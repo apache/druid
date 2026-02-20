@@ -92,6 +92,11 @@ public class ImmutableDruidServer
     return metadata.getMaxSize();
   }
 
+  public long getStorageSize()
+  {
+    return metadata.getStorageSize();
+  }
+
   public ServerType getType()
   {
     return metadata.getType();

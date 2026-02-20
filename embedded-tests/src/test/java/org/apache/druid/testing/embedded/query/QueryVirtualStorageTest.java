@@ -25,12 +25,17 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -52,6 +57,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -59,6 +66,11 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
+  // size of wiki segments, adjust this if segment size changes for some reason
+  private static final long SIZE_BYTES = 3776682L;
+  private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
+  private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -72,7 +84,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    historical.addProperty("druid.segmentCache.virtualStorage", "true")
+    historical.setServerMemory(500_000_000)
+              .addProperty("druid.segmentCache.virtualStorage", "true")
               .addProperty("druid.segmentCache.virtualStorageLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
@@ -80,11 +93,16 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
                       StringUtils.format(
                           "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
                           cluster.getTestFolder().newFolder().getAbsolutePath(),
-                          HumanReadableBytes.parse("1MiB")
+                          CACHE_SIZE
                       )
                   )
               )
-              .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")));
+              .addProperty("druid.server.maxSize", String.valueOf(MAX_SIZE));
+
+    broker.setServerMemory(200_000_000)
+          .addProperty("druid.msq.dart.controller.maxRetainedReportCount", "10")
+          .addProperty("druid.query.default.context.maxConcurrentStages", "1")
+          .addProperty("druid.sql.planner.enableSysQueriesTable", "true");
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
@@ -101,6 +119,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         .useLatchableEmitter()
         .useDefaultTimeoutForLatchableEmitter(20)
         .addResource(storageResource)
+        .addCommonProperty("druid.msq.dart.enabled", "true")
         .addCommonProperty("druid.storage.zip", "false")
         .addCommonProperty("druid.indexer.task.buildV10", "true")
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
@@ -135,7 +154,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     Throwable t = Assertions.assertThrows(
         RuntimeException.class,
-        () -> cluster.runSql("select * from \"%s\"", dataSource)
+        () -> cluster.runSql("select count(*) from \"%s\"", dataSource)
     );
     Assertions.assertTrue(t.getMessage().contains("Unable to load segment"));
     Assertions.assertTrue(t.getMessage().contains("] on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
@@ -163,6 +182,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
 
     LatchableEmitter emitter = historical.latchableEmitter();
+    LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
+
     // clear out the pipe to get zerod out storage monitor metrics
     ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
     while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
@@ -217,6 +238,79 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
     Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
+
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        CACHE_SIZE,
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
+    );
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        MAX_SIZE,
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+    );
+  }
+
+  @Test
+  void testQueryTooMuchDataButWithDart()
+  {
+    // dart uses vsf in a totally rad way so it can query all of the segments at once due to how it chunks up and
+    // fetches segments to do the work
+    final String sqlQueryId = UUID.randomUUID().toString();
+    final String resultString = cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(
+            new ClientSqlQuery(
+                StringUtils.format("select count(*) from \"%s\"", dataSource),
+                "CSV",
+                false,
+                false,
+                false,
+                Map.of(
+                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId,
+                    QueryContexts.ENGINE, "msq-dart"
+                ),
+                null
+            )
+        )
+    ).trim();
+
+    final Long result = Long.parseLong(resultString);
+    Assertions.assertEquals(39244L, result);
+
+    // Now fetch the report using the SQL query ID
+    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker);
+
+    // Verify the report response
+    Assertions.assertNotNull(reportResponse, "Report response should not be null");
+    ChannelCounters.Snapshot segmentChannelCounters =
+        (ChannelCounters.Snapshot) reportResponse.getReportMap()
+                                                 .findReport("multiStageQuery")
+                                                 .map(r ->
+                                                          ((MSQTaskReportPayload) r.getPayload()).getCounters()
+                                                                                                 .snapshotForStage(0)
+                                                                                                 .get(0)
+                                                                                                 .getMap()
+                                                                                                 .get("input0")
+                                                 ).orElse(null);
+
+    Assertions.assertNotNull(segmentChannelCounters);
+    Assertions.assertArrayEquals(new long[]{24L}, segmentChannelCounters.getFiles());
+    Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
+    // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
+    // test order
+    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
+    Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
+    Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
+  }
+
+  @Test
+  void testQuerySysTables()
+  {
+    String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
+    Assertions.assertEquals(
+        StringUtils.format("%s,%s,%s", SIZE_BYTES, MAX_SIZE, CACHE_SIZE),
+        cluster.callApi().runSql(query)
+    );
   }
 
 

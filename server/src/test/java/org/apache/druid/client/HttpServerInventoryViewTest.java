@@ -593,7 +593,7 @@ public class HttpServerInventoryViewTest
     DiscoveryDruidNode addNodeAndNotifyListeners(String host)
     {
       final DruidNode druidNode = new DruidNode("druid/historical", host, false, 8080, null, true, false);
-      DataNodeService dataNodeService = new DataNodeService("tier", 10L << 30, ServerType.HISTORICAL, 0);
+      DataNodeService dataNodeService = new DataNodeService("tier", 10L << 30, null, ServerType.HISTORICAL, 0);
       final DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
           druidNode,
           NodeRole.HISTORICAL,

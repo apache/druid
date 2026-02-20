@@ -151,6 +151,8 @@ public class SystemSchemaTest extends CalciteTestBase
 {
   private static final ObjectMapper MAPPER = CalciteTests.getJsonMapper();
 
+  private static final String DATASOURCE_ALL_ACCESS = "allAccess";
+
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
@@ -440,7 +442,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s3", "brokerHostWithBroadcastSegments", false, 8082, 8282, true, true),
       NodeRole.BROKER,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.BROKER, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.BROKER, 0)
       ),
       startTime
   );
@@ -456,7 +458,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "localhost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0)
       ),
       startTime
   );
@@ -465,7 +467,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "histHost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0)
       ),
       startTime
   );
@@ -474,7 +476,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "lameHost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0)
       ),
       startTime
   );
@@ -490,7 +492,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s7", "localhost", false, 8080, null, true, false),
       NodeRole.PEON,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0)
       ),
       startTime
   );
@@ -499,7 +501,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s7", "peonHost", false, 8080, null, true, false),
       NodeRole.PEON,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0)
       ),
       startTime
   );
@@ -508,13 +510,22 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s8", "indexerHost", false, 8091, null, true, false),
       NodeRole.INDEXER,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0)
       ),
       startTime
   );
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
-      new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
+      new DruidServerMetadata(
+          "server1",
+          "localhost:0000",
+          null,
+          5L,
+          null,
+          ServerType.REALTIME,
+          DruidServer.DEFAULT_TIER,
+          0
+      ),
       1L,
       ImmutableMap.of(
           "dummy",
@@ -524,7 +535,16 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final ImmutableDruidServer druidServer2 = new ImmutableDruidServer(
-      new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+      new DruidServerMetadata(
+          "server2",
+          "server2:1234",
+          null,
+          5L,
+          null,
+          ServerType.HISTORICAL,
+          DruidServer.DEFAULT_TIER,
+          0
+      ),
       1L,
       ImmutableMap.of(
           "dummy",
@@ -565,7 +585,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(14, serverFields.size());
+    Assert.assertEquals(15, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
 
@@ -829,7 +849,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     final List<DruidServer> servers = new ArrayList<>();
     servers.add(mockDataServer(historical1.getDruidNode().getHostAndPortToUse(), 200L, 1000L, "tier"));
-    servers.add(mockDataServer(historical2.getDruidNode().getHostAndPortToUse(), 400L, 1000L, "tier"));
+    servers.add(mockDataServer(historical2.getDruidNode().getHostAndPortToUse(), 400L, 1000L, 100L, "tier2"));
     servers.add(mockDataServer(peon1.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
     servers.add(mockDataServer(peon2.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
     servers.add(mockDataServer(broker1.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
@@ -870,6 +890,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -888,6 +909,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -903,9 +925,10 @@ public class SystemSchemaTest extends CalciteTestBase
             8083,
             -1,
             NodeRole.HISTORICAL,
-            "tier",
+            "tier2",
             400L,
             1000L,
+            100L,
             nonLeader,
             startTimeStr,
             version,
@@ -923,6 +946,7 @@ public class SystemSchemaTest extends CalciteTestBase
             NodeRole.INDEXER,
             "tier",
             0L,
+            1000L,
             1000L,
             nonLeader,
             startTimeStr,
@@ -942,6 +966,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -959,6 +984,7 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
+        1000L,
         nonLeader,
         startTimeStr,
         version,
@@ -974,6 +1000,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.COORDINATOR,
             null,
+            0L,
             0L,
             0L,
             1L,
@@ -994,6 +1021,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -1012,6 +1040,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             200L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -1028,6 +1057,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.OVERLORD,
             null,
+            0L,
             0L,
             0L,
             1L,
@@ -1049,6 +1079,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
+            0L,
             startTimeStr,
             version,
             null,
@@ -1064,6 +1095,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.OVERLORD,
             null,
+            0L,
             0L,
             0L,
             0L,
@@ -1084,6 +1116,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -1100,6 +1133,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.MIDDLE_MANAGER,
             null,
+            0L,
             0L,
             0L,
             nonLeader,
@@ -1119,6 +1153,7 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
+        1000L,
         nonLeader,
         startTimeStr,
         version,
@@ -1137,12 +1172,18 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private DruidServer mockDataServer(String name, long currentSize, long maxSize, String tier)
   {
+    return mockDataServer(name, currentSize, maxSize, maxSize, tier);
+  }
+
+  private DruidServer mockDataServer(String name, long currentSize, long maxSize, long storageSize, String tier)
+  {
     final DruidServer server = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(serverInventoryView.getInventoryValue(name))
             .andReturn(server)
             .once();
     EasyMock.expect(server.getCurrSize()).andReturn(currentSize).once();
     EasyMock.expect(server.getMaxSize()).andReturn(maxSize).once();
+    EasyMock.expect(server.getStorageSize()).andReturn(storageSize).once();
     EasyMock.expect(server.getTier()).andReturn(tier).once();
     return server;
   }
@@ -1156,6 +1197,7 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable String tier,
       @Nullable Long currSize,
       @Nullable Long maxSize,
+      @Nullable Long storageSize,
       @Nullable Long isLeader,
       String startTime,
       String version,
@@ -1173,6 +1215,7 @@ public class SystemSchemaTest extends CalciteTestBase
         tier,
         currSize,
         maxSize,
+        storageSize,
         isLeader,
         startTime,
         version,
@@ -1449,8 +1492,9 @@ public class SystemSchemaTest extends CalciteTestBase
     SystemSchema.SupervisorsTable supervisorTable =
         new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
 
-    final String json = "[{\n"
-                  + "\t\"id\": \"wikipedia\",\n"
+    String json = "[{\n"
+                  + "\t\"id\": \"wikipedia_supervisor\",\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
                   + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
                   + "\t\"healthy\": false,\n"
@@ -1638,6 +1682,100 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.verify(mockEngine);
   }
 
+  @Test
+  public void testSupervisorTableAuthOnDataSourceName() throws JsonProcessingException
+  {
+    SystemSchema.SupervisorsTable supervisorTable =
+        new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
+
+    // Verify that 1 row is returned for datasource name DATASOURCE_ALL_ACCESS
+    String datasourceAllAccessSupervisor =
+        "[{\n"
+        + "\t\"id\": \"wikipedia_supervisor\",\n"
+        + "\t\"dataSource\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"wikipedia\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceAllAccessSupervisor, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    List<Object[]> rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertEquals(1, rows.size());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+
+    // Verify that no row is returned for datasource name not matching DATASOURCE_ALL_ACCESS
+    String datasourceNotAllAccess =
+        "[{\n"
+        + "\t\"id\": \"wikipedia_supervisor\",\n"
+        + "\t\"dataSource\": \"wikipedia\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"wikipedia\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceNotAllAccess, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+
+    // Verify that no row is returned for datasource source and id matching DATASOURCE_ALL_ACCESS
+    String datasourceSourceAndIdAllAccess =
+        "[{\n"
+        + "\t\"id\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"dataSource\": \"wikipedia\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceSourceAndIdAllAccess, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+  }
+
   /**
    * Creates a test QueryInfo implementation for testing purposes.
    */
@@ -1740,6 +1878,7 @@ public class SystemSchemaTest extends CalciteTestBase
                 username.equals(Users.SUPER)
                 || (action == Action.READ && username.equals(Users.DATASOURCE_READ))
                 || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
+                || (resource.getName().equals(DATASOURCE_ALL_ACCESS))
             );
           }
 
@@ -1824,5 +1963,6 @@ public class SystemSchemaTest extends CalciteTestBase
     private static final String SUPER = CalciteTests.TEST_SUPERUSER_NAME;
     private static final String DATASOURCE_READ = "datasourceRead";
     private static final String DATASOURCE_WRITE = "datasourceWrite";
+    private static final String ONLY_DATASOURCE_ALL_ACCESS = "onlyDatasourceAllAccess";
   }
 }

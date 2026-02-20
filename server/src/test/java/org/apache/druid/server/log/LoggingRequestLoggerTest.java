@@ -209,6 +209,23 @@ public class LoggingRequestLoggerTest
   }
 
   @Test
+  public void testSqlLogging() throws Exception
+  {
+    final RequestLogLine sqlLogLine = RequestLogLine.forSql(
+        "select * from foo", Map.of("sqlQueryId", "id1"), DateTimes.of("2026-01-01"), null, new QueryStats(Map.of("query/time", 13L))
+    );
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(MAPPER, true, false);
+
+    requestLogger.logSqlQuery(sqlLogLine);
+    final String observedLogLine = BAOS.toString(StandardCharsets.UTF_8);
+
+    Assert.assertEquals(
+        "2026-01-01T00:00:00.000Z\t\t\t{\"query/time\":13}\t{\"context\":{\"sqlQueryId\":\"id1\"},\"query\":\"select * from foo\"}",
+        MAPPER.readTree(observedLogLine).get("message").asText()
+    );
+  }
+
+  @Test
   public void testLoggingMDC() throws Exception
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);

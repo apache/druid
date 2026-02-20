@@ -1100,7 +1100,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 cursorFactory.getRowSignature(),
-                false,
                 false
             )
         )

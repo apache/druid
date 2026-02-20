@@ -225,13 +225,16 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
   private abstract static class BitmapIterator implements Iterator<ImmutableBitmap>
   {
     private final DictionaryEncodedValueIndex<?> inputColumnIndexes;
+
     int next;
     int index = 0;
     boolean nextSet = false;
+    private final Iterator<?> valuesIterator;
 
     private BitmapIterator(DictionaryEncodedValueIndex<?> inputColumnIndexes)
     {
       this.inputColumnIndexes = inputColumnIndexes;
+      this.valuesIterator = inputColumnIndexes.getValueIterator();
     }
 
     @Override
@@ -258,8 +261,8 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
 
     private void findNext()
     {
-      while (!nextSet && index < inputColumnIndexes.getCardinality()) {
-        Object nextValue = inputColumnIndexes.getValue(index);
+      while (!nextSet && valuesIterator.hasNext()) {
+        final Object nextValue = valuesIterator.next();
         nextSet = nextMatches(nextValue);
         if (nextSet) {
           next = index;

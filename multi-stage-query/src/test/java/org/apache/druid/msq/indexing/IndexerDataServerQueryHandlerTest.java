@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataServerClient;
-import org.apache.druid.discovery.DruidServiceTestUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -56,6 +55,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -87,6 +87,7 @@ public class IndexerDataServerQueryHandlerTest
       "host1:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0
@@ -96,6 +97,7 @@ public class IndexerDataServerQueryHandlerTest
       "host2:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0
@@ -143,7 +145,7 @@ public class IndexerDataServerQueryHandlerTest
             new ChannelCounters(),
             mock(ServiceClientFactory.class),
             coordinatorClient,
-            DruidServiceTestUtils.newJsonMapper(),
+            TestHelper.makeJsonMapper(),
             queryToolChestWarehouse,
             new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2)),
             IndexerDataServerRetryPolicy.noRetries()

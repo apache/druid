@@ -17,16 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.jackson;
+package org.apache.druid.msq.counters;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class StringObjectPairListTest
+class ChannelCountersTest
 {
   @Test
-  public void testEquals()
+  void testSnapshotEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(StringObjectPairList.class).usingGetClass().withNonnullFields("pairs").verify();
+    EqualsVerifier.forClass(ChannelCounters.Snapshot.class).usingGetClass().verify();
   }
 }

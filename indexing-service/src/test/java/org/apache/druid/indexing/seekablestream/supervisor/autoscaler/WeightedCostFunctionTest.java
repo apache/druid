@@ -38,7 +38,6 @@ public class WeightedCostFunctionTest
                                       .enableTaskAutoScaler(true)
                                       .lagWeight(0.3)
                                       .idleWeight(0.7)
-                                      .defaultProcessingRate(1000.0)
                                       .build();
   }
 
@@ -67,7 +66,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(100.0)
                                                                        .build();
 
     CostMetrics metrics = createMetrics(200000.0, 10, 200, 0.3);
@@ -84,33 +82,31 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testLagCostWithMarginalModel()
+  public void testLagCostWithAbsoluteModel()
   {
-    // With lag-only config (no idle penalty), the marginal model is used for scale-up:
-    // lagRecoveryTime = aggregateLag / (taskCountDiff * rate)
+    // With lag-only config (no idle penalty), cost uses absolute model:
+    // lagRecoveryTime = aggregateLag / (taskCount * rate)
     CostBasedAutoScalerConfig lagOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                        .taskCountMax(100)
                                                                        .taskCountMin(1)
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
                                                                        .build();
 
-    // aggregateLag = 100000 * 100 = 10,000,000
+    // aggregateLag = 100000 * 100 = 10,000,000; lagPerPartition = 100,000
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
+    double aggregateLag = 100000.0 * 100;
+    double amplification = 1.0 + 0.2 * Math.log(aggregateLag / 100);
 
-    // Current (10 tasks): uses absolute model = 10M / (10 * 1000) = 1000s
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost at current tasks", 1000., costCurrent, 0.1);
+    Assert.assertEquals("Cost of current tasks", aggregateLag * amplification / (10 * 1000.0), costCurrent, 0.1);
 
-    // Scale up by 5 (to 15): marginal model = 10M / (15 * 1000) = 666
     double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 5", 666.7, costUp5, 0.1);
+    Assert.assertEquals("Cost when scaling up by 5", aggregateLag * amplification / (15 * 1000.0), costUp5, 0.1);
 
-    // Scale up by 10 (to 20): marginal model = 10M / (20 * 1000) = 500s
     double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 10", 500.0, costUp10, 0.01);
+    Assert.assertEquals("Cost when scaling up by 10", aggregateLag * amplification / (20 * 1000.0), costUp10, 0.1);
 
     // Adding more tasks reduces lag recovery time
     Assert.assertTrue("Adding more tasks reduces lag cost", costUp10 < costUp5);
@@ -139,7 +135,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     CostBasedAutoScalerConfig idleOnly = CostBasedAutoScalerConfig.builder()
@@ -148,7 +143,6 @@ public class WeightedCostFunctionTest
                                                                   .enableTaskAutoScaler(true)
                                                                   .lagWeight(0.0)
                                                                   .idleWeight(1.0)
-                                                                  .defaultProcessingRate(1000.0)
                                                                   .build();
 
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
@@ -197,7 +191,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
                                                                        .build();
 
     double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
@@ -222,7 +215,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Current: 10 tasks with 40% idle (60% busy)
@@ -248,7 +240,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Extreme scale-down: 10 tasks → 2 tasks with 40% idle
@@ -257,7 +248,7 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
-    // idlenessCost = taskCount * taskDuration * 0.0 (clamped) = 0
+    // idlenessCost = taskCount * 0.0 (clamped) = 0
     Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
 
     // Extreme scale-up shouldn't exceed 1.0 for idle ratio
@@ -266,7 +257,6 @@ public class WeightedCostFunctionTest
     // predictedIdle = 1 - 0.9/10 = 1 - 0.09 = 0.91 (within bounds)
     CostMetrics lowIdle = createMetrics(0.0, 10, 100, 0.1);
     double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig).totalCost();
-    // idlenessCost = 100 * 3600 * 0.91 = 327600
     Assert.assertTrue("Cost should be finite and positive", Double.isFinite(costAt100) && costAt100 > 0);
   }
 
@@ -279,7 +269,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Negative idle ratio indicates missing data → should default to 0.5
@@ -289,37 +278,75 @@ public class WeightedCostFunctionTest
     double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
     // With missing data, predicted idle = 0.5 for all task counts
-    // idlenessCost at 10 = 10 * 3600 * 0.5 = 18000
-    // idlenessCost at 20 = 20 * 3600 * 0.5 = 36000
-    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * 3600 * 0.5, cost10, 0.0001);
-    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * 3600 * 0.5, cost20, 0.0001);
+    // idlenessCost at 10 = 10 * 0.5 = 5
+    // idlenessCost at 20 = 20 * 0.5 = 10
+    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * 0.5, cost10, 0.0001);
+    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * 0.5, cost20, 0.0001);
   }
 
   @Test
-  public void testLagAmplificationReducesIdleUnderHighLag()
+  public void testLagAmplificationAppliedUnconditionally()
   {
-    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(100)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .defaultProcessingRate(1000.0)
-                                                                        .build();
+    CostBasedAutoScalerConfig lagOnly = CostBasedAutoScalerConfig.builder()
+                                                                 .taskCountMax(100)
+                                                                 .taskCountMin(1)
+                                                                 .enableTaskAutoScaler(true)
+                                                                 .lagWeight(1.0)
+                                                                 .idleWeight(0.0)
+                                                                 .build();
 
-    int currentTaskCount = 3;
-    int proposedTaskCount = 8;
+    int currentTaskCount = 10;
+    int proposedTaskCount = 10;
+    int partitionCount = 10;
+    double pollIdleRatio = 0.1;
+
+    // lagPerPartition = 150 * 10 / 10 = 150, amplification = 1 + 0.2 * ln(150)
+    CostMetrics metrics = createMetrics(150.0, currentTaskCount, partitionCount, pollIdleRatio);
+
+    double costWithAmp = costFunction.computeCost(metrics, proposedTaskCount, lagOnly).totalCost();
+
+    double aggregateLag = 150.0 * partitionCount;
+    double lagPerPartition = aggregateLag / partitionCount;
+    double amplification = 1.0 + 0.2 * Math.log(lagPerPartition);
+    double expected = aggregateLag * amplification / (proposedTaskCount * 1000.0);
+
+    Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);
+  }
+
+  @Test
+  public void testAmplificationGrowsWithLag()
+  {
+    // Verify that higher lag produces proportionally higher cost due to log amplification
+    CostBasedAutoScalerConfig lagOnly = CostBasedAutoScalerConfig.builder()
+                                                                 .taskCountMax(100)
+                                                                 .taskCountMin(1)
+                                                                 .enableTaskAutoScaler(true)
+                                                                 .lagWeight(1.0)
+                                                                 .idleWeight(0.0)
+                                                                 .build();
+
+    int currentTaskCount = 10;
+    int proposedTaskCount = 10;
     int partitionCount = 30;
     double pollIdleRatio = 0.1;
 
-    CostMetrics lowLag = createMetrics(40_000.0, currentTaskCount, partitionCount, pollIdleRatio);
-    CostMetrics highLag = createMetrics(500_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+    CostMetrics lowLag = createMetrics(100.0, currentTaskCount, partitionCount, pollIdleRatio);
+    CostMetrics highLag = createMetrics(10_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
-    double lowLagCost = costFunction.computeCost(lowLag, proposedTaskCount, idleOnlyConfig).totalCost();
-    double highLagCost = costFunction.computeCost(highLag, proposedTaskCount, idleOnlyConfig).totalCost();
+    double lowCost = costFunction.computeCost(lowLag, proposedTaskCount, lagOnly).totalCost();
+    double highCost = costFunction.computeCost(highLag, proposedTaskCount, lagOnly).totalCost();
+
+    Assert.assertTrue("Higher lag should produce higher cost", highCost > lowCost);
+
+    // The ratio of costs should be more than the ratio of raw lags (due to amplification)
+    double lagRatio = 10_000.0 / 100.0;
+    double costRatio = highCost / lowCost;
     Assert.assertTrue(
-        "Higher lag should reduce predicted idle more aggressively",
-        lowLagCost > highLagCost
+        "Amplification should make cost grow faster than linear with lag",
+        costRatio > lagRatio
     );
   }
+
 
   private CostMetrics createMetrics(
       double avgPartitionLag,

@@ -20,6 +20,8 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
@@ -41,12 +43,14 @@ import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -157,24 +161,25 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   {
     final TimelineLookup<String, DataSegment> timeline =
         getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
+    final Predicate<SegmentDescriptor> segmentFilter = tableInputSpec.getSegments() != null
+                                                       ? Set.copyOf(tableInputSpec.getSegments())::contains
+                                                       : Predicates.alwaysTrue();
 
     if (timeline == null) {
       return Collections.emptySet();
     } else {
+      // A segment can overlap with multiple search intervals, or even outside search intervals.
+      // The same segment can appear multiple times or 0 time, but each is also bounded within the overlapped search interval
       final Iterator<DataSegmentWithInterval> dataSegmentIterator =
           tableInputSpec.getIntervals().stream()
                         .flatMap(interval -> timeline.lookup(interval).stream())
                         .flatMap(
                             holder ->
                                 StreamSupport.stream(holder.getObject().spliterator(), false)
-                                             .filter(chunk -> !chunk.getObject().isTombstone())
-                                             .map(
-                                                 chunk ->
-                                                     new DataSegmentWithInterval(
-                                                         chunk.getObject(),
-                                                         holder.getInterval()
-                                                     )
-                                             )
+                                             .map(PartitionChunk::getObject)
+                                             .filter(segment -> !segment.isTombstone())
+                                             .filter(segment -> segmentFilter.apply(segment.toDescriptor()))
+                                             .map(segment -> new DataSegmentWithInterval(segment, holder.getInterval()))
                         ).iterator();
 
       return DimFilterUtils.filterShards(

@@ -500,7 +500,7 @@ public class Expressions
     );
     return simpleFilter != null
            ? simpleFilter
-           : toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+           : toExpressionLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, rexNode);
   }
 
   /**
@@ -524,7 +524,7 @@ public class Expressions
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE || kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
       // use expression filter to get istrue/notfalse/isfalse/nottrue expressions for correct 3vl behavior
-      return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      return toExpressionLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, rexNode);
     } else if (kind == SqlKind.IS_NULL || kind == SqlKind.IS_NOT_NULL) {
       final RexNode operand = Iterables.getOnlyElement(((RexCall) rexNode).getOperands());
 
@@ -831,25 +831,43 @@ public class Expressions
 
   /**
    * Translates to an "expression" type leaf filter. Used as a fallback if we can't use a simple leaf filter.
+   * If the expression contains specialized nodes (e.g. JSON_VALUE), a virtual column is created to benefit
+   * from specialization. Otherwise, the expression is inlined directly.
    */
   @Nullable
   private static DimFilter toExpressionLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
+      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode rexNode
   )
   {
     final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
 
-    if (druidExpression != null) {
+    if (druidExpression == null) {
+      return null;
+    }
+
+    if (virtualColumnRegistry != null && druidExpression.containsSpecializedNodes()) {
+      // Use a virtual column so we can take advantage of specialization.
+      final String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          druidExpression,
+          ColumnType.LONG
+      );
+      final String vcExpression = "\"" + virtualColumnName + "\"";
+      return new ExpressionDimFilter(
+          vcExpression,
+          plannerContext.parseExpression(vcExpression),
+          null
+      );
+    } else {
+      // No specialization, inline the expression directly.
       return new ExpressionDimFilter(
           druidExpression.getExpression(),
           plannerContext.parseExpression(druidExpression.getExpression()),
           null
       );
     }
-
-    return null;
   }
 
   /**

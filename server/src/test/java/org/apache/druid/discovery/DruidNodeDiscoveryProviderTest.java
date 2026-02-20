@@ -91,7 +91,7 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNode("s1", "h1", false, 8080, null, true, false),
         NodeRole.HISTORICAL,
         ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0),
+            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0),
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
@@ -99,7 +99,7 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNode("s2", "h2", false, 8080, null, true, false),
         NodeRole.HISTORICAL,
         ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
+            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0))
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
@@ -113,7 +113,7 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNode("s4", "h4", false, 8080, null, true, false),
         NodeRole.PEON,
         ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0),
+            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0),
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
@@ -121,7 +121,7 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNode("s5", "h5", false, 8080, null, true, false),
         NodeRole.PEON,
         ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
+            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, null, ServerType.HISTORICAL, 0))
     );
 
     DiscoveryDruidNode node6 = new DiscoveryDruidNode(

@@ -31,12 +31,13 @@ import {
   ActionCell,
   MoreButton,
   RefreshButton,
+  TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import { AsyncActionDialog } from '../../dialogs';
+import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
@@ -84,8 +85,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Start time',
     'Version',
@@ -100,8 +101,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Detail',
   ],
@@ -111,8 +112,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Start time',
     'Version',
@@ -138,6 +139,9 @@ export interface ServicesViewState {
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
 
+  serviceTableActionDialogServer?: string;
+  serviceTableActionDialogActions: BasicAction[];
+
   visibleColumns: LocalStorageBackedVisibility;
 }
 
@@ -149,6 +153,8 @@ interface ServiceResultRow {
   readonly host: string;
   readonly curr_size: NumberLike;
   readonly max_size: NumberLike;
+  readonly storage_size: NumberLike;
+  readonly effective_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
@@ -255,6 +261,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
+  "storage_size",
+  CASE WHEN "storage_size" < "max_size" THEN "storage_size" ELSE "max_size" END AS "effective_size",
   "is_leader",
   "start_time",
   "version",
@@ -283,6 +291,8 @@ ORDER BY
     this.state = {
       servicesState: QueryState.INIT,
 
+      serviceTableActionDialogActions: [],
+
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
       ),
@@ -310,6 +320,8 @@ ORDER BY
                 tls_port: port < 9000 ? -1 : port,
                 curr_size: s.currSize,
                 max_size: s.maxSize,
+                storage_size: s.maxSize,
+                effective_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
@@ -477,7 +489,34 @@ ORDER BY
           show: visibleColumns.shown('Service'),
           accessor: 'service',
           width: 300,
-          Cell: this.renderFilterableCell('service'),
+          Cell: ({ value, original, aggregated }) => {
+            if (aggregated) return '';
+
+            const { service_type } = original;
+            const workerInfo = workerInfoLookup[value];
+
+            // Make clickable if SQL is available to show properties
+            if (!capabilities.hasSql()) return value;
+
+            return (
+              <TableClickableCell
+                tooltip="Show properties"
+                onClick={() =>
+                  this.setState({
+                    serviceTableActionDialogServer: value,
+                    serviceTableActionDialogActions: this.getServiceActions(
+                      value,
+                      service_type,
+                      workerInfo,
+                    ),
+                  })
+                }
+                hoverIcon={IconNames.PROPERTIES}
+              >
+                {value}
+              </TableClickableCell>
+            );
+          },
           Aggregated: () => '',
         },
         {
@@ -535,8 +574,8 @@ ORDER BY
           Aggregated: () => '',
         },
         {
-          Header: 'Current size',
-          show: visibleColumns.shown('Current size'),
+          Header: 'Assigned size',
+          show: visibleColumns.shown('Assigned size'),
           id: 'curr_size',
           width: 100,
           filterable: false,
@@ -555,23 +594,27 @@ ORDER BY
           },
         },
         {
-          Header: 'Max size',
-          show: visibleColumns.shown('Max size'),
-          id: 'max_size',
+          Header: 'Effective size',
+          show: visibleColumns.shown('Effective size'),
+          id: 'effective_size',
           width: 100,
           filterable: false,
-          accessor: 'max_size',
+          accessor: 'effective_size',
           className: 'padded',
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalMax = sum(originalRows, s => s.max_size);
-            return formatBytes(totalMax);
+            const totalEffectiveSize = sum(originalRows, s => s.effective_size);
+            return formatBytes(totalEffectiveSize);
           },
           Cell: ({ value, aggregated, original }) => {
             if (aggregated || original.service_type !== 'historical') return '';
             if (value === null) return '';
-            return formatBytes(value);
+            return (
+              <div data-tooltip={`Max size: ${formatBytes(original.max_size)}`}>
+                {formatBytes(value)}
+              </div>
+            );
           },
         },
         {
@@ -588,17 +631,28 @@ ORDER BY
               return (
                 (Number(workerInfo.currCapacityUsed) || 0) / Number(workerInfo.worker?.capacity)
               );
+            } else if (row.effective_size) {
+              return Number(row.curr_size) / Number(row.effective_size);
             } else {
-              return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
+              return null;
             }
           },
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
 
             if (originalRows.some(r => r.service_type === 'historical')) {
-              const totalCurr = sum(originalRows, s => Number(s.curr_size));
-              const totalMax = sum(originalRows, s => Number(s.max_size));
-              return <FillIndicator value={totalCurr / totalMax} />;
+              const totalAssignedSize = sum(originalRows, s => Number(s.curr_size));
+              const totalEffectiveSize = sum(originalRows, s => Number(s.effective_size));
+              const totalMaxSize = sum(originalRows, s => Number(s.max_size));
+              // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+              // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+              // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+              // fill capacity
+              const isVsfOverCapacity =
+                totalMaxSize > totalEffectiveSize && totalAssignedSize > totalEffectiveSize;
+              const label = totalAssignedSize / totalEffectiveSize;
+              const usage = isVsfOverCapacity ? totalEffectiveSize / totalAssignedSize : label;
+              return <FillIndicator barValue={usage} labelValue={label} />;
             } else if (
               originalRows.some(
                 r => r.service_type === 'indexer' || r.service_type === 'middle_manager',
@@ -618,13 +672,27 @@ ORDER BY
               return '';
             }
           },
-          Cell: ({ value, aggregated, original }) => {
+          Cell: ({ aggregated, original }) => {
             if (aggregated) return '';
-            const { service_type } = original;
+            const { service_type, curr_size, max_size, effective_size } = original;
 
             switch (service_type) {
-              case 'historical':
-                return <FillIndicator value={value} />;
+              case 'historical': {
+                // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+                // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+                // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+                // fill capacity
+                const isVsfOverCapacity = effective_size < max_size && curr_size > effective_size;
+                const labelValue = Number(curr_size) / Number(effective_size);
+                return (
+                  <FillIndicator
+                    labelValue={labelValue}
+                    barValue={
+                      isVsfOverCapacity ? Number(effective_size) / Number(curr_size) : labelValue
+                    }
+                  />
+                );
+              }
 
               case 'indexer':
               case 'middle_manager': {
@@ -794,22 +862,24 @@ ORDER BY
         },
         {
           Header: ACTION_COLUMN_LABEL,
-          show: capabilities.hasOverlordAccess(),
+          show: capabilities.hasSql(),
           id: ACTION_COLUMN_ID,
           width: ACTION_COLUMN_WIDTH,
           accessor: 'service',
           filterable: false,
           sortable: false,
-          Cell: ({ value, aggregated }) => {
+          Cell: ({ value, original, aggregated }) => {
             if (aggregated) return '';
 
+            const { service_type } = original;
             const workerInfo = workerInfoLookup[value];
-            if (!workerInfo) return null;
 
-            const { worker } = workerInfo;
-            const disabled = worker.version === '';
-            const workerActions = this.getWorkerActions(worker.host, disabled);
-            return <ActionCell actions={workerActions} menuTitle={worker.host} />;
+            // Get all applicable actions (worker actions + properties action)
+            const serviceActions = this.getServiceActions(value, service_type, workerInfo, true);
+            if (serviceActions.length === 0) return null;
+
+            const menuTitle = workerInfo ? workerInfo.worker.host : value;
+            return <ActionCell actions={serviceActions} menuTitle={menuTitle} />;
           },
           Aggregated: () => '',
         },
@@ -817,24 +887,53 @@ ORDER BY
     },
   );
 
-  private getWorkerActions(workerHost: string, disabled: boolean): BasicAction[] {
-    if (disabled) {
-      return [
-        {
+  private getServiceActions(
+    server: string,
+    serviceType: string,
+    workerInfo?: WorkerInfo,
+    fromTable?: boolean,
+  ): BasicAction[] {
+    const actions: BasicAction[] = [];
+
+    // Add worker-specific actions (enable/disable) if this is a worker
+    if (workerInfo) {
+      const { worker } = workerInfo;
+      const disabled = worker.version === '';
+
+      if (disabled) {
+        actions.push({
           icon: IconNames.TICK,
           title: 'Enable',
-          onAction: () => this.setState({ middleManagerEnableWorkerHost: workerHost }),
-        },
-      ];
-    } else {
-      return [
-        {
+          onAction: () => this.setState({ middleManagerEnableWorkerHost: worker.host }),
+        });
+      } else {
+        actions.push({
           icon: IconNames.DISABLE,
           title: 'Disable',
-          onAction: () => this.setState({ middleManagerDisableWorkerHost: workerHost }),
-        },
-      ];
+          onAction: () => this.setState({ middleManagerDisableWorkerHost: worker.host }),
+        });
+      }
     }
+
+    // Add properties action when called from table
+    if (fromTable) {
+      actions.push({
+        icon: IconNames.PROPERTIES,
+        title: 'View properties',
+        onAction: () => {
+          this.setState({
+            serviceTableActionDialogServer: server,
+            serviceTableActionDialogActions: this.getServiceActions(
+              server,
+              serviceType,
+              workerInfo,
+            ),
+          });
+        },
+      });
+    }
+
+    return actions;
   }
 
   renderDisableWorkerAction() {
@@ -969,7 +1068,21 @@ ORDER BY
         {this.renderServicesTable()}
         {this.renderDisableWorkerAction()}
         {this.renderEnableWorkerAction()}
+        {this.renderServiceTableActionDialog()}
       </div>
+    );
+  }
+
+  renderServiceTableActionDialog() {
+    const { serviceTableActionDialogServer, serviceTableActionDialogActions } = this.state;
+    if (!serviceTableActionDialogServer) return;
+
+    return (
+      <ServiceTableActionDialog
+        service={serviceTableActionDialogServer}
+        actions={serviceTableActionDialogActions}
+        onClose={() => this.setState({ serviceTableActionDialogServer: undefined })}
+      />
     );
   }
 }

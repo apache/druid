@@ -29,25 +29,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
-  /**
-   * Represents the maximum multiplier factor applied to amplify lag-based costs in the cost computation process.
-   * This value is used to cap the lag amplification effect to prevent excessively high cost inflation
-   * caused by significant partition lag.
-   * It ensures that lag-related adjustments remain bounded within a reasonable range for stability of
-   * cost-based auto-scaling decisions.
-   */
-  private static final double LAG_AMPLIFICATION_MAX_MULTIPLIER = 2.0;
-  private static final long LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION = 500_000L;
-  /**
-   * It is used to calculate the denominator for the ramp formula in the cost
-   * computation logic. This value represents the difference between the maximum lag per
-   * partition (LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION) and the extra scaling activation
-   * lag threshold (CostBasedAutoScaler.EXTRA_SCALING_ACTIVATION_LAG_THRESHOLD).
-   * <p>
-   * It is impacting how the cost model evaluates scaling decisions during high-lag sceario.
-   */
-  private static final double RAMP_DENOMINATOR =
-      LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION - (double) CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
+  private static final double LAG_AMPLIFICATION_MULTIPLIER = 0.2;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -64,7 +46,11 @@ public class WeightedCostFunction
    * @return CostResult containing totalCost, lagCost, and idleCost,
    * or result with {@link Double#POSITIVE_INFINITY} for invalid inputs
    */
-  public CostResult computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
+  public CostResult computeCost(
+      CostMetrics metrics,
+      int proposedTaskCount,
+      CostBasedAutoScalerConfig config
+  )
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
       return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
@@ -82,12 +68,19 @@ public class WeightedCostFunction
       }
     } else {
       // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
+      // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
       // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
-      lagRecoveryTime = metrics.getAggregateLag() / (proposedTaskCount * avgProcessingRate);
+      if (metrics.getAggregateLag() <= 0) {
+        lagRecoveryTime = 0;
+      } else {
+        final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
+        final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
+        lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * avgProcessingRate);
+      }
     }
 
     final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount);
-    final double idleCost = proposedTaskCount * metrics.getTaskDurationSeconds() * predictedIdleRatio;
+    final double idleCost = proposedTaskCount * predictedIdleRatio;
     final double lagCost = config.getLagWeight() * lagRecoveryTime;
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
     final double cost = lagCost + weightedIdleCost;
@@ -106,14 +99,7 @@ public class WeightedCostFunction
   }
 
   /**
-   * Estimates the idle ratio for a proposed task count.
-   * Includes lag-based adjustment to eliminate high lag and
-   * reduce predicted idle when work exists.
-   * <p>
-   * Formulas:
-   * {@code linearPrediction = max(0, 1 - busyFraction / taskRatio)}
-   * {@code lagBusyFactor = 1 - exp(-lagPerTask / LAG_SCALE_FACTOR)}
-   * {@code adjustedPrediction = linearPrediction × (1 - lagBusyFactor)}
+   * Estimates the idle ratio for a proposed task count with linear prediction.
    *
    * @param metrics   current system metrics containing idle ratio and task count
    * @param taskCount target task count to estimate an idle ratio for
@@ -138,28 +124,8 @@ public class WeightedCostFunction
     final double taskRatio = (double) taskCount / currentTaskCount;
     final double linearPrediction = Math.max(0.0, Math.min(1.0, 1.0 - busyFraction / taskRatio));
 
-    // Lag-based adjustment: more work per task → less idle
-    final double lagPerTask = metrics.getAggregateLag() / taskCount;
-    double lagBusyFactor = 1.0 - Math.exp(-lagPerTask / CostBasedAutoScaler.AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD);
-    final int partitionCount = metrics.getPartitionCount();
-
-    if (partitionCount > 0) {
-      final double lagPerPartition = metrics.getAggregateLag() / partitionCount;
-      // Lag-amplified idle decay
-      if (lagPerPartition >= CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD) {
-        double ramp = Math.max(0.0,
-                               (lagPerPartition - CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD)
-                               / RAMP_DENOMINATOR
-        );
-        ramp = Math.min(1.0, ramp);
-
-        final double multiplier = 1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0);
-        lagBusyFactor = Math.min(1.0, lagBusyFactor * multiplier);
-      }
-    }
-
     // Clamp to valid range [0, 1]
-    return Math.max(0.0, linearPrediction * (1.0 - lagBusyFactor));
+    return Math.max(0.0, linearPrediction);
   }
 
 }
