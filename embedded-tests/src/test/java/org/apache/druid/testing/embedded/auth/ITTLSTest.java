@@ -409,6 +409,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         .setKeyStorePasswordProvider(passwordProvider)
         .setKeyManagerFactoryPasswordProvider(passwordProvider)
         .setCertificateChecker(certificateChecker)
+        .setValidateHostnames(false)
         .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(intermediateClientSSLContext);

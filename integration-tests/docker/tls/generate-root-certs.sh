@@ -15,14 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-rm -f root.key
-rm -f untrusted_root.key
-rm -f root.pem
-rm -f untrusted_root.pem
+rm -f scripts/root.key
+rm -f scripts/untrusted_root.key
+rm -f scripts/root.pem
+rm -f scripts/untrusted_root.pem
 
-openssl genrsa -out docker/tls/root.key 4096
-openssl genrsa -out docker/tls/untrusted_root.key 4096
+openssl genrsa -out scripts/root.key 4096
+openssl genrsa -out scripts/untrusted_root.key 4096
 
-openssl req -config docker/tls/root.cnf -key docker/tls/root.key -new -x509 -days 3650 -sha256 -extensions v3_ca -out docker/tls/root.pem
-openssl req -config docker/tls/root.cnf -key docker/tls/untrusted_root.key -new -x509 -days 3650 -sha256 -extensions v3_ca -out docker/tls/untrusted_root.pem
+openssl req -config scripts/root.cnf -key scripts/root.key -new -x509 -days 3650 -sha256 -extensions v3_ca -out scripts/root.pem
+openssl req -config scripts/root.cnf -key scripts/untrusted_root.key -new -x509 -days 3650 -sha256 -extensions v3_ca -out scripts/untrusted_root.pem
 

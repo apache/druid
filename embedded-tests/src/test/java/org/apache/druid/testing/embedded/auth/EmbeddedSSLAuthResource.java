@@ -109,7 +109,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
            .addCommonProperty("druid.server.https.trustStoreAlgorithm", "PKIX")
            .addCommonProperty("druid.server.https.trustStorePassword", "druid123")
            .addCommonProperty("druid.server.https.trustStorePath", truststore)
-           .addCommonProperty("druid.server.https.validateHostnames", "true")
+           .addCommonProperty("druid.server.https.validateHostnames", "false")
 
            .addCommonProperty("druid.client.https.protocol", "TLSv1.2")
            .addCommonProperty("druid.client.https.certAlias", "druid")
