@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -752,14 +753,20 @@ public class CompactionStatus
 
     private CompactionStatus transformSpecIsUpToDate(CompactionState lastCompactionState)
     {
-      if (compactionConfig.getTransformSpec() == null) {
+      final CompactionTransformSpec configuredSpec = compactionConfig.getTransformSpec();
+      if (configuredSpec == null
+          || (configuredSpec.getFilter() == null && configuredSpec.getVirtualColumns().isEmpty())) {
         return COMPLETE;
       }
 
+      final CompactionTransformSpec existingSpec = Configs.valueOrDefault(
+          lastCompactionState.getTransformSpec(),
+          new CompactionTransformSpec(null, null)
+      );
       return CompactionStatus.completeIfNullOrEqual(
           "transformSpec",
-          compactionConfig.getTransformSpec(),
-          lastCompactionState.getTransformSpec(),
+          configuredSpec,
+          existingSpec,
           String::valueOf
       );
     }
