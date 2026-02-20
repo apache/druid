@@ -35,4 +35,14 @@ public interface SupervisorTaskAutoScaler
   {
     return -1;
   }
+
+  /**
+   * Indicates whether the auto-scaler should adjust scaling during task rollover events.
+   * Task rollover typically occurs when tasks reach the end of their assigned duration,
+   * and scaling decisions during this period may help ensure smooth transitions.
+   */
+  default boolean shouldScaleDuringTaskRollover()
+  {
+    return false;
+  }
 }

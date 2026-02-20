@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit;
  * while keeping changes gradual (no large jumps).
  * <p>
  * Scale-up and scale-down are both evaluated proactively.
- * Future versions may perform scale-down on task rollover only.
+ * The is an option to perform scale-down on task rollover only.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
@@ -148,6 +148,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
+  @Override
+  public boolean shouldScaleDuringTaskRollover()
+  {
+    return config.isScaleDownOnTaskRolloverOnly();
+  }
+
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
@@ -189,10 +195,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Returns -1 (no scaling needed) in the following cases:
    * <ul>
    *   <li>Metrics are not available</li>
+   *   <li>Partition or task counts are invalid</li>
+   *   <li>No valid task counts remain after applying constraints</li>
    *   <li>Current task count already optimal</li>
    * </ul>
    *
-   * @return optimal task count for scale-up, or -1 if no scaling action needed
+   * @return optimal task count (scale up or down), or -1 if no scaling action needed
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -225,8 +233,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int optimalTaskCount = -1;
     CostResult optimalCost = new CostResult();
 
-    log.info(
-        "Current metrics: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+    log.debug(
+        "Current metrics of[%s]: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+        supervisorId,
         metrics.getAggregateLag(),
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
@@ -414,7 +423,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * averaged across all tasks.
    *
    * @param taskStats the stats map from supervisor.getStats()
-   * @return the average 15-minute processing rate across all tasks in records/second,
+   * @return the average processing rate across all tasks in records/second,
    * or -1 if no valid metrics are available
    */
   static double extractMovingAverage(Map<String, Map<String, Object>> taskStats)
