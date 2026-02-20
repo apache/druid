@@ -491,7 +491,13 @@ public class CompactionStatusTest
         VirtualColumns.create(vc)
     );
     CompactionState lastCompactionState = new CompactionState(
-        null, null, null, transformSpec, IndexSpec.getDefault(), null, null
+        null,
+        null,
+        null,
+        transformSpec,
+        IndexSpec.getDefault(),
+        null,
+        null
     );
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
@@ -518,9 +524,13 @@ public class CompactionStatusTest
     );
 
     CompactionState lastCompactionState = new CompactionState(
-        null, null, null,
+        null,
+        null,
+        null,
         new CompactionTransformSpec(filter, VirtualColumns.create(oldVc)),
-        IndexSpec.getDefault(), null, null
+        IndexSpec.getDefault(),
+        null,
+        null
     );
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
