@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -32,10 +31,11 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -55,20 +56,33 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
+  private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
+  @Nullable
+  private final ServiceEmitter emitter;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
   // Please see https://github.com/apache/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig
+  )
+  {
+    this(config, hadoopConfig, null);
+  }
+
   @Inject
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       @Hdfs Configuration hadoopConfig,
-      ObjectMapper jsonMapper
+      ServiceEmitter emitter
   )
   {
+    this.config = config;
     this.hadoopConfig = hadoopConfig;
+    this.emitter = emitter;
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
         () -> {
@@ -105,28 +119,34 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
     final String storageDir = this.getStorageDir(segment, false);
 
-
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
-    final String outIndexFilePathSuffix = StringUtils.format(
-        "%s/%s/%d_%sindex.zip",
+    final String outIndexFilePath = StringUtils.format(
+        "%s/%s/%d_%sindex%s",
         fullyQualifiedStorageDirectory.get(),
         storageDir,
         segment.getShardSpec().getPartitionNum(),
-        uniquePrefix
+        uniquePrefix,
+        config.getCompressionFormat().getSuffix()
     );
 
-    return pushToFilePathWithRetry(inDir, segment, outIndexFilePathSuffix);
+    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
   }
 
   @Override
   public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
-    String outIndexFilePath = StringUtils.format(
-        "%s/%s/%d_index.zip",
-        fullyQualifiedStorageDirectory.get(),
-        storageDirSuffix.replace(':', '_'),
-        segment.getShardSpec().getPartitionNum()
-    );
+    final String outIndexFilePath;
+    if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")) {
+      outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
+    } else {
+      outIndexFilePath = StringUtils.format(
+          "%s/%s/%d_index%s",
+          fullyQualifiedStorageDirectory.get(),
+          storageDirSuffix.replace(':', '_'),
+          segment.getShardSpec().getPartitionNum(),
+          config.getCompressionFormat().getSuffix()
+      );
+    }
 
     return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
   }
@@ -136,11 +156,17 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     // Retry any HDFS errors that occur, up to 5 times.
     try {
-      return RetryUtils.retry(
+      final long startTime = System.currentTimeMillis();
+
+      final DataSegment result = RetryUtils.retry(
           () -> pushToFilePath(inDir, segment, outIndexFilePath),
           exception -> exception instanceof Exception,
           5
       );
+
+      emitMetrics(result.getSize(), System.currentTimeMillis() - startTime);
+
+      return result;
     }
     catch (Exception e) {
       Throwables.throwIfInstanceOf(e, IOException.class);
@@ -149,21 +175,32 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
   }
 
+  private void emitMetrics(long size, long duration)
+  {
+    if (emitter == null) {
+      return;
+    }
+
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    metricBuilder.setDimension("format", config.getCompressionFormat());
+    emitter.emit(metricBuilder.setMetric("hdfs/push/size", size));
+    emitter.emit(metricBuilder.setMetric("hdfs/push/duration", duration));
+  }
+
   private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
   {
     log.debug(
-        "Copying segment[%s] to HDFS at location[%s/%s]",
+        "Copying segment[%s] to HDFS at location[%s]",
         segment.getId(),
-        fullyQualifiedStorageDirectory.get(),
         outIndexFilePath
     );
-
     Path tmpIndexFile = new Path(StringUtils.format(
-        "%s/%s/%s/%s_index.zip",
+        "%s/%s/%s/%s_index%s",
         fullyQualifiedStorageDirectory.get(),
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
-        segment.getShardSpec().getPartitionNum()
+        segment.getShardSpec().getPartitionNum(),
+        config.getCompressionFormat().getSuffix()
     ));
     FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
@@ -174,7 +211,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try {
       try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
-        size = CompressionUtils.zip(inDir, out);
+        size = config.getCompressionFormat().compressDirectory(inDir, out);
       }
       final Path outIndexFile = new Path(outIndexFilePath);
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
@@ -184,6 +221,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());
       copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
+    }
+    catch (IOException e) {
+      log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexFilePath);
+      throw e;
     }
     finally {
       try {

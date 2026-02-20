@@ -36,7 +36,6 @@ import org.apache.druid.indexer.Bucket;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.JobHelper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.GranularityModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,6 +45,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -97,7 +97,7 @@ public class HdfsDataSegmentPusherTest
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
-    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
+    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true));
   }
 
   @Test
@@ -126,7 +126,8 @@ public class HdfsDataSegmentPusherTest
   @Test
   public void testPushWithMultipleSegments() throws Exception
   {
-    testUsingSchemeForMultipleSegments("file", 3);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.ZIP);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.LZ4);
   }
 
   @Test
@@ -146,7 +147,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -187,7 +188,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -210,7 +211,7 @@ public class HdfsDataSegmentPusherTest
     );
   }
 
-  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
+  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments, CompressionUtils.Format format) throws Exception
   {
     Configuration conf = new Configuration(true);
     DataSegment[] segments = new DataSegment[numberOfSegments];
@@ -226,12 +227,14 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
     final File storageDirectory = tempFolder.newFolder();
 
+    config.setCompressionFormat(format);
     config.setStorageDirectory(
         scheme != null
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     for (int i = 0; i < numberOfSegments; i++) {
       segments[i] = new DataSegment(
@@ -251,10 +254,11 @@ public class HdfsDataSegmentPusherTest
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
       String indexUri = StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
           pusher.getStorageDir(segments[i], false),
-          segments[i].getShardSpec().getPartitionNum()
+          segments[i].getShardSpec().getPartitionNum(),
+          format.getExtension()
       );
 
       Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
@@ -269,10 +273,11 @@ public class HdfsDataSegmentPusherTest
       String segmentPath = pusher.getStorageDir(pushedSegment, false);
 
       File indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
       Assert.assertTrue(indexFile.exists());
 
@@ -280,10 +285,11 @@ public class HdfsDataSegmentPusherTest
       Assert.assertEquals(segments[i], pushedSegment);
 
       indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
       Assert.assertTrue(indexFile.exists());
 
@@ -320,7 +326,7 @@ public class HdfsDataSegmentPusherTest
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",

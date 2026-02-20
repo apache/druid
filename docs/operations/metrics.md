@@ -630,3 +630,14 @@ These metrics are available on operating systems with the cgroup kernel feature.
 |`cgroup/cpuset/effective_cpu_count`|Total number of active CPUs available to the process. Derived from `cpuset.effective_cpus`.||Varies|
 |`cgroup/cpuset/mems_count`|Total number of memory nodes available to the process. Derived from `cpuset.mems`.||Varies|
 |`cgroup/cpuset/effective_mems_count`|Total number of active memory nodes available to the process. Derived from `cpuset.effective_mems`.||Varies|
+
+## HDFS
+
+These metrics are available when the `druid-hdfs-storage` extension is used to push/pull segment files.
+
+| Metric               | Description                                                                   | Dimensions                                  | Normal value |
+|----------------------|-------------------------------------------------------------------------------|---------------------------------------------|--------------|
+| `hdfs/pull/size`     | Total bytes of decompressed segment files pulled from HDFS.                   | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/pull/duration` | Time in milliseconds spent decompressing and pulling segment files from HDFS. | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/push/size`     | Total bytes compressed segment files pushed to HDFS.                          | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/push/duration` | Time in milliseconds spent compressing and pushing segment files to HDFS.     | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
