@@ -129,7 +129,7 @@
         <zookeeper.version>3.8.4</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
-        <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
+        <com.google.http.client.apis.version>1.44.2</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
