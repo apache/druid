@@ -52,16 +52,11 @@ import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
-import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.net.URL;
-import java.nio.channels.ClosedChannelException;
 
 public class ITTLSTest extends EmbeddedClusterTestBase
 {
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
-
-  private static final int MAX_CONNECTION_EXCEPTION_RETRIES = 30;
 
   private DruidHttpClientConfig httpClientConfig;
   private TLSCertificateChecker certificateChecker;
@@ -116,13 +111,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         new BasicCredentials("admin", "priest"),
         overlord.bindings().globalHttpClient()
     );
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(coordinator) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(overlord) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(broker) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(historical) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(router) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(permissiveAnyCertRouter) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerUrl(noClientAuthRouter) + "/status", null);
+    makeRequest(adminClient, getServerUrl(coordinator) + "/status");
+    makeRequest(adminClient, getServerUrl(overlord) + "/status");
+    makeRequest(adminClient, getServerUrl(broker) + "/status");
+    makeRequest(adminClient, getServerUrl(historical) + "/status");
+    makeRequest(adminClient, getServerUrl(router) + "/status");
+    makeRequest(adminClient, getServerUrl(permissiveAnyCertRouter) + "/status");
+    makeRequest(adminClient, getServerUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -132,13 +127,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/client.jks",
         "druid"
     );
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(coordinator) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(overlord) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(historical) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(router) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter) + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    makeRequest(adminClient, getServerTlsUrl(coordinator) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(overlord) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(broker) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(historical) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(router) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
+    makeRequest(adminClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -148,27 +143,27 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/intermediate_ca_client.jks",
         "intermediate_ca_client"
     );
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(coordinator) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(overlord) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(historical) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(router) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter) + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    makeRequest(intermediateCertClient, getServerTlsUrl(coordinator) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(overlord) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(broker) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(historical) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(router) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
+    makeRequest(intermediateCertClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
   public void checkAccessWithNoCert()
   {
     HttpClient certlessClient = makeCertlessClient();
-    makeRequest(certlessClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    makeRequest(certlessClient, getServerTlsUrl(noClientAuthRouter) + "/status");
 
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(router));
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(coordinator));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(overlord));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(broker));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(historical));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(router));
+    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(permissiveAnyCertRouter));
   }
 
   @Test
@@ -178,13 +173,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/invalid_hostname_client.jks",
         "invalid_hostname_client"
     );
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(router));
-    makeRequest(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter) + "/status", null);
-    makeRequest(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(coordinator));
+    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(overlord));
+    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(broker));
+    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(historical));
+    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(router));
+    makeRequest(wrongHostnameClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
+    makeRequest(wrongHostnameClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -194,13 +189,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/client_another_root.jks",
         "druid_another_root"
     );
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(router));
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(wrongRootClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(coordinator));
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(overlord));
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(broker));
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(historical));
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(router));
+    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(permissiveAnyCertRouter));
+    makeRequest(wrongRootClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -210,13 +205,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/revoked_client.jks",
         "revoked_druid"
     );
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, getServerTlsUrl(router));
-    makeRequest(revokedClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter) + "/status", null);
-    makeRequest(revokedClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(coordinator));
+    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(overlord));
+    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(broker));
+    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(historical));
+    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(router));
+    makeRequest(revokedClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
+    makeRequest(revokedClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -226,13 +221,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/expired_client.jks",
         "expired_client"
     );
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(router));
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(expiredClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(coordinator));
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(overlord));
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(broker));
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(historical));
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(router));
+    checkFailedAccessExpired(expiredClient, getServerTlsUrl(permissiveAnyCertRouter));
+    makeRequest(expiredClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -242,13 +237,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/invalid_ca_client.jks",
         "invalid_ca_client"
     );
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(coordinator));
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(overlord));
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(broker));
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(historical));
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(router));
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(notCAClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(coordinator));
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(overlord));
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(broker));
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(historical));
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(router));
+    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(permissiveAnyCertRouter));
+    makeRequest(notCAClient, getServerTlsUrl(noClientAuthRouter) + "/status");
   }
 
   @Test
@@ -269,90 +264,76 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         wrongHostnameClient,
         HttpMethod.POST,
         getServerTlsUrl(router) + "/druid/v2",
-        "Custom cert check",
         ISE.class,
-        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input",
-        true
+        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input"
     );
 
-    makeRequest(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(router) + "/druid/coordinator/v1/leader", null);
+    makeRequest(wrongHostnameClient, getServerTlsUrl(router) + "/druid/coordinator/v1/leader");
   }
 
-  private void checkFailedAccessNoCert(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessNoCert(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Certless",
         SSLException.class,
-        "Received fatal alert: bad_certificate",
-        false
+        "Received fatal alert: bad_certificate"
     );
   }
 
-  private void checkFailedAccessWrongHostname(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessWrongHostname(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Wrong hostname",
         SSLException.class,
-        "Received fatal alert: certificate_unknown",
-        false
+        "Received fatal alert: certificate_unknown"
     );
   }
 
-  private void checkFailedAccessWrongRoot(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessWrongRoot(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Wrong root cert",
         SSLException.class,
-        "Received fatal alert: certificate_unknown",
-        false
+        "Received fatal alert: certificate_unknown"
     );
   }
 
-  private void checkFailedAccessRevoked(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessRevoked(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Revoked cert",
         SSLException.class,
-        "Received fatal alert: certificate_unknown",
-        false
+        "Received fatal alert: certificate_unknown"
     );
   }
 
-  private void checkFailedAccessExpired(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessExpired(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Expired cert",
         SSLException.class,
-        "Received fatal alert: certificate_unknown",
-        false
+        "Received fatal alert: certificate_unknown"
     );
   }
 
-  private void checkFailedAccessNotCA(HttpClient httpClient, HttpMethod method, String url)
+  private void checkFailedAccessNotCA(HttpClient httpClient, String url)
   {
     checkFailedAccess(
         httpClient,
-        method,
+        HttpMethod.GET,
         url + "/status",
-        "Cert signed by non-CA",
         SSLException.class,
-        "Received fatal alert: certificate_unknown",
-        false
+        "Received fatal alert: certificate_unknown"
     );
   }
 
@@ -385,7 +366,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     final DefaultPasswordProvider passwordProvider = new DefaultPasswordProvider("druid123");
     SSLContext intermediateClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
         .setProtocol("TLSv1.2")
-        //.setTrustStoreType(sslClientConfig.getTrustStoreType())
         .setTrustStorePath(sslAuthResource.getTlsFilePath("client_tls/truststore.jks"))
         .setTrustStoreAlgorithm("PKIX")
         .setTrustStorePasswordProvider(passwordProvider)
@@ -399,24 +379,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(intermediateClientSSLContext);
 
-    final Lifecycle lifecycle = new Lifecycle();
-
     HttpClient client = HttpClientInit.createClient(
         builder.build(),
-        lifecycle
+        new Lifecycle()
     );
-    try {
-      lifecycle.start();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
 
-    HttpClient adminClient = new CredentialedHttpClient(
+    return new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
         client
     );
-    return adminClient;
   }
 
   private HttpClient makeCertlessClient()
@@ -432,143 +403,75 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(certlessClientSSLContext);
 
-    final Lifecycle lifecycle = new Lifecycle();
-
     HttpClient client = HttpClientInit.createClient(
         builder.build(),
-        lifecycle
+        new Lifecycle()
     );
-    try {
-      lifecycle.start();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
 
-    HttpClient adminClient = new CredentialedHttpClient(
+    return new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
         client
     );
-    return adminClient;
   }
 
   private void checkFailedAccess(
       HttpClient httpClient,
       HttpMethod method,
       String url,
-      String clientDesc,
       Class<?> expectedException,
-      String expectedExceptionMsg,
-      boolean useContainsMsgCheck
+      String expectedExceptionMsg
   )
   {
-    int retries = 0;
-    while (true) {
-      try {
-        makeRequest(httpClient, method, url, null, -1);
-      }
-      catch (RuntimeException re) {
-        Throwable rootCause = Throwables.getRootCause(re);
-
-        if (isRetriable(rootCause)) {
-          if (retries > MAX_CONNECTION_EXCEPTION_RETRIES) {
-            Assertions.fail(StringUtils.format(
-                "Broken pipe / connection reset retries exhausted, test failed, did not get %s.",
-                expectedException
-            ));
-          } else {
-            retries += 1;
-            continue;
-          }
-        }
-
-        Assertions.assertTrue(
-            expectedException.isInstance(rootCause),
-            StringUtils.format("Expected %s but found %s instead.", expectedException, Throwables.getStackTraceAsString(rootCause))
-        );
-
-        if (useContainsMsgCheck) {
-          Assertions.assertTrue(rootCause.getMessage().contains(expectedExceptionMsg));
-        } else {
-          Assertions.assertEquals(
-              rootCause.getMessage(),
-              expectedExceptionMsg
-          );
-        }
-
-        return;
-      }
+    try {
+      makeRequest(httpClient, method, url);
       Assertions.fail(StringUtils.format("Test failed, did not get %s.", expectedException));
+    }
+    catch (RuntimeException re) {
+      Throwable rootCause = Throwables.getRootCause(re);
+
+      Assertions.assertTrue(
+          expectedException.isInstance(rootCause),
+          StringUtils.format(
+              "Expected %s but found %s instead.",
+              expectedException,
+              Throwables.getStackTraceAsString(rootCause)
+          )
+      );
+
+      Assertions.assertTrue(rootCause.getMessage().contains(expectedExceptionMsg));
     }
   }
 
-  private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
+  private void makeRequest(HttpClient httpClient, String url)
   {
-    return makeRequest(httpClient, method, url, content, 4);
+    makeRequest(httpClient, HttpMethod.GET, url);
   }
 
-  private StatusResponseHolder makeRequest(
+  private void makeRequest(
       HttpClient httpClient,
       HttpMethod method,
-      String url,
-      byte[] content,
-      int maxRetries
+      String url
   )
   {
     try {
       Request request = new Request(method, new URL(url));
-      if (content != null) {
-        request.setContent(MediaType.APPLICATION_JSON, content);
+      StatusResponseHolder response = httpClient.go(
+          request,
+          StatusResponseHandler.getInstance()
+      ).get();
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        String errMsg = StringUtils.format(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+        throw new ISE(errMsg);
       }
-      int retryCount = 0;
-
-      StatusResponseHolder response;
-
-      while (true) {
-        response = httpClient.go(
-            request,
-            StatusResponseHandler.getInstance()
-        ).get();
-
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-          String errMsg = StringUtils.format(
-              "Error while making request to url[%s] status[%s] content[%s]",
-              url,
-              response.getStatus(),
-              response.getContent()
-          );
-          if (retryCount > maxRetries) {
-            throw new ISE(errMsg);
-          } else {
-            // LOG.error(errMsg);
-            // LOG.error("retrying in 3000ms, retryCount: " + retryCount);
-            retryCount++;
-            Thread.sleep(3000);
-          }
-        } else {
-          // LOG.info("[%s] request to [%s] succeeded.", method, url);
-          break;
-        }
-      }
-      return response;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private boolean isRetriable(Throwable ex)
-  {
-    if (!(ex instanceof IOException)) {
-      return false;
-    }
-
-    if (ex instanceof ClosedChannelException) {
-      return true;
-    }
-
-    return null != ex.getMessage()
-        && ("Broken pipe".equals(ex.getMessage())
-            || "Connection reset by peer".contains(ex.getMessage()));
   }
 }
