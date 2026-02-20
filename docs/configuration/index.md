@@ -1637,7 +1637,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the historical.|0|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
-|`druid.processing.parallelPoolInit`|Allows all merge/processing pools to be allocated in parallel on process launch. This significantly speeds up task launch times.|`false`|
+|`druid.processing.parallelPoolInit`|Allows all merge/processing pools to be allocated in parallel on process launch. This significantly speeds up node launch times.|`false`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
