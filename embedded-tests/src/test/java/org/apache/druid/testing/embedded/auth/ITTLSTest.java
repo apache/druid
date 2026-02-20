@@ -24,7 +24,6 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
@@ -60,8 +59,6 @@ import java.nio.channels.ClosedChannelException;
 
 public class ITTLSTest extends EmbeddedClusterTestBase
 {
-  private static final Logger LOG = new Logger(ITTLSTest.class);
-
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
 
   private static final int MAX_CONNECTION_EXCEPTION_RETRIES = 30;
@@ -115,7 +112,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void testPlaintextAccess()
   {
-    LOG.info("---------Testing resource access without TLS---------");
     HttpClient adminClient = new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
         overlord.bindings().globalHttpClient()
@@ -132,7 +128,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void testTLSNodeAccess()
   {
-    LOG.info("---------Testing resource access with TLS enabled---------");
     HttpClient adminClient = makeCustomHttpClient(
         "client_tls/client.jks",
         "druid"
@@ -149,7 +144,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void testTLSNodeAccessWithIntermediate()
   {
-    LOG.info("---------Testing TLS resource access with 3-part cert chain---------");
     HttpClient intermediateCertClient = makeCustomHttpClient(
         "client_tls/intermediate_ca_client.jks",
         "intermediate_ca_client"
@@ -166,7 +160,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithNoCert()
   {
-    LOG.info("---------Testing TLS resource access without a certificate---------");
     HttpClient certlessClient = makeCertlessClient();
     makeRequest(certlessClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
 
@@ -181,7 +174,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithWrongHostname()
   {
-    LOG.info("---------Testing TLS resource access when client certificate has non-matching hostnames---------");
     HttpClient wrongHostnameClient = makeCustomHttpClient(
         "client_tls/invalid_hostname_client.jks",
         "invalid_hostname_client"
@@ -198,7 +190,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithWrongRoot()
   {
-    LOG.info("---------Testing TLS resource access when client certificate is signed by a non-trusted root CA---------");
     HttpClient wrongRootClient = makeCustomHttpClient(
         "client_tls/client_another_root.jks",
         "druid_another_root"
@@ -215,7 +206,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithRevokedCert()
   {
-    LOG.info("---------Testing TLS resource access when client certificate has been revoked---------");
     HttpClient revokedClient = makeCustomHttpClient(
         "client_tls/revoked_client.jks",
         "revoked_druid"
@@ -232,7 +222,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithExpiredCert()
   {
-    LOG.info("---------Testing TLS resource access when client certificate has expired---------");
     HttpClient expiredClient = makeCustomHttpClient(
         "client_tls/expired_client.jks",
         "expired_client"
@@ -249,8 +238,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Test
   public void checkAccessWithNotCASignedCert()
   {
-    LOG.info(
-        "---------Testing TLS resource access when client certificate is signed by a non-CA intermediate cert---------");
     HttpClient notCAClient = makeCustomHttpClient(
         "client_tls/invalid_ca_client.jks",
         "invalid_ca_client"
@@ -268,7 +255,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @Disabled("Add custom ITTLSCertificateChecker to enable this test")
   public void checkAccessWithCustomCertificateChecks()
   {
-    LOG.info("---------Testing TLS resource access with custom certificate checks---------");
     HttpClient wrongHostnameClient = makeCustomHttpClient(
         "client_tls/invalid_hostname_client.jks",
         "invalid_hostname_client",
@@ -409,7 +395,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         .setKeyStorePasswordProvider(passwordProvider)
         .setKeyManagerFactoryPasswordProvider(passwordProvider)
         .setCertificateChecker(certificateChecker)
-        .setValidateHostnames(false)
         .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(intermediateClientSSLContext);
@@ -511,7 +496,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
           );
         }
 
-        LOG.info("%s client [%s] request failed as expected when accessing [%s]", clientDesc, method, url);
         return;
       }
       Assertions.fail(StringUtils.format("Test failed, did not get %s.", expectedException));
@@ -556,13 +540,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
           if (retryCount > maxRetries) {
             throw new ISE(errMsg);
           } else {
-            LOG.error(errMsg);
-            LOG.error("retrying in 3000ms, retryCount: " + retryCount);
+            // LOG.error(errMsg);
+            // LOG.error("retrying in 3000ms, retryCount: " + retryCount);
             retryCount++;
             Thread.sleep(3000);
           }
         } else {
-          LOG.info("[%s] request to [%s] succeeded.", method, url);
+          // LOG.info("[%s] request to [%s] succeeded.", method, url);
           break;
         }
       }

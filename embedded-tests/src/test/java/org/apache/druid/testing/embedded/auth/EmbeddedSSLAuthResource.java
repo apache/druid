@@ -109,14 +109,13 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
            .addCommonProperty("druid.server.https.trustStoreAlgorithm", "PKIX")
            .addCommonProperty("druid.server.https.trustStorePassword", "druid123")
            .addCommonProperty("druid.server.https.trustStorePath", truststore)
-           .addCommonProperty("druid.server.https.validateHostnames", "false")
+           .addCommonProperty("druid.server.https.validateHostnames", "true")
 
            .addCommonProperty("druid.client.https.protocol", "TLSv1.2")
            .addCommonProperty("druid.client.https.certAlias", "druid")
            .addCommonProperty("druid.client.https.keyManagerPassword", "druid123")
            .addCommonProperty("druid.client.https.keyStorePassword", "druid123")
            .addCommonProperty("druid.client.https.keyStorePath", keystore)
-           //.addCommonProperty("druid.client.https.keyStoreType", "PKCS12")
            .addCommonProperty("druid.client.https.trustStoreAlgorithm", "PKIX")
            .addCommonProperty("druid.client.https.trustStorePassword", "druid123")
            .addCommonProperty("druid.client.https.trustStorePath", truststore);
