@@ -582,12 +582,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     if (ex instanceof ClosedChannelException) {
       return true;
     }
-//    if (ex instanceof ChannelException) {
-//      return "Channel disconnected".equals(ex.getMessage());
-//    }
-//    if (!(ex instanceof IOException)) {
-//      return false;
-//    }
 
     return null != ex.getMessage()
         && ("Broken pipe".equals(ex.getMessage())

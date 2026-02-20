@@ -41,19 +41,3 @@ jobs:
               - 'extension-core/(mysql-metadata-storage|druid-basic-security|simple-client-sslcontext|druid-testing-tools|druid-lookups-cached-global|druid-histogram|druid-datasketches|druid-parquet-extensions|druid-avro-extensions|druid-protobuf-extensions|druid-orc-extensions|druid-kafka-indexing-service|druid-s3-extensions)/**'
             core:
               - '!extension*/**'
-
-  integration-query-tests-middleManager:
-    needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [security]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      use_indexer: middleManager
-      override_config_path: ./environment-configs/test-groups/prepopulated-data
-      group: ${{ matrix.testing_group }}
