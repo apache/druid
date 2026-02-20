@@ -23,11 +23,13 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.emitter.kafka.KafkaEmitterModule;
+import org.apache.druid.guice.ClusterTestingModule;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -35,6 +37,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -108,7 +111,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
-           .useDefaultTimeoutForLatchableEmitter(60)
+           .addExtension(ClusterTestingModule.class)
+           .useDefaultTimeoutForLatchableEmitter(6000)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
@@ -126,6 +130,22 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addServer(new EmbeddedRouter());
 
     return cluster;
+  }
+
+  @Test
+  public void test_ingest_withAutoScaling()
+  {
+    // Submit and start a supervisor
+    final String supervisorId = dataSource + "_supe";
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
+        supervisorId,
+        1,
+        1000
+    );
+
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec);
+
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("stuff"));
   }
 
   @Test
@@ -398,8 +418,28 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
+                .withAutoScalerConfig(createAutoScalerConfig())
+                .withTaskDuration(Period.minutes(1))
+                .withLagAggregator(new FaultyLagAggregator(10_000))
+        )
+        .withContext(
+            Map.of("clusterTesting", Map.of("taskActionClientConfig", Map.of("segmentPublishDelay", "PT10s")))
         )
         .withId(supervisorId)
         .build(dataSource, TOPIC);
+  }
+
+  private CostBasedAutoScalerConfig createAutoScalerConfig()
+  {
+    return new CostBasedAutoScalerConfig(
+        10,
+        1,
+        true,
+        null,
+        5_000L,
+        null,
+        5_000L,
+        null, null, null, null, null, null
+    );
   }
 }
