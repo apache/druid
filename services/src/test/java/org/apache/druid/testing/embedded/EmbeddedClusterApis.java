@@ -211,7 +211,12 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
-    waitForTaskToSucceed(taskId, overlord.latchableEmitter());
+    TaskStatus taskStatus = waitForTaskToFinish(taskId, overlord.latchableEmitter());
+    Assertions.assertEquals(
+        TaskState.SUCCESS,
+        taskStatus.getStatusCode(),
+        StringUtils.format("Task[%s] failed with error[%s]", taskId, taskStatus.getErrorMsg())
+    );
   }
 
   /**
@@ -221,11 +226,9 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void waitForTaskToSucceed(String taskId, LatchableEmitter emitter)
   {
-    final TaskStatus taskStatus = waitForTaskToFinish(taskId, emitter);
     Assertions.assertEquals(
         TaskState.SUCCESS,
-        taskStatus.getStatusCode(),
-        StringUtils.format("Task[%s] failed with error[%s]", taskId, taskStatus.getErrorMsg())
+        waitForTaskToFinish(taskId, emitter).getStatusCode()
     );
   }
 

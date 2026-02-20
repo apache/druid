@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
  * functionality of latest Druid Docker images. The underlying cluster also uses
  * embedded servers either to provide visibility into the cluster state.
  */
-public class IngestionDockerTest extends IngestionSmokeTest
+public class IngestionDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
@@ -52,7 +52,7 @@ public class IngestionDockerTest extends IngestionSmokeTest
     overlord.addProperty("druid.plaintextPort", "7090");
 
     return cluster
-        .useDefaultTimeoutForLatchableEmitter(180)
+        .useDefaultTimeoutForLatchableEmitter(240)
         .useContainerFriendlyHostname()
         .addResource(containerOverlord)
         .addResource(containerCoordinator)

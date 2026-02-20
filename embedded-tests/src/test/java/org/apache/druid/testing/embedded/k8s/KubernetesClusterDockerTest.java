@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.k8s;
 
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.docker.LatestImageDockerTest;
 import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
  * Runs some basic ingestion tests against latest image Druid containers running
  * on a K3s cluster.
  */
-public class KubernetesClusterDockerTest extends IngestionSmokeTest
+public class KubernetesClusterDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
@@ -60,8 +61,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest
         .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
-            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"postgresql-metadata-storage\"]"
         );
   }
 

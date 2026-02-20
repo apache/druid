@@ -35,10 +35,8 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -64,8 +62,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -275,17 +271,6 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
 
     final EmbeddedMSQApis msqApis = new EmbeddedMSQApis(cluster, overlord);
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql, dataSource);
-
-    final ServiceMetricEvent failedTaskEvent = eventCollector.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasDimension(DruidMetrics.TASK_TYPE, "query_worker")
-                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
-    );
-    // Write out the logs of the task to a file
-    final String taskId = (String) failedTaskEvent.getUserDims().get(DruidMetrics.TASK_ID);
-    downloadTaskLogForDebugging(taskId);
-
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), eventCollector.latchableEmitter());
 
     waitForSegmentsToBeQueryable(1);
@@ -310,18 +295,6 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
-
-    // Check if the task is failing
-    final ServiceMetricEvent failedTaskEvent = eventCollector.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/run/time")
-                      .hasService("druid/overlord")
-                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
-
-    // Write out the logs of the task to a file
-    final String taskId = (String) failedTaskEvent.getUserDims().get(DruidMetrics.TASK_ID);
-    downloadTaskLogForDebugging(taskId);
 
     waitForSegmentsToBeQueryable(1);
 
@@ -384,30 +357,6 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
     Assertions.assertFalse(logs.isEmpty());
     Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
-  }
-
-  private void downloadTaskLogForDebugging(String taskId)
-  {
-    final File logDirectory = new File("tasklogs");
-    final File logFile = new File(logDirectory, taskId);
-    System.out.println("Log file path is: " + logFile.getAbsolutePath());
-    try (FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
-      final Optional<InputStream> streamOptional =
-          cluster.callApi().waitForResult(
-              () -> overlord.bindings()
-                            .getInstance(TaskLogStreamer.class)
-                            .streamTaskLog(taskId, 0),
-              Optional::isPresent
-          ).go();
-
-      if (streamOptional.isPresent()) {
-        FileUtils.mkdirp(logDirectory);
-        IOUtils.copy(streamOptional.get(), fileOutputStream);
-      }
-    }
-    catch (Exception e) {
-      // Ignore
-    }
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
