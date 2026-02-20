@@ -854,7 +854,8 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
 |`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
 
 - A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
-- If any criterion is omitted or empty, it matches everything (e.g., omitting `queryTypes` matches all query types)
+- If any criterion is omitted, empty or null, it matches everything (e.g., omitting `queryTypes` or setting it to null matches all query types)
+- For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
 - At least one criterion must be specified per rule to prevent accidentally blocking all queries
 - A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
 
@@ -870,6 +871,7 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
     },
     {
       "ruleName": "block-debug-queries",
+      "queryTypes": null,
       "contextMatches": {
         "debug": "true"
       }
@@ -888,7 +890,7 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
 
 In this example:
 - The first rule blocks all `scan` queries against `large_table` or `huge_dataset` datasources
-- The second rule blocks any query with context parameter `debug=true` (regardless of datasource or query type)
+- The second rule blocks any query with context parameter `debug=true` regardless of datasource (omitted) or query type (explicitly `null`)
 - The third rule blocks only `scan` queries against `sensitive_data` datasource when submitted by `blocked_user`
 
 **Error response:**

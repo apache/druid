@@ -131,7 +131,8 @@ public class QueryBlocklistRule
     if (hasContextCriteria) {
       for (Map.Entry<String, String> entry : contextMatches.entrySet()) {
         Object contextValue = query.getContext().get(entry.getKey());
-        if (!entry.getValue().equals(String.valueOf(contextValue))) {
+        // If the query context doesn't have this key or has a null value, it doesn't match
+        if (contextValue == null || !entry.getValue().equals(String.valueOf(contextValue))) {
           return false;
         }
       }
