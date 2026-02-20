@@ -20,6 +20,7 @@
 package org.apache.druid.server.compaction;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -189,10 +190,10 @@ public class ReindexingDeletionRuleTest
   }
 
   @Test
-  public void test_constructor_nullDeleteWhere_throwsNullPointerException()
+  public void test_constructor_nullDeleteWhere_throwsDruidException()
   {
     Assertions.assertThrows(
-        NullPointerException.class,
+        DruidException.class,
         () -> new ReindexingDeletionRule("test-id", "description", PERIOD_30_DAYS, null, null)
     );
   }

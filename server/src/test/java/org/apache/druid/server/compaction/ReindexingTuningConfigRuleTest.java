@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -160,10 +161,10 @@ public class ReindexingTuningConfigRuleTest
   }
 
   @Test
-  public void test_constructor_nullTuningConfig_throwsNullPointerException()
+  public void test_constructor_nullTuningConfig_throwsDruidException()
   {
     Assertions.assertThrows(
-        NullPointerException.class,
+        DruidException.class,
         () -> new ReindexingTuningConfigRule("test-id", "description", PERIOD_21_DAYS, null)
     );
   }

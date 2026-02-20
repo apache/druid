@@ -20,6 +20,7 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -347,5 +348,23 @@ public class ReindexingDataSchemaRuleTest
     );
     Assertions.assertNotNull(rule.getMetricsSpec());
     Assertions.assertEquals(0, rule.getMetricsSpec().length);
+  }
+
+  @Test
+  public void test_constructor_allNull_throwsDruidException()
+  {
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new ReindexingDataSchemaRule(
+            "test-id",
+            "description",
+            PERIOD_14_DAYS,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
   }
 }

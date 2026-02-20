@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Period;
@@ -67,7 +68,8 @@ public class ReindexingTuningConfigRule extends AbstractReindexingRule
   )
   {
     super(id, description, olderThan);
-    this.tuningConfig = Objects.requireNonNull(tuningConfig, "tuningConfig cannot be null");
+    InvalidInput.conditionalException(tuningConfig != null, "'tuningConfig' cannot be null");
+    this.tuningConfig = tuningConfig;
   }
 
   @JsonProperty

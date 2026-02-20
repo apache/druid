@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Period;
@@ -97,7 +98,8 @@ public class ReindexingDeletionRule extends AbstractReindexingRule
   )
   {
     super(id, description, olderThan);
-    this.deleteWhere = Objects.requireNonNull(deleteWhere, "deleteWhere cannot be null");
+    InvalidInput.conditionalException(deleteWhere != null, "'deleteWhere' cannot be null");
+    this.deleteWhere = deleteWhere;
     this.virtualColumns = virtualColumns;
   }
 

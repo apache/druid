@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -68,6 +69,10 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
   )
   {
     super(id, description, olderThan);
+    InvalidInput.conditionalException(
+        (dimensionsSpec != null || metricsSpec != null || queryGranularity != null || rollup != null || projections != null),
+        "At least oe of 'dimensionsSpec', 'metricsSpec', 'queryGranularity', 'rollup' or 'projections' must be non-null"
+    );
     this.dimensionsSpec = dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.queryGranularity = queryGranularity;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
@@ -161,10 +162,10 @@ public class ReindexingIOConfigRuleTest
   }
 
   @Test
-  public void test_constructor_nullIOConfig_throwsNullPointerException()
+  public void test_constructor_nullIOConfig_throwsDruidException()
   {
     Assertions.assertThrows(
-        NullPointerException.class,
+        DruidException.class,
         () -> new ReindexingIOConfigRule("test-id", "description", PERIOD_60_DAYS, null)
     );
   }

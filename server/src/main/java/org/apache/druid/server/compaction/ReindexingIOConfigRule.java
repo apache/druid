@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.joda.time.Period;
 
@@ -58,7 +59,8 @@ public class ReindexingIOConfigRule extends AbstractReindexingRule
   )
   {
     super(id, description, olderThan);
-    this.ioConfig = Objects.requireNonNull(ioConfig, "ioConfig cannot be null");
+    InvalidInput.conditionalException(ioConfig != null, "'ioConfig' cannot be null");
+    this.ioConfig = ioConfig;
   }
 
   @JsonProperty
