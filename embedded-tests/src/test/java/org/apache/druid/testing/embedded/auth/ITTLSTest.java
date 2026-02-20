@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -49,6 +48,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
@@ -168,13 +168,14 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   {
     LOG.info("---------Testing TLS resource access without a certificate---------");
     HttpClient certlessClient = makeCertlessClient();
+    makeRequest(certlessClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
+
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(coordinator));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(overlord));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(broker));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(historical));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(router));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(certlessClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
   }
 
   @Test
@@ -263,32 +264,33 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     makeRequest(notCAClient, HttpMethod.GET, getServerTlsUrl(noClientAuthRouter) + "/status", null);
   }
 
-//  @Test
-//  public void checkAccessWithCustomCertificateChecks()
-//  {
-//    LOG.info("---------Testing TLS resource access with custom certificate checks---------");
-//    HttpClient wrongHostnameClient = makeCustomHttpClient(
-//        "client_tls/invalid_hostname_client.jks",
-//        "invalid_hostname_client",
-//        new ITTLSCertificateChecker()
-//    );
-//
-//    checkFailedAccessWrongHostname(httpClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl());
-//
-//    makeRequest(wrongHostnameClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl() + "/status", null);
-//
-//    checkFailedAccess(
-//        wrongHostnameClient,
-//        HttpMethod.POST,
-//        config.getCustomCertCheckRouterTLSUrl() + "/druid/v2",
-//        "Custom cert check",
-//        ISE.class,
-//        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input",
-//        true
-//    );
-//
-//    makeRequest(wrongHostnameClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl() + "/druid/coordinator/v1/leader", null);
-//  }
+  @Test
+  @Disabled("Add custom ITTLSCertificateChecker to enable this test")
+  public void checkAccessWithCustomCertificateChecks()
+  {
+    LOG.info("---------Testing TLS resource access with custom certificate checks---------");
+    HttpClient wrongHostnameClient = makeCustomHttpClient(
+        "client_tls/invalid_hostname_client.jks",
+        "invalid_hostname_client",
+        null // new ITTLSCertificateChecker()
+    );
+
+    // checkFailedAccessWrongHostname(httpClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl());
+
+    // makeRequest(wrongHostnameClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl() + "/status", null);
+
+    checkFailedAccess(
+        wrongHostnameClient,
+        HttpMethod.POST,
+        getServerTlsUrl(router) + "/druid/v2",
+        "Custom cert check",
+        ISE.class,
+        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input",
+        true
+    );
+
+    makeRequest(wrongHostnameClient, HttpMethod.GET, getServerTlsUrl(router) + "/druid/coordinator/v1/leader", null);
+  }
 
   private void checkFailedAccessNoCert(HttpClient httpClient, HttpMethod method, String url)
   {
@@ -396,14 +398,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   {
     final DefaultPasswordProvider passwordProvider = new DefaultPasswordProvider("druid123");
     SSLContext intermediateClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
-        //.setProtocol(sslClientConfig.getProtocol())
+        .setProtocol("TLSv1.2")
         //.setTrustStoreType(sslClientConfig.getTrustStoreType())
         .setTrustStorePath(sslAuthResource.getTlsFilePath("client_tls/truststore.jks"))
-        //.setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStoreAlgorithm("PKIX")
         .setTrustStorePasswordProvider(passwordProvider)
-        //.setKeyStoreType(sslClientConfig.getKeyStoreType())
+        .setKeyStoreType("PKCS12")
         .setKeyStorePath(sslAuthResource.getTlsFilePath(keystorePath))
-        //.setKeyStoreAlgorithm(sslClientConfig.getKeyManagerFactoryAlgorithm())
         .setCertAlias(certAlias)
         .setKeyStorePasswordProvider(passwordProvider)
         .setKeyManagerFactoryPasswordProvider(passwordProvider)
@@ -435,12 +436,12 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   private HttpClient makeCertlessClient()
   {
     SSLContext certlessClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
-        //.setProtocol(sslClientConfig.getProtocol())
-        //.setTrustStoreType(sslClientConfig.getTrustStoreType())
+        .setProtocol("TLSv1.2")
+        .setTrustStoreType("JKS")
         .setTrustStorePath(sslAuthResource.getTlsFilePath("client_tls/truststore.jks"))
-        //.setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStoreAlgorithm("PKIX")
         .setTrustStorePasswordProvider(new DefaultPasswordProvider("druid123"))
-        //.setCertificateChecker(certificateChecker)
+        .setCertificateChecker(certificateChecker)
         .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(certlessClientSSLContext);

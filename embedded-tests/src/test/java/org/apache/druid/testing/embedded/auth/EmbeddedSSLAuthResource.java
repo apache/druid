@@ -47,9 +47,9 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
   @Override
   public void start() throws Exception
   {
-    final File tlsDir = cluster.getTestFolder().getOrCreateFolder("tls");
-    final File tlsScripts = new File(tlsDir, "scripts");
+    final File tlsDir = getTlsTempDirectory();
 
+    final File tlsScripts = new File(tlsDir, "scripts");
     copyScriptsToDirectory(tlsScripts);
 
     // Generate client certificates and keystores
@@ -134,7 +134,11 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
    */
   public String getTlsFilePath(String filename)
   {
-    final File tlsDir = cluster.getTestFolder().getOrCreateFolder("tls");
-    return new File(tlsDir, filename).getAbsolutePath();
+    return new File(getTlsTempDirectory(), filename).getAbsolutePath();
+  }
+
+  private File getTlsTempDirectory()
+  {
+    return cluster.getTestFolder().getOrCreateFolder("tls");
   }
 }
