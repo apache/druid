@@ -76,7 +76,7 @@ public abstract class EmbeddedClusterTestBase
   {
     final DruidNode node = server.bindings().selfNode();
     return StringUtils.format(
-        "http://%s:%s",
+        "https://%s:%s",
         node.getHost(),
         node.getTlsPort()
     );
