@@ -234,7 +234,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       TreeMap<Integer, Map<KafkaTopicPartition, Long>> sequenceOffsets,
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      @Nullable List<Integer> serverPrioritiesToAssign
   ) throws JsonProcessingException
   {
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
@@ -243,6 +244,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
+
+
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KafkaIndexTask(
           taskId,
@@ -252,7 +255,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper
+          sortingMapper,
+          serverPrioritiesToAssign == null || serverPrioritiesToAssign.isEmpty() ? null : serverPrioritiesToAssign.get(i)
       ));
     }
     return taskList;

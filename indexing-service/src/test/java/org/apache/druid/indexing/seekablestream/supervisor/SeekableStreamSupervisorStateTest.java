@@ -695,6 +695,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
@@ -801,6 +802,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
@@ -1100,6 +1102,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     ) {};
 
@@ -1318,7 +1321,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        stopTaskCount
+        stopTaskCount,
+        null
     )
     {
     };
@@ -1553,6 +1557,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
@@ -2111,6 +2116,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
+
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
@@ -2678,6 +2684,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         null,
+        null,
         null
     )
     {
@@ -2741,7 +2748,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         lagAggregator,
         null,
         null,
-        1 // ensure this is overridden
+        1, // ensure this is overridden
+        null
     )
     {
     };
@@ -2818,6 +2826,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         autoScalerConfig,
         LagAggregator.DEFAULT,
+        null,
         null,
         null,
         null
@@ -3020,7 +3029,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         TreeMap<Integer, Map<String, String>> sequenceOffsets,
         SeekableStreamIndexTaskIOConfig taskIoConfig,
         SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-        RowIngestionMetersFactory rowIngestionMetersFactory
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        @Nullable List<Integer> serverPrioritiesToAssign
     )
     {
       return ImmutableList.of(new TestSeekableStreamIndexTask(

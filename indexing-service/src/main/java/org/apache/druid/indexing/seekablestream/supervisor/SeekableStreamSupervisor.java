@@ -204,6 +204,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // task groups have nothing but closed partitions in their assignments.
     final ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName;
 
+    final ConcurrentHashMap<String, Integer> taskIdToServerPriority = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final DateTime minimumMessageTime;
     final DateTime maximumMessageTime;
@@ -2519,6 +2520,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
         killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
         taskGroup.tasks.remove(taskId);
+        taskGroup.taskIdToServerPriority.remove(taskId);
       } else if (checkpointResult.valueOrThrow().isEmpty()) {
         log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
       } else {
@@ -2642,6 +2644,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               latestOffsetsFromDb
           );
           taskGroup.tasks.remove(sequenceCheckpoint.lhs);
+          taskGroup.taskIdToServerPriority.remove(sequenceCheckpoint.lhs);
         }
     );
   }
@@ -3543,6 +3546,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
               killTask(taskId, "Killing task [%s] which hasn't been assigned to a worker", taskId);
               i.remove();
+              taskGroup.taskIdToServerPriority.remove(taskId);
             }
           }
         }
@@ -3580,10 +3584,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     pauseException
                 );
                 taskGroup.tasks.remove(taskId);
+                taskGroup.taskIdToServerPriority.remove(taskId);
 
               } else if (input.get(i).valueOrThrow() == null || input.get(i).valueOrThrow().isEmpty()) {
                 killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
                 taskGroup.tasks.remove(taskId);
+                taskGroup.taskIdToServerPriority.remove(taskId);
               } else { // otherwise build a map of the highest sequences seen
                 for (Entry<PartitionIdType, SequenceOffsetType> sequence : input.get(i).valueOrThrow().entrySet()) {
                   if (!endOffsets.containsKey(sequence.getKey())
@@ -3725,6 +3731,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           if (taskData.status.isFailure()) {
             stateManager.recordCompletedTaskState(TaskState.FAILED);
             iTask.remove(); // remove failed task
+            group.taskIdToServerPriority.remove(taskId);
             if (group.tasks.isEmpty()) {
               // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
               entireTaskGroupFailed = true;
@@ -3821,6 +3828,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.info("Stopping task[%s] as it does not match the expected sequence range and ingestion spec.", taskId);
           futures.add(stopTask(taskId, false));
           iTasks.remove();
+          taskGroup.taskIdToServerPriority.remove(taskId);
           continue;
         }
 
@@ -3830,6 +3838,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (taskData.status.isFailure()) {
           stateManager.recordCompletedTaskState(TaskState.FAILED);
           iTasks.remove();
+          taskGroup.taskIdToServerPriority.remove(taskId);
           continue;
         }
 
@@ -4206,6 +4215,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void createTasksForGroup(int groupId, int replicas)
       throws JsonProcessingException
   {
+
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
     Map<PartitionIdType, SequenceOffsetType> startPartitions = group.startingSequences;
     Map<PartitionIdType, SequenceOffsetType> endPartitions = new HashMap<>();
@@ -4230,6 +4240,28 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ioConfig
     );
 
+    final Map<Integer, Integer> priorityToReplicaCount = ioConfig.getServerPriorityToReplicaCount();
+    List<Integer> unassignedServerPriorities = new ArrayList<>();
+    if (priorityToReplicaCount != null) {
+      final Set<Integer> assignedPriorities = new HashSet<>(group.taskIdToServerPriority.values());
+      unassignedServerPriorities = priorityToReplicaCount.keySet()
+                                                         .stream()
+                                                         .sorted()
+                                                         .filter(priority -> !assignedPriorities.contains(priority))
+                                                         .collect(Collectors.toList());
+
+      log.info("Task server priorities[%s] have already been assigned. Unassigned server priorities[%s] for taskGroupId[%d] with replicas[%d]",
+               group.taskIdToServerPriority.values(), unassignedServerPriorities, groupId, replicas);
+    }
+
+    // Validate
+    if (!unassignedServerPriorities.isEmpty()) {
+      if (unassignedServerPriorities.size() < replicas) {
+        // This indicates a bug in the code as this invariant should have already been validated in the constructor.
+        throw DruidException.defensive("Found unassignedServerPriorities[%s] of size[%d] < total replicas[%d]", unassignedServerPriorities, unassignedServerPriorities.size(), replicas);
+      }
+    }
+
     List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>> taskList = createIndexTasks(
         replicas,
         group.baseSequenceName,
@@ -4237,10 +4269,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         group.checkpointSequences,
         newIoConfig,
         taskTuningConfig,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        unassignedServerPriorities
     );
 
     for (SeekableStreamIndexTask indexTask : taskList) {
+      final String taskId = indexTask.getId();
+      final Integer serverPriority = indexTask.getServerPriority();
+
+      if (serverPriority != null) {
+        log.info("Adding serverPriority[%d] for task[%s] and groupId[%s]", serverPriority, taskId, groupId);
+        group.taskIdToServerPriority.put(taskId, serverPriority);
+      }
+
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
       if (taskQueue.isPresent()) {
         try {
@@ -4495,11 +4536,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   );
 
   /**
-   * creates a list of specific kafka/kinesis index tasks using
-   * the given replicas count
+   * Creates a list of specific kafka/kinesis index tasks using
+   * the given replicas count and {@code serverPrioritiesToAssign} for each task, if null or non-empty.
    *
-   * @return list of specific kafka/kinesis index taksks
-   * @throws JsonProcessingException
+   * @return list of specific Kafka/Kinesis index tasks
+   * @throws JsonProcessingException if task serialization fails
    */
   protected abstract List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>> createIndexTasks(
       int replicas,
@@ -4508,7 +4549,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> sequenceOffsets,
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      @Nullable List<Integer> serverPrioritiesToAssign
   ) throws JsonProcessingException;
 
   /**

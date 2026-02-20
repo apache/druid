@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfig
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -360,6 +361,14 @@ public class ForkingTaskRunner
                         command.addSystemProperty("druid.task.executor.tlsPort", node.getTlsPort());
                         command.addSystemProperty("druid.task.executor.enableTlsPort", node.isEnableTlsPort());
                         command.addSystemProperty("log4j2.configurationFactory", ConsoleLoggingEnforcementConfigurationFactory.class.getName());
+
+
+                        if (task instanceof SeekableStreamIndexTask) {
+                          final Integer serverPriority = ((SeekableStreamIndexTask) task).getServerPriority();
+                          if (serverPriority != null) {
+                            command.addSystemProperty("druid.server.priority", serverPriority);
+                          }
+                        }
 
                         command.addSystemProperty("druid.indexer.task.baseTaskDir", storageSlot.getDirectory().getAbsolutePath());
                         command.addSystemProperty("druid.indexer.task.tmpStorageBytesPerTask", storageSlot.getNumBytes());

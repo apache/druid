@@ -67,7 +67,8 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        null
     );
     this.configMapper = configMapper;
 

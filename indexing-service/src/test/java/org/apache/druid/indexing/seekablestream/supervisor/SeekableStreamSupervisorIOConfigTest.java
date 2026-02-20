@@ -29,6 +29,9 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -56,6 +59,7 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
@@ -77,6 +81,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertNull(config.getStopTaskCount());
     Assert.assertEquals(lagAggregator, config.getLagAggregator());
     Assert.assertEquals(1, config.getMaxAllowedStops());
+    Assert.assertNull(config.getServerPriorityToReplicaCount());
   }
 
   @Test
@@ -106,6 +111,7 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
@@ -128,6 +134,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         lagAggregator,
+        null,
         null,
         null,
         null
@@ -161,6 +168,7 @@ public class SeekableStreamSupervisorIOConfigTest
             lagAggregator,
             DateTimes.nowUtc(),
             null,
+            null,
             null
         )
         {
@@ -181,6 +189,7 @@ public class SeekableStreamSupervisorIOConfigTest
         DruidException.class,
         () -> new SeekableStreamSupervisorIOConfig(
             "stream",
+            null,
             null,
             null,
             null,
@@ -227,6 +236,7 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
@@ -250,7 +260,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        3
+        3,
+        null
     )
     {
     };
@@ -285,7 +296,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        1
+        1,
+        null
     )
     {
     };
@@ -317,7 +329,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        1
+        1,
+        null
     )
     {
     };
@@ -346,11 +359,126 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
     };
 
     Assert.assertEquals(10, config3.getMaxAllowedStops());
+  }
+
+  @Test
+  public void testServerPriorityToReplicaCountAndReplicas()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    // serverPriorityToReplicaCount with sum 5 (e.g. 2 + 3), replicas null -> replicas becomes 5
+    Map<Integer, Integer> priorityToReplicas = new HashMap<>();
+    priorityToReplicas.put(1, 2);
+    priorityToReplicas.put(2, 3);
+
+    SeekableStreamSupervisorIOConfig configFromMapOnly = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        priorityToReplicas
+    )
+    {
+    };
+    Assert.assertEquals(Integer.valueOf(5), configFromMapOnly.getReplicas());
+    Assert.assertEquals(priorityToReplicas, configFromMapOnly.getServerPriorityToReplicaCount());
+
+    // serverPriorityToReplicaCount with sum 5, replicas 5 (matching) -> replicas is 5
+    SeekableStreamSupervisorIOConfig configMatchingReplicas = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        5,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        priorityToReplicas
+    )
+    {
+    };
+    Assert.assertEquals(Integer.valueOf(5), configMatchingReplicas.getReplicas());
+    Assert.assertEquals(priorityToReplicas, configMatchingReplicas.getServerPriorityToReplicaCount());
+
+    // serverPriorityToReplicaCount with sum 5, replicas 3 (mismatch) -> throws IAE
+    IAE ex = Assert.assertThrows(
+        IAE.class,
+        () -> new SeekableStreamSupervisorIOConfig(
+            "stream",
+            null,
+            3,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            lagAggregator,
+            null,
+            null,
+            null,
+            priorityToReplicas
+        )
+        {
+        }
+    );
+    Assert.assertTrue(
+        ex.getMessage().contains("replicas[3] != sum of replicas[5] specified in serverPriorityToReplicaCount")
+    );
+
+    // serverPriorityToReplicaCount null, replicas set -> replicas is used
+    SeekableStreamSupervisorIOConfig configReplicasOnly = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        4,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+    Assert.assertEquals(Integer.valueOf(4), configReplicasOnly.getReplicas());
+    Assert.assertNull(configReplicasOnly.getServerPriorityToReplicaCount());
   }
 }
