@@ -87,7 +87,7 @@ public class CompactionStatus
       Evaluator::rollupIsUpToDate,
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
-      Evaluator::transformSpecFilterIsUpToDate,
+      Evaluator::transformSpecIsUpToDate,
       Evaluator::projectionsAreUpToDate
   );
 
@@ -567,9 +567,9 @@ public class CompactionStatus
       return evaluateForAllCompactionStates(this::metricsSpecIsUpToDate);
     }
 
-    private CompactionStatus transformSpecFilterIsUpToDate()
+    private CompactionStatus transformSpecIsUpToDate()
     {
-      return evaluateForAllCompactionStates(this::transformSpecFilterIsUpToDate);
+      return evaluateForAllCompactionStates(this::transformSpecIsUpToDate);
     }
 
     private CompactionStatus partitionsSpecIsUpToDate(CompactionState lastCompactionState)
@@ -751,17 +751,16 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus transformSpecFilterIsUpToDate(CompactionState lastCompactionState)
+    private CompactionStatus transformSpecIsUpToDate(CompactionState lastCompactionState)
     {
       if (compactionConfig.getTransformSpec() == null) {
         return COMPLETE;
       }
 
-      CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
       return CompactionStatus.completeIfNullOrEqual(
-          "transformSpec filter",
-          compactionConfig.getTransformSpec().getFilter(),
-          existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
+          "transformSpec",
+          compactionConfig.getTransformSpec(),
+          lastCompactionState.getTransformSpec(),
           String::valueOf
       );
     }
