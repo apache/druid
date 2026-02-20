@@ -34,6 +34,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.apache.druid.server.security.TLSUtils;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -65,8 +66,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
   private static final int MAX_CONNECTION_EXCEPTION_RETRIES = 30;
 
-  private SSLClientConfig sslClientConfig;
-  private HttpClient httpClient;
   private DruidHttpClientConfig httpClientConfig;
   private TLSCertificateChecker certificateChecker;
 
@@ -109,8 +108,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   @BeforeAll
   public void initHttpClient()
   {
-    this.sslClientConfig = overlord.bindings().getInstance(SSLClientConfig.class);
-    this.httpClient = overlord.bindings().globalHttpClient();
     this.httpClientConfig = overlord.bindings().getInstance(DruidHttpClientConfig.class);
     this.certificateChecker = overlord.bindings().getInstance(TLSCertificateChecker.class);
   }
@@ -121,7 +118,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     LOG.info("---------Testing resource access without TLS---------");
     HttpClient adminClient = new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
-        httpClient
+        overlord.bindings().globalHttpClient()
     );
     makeRequest(adminClient, HttpMethod.GET, getServerUrl(coordinator) + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, getServerUrl(overlord) + "/status", null);
@@ -136,11 +133,11 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   public void testTLSNodeAccess()
   {
     LOG.info("---------Testing resource access with TLS enabled---------");
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
+    HttpClient adminClient = makeCustomHttpClient(
+        "client_tls/client.jks",
+        "druid"
     );
-    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
+    makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(coordinator) + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(overlord) + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, getServerTlsUrl(historical) + "/status", null);
@@ -157,7 +154,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/intermediate_ca_client.jks",
         "intermediate_ca_client"
     );
-    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
+    makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(coordinator) + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(overlord) + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(broker) + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, getServerTlsUrl(historical) + "/status", null);
@@ -171,7 +168,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   {
     LOG.info("---------Testing TLS resource access without a certificate---------");
     HttpClient certlessClient = makeCertlessClient();
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(broker));
+    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(coordinator));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(overlord));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(broker));
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, getServerTlsUrl(historical));
@@ -397,18 +394,19 @@ public class ITTLSTest extends EmbeddedClusterTestBase
       TLSCertificateChecker certificateChecker
   )
   {
+    final DefaultPasswordProvider passwordProvider = new DefaultPasswordProvider("druid123");
     SSLContext intermediateClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
-        .setProtocol(sslClientConfig.getProtocol())
-        .setTrustStoreType(sslClientConfig.getTrustStoreType())
-        .setTrustStorePath(sslClientConfig.getTrustStorePath())
-        .setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
-        .setTrustStorePasswordProvider(sslClientConfig.getTrustStorePasswordProvider())
-        .setKeyStoreType(sslClientConfig.getKeyStoreType())
+        //.setProtocol(sslClientConfig.getProtocol())
+        //.setTrustStoreType(sslClientConfig.getTrustStoreType())
+        .setTrustStorePath(sslAuthResource.getTlsFilePath("client_tls/truststore.jks"))
+        //.setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStorePasswordProvider(passwordProvider)
+        //.setKeyStoreType(sslClientConfig.getKeyStoreType())
         .setKeyStorePath(sslAuthResource.getTlsFilePath(keystorePath))
-        .setKeyStoreAlgorithm(sslClientConfig.getKeyManagerFactoryAlgorithm())
+        //.setKeyStoreAlgorithm(sslClientConfig.getKeyManagerFactoryAlgorithm())
         .setCertAlias(certAlias)
-        .setKeyStorePasswordProvider(sslClientConfig.getKeyStorePasswordProvider())
-        .setKeyManagerFactoryPasswordProvider(sslClientConfig.getKeyManagerPasswordProvider())
+        .setKeyStorePasswordProvider(passwordProvider)
+        .setKeyManagerFactoryPasswordProvider(passwordProvider)
         .setCertificateChecker(certificateChecker)
         .build();
 
@@ -437,12 +435,12 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   private HttpClient makeCertlessClient()
   {
     SSLContext certlessClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
-        .setProtocol(sslClientConfig.getProtocol())
-        .setTrustStoreType(sslClientConfig.getTrustStoreType())
-        .setTrustStorePath(sslClientConfig.getTrustStorePath())
-        .setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
-        .setTrustStorePasswordProvider(sslClientConfig.getTrustStorePasswordProvider())
-        .setCertificateChecker(certificateChecker)
+        //.setProtocol(sslClientConfig.getProtocol())
+        //.setTrustStoreType(sslClientConfig.getTrustStoreType())
+        .setTrustStorePath(sslAuthResource.getTlsFilePath("client_tls/truststore.jks"))
+        //.setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStorePasswordProvider(new DefaultPasswordProvider("druid123"))
+        //.setCertificateChecker(certificateChecker)
         .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(certlessClientSSLContext);

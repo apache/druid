@@ -28,6 +28,12 @@ import org.apache.druid.testing.embedded.EmbeddedResource;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * {@link EmbeddedResource} used to enable SSL on Druid services.
+ * This resource generates the certificates and keystores needed by both the
+ * server and client, and then configures the Druid cluster with the appropriate
+ * keystore and truststore paths.
+ */
 public class EmbeddedSSLAuthResource implements EmbeddedResource
 {
   private EmbeddedDruidCluster cluster;
@@ -46,7 +52,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
 
     copyScriptsToDirectory(tlsScripts);
 
-    // Generate client certificates and keystore
+    // Generate client certificates and keystores
     final ProcessBuilder generateClientCertificates = new ProcessBuilder(
         "bash",
         new File(tlsScripts, "generate-client-certs-and-keystores.sh").getAbsolutePath()
@@ -60,6 +66,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
       throw new ISE("Client certificate generation failed");
     }
 
+    // Generate server certificates and keystores
     final ProcessBuilder generateServerCertificates = new ProcessBuilder(
         "bash",
         new File(tlsScripts, "generate-server-certs-and-keystores.sh").getAbsolutePath()
@@ -87,7 +94,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    final String truststore = getTlsFilePath("client_tls/truststore.jks");
+    final String truststore = getTlsFilePath("server_tls/truststore.jks");
     final String keystore = getTlsFilePath("server_tls/server.p12");
 
     cluster.addExtension(SSLContextModule.class)
