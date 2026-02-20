@@ -53,7 +53,7 @@ jobs:
 
       - name: Tar task logs
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: tar cvzf ./tasklogs.tgz ./tasklogs
+        run: tar cvzf ./tasklogs.tgz ./embedded-tests/target/tasklogs
 
       - name: Upload task logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}

@@ -390,6 +390,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   {
     final File logDirectory = new File("tasklogs");
     final File logFile = new File(logDirectory, taskId);
+    System.out.println("Log file path is: " + logFile.getAbsolutePath());
     try (FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
       final Optional<InputStream> streamOptional =
           cluster.callApi().waitForResult(
