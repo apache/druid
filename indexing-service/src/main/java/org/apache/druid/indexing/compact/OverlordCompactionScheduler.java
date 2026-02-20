@@ -499,7 +499,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
           updateRequest.getEngine()
       );
     } else {
-      return new CompactionSimulateResult(Collections.emptyMap());
+      return new CompactionSimulateResult(Collections.emptyMap(), null);
     }
   }
 

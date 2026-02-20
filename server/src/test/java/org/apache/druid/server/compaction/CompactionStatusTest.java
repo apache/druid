@@ -99,9 +99,7 @@ public class CompactionStatusTest
   {
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(null);
-    Assert.assertNull(
-        CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
-    );
+    Assert.assertNull(CompactionStatus.findPartitionsSpecFromConfig(tuningConfig));
   }
 
   @Test
@@ -173,9 +171,7 @@ public class CompactionStatusTest
                                               .build();
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
-        CompactionStatus.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config)
-        )
+        CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(config))
     );
   }
 
@@ -221,7 +217,7 @@ public class CompactionStatusTest
   @Test
   public void testStatusWhenLastCompactionStateIsNull()
   {
-    verifyCompactionStatusIsPendingBecause(
+    verifyCompactionIsEligibleBecause(
         null,
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "not compacted yet"
@@ -232,7 +228,7 @@ public class CompactionStatusTest
   public void testStatusWhenLastCompactionStateIsEmpty()
   {
     final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, null);
-    verifyCompactionStatusIsPendingBecause(
+    verifyCompactionIsEligibleBecause(
         new CompactionState(null, null, null, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig
             .builder()
@@ -257,7 +253,7 @@ public class CompactionStatusTest
         .forDataSource(TestDataSource.WIKI)
         .build();
 
-    verifyCompactionStatusIsPendingBecause(
+    verifyCompactionIsEligibleBecause(
         lastCompactionState,
         compactionConfig,
         "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows],"
@@ -287,7 +283,7 @@ public class CompactionStatusTest
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, null))
         .build();
 
-    verifyCompactionStatusIsPendingBecause(
+    verifyCompactionIsEligibleBecause(
         lastCompactionState,
         compactionConfig,
         "'indexSpec' mismatch: "
@@ -329,7 +325,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    verifyCompactionStatusIsPendingBecause(
+    verifyCompactionIsEligibleBecause(
         lastCompactionState,
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
@@ -362,11 +358,11 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.COMPLETE, status.getState());
   }
 
   @Test
@@ -412,11 +408,11 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.COMPLETE, status);
   }
 
   @Test
@@ -467,11 +463,12 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
+    Assert.assertTrue(status.getReason().contains("'projections' mismatch"));
   }
 
   @Test
@@ -521,11 +518,11 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.COMPLETE, status);
   }
 
   @Test
@@ -575,11 +572,12 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
+    Assert.assertTrue(status.getReason().contains("'dimensionsSpec' mismatch"));
   }
 
   @Test
@@ -607,7 +605,7 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -643,7 +641,7 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -666,11 +664,11 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.COMPLETE, status);
   }
 
   @Test
@@ -686,7 +684,7 @@ public class CompactionStatusTest
         .build();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         "One or more fingerprinted segments do not have a cached indexing state"
     );
@@ -711,11 +709,11 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.COMPLETE, status);
   }
 
   @Test
@@ -740,7 +738,7 @@ public class CompactionStatusTest
 
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -765,11 +763,11 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.COMPLETE, status);
   }
 
   // ============================
@@ -795,13 +793,12 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
-    Assert.assertTrue(status.isSkipped());
+    Assert.assertEquals(CompactionStatus.State.NOT_ELIGIBLE, status.getState());
     Assert.assertTrue(status.getReason().contains("'inputSegmentSize' exceeded"));
     Assert.assertTrue(status.getReason().contains("200000000"));
     Assert.assertTrue(status.getReason().contains("150000000"));
@@ -812,22 +809,22 @@ public class CompactionStatusTest
    * Allows customization of the segments in the compaction candidate.
    */
   private void verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-      CompactionCandidate candidate,
+      CompactionCandidate.ProposedCompaction proposedCompaction,
       DataSourceCompactionConfig compactionConfig,
       String expectedReason
   )
   {
     final CompactionStatus status = CompactionStatus.compute(
-        candidate,
+        proposedCompaction,
         compactionConfig,
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
     Assert.assertEquals(expectedReason, status.getReason());
   }
 
-  private void verifyCompactionStatusIsPendingBecause(
+  private void verifyCompactionIsEligibleBecause(
       CompactionState lastCompactionState,
       DataSourceCompactionConfig compactionConfig,
       String expectedReason
@@ -838,12 +835,12 @@ public class CompactionStatusTest
                      .lastCompactionState(lastCompactionState)
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
     Assert.assertEquals(expectedReason, status.getReason());
   }
 

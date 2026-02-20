@@ -80,13 +80,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
 
-    final Table queuedTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table queuedTable = compactionStates.get(CompactionCandidate.TaskState.READY);
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         queuedTable.getColumnNames()
@@ -106,7 +106,7 @@ public class CompactionRunSimulatorTest
         queuedTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
@@ -153,13 +153,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
 
-    final Table pendingTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table pendingTable = compactionStates.get(CompactionCandidate.TaskState.READY);
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingTable.getColumnNames()
@@ -172,24 +172,23 @@ public class CompactionRunSimulatorTest
         pendingTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
     );
-    final String rejectedMessage
-        = "Rejected by search policy: Datasource/Interval is not in the list of 'eligibleCandidates'";
+    final String rejectedMessage = "Datasource/Interval is not in the list of 'eligibleCandidates'";
     Assert.assertEquals(
         List.of(
-            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]"),
             List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
-        ),
+            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, rejectedMessage)
+            ),
         skippedTable.getRows()
     );
   }

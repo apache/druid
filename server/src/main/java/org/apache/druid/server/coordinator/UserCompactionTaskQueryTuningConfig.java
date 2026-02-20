@@ -88,4 +88,171 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
   {
     throw new UnsupportedOperationException();
   }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static class Builder
+  {
+    private Integer maxRowsInMemory;
+    private AppendableIndexSpec appendableIndexSpec;
+    private Long maxBytesInMemory;
+    private Long maxTotalRows;
+    private SplitHintSpec splitHintSpec;
+    private PartitionsSpec partitionsSpec;
+    private IndexSpec indexSpec;
+    private IndexSpec indexSpecForIntermediatePersists;
+    private Integer maxPendingPersists;
+    private Long pushTimeout;
+    private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private Integer maxNumConcurrentSubTasks;
+    private Integer maxRetry;
+    private Long taskStatusCheckPeriodMs;
+    private Duration chatHandlerTimeout;
+    private Integer chatHandlerNumRetries;
+    private Integer maxNumSegmentsToMerge;
+    private Integer totalNumMergeTasks;
+    private Integer maxColumnsToMerge;
+
+    public Builder maxRowsInMemory(Integer maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder appendableIndexSpec(AppendableIndexSpec appendableIndexSpec)
+    {
+      this.appendableIndexSpec = appendableIndexSpec;
+      return this;
+    }
+
+    public Builder maxBytesInMemory(Long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder maxTotalRows(Long maxTotalRows)
+    {
+      this.maxTotalRows = maxTotalRows;
+      return this;
+    }
+
+    public Builder splitHintSpec(SplitHintSpec splitHintSpec)
+    {
+      this.splitHintSpec = splitHintSpec;
+      return this;
+    }
+
+    public Builder partitionsSpec(PartitionsSpec partitionsSpec)
+    {
+      this.partitionsSpec = partitionsSpec;
+      return this;
+    }
+
+    public Builder indexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder indexSpecForIntermediatePersists(IndexSpec indexSpecForIntermediatePersists)
+    {
+      this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists;
+      return this;
+    }
+
+    public Builder maxPendingPersists(Integer maxPendingPersists)
+    {
+      this.maxPendingPersists = maxPendingPersists;
+      return this;
+    }
+
+    public Builder pushTimeout(Long pushTimeout)
+    {
+      this.pushTimeout = pushTimeout;
+      return this;
+    }
+
+    public Builder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+    {
+      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+      return this;
+    }
+
+    public Builder maxNumConcurrentSubTasks(Integer maxNumConcurrentSubTasks)
+    {
+      this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
+      return this;
+    }
+
+    public Builder maxRetry(Integer maxRetry)
+    {
+      this.maxRetry = maxRetry;
+      return this;
+    }
+
+    public Builder taskStatusCheckPeriodMs(Long taskStatusCheckPeriodMs)
+    {
+      this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs;
+      return this;
+    }
+
+    public Builder chatHandlerTimeout(Duration chatHandlerTimeout)
+    {
+      this.chatHandlerTimeout = chatHandlerTimeout;
+      return this;
+    }
+
+    public Builder chatHandlerNumRetries(Integer chatHandlerNumRetries)
+    {
+      this.chatHandlerNumRetries = chatHandlerNumRetries;
+      return this;
+    }
+
+    public Builder maxNumSegmentsToMerge(Integer maxNumSegmentsToMerge)
+    {
+      this.maxNumSegmentsToMerge = maxNumSegmentsToMerge;
+      return this;
+    }
+
+    public Builder totalNumMergeTasks(Integer totalNumMergeTasks)
+    {
+      this.totalNumMergeTasks = totalNumMergeTasks;
+      return this;
+    }
+
+    public Builder maxColumnsToMerge(Integer maxColumnsToMerge)
+    {
+      this.maxColumnsToMerge = maxColumnsToMerge;
+      return this;
+    }
+
+    public UserCompactionTaskQueryTuningConfig build()
+    {
+      return new UserCompactionTaskQueryTuningConfig(
+          maxRowsInMemory,
+          appendableIndexSpec,
+          maxBytesInMemory,
+          maxTotalRows,
+          splitHintSpec,
+          partitionsSpec,
+          indexSpec,
+          indexSpecForIntermediatePersists,
+          maxPendingPersists,
+          pushTimeout,
+          segmentWriteOutMediumFactory,
+          maxNumConcurrentSubTasks,
+          maxRetry,
+          taskStatusCheckPeriodMs,
+          chatHandlerTimeout,
+          chatHandlerNumRetries,
+          maxNumSegmentsToMerge,
+          totalNumMergeTasks,
+          maxColumnsToMerge
+      );
+    }
+  }
 }

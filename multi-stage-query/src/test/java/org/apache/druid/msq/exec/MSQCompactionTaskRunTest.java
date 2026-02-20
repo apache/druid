@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Guice;
@@ -36,7 +37,9 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -46,6 +49,8 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTaskRunBase;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -62,6 +67,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -76,6 +82,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -89,6 +96,7 @@ import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -574,6 +582,163 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     CompactionTask finalTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
     Pair<TaskStatus, DataSegmentsWithSchemas> finalResult = runTask(finalTask);
     verifyTaskSuccessRowsAndSchemaMatch(finalResult, 19);
+  }
+
+  @Test
+  public void testIncrementalCompaction() throws Exception
+  {
+    Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
+    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+    verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
+
+    final CompactionTask compactionTask1 =
+        compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
+
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair1 = runTask(compactionTask1);
+    verifyTaskSuccessRowsAndSchemaMatch(resultPair1, TOTAL_TEST_ROWS);
+    verifyCompactedSegment(List.copyOf(resultPair1.rhs.getSegments()), segmentGranularity, DEFAULT_QUERY_GRAN, false);
+    Assert.assertEquals(1, resultPair1.rhs.getSegments().size());
+    final DataSegment compactedSegment1 = Iterables.getOnlyElement(resultPair1.rhs.getSegments());
+
+    Pair<TaskStatus, DataSegmentsWithSchemas> appendTask = runAppendTask();
+    verifyTaskSuccessRowsAndSchemaMatch(appendTask, TOTAL_TEST_ROWS);
+
+    List<SegmentDescriptor> uncompacted = appendTask.rhs.getSegments()
+                                                        .stream()
+                                                        .map(DataSegment::toDescriptor)
+                                                        .collect(Collectors.toList());
+    final CompactionTask compactionTask2 =
+        compactionTaskBuilder(segmentGranularity)
+            .inputSpec(new CompactionIntervalSpec(inputInterval, uncompacted, null), true)
+            .build();
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
+    verifyTaskSuccessRowsAndSchemaMatch(resultPair2, TOTAL_TEST_ROWS);
+    Assert.assertEquals(1, resultPair2.rhs.getSegments().size());
+    final DataSegment compactedSegment2 = Iterables.getOnlyElement(resultPair2.rhs.getSegments());
+
+    final List<String> usedSegments =
+        coordinatorClient.fetchUsedSegments(DATA_SOURCE, List.of(Intervals.of("2014-01-01/2014-01-02")))
+                         .get()
+                         .stream()
+                         .map(DataSegment::toString)
+                         .collect(Collectors.toList());
+    Assert.assertEquals(
+        List.of(
+            compactedSegment2.withShardSpec(new NumberedShardSpec(0, 2)).toString(),
+            // shard spec in compactedSegment2 has been updated
+            compactedSegment1.toBuilder()
+                             .shardSpec(new NumberedShardSpec(1, 2))
+                             .version(compactedSegment2.getVersion())
+                             .build()
+                             .toString() // compactedSegment1 has been upgraded with the new version & shardSpec
+        ), usedSegments);
+  }
+
+  @Test
+  public void testIncrementalCompactionRangePartition() throws Exception
+  {
+    List<String> rows = ImmutableList.of(
+        "2014-01-01T00:00:10Z,a,1\n",
+        "2014-01-01T00:00:10Z,b,2\n",
+        "2014-01-01T00:00:10Z,c,3\n",
+        "2014-01-01T01:00:20Z,a,1\n",
+        "2014-01-01T01:00:20Z,b,2\n",
+        "2014-01-01T01:00:20Z,c,3\n",
+        "2014-01-01T02:00:30Z,a,1\n",
+        "2014-01-01T02:00:30Z,b,2\n",
+        "2014-01-01T02:00:30Z,c,3\n"
+    );
+    Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
+    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+    verifyTaskSuccessRowsAndSchemaMatch(
+        runTask(buildIndexTask(DEFAULT_PARSE_SPEC, rows, inputInterval, false)),
+        9
+    );
+
+    PartitionsSpec rangePartitionSpec = new DimensionRangePartitionsSpec(null, 3, List.of("dim"), false);
+    TuningConfig tuningConfig = TuningConfigBuilder.forCompactionTask()
+                                                   .withMaxTotalRows(Long.MAX_VALUE)
+                                                   .withPartitionsSpec(rangePartitionSpec)
+                                                   .withForceGuaranteedRollup(true)
+                                                   .build();
+    final CompactionTask compactionTask1 =
+        compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).tuningConfig(tuningConfig).build();
+
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair1 = runTask(compactionTask1);
+    verifyTaskSuccessRowsAndSchemaMatch(resultPair1, 9);
+    Assert.assertEquals(3, resultPair1.rhs.getSegments().size());
+
+    Pair<TaskStatus, DataSegmentsWithSchemas> appendTask =
+        runTask(buildIndexTask(DEFAULT_PARSE_SPEC, rows, inputInterval, true));
+    verifyTaskSuccessRowsAndSchemaMatch(appendTask, 9);
+
+    List<SegmentDescriptor> uncompacted = appendTask.rhs.getSegments()
+                                                        .stream()
+                                                        .map(DataSegment::toDescriptor)
+                                                        .collect(Collectors.toList());
+    final CompactionTask compactionTask2 =
+        compactionTaskBuilder(segmentGranularity)
+            .inputSpec(new CompactionIntervalSpec(inputInterval, uncompacted, null), true)
+            .tuningConfig(tuningConfig)
+            .build();
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
+    verifyTaskSuccessRowsAndSchemaMatch(resultPair2, 9);
+    Assert.assertEquals(3, resultPair2.rhs.getSegments().size());
+
+    final List<DataSegment> usedSegments =
+        coordinatorClient.fetchUsedSegments(DATA_SOURCE, List.of(Intervals.of("2014-01-01/2014-01-02"))).get();
+    Assert.assertEquals(6, usedSegments.size());
+    final List<ShardSpec> shards = usedSegments.stream().map(DataSegment::getShardSpec).collect(Collectors.toList());
+    Assert.assertEquals(Set.of("range"), shards.stream().map(ShardSpec::getType).collect(Collectors.toSet()));
+  }
+
+  @Test
+  public void testIncrementalCompactionOverlappingInterval() throws Exception
+  {
+    Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
+    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+
+    List<String> rows = new ArrayList<>();
+    rows.add("2014-01-01T00:00:10Z,a1,11\n");
+    rows.add("2014-01-01T00:00:10Z,b1,12\n");
+    rows.add("2014-01-01T00:00:10Z,c1,13\n");
+    rows.add("2014-01-01T06:00:20Z,a1,11\n");
+    rows.add("2014-01-01T06:00:20Z,b1,12\n");
+    rows.add("2014-01-01T06:00:20Z,c1,13\n");
+    rows.add("2014-01-01T08:00:20Z,b1,12\n");
+    rows.add("2014-01-01T08:00:20Z,c1,13\n");
+    rows.add("2014-01-01T10:00:20Z,b1,12\n");
+    rows.add("2014-01-01T10:00:20Z,c1,13\n");
+    final IndexTask indexTask = buildIndexTask(
+        Granularities.SIX_HOUR,
+        DEFAULT_PARSE_SPEC,
+        rows,
+        TEST_INTERVAL_DAY,
+        true
+    );
+    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runTask(indexTask);
+    // created 2 segments in HOUR 0 -> HOUR 6, and 4 segments in HOUR 6 -> HOUR12
+    Assert.assertEquals(6, indexTaskResult.rhs.getSegments().size());
+    verifyTaskSuccessRowsAndSchemaMatch(indexTaskResult, 10);
+
+    // First compaction task to only compact 6 segments from indexTask.
+    final Interval compactionInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T08:00:00Z");
+    final List<SegmentDescriptor> uncompactedFromIndexTask =
+        indexTaskResult.rhs.getSegments()
+                           .stream()
+                           .filter(s -> compactionInterval.contains(s.getInterval()))
+                           .map(DataSegment::toDescriptor)
+                           .collect(Collectors.toList());
+
+    final CompactionTask compactionTask1 =
+        compactionTaskBuilder(Granularities.EIGHT_HOUR)
+            .inputSpec(new CompactionIntervalSpec(compactionInterval, uncompactedFromIndexTask, null), true)
+            .build();
+    ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
+    Assert.assertEquals(
+        "Incremental compaction doesn't allow segments not completely within interval[2014-01-01T00:00:00.000Z/2014-01-01T08:00:00.000Z]",
+        e.getMessage()
+    );
   }
 
   @Override

@@ -80,7 +80,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidate.ProposedCompaction;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -101,6 +101,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -217,7 +218,10 @@ public class CompactSegmentsTest
       final String dataSource = DATA_SOURCE_PREFIX + i;
       for (int j : new int[]{0, 1, 2, 3, 7, 8}) {
         for (int k = 0; k < PARTITION_PER_TIME_INTERVAL; k++) {
-          List<DataSegment> segmentForDatasource = datasourceToSegments.computeIfAbsent(dataSource, key -> new ArrayList<>());
+          List<DataSegment> segmentForDatasource = datasourceToSegments.computeIfAbsent(
+              dataSource,
+              key -> new ArrayList<>()
+          );
           DataSegment dataSegment = createSegment(dataSource, j, true, k);
           allSegments.add(dataSegment);
           segmentForDatasource.add(dataSegment);
@@ -250,17 +254,10 @@ public class CompactSegmentsTest
                                       startDay + 2
                                   )
                               );
-    return new DataSegment(
-        dataSource,
-        interval,
-        "version",
-        null,
-        Collections.emptyList(),
-        Collections.emptyList(),
-        shardSpec,
-        0,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, "version", partition))
+                      .shardSpec(shardSpec)
+                      .size(10L)
+                      .build();
   }
 
   @Test
@@ -865,8 +862,12 @@ public class CompactSegmentsTest
                                               .withTuningConfig(getTuningConfig(3))
                                               .withEngine(engine)
                                               .withGranularitySpec(
-                                      new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                  )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
@@ -876,7 +877,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        ProposedCompaction.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -901,10 +902,10 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withDimensionsSpec(
-                                            new UserCompactionTaskDimensionsConfig(
-                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
-                                            )
-                                        )
+                                                  new UserCompactionTaskDimensionsConfig(
+                                                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -968,10 +969,10 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withDimensionsSpec(
-                                            new UserCompactionTaskDimensionsConfig(
-                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
-                                            )
-                                        )
+                                                  new UserCompactionTaskDimensionsConfig(
+                                                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                                  )
+                                              )
                                               .withProjections(projections)
                                               .withEngine(engine)
                                               .build()
@@ -1056,8 +1057,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      true
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1067,7 +1072,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        ProposedCompaction.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1102,6 +1107,7 @@ public class CompactSegmentsTest
             new ClientCompactionIOConfig(
                 new ClientCompactionIntervalSpec(
                     Intervals.of("2000/2099"),
+                    null,
                     "testSha256OfSortedSegmentIds"
                 ),
                 null
@@ -1146,8 +1152,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1162,7 +1172,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        ProposedCompaction.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1288,10 +1298,10 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withTransformSpec(
-                                            new CompactionTransformSpec(
-                                                new SelectorDimFilter("dim1", "foo", null)
-                                            )
-                                        )
+                                                  new CompactionTransformSpec(
+                                                      new SelectorDimFilter("dim1", "foo", null)
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1328,7 +1338,7 @@ public class CompactSegmentsTest
   @Test
   public void testCompactWithMetricsSpec()
   {
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{new CountAggregatorFactory("cnt")};
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
@@ -1358,30 +1368,26 @@ public class CompactSegmentsTest
     String dataSourceName = DATA_SOURCE_PREFIX + 1;
     List<DataSegment> segments = new ArrayList<>();
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(0, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(
+                       dataSourceName,
+                       Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
+                       "1",
+                       0
+                   ))
+                   .shardSpec(shardSpecFactory.apply(0, 2))
+                   .size(10L)
+                   .build()
     );
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(1, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(
+                       dataSourceName,
+                       Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
+                       "1",
+                       1
+                   ))
+                   .shardSpec(shardSpecFactory.apply(1, 2))
+                   .size(10L)
+                   .build()
     );
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
@@ -1403,7 +1409,7 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        CompactionCandidate.from(segments, Granularities.DAY).getCompactionInterval(),
+        ProposedCompaction.from(segments, Granularities.DAY).getCompactionInterval(),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1418,30 +1424,26 @@ public class CompactSegmentsTest
     String dataSourceName = DATA_SOURCE_PREFIX + 1;
     List<DataSegment> segments = new ArrayList<>();
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(0, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(
+                       dataSourceName,
+                       Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
+                       "1",
+                       0
+                   ))
+                   .shardSpec(shardSpecFactory.apply(0, 2))
+                   .size(10L)
+                   .build()
     );
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(1, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(
+                       dataSourceName,
+                       Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
+                       "1",
+                       1
+                   ))
+                   .shardSpec(shardSpecFactory.apply(1, 2))
+                   .size(10L)
+                   .build()
     );
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
@@ -1457,8 +1459,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1466,7 +1472,7 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        CompactionCandidate.from(segments, Granularities.YEAR).getCompactionInterval(),
+        ProposedCompaction.from(segments, Granularities.YEAR).getCompactionInterval(),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1490,7 +1496,7 @@ public class CompactSegmentsTest
                                               .withInputSegmentSizeBytes(500L)
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
-                                              .withMetricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
+                                              .withMetricsSpec(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
                                               .withEngine(engine)
                                               .build()
     );
@@ -1545,17 +1551,20 @@ public class CompactSegmentsTest
   {
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
     AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(dataSourceName);
-    Assert.assertEquals(dataSourceName, snapshot.getDataSource());
-    Assert.assertEquals(scheduleStatus, snapshot.getScheduleStatus());
-    Assert.assertEquals(expectedByteCountAwaitingCompaction, snapshot.getBytesAwaitingCompaction());
-    Assert.assertEquals(expectedByteCountCompressed, snapshot.getBytesCompacted());
-    Assert.assertEquals(expectedByteCountSkipped, snapshot.getBytesSkipped());
-    Assert.assertEquals(expectedIntervalCountAwaitingCompaction, snapshot.getIntervalCountAwaitingCompaction());
-    Assert.assertEquals(expectedIntervalCountCompressed, snapshot.getIntervalCountCompacted());
-    Assert.assertEquals(expectedIntervalCountSkipped, snapshot.getIntervalCountSkipped());
-    Assert.assertEquals(expectedSegmentCountAwaitingCompaction, snapshot.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(expectedSegmentCountCompressed, snapshot.getSegmentCountCompacted());
-    Assert.assertEquals(expectedSegmentCountSkipped, snapshot.getSegmentCountSkipped());
+    Assert.assertEquals(new AutoCompactionSnapshot(
+        dataSourceName,
+        scheduleStatus,
+        null,
+        expectedByteCountAwaitingCompaction,
+        expectedByteCountCompressed,
+        expectedByteCountSkipped,
+        expectedSegmentCountAwaitingCompaction,
+        expectedSegmentCountCompressed,
+        expectedSegmentCountSkipped,
+        expectedIntervalCountAwaitingCompaction,
+        expectedIntervalCountCompressed,
+        expectedIntervalCountSkipped
+    ), snapshot);
   }
 
   private void doCompactionAndAssertCompactSegmentStatistics(CompactSegments compactSegments, int compactionRunCount)
@@ -1632,7 +1641,10 @@ public class CompactSegmentsTest
     return doCompactSegments(compactSegments, (Integer) null);
   }
 
-  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
+  private CoordinatorRunStats doCompactSegments(
+      CompactSegments compactSegments,
+      @Nullable Integer numCompactionTaskSlots
+  )
   {
     return doCompactSegments(compactSegments, createCompactionConfigs(), numCompactionTaskSlots);
   }
@@ -1725,7 +1737,8 @@ public class CompactSegmentsTest
         = dataSources.getUsedSegmentsTimelinesPerDataSource();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(expectedInterval);
+      List<TimelineObjectHolder<String, DataSegment>> holders =
+          dataSourceToTimeline.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
       Assert.assertEquals(2, chunks.size());
@@ -1821,10 +1834,10 @@ public class CompactSegmentsTest
                                                 .withTuningConfig(getTuningConfig(maxNumConcurrentSubTasksForNative))
                                                 .withEngine(engine)
                                                 .withTaskContext(
-                                              maxNumTasksForMSQ == null
-                                              ? null
-                                              : ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
-                                          )
+                                                    maxNumTasksForMSQ == null
+                                                    ? null
+                                                    : Map.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
+                                                )
                                                 .build()
       );
     }
@@ -1925,7 +1938,8 @@ public class CompactSegmentsTest
       if (clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec() instanceof DynamicPartitionsSpec) {
         compactionPartitionsSpec = new DynamicPartitionsSpec(
             clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment(),
-            ((DynamicPartitionsSpec) clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec()).getMaxTotalRowsOr(Long.MAX_VALUE)
+            ((DynamicPartitionsSpec) clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec()).getMaxTotalRowsOr(
+                Long.MAX_VALUE)
         );
       } else {
         compactionPartitionsSpec = clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec();
@@ -1937,40 +1951,39 @@ public class CompactSegmentsTest
       }
 
       for (int i = 0; i < 2; i++) {
-        DataSegment compactSegment = new DataSegment(
-            segments.get(0).getDataSource(),
-            compactInterval,
-            version,
-            null,
-            segments.get(0).getDimensions(),
-            segments.get(0).getMetrics(),
-            shardSpecFactory.apply(i, 2),
-            new CompactionState(
-                compactionPartitionsSpec,
-                clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
-                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
-                ),
-                metricsSpec,
-                clientCompactionTaskQuery.getTransformSpec(),
-                jsonMapper.convertValue(
-                    ImmutableMap.of(
-                        "bitmap",
-                        ImmutableMap.of("type", "roaring"),
-                        "dimensionCompression",
-                        "lz4",
-                        "metricCompression",
-                        "lz4",
-                        "longEncoding",
-                        "longs"
-                    ),
-                    IndexSpec.class
-                ),
-                jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                null
-            ),
-            1,
-            segmentSize
-        );
+        DataSegment compactSegment =
+            DataSegment.builder(SegmentId.of(segments.get(0).getDataSource(), compactInterval, version, i))
+                       .dimensions(segments.get(0).getDimensions())
+                       .metrics(segments.get(0).getMetrics())
+                       .shardSpec(shardSpecFactory.apply(i, 2))
+                       .lastCompactionState(
+                           new CompactionState(
+                               compactionPartitionsSpec,
+                               clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
+                                   clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
+                               ),
+                               metricsSpec,
+                               clientCompactionTaskQuery.getTransformSpec(),
+                               jsonMapper.convertValue(
+                                   ImmutableMap.of(
+                                       "bitmap",
+                                       ImmutableMap.of("type", "roaring"),
+                                       "dimensionCompression",
+                                       "lz4",
+                                       "metricCompression",
+                                       "lz4",
+                                       "longEncoding",
+                                       "longs"
+                                   ),
+                                   IndexSpec.class
+                               ),
+                               jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                               null
+                           )
+                       )
+                       .binaryVersion(1)
+                       .size(segmentSize)
+                       .build();
 
         timeline.add(
             compactInterval,

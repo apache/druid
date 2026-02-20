@@ -32,8 +32,10 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -43,10 +45,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionMode;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -192,7 +194,6 @@ public class CompactSegments implements CoordinatorCustomDuty
         compactionSnapshotBuilder,
         slotManager,
         iterator,
-        policy,
         defaultEngine
     );
 
@@ -228,7 +229,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       CompactionSnapshotBuilder snapshotBuilder,
       CompactionSlotManager slotManager,
       CompactionSegmentIterator iterator,
-      CompactionCandidateSearchPolicy policy,
       CompactionEngine defaultEngine
   )
   {
@@ -244,20 +244,18 @@ public class CompactSegments implements CoordinatorCustomDuty
       final String dataSourceName = entry.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionStatus compactionStatus =
-          statusTracker.computeCompactionStatus(entry, policy);
-      final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
+      final CompactionCandidate.TaskState compactionTaskState = statusTracker.computeCompactionTaskState(entry);
+      statusTracker.onCompactionTaskStateComputed(entry, compactionTaskState, config);
 
-      if (compactionStatus.isComplete()) {
-        snapshotBuilder.addToComplete(candidatesWithStatus);
-        continue;
-      } else if (compactionStatus.isSkipped()) {
-        snapshotBuilder.addToSkipped(candidatesWithStatus);
-        continue;
-      } else {
-        // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-        snapshotBuilder.addToComplete(entry);
+      switch (compactionTaskState) {
+        case READY:
+        case TASK_IN_PROGRESS:
+        case RECENTLY_COMPLETED:
+          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
+          snapshotBuilder.addToComplete(entry);
+          break;
+        default:
+          throw DruidException.defensive("unexpected task state[%s]", compactionTaskState);
       }
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
@@ -371,8 +369,11 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
-    if (candidate.getCurrentStatus() != null) {
-      autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
+    if (CompactionMode.NOT_APPLICABLE.equals(candidate.getMode())) {
+      autoCompactionContext.put(
+          COMPACTION_REASON_KEY,
+          GuavaUtils.firstNonNull(candidate.getPolicyNote(), candidate.getEligibility().getReason())
+      );
     }
 
     autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
@@ -418,7 +419,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.onCompactionStatusComputed(entry, datasourceToConfig.get(entry.getDataSource()));
+      statusTracker.onSkippedCandidate(entry, datasourceToConfig.get(entry.getDataSource()));
       snapshotBuilder.addToSkipped(entry);
     });
 
@@ -463,14 +464,20 @@ public class CompactSegments implements CoordinatorCustomDuty
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
+    switch (entry.getMode()) {
+      case FULL_COMPACTION:
+      case INCREMENTAL_COMPACTION:
+        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
+        break;
+      default:
+        throw DruidException.defensive("Unexpected compaction mode[%s]", entry.getMode());
+    }
 
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null),
-            dropExisting
-        ),
+        new ClientCompactionIOConfig(clientCompactionIntervalSpec, dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

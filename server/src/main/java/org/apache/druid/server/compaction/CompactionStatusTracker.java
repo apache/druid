@@ -80,15 +80,12 @@ public class CompactionStatusTracker
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
    */
-  public CompactionStatus computeCompactionStatus(
-      CompactionCandidate candidate,
-      CompactionCandidateSearchPolicy searchPolicy
-  )
+  public CompactionCandidate.TaskState computeCompactionTaskState(CompactionCandidate candidate)
   {
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionStatus.running("Task for interval is already running");
+      return CompactionCandidate.TaskState.TASK_IN_PROGRESS;
     }
 
     // Skip intervals that have been recently compacted if segment timeline is not updated yet
@@ -96,27 +93,35 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.skipped(
-          "Segment timeline not updated since last compaction task succeeded"
-      );
+      return CompactionCandidate.TaskState.RECENTLY_COMPLETED;
     }
 
-    // Skip intervals that have been filtered out by the policy
-    final CompactionCandidateSearchPolicy.Eligibility eligibility
-        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
-    if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
-    } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
-    }
+    return CompactionCandidate.TaskState.READY;
   }
 
   /**
    * Tracks the latest compaction status of the given compaction candidates.
    * Used only by the {@link CompactionRunSimulator}.
    */
-  public void onCompactionStatusComputed(
+  public void onSkippedCandidate(
       CompactionCandidate candidateSegments,
+      DataSourceCompactionConfig config
+  )
+  {
+    // Nothing to do, used by simulator
+  }
+
+  public void onCompactionCandidates(
+      CompactionCandidate candidateSegments,
+      DataSourceCompactionConfig config
+  )
+  {
+    // Nothing to do, used by simulator
+  }
+
+  public void onCompactionTaskStateComputed(
+      CompactionCandidate candidateSegments,
+      CompactionCandidate.TaskState taskState,
       DataSourceCompactionConfig config
   )
   {

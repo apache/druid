@@ -74,6 +74,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
@@ -559,14 +560,149 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           ImmutableMap.of("path", "b-" + i),
           ImmutableList.of("dim1"),
           ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 9),
+          new NumberedShardSpec(i - 1, 8),
           9,
           100
       );
       replacingSegments.add(segment);
     }
 
-    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null);
+    Assert.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
+
+    Assert.assertEquals(
+        2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
+        retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
+    );
+
+    final Set<DataSegment> usedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        "foo",
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
+    for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(appendSegment.getId().toString()));
+    }
+    usedSegments.removeAll(segmentsAppendedWithReplaceLock);
+    Assert.assertEquals(usedSegments, coordinator.retrieveAllUsedSegments("foo", Segments.ONLY_VISIBLE));
+
+    Assert.assertTrue(usedSegments.containsAll(replacingSegments));
+    for (DataSegment replaceSegment : replacingSegments) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
+    }
+    usedSegments.removeAll(replacingSegments);
+
+    Assert.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
+    for (DataSegment segmentReplicaWithNewVersion : usedSegments) {
+      boolean hasBeenCarriedForward = false;
+      for (DataSegment appendedSegment : segmentsAppendedWithReplaceLock) {
+        if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
+          Assert.assertEquals(
+              appendedSegment.getId().toString(),
+              upgradedFromSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
+          );
+          hasBeenCarriedForward = true;
+          break;
+        }
+      }
+      Assert.assertTrue(hasBeenCarriedForward);
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsInInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-01-01/2023-02-01"));
+    Assert.assertEquals(2, pendingSegmentsInInterval.size());
+    final SegmentId rootPendingSegmentId = pendingSegmentInInterval.getId().asSegmentId();
+    if (pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId() == null) {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(0).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(1).getUpgradedFromSegmentId());
+    } else {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(1).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId());
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsOutsideInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-04-01/2023-05-01"));
+    Assert.assertEquals(1, pendingSegmentsOutsideInterval.size());
+    Assert.assertEquals(
+        pendingSegmentOutsideInterval.getId().asSegmentId(), pendingSegmentsOutsideInterval.get(0).getId().asSegmentId()
+    );
+  }
+
+  @Test
+  public void testCommitReplaceSegmentsWithUpdatedCorePartitions()
+  {
+    // this test is very similar to testCommitReplaceSegments, except both append/replace segments use DimensionRangeShardSpec
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
+    final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final PendingSegmentRecord pendingSegmentInInterval = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-01-01/2023-01-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    final PendingSegmentRecord pendingSegmentOutsideInterval = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-04-01/2023-04-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
+          "2023-01-0" + i,
+          ImmutableMap.of("path", "a-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, i - 1, 8),
+          9,
+          100
+      );
+      segmentsAppendedWithReplaceLock.add(segment);
+      appendedSegmentToReplaceLockMap.put(segment, replaceLock);
+    }
+
+    segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, Collections.emptyMap());
+    insertPendingSegments(
+        "foo",
+        List.of(pendingSegmentInInterval, pendingSegmentOutsideInterval),
+        true
+    );
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
+
+    final Set<DataSegment> replacingSegments = new HashSet<>();
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-01/2023-02-01"),
+          "2023-02-01",
+          ImmutableMap.of("path", "b-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, i - 1, 8),
+          9,
+          100
+      );
+      replacingSegments.add(segment);
+    }
+
+    Assert.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
 
     Assert.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
@@ -587,6 +723,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
+    Set<DataSegment> fetched = coordinator.retrieveAllUsedSegments("foo", Segments.ONLY_VISIBLE);
+    Assert.assertEquals(usedSegments, fetched);
+    // all segments have the same corePartitions, exactly the size of replaced + appended
+    List<ShardSpec> shardSpecs = fetched.stream().map(DataSegment::getShardSpec).toList();
+    Assert.assertTrue(shardSpecs.stream().allMatch(s -> s.getNumCorePartitions() == usedSegments.size()));
+    Assert.assertTrue(shardSpecs.stream().allMatch(s -> s instanceof DimensionRangeShardSpec));
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
     for (DataSegment replaceSegment : replacingSegments) {
       Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
