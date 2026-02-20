@@ -38,7 +38,6 @@ public class WeightedCostFunctionTest
                                       .enableTaskAutoScaler(true)
                                       .lagWeight(0.3)
                                       .idleWeight(0.7)
-                                      .defaultProcessingRate(1000.0)
                                       .build();
   }
 
@@ -67,7 +66,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(100.0)
                                                                        .build();
 
     CostMetrics metrics = createMetrics(200000.0, 10, 200, 0.3);
@@ -94,7 +92,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
                                                                        .build();
 
     // aggregateLag = 100000 * 100 = 10,000,000; lagPerPartition = 100,000
@@ -138,7 +135,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     CostBasedAutoScalerConfig idleOnly = CostBasedAutoScalerConfig.builder()
@@ -147,7 +143,6 @@ public class WeightedCostFunctionTest
                                                                   .enableTaskAutoScaler(true)
                                                                   .lagWeight(0.0)
                                                                   .idleWeight(1.0)
-                                                                  .defaultProcessingRate(1000.0)
                                                                   .build();
 
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
@@ -196,7 +191,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
                                                                        .build();
 
     double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
@@ -221,7 +215,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Current: 10 tasks with 40% idle (60% busy)
@@ -247,7 +240,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Extreme scale-down: 10 tasks → 2 tasks with 40% idle
@@ -277,7 +269,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Negative idle ratio indicates missing data → should default to 0.5
@@ -302,7 +293,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     int currentTaskCount = 10;
@@ -333,7 +323,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     int currentTaskCount = 10;
