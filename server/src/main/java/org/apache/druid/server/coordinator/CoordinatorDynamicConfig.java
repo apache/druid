@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.server.QueryBlocklistRule;
 import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -37,6 +38,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -83,6 +85,11 @@ public class CoordinatorDynamicConfig
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 
   /**
+   * List of query blocklist rules for blocking queries on brokers dynamically.
+   */
+  private final List<QueryBlocklistRule> queryBlocklist;
+
+  /**
    * The maximum number of segments that can be queued for loading to any given server.
    */
   private final int maxSegmentsInNodeLoadingQueue;
@@ -126,7 +133,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+      @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -172,6 +180,7 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
+    this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Defaults.QUERY_BLOCKLIST);
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -351,6 +360,17 @@ public class CoordinatorDynamicConfig
     return turboLoadingNodes;
   }
 
+  /**
+   * List of query blocklist rules for dynamically blocking queries on brokers.
+   *
+   * @return List of query blocklist rules
+   */
+  @JsonProperty
+  public List<QueryBlocklistRule> getQueryBlocklist()
+  {
+    return queryBlocklist;
+  }
+
   @Override
   public String toString()
   {
@@ -371,6 +391,7 @@ public class CoordinatorDynamicConfig
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
+           ", queryBlocklist=" + queryBlocklist +
            '}';
   }
 
@@ -407,7 +428,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
-           && Objects.equals(cloneServers, that.cloneServers);
+           && Objects.equals(cloneServers, that.cloneServers)
+           && Objects.equals(queryBlocklist, that.queryBlocklist);
   }
 
   @Override
@@ -431,7 +453,8 @@ public class CoordinatorDynamicConfig
         pauseCoordination,
         debugDimensions,
         turboLoadingNodes,
-        cloneServers
+        cloneServers,
+        queryBlocklist
     );
   }
 
@@ -454,6 +477,7 @@ public class CoordinatorDynamicConfig
 
   private static class Defaults
   {
+    static final List<QueryBlocklistRule> QUERY_BLOCKLIST = List.of();
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
@@ -488,6 +512,7 @@ public class CoordinatorDynamicConfig
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
     private Map<String, String> cloneServers;
+    private List<QueryBlocklistRule> queryBlocklist;
 
     public Builder()
     {
@@ -512,7 +537,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+        @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -533,6 +559,7 @@ public class CoordinatorDynamicConfig
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
       this.cloneServers = cloneServers;
+      this.queryBlocklist = queryBlocklist;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -631,6 +658,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withQueryBlocklist(List<QueryBlocklistRule> queryBlocklist)
+    {
+      this.queryBlocklist = queryBlocklist;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -658,7 +691,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
           turboLoadingNodes,
-          cloneServers
+          cloneServers,
+          queryBlocklist
       );
     }
 
@@ -690,7 +724,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
-          valueOrDefault(cloneServers, defaults.getCloneServers())
+          valueOrDefault(cloneServers, defaults.getCloneServers()),
+          valueOrDefault(queryBlocklist, defaults.getQueryBlocklist())
       );
     }
   }

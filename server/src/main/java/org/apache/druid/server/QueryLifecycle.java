@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -99,6 +101,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
   private final long startMs;
   private final long startNs;
 
@@ -121,6 +124,7 @@ public class QueryLifecycle
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      @Nullable final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
       final long startMs,
       final long startNs
   )
@@ -134,6 +138,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -158,6 +163,8 @@ public class QueryLifecycle
   )
   {
     initialize(query);
+
+    checkQueryBlocklist();
 
     final Sequence<T> results;
 
@@ -307,6 +314,36 @@ public class QueryLifecycle
     doAuthorize(authenticationResult, authorizationResult);
     if (!state.equals(State.AUTHORIZED)) {
       throw DruidException.defensive("Unexpected state [%s], expecting [%s].", state, State.AUTHORIZED);
+    }
+  }
+
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    if (brokerViewOfCoordinatorConfig == null) {
+      return; // Not running on broker, skip blocklist check
+    }
+
+    CoordinatorDynamicConfig config = brokerViewOfCoordinatorConfig.getDynamicConfig();
+    if (config == null) {
+      return; // Config not loaded yet, allow query (best effort)
+    }
+
+    for (QueryBlocklistRule rule : config.getQueryBlocklist()) {
+      if (rule.matches(this.baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build(
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
+                                rule.getRuleName()
+                            );
+      }
     }
   }
 

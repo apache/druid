@@ -34,5 +34,6 @@ export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
   replicateAfterLoadTimeout: false,
   useRoundRobinSegmentAssignment: true,
   smartSegmentLoading: true,
+  queryBlocklist: [],
   debugDimensions: null,
 };

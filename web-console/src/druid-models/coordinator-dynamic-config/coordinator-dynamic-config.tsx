@@ -39,9 +39,17 @@ export interface CoordinatorDynamicConfig {
   useRoundRobinSegmentAssignment?: boolean;
   smartSegmentLoading?: boolean;
   turboLoadingNodes?: string[];
+  queryBlocklist?: QueryBlocklistRule[];
 
   // Undocumented
   debugDimensions?: any;
+}
+
+export interface QueryBlocklistRule {
+  ruleName: string;
+  dataSources?: string[];
+  queryTypes?: string[];
+  contextMatches?: Record<string, string>;
 }
 
 export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[] = [
