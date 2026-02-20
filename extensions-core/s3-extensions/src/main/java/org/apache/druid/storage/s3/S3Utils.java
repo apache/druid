@@ -19,19 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CanonicalGrantee;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -40,12 +27,24 @@ import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.Grantee;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.Permission;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.Type;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -66,6 +65,42 @@ public class S3Utils
   private static final Logger log = new Logger(S3Utils.class);
 
   /**
+   * A holder for S3Object with its associated bucket name.
+   * In AWS SDK v2, S3Object doesn't include the bucket name, so we need to track it separately.
+   */
+  public static class S3ObjectWithBucket
+  {
+    private final String bucket;
+    private final S3Object s3Object;
+
+    public S3ObjectWithBucket(String bucket, S3Object s3Object)
+    {
+      this.bucket = bucket;
+      this.s3Object = s3Object;
+    }
+
+    public String getBucket()
+    {
+      return bucket;
+    }
+
+    public String getKey()
+    {
+      return s3Object.key();
+    }
+
+    public long getSize()
+    {
+      return s3Object.size();
+    }
+
+    public S3Object getS3Object()
+    {
+      return s3Object;
+    }
+  }
+
+  /**
    * Error for calling putObject with an entity over 5GB in size.
    */
   public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
@@ -84,19 +119,25 @@ public class S3Utils
         }
         return true;
       } else if (e instanceof SdkClientException
+                 && e.getMessage() != null
                  && e.getMessage().contains("Data read has a different length than the expected")) {
         // Can happen when connections to S3 are dropped; see https://github.com/apache/druid/pull/11941.
         // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
         // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
         return true;
-      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
+      } else if (e instanceof SdkClientException
+                 && e.getMessage() != null
+                 && e.getMessage().contains("Unable to execute HTTP request")) {
         // This is likely due to a temporary DNS issue and can be retried.
         return true;
-      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to find a region via the region provider chain")) {
+      } else if (e instanceof SdkClientException
+                 && e.getMessage() != null
+                 && e.getMessage().contains("Unable to find a region")) {
         // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
         // https://github.com/aws/aws-sdk-java/issues/2285
         return true;
-      } else if (e instanceof AmazonS3Exception && ((AmazonS3Exception) e).getStatusCode() == 200 &&
+      } else if (e instanceof S3Exception && ((S3Exception) e).statusCode() == 200 &&
+                 e.getMessage() != null &&
                  (e.getMessage().contains("InternalError") || e.getMessage().contains("SlowDown"))) {
         // This can happen sometimes when AWS returns a 200 response with internal error message
         // https://repost.aws/knowledge-center/s3-resolve-200-internalerror
@@ -104,8 +145,8 @@ public class S3Utils
       } else if (e instanceof InterruptedException) {
         Thread.interrupted(); // Clear interrupted state and not retry
         return false;
-      } else if (e instanceof AmazonClientException) {
-        return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
+      } else if (e instanceof SdkException) {
+        return AWSClientUtil.isClientExceptionRecoverable((SdkException) e);
       } else {
         return apply(e.getCause());
       }
@@ -136,8 +177,9 @@ public class S3Utils
   {
     if (e == null) {
       return null;
-    } else if (e instanceof AmazonS3Exception) {
-      return ((AmazonS3Exception) e).getErrorCode();
+    } else if (e instanceof S3Exception) {
+      S3Exception s3e = (S3Exception) e;
+      return s3e.awsErrorDetails() != null ? s3e.awsErrorDetails().errorCode() : null;
     } else {
       return getS3ErrorCode(e.getCause());
     }
@@ -152,8 +194,8 @@ public class S3Utils
     try {
       return s3Client.doesObjectExist(bucketName, objectKey);
     }
-    catch (AmazonS3Exception e) {
-      if (e.getStatusCode() == 404) {
+    catch (S3Exception e) {
+      if (e.statusCode() == 404) {
         // Object is inaccessible to current user, but does exist.
         return true;
       }
@@ -171,7 +213,7 @@ public class S3Utils
    * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
    * constructed.
    */
-  public static Iterator<S3ObjectSummary> objectSummaryIterator(
+  public static Iterator<S3Object> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength
@@ -189,7 +231,7 @@ public class S3Utils
    * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
    * constructed.
    */
-  public static Iterator<S3ObjectSummary> objectSummaryIterator(
+  public static Iterator<S3Object> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength,
@@ -200,20 +242,37 @@ public class S3Utils
   }
 
   /**
-   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
+   * Create an iterator over a set of S3 objects with their bucket names.
+   *
+   * Similar to {@link #objectSummaryIterator} but returns {@link S3ObjectWithBucket} which includes
+   * the bucket name for each object. This is needed because AWS SDK v2's S3Object doesn't include
+   * the bucket name.
+   */
+  public static Iterator<S3ObjectWithBucket> objectSummaryWithBucketIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterable<URI> prefixes,
+      final int maxListingLength,
+      final int maxRetries
+  )
+  {
+    return new ObjectSummaryWithBucketIterator(s3Client, prefixes, maxListingLength, maxRetries);
+  }
+
+  /**
+   * Create an {@link URI} from the given {@link S3Object}. The result URI is composed as below.
    *
    * <pre>
    * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
    * </pre>
    */
-  public static URI summaryToUri(S3ObjectSummary object)
+  public static URI summaryToUri(S3Object object, String bucketName)
   {
-    return summaryToCloudObjectLocation(object).toUri(SCHEME);
+    return summaryToCloudObjectLocation(object, bucketName).toUri(SCHEME);
   }
 
-  public static CloudObjectLocation summaryToCloudObjectLocation(S3ObjectSummary object)
+  public static CloudObjectLocation summaryToCloudObjectLocation(S3Object object, String bucketName)
   {
-    return new CloudObjectLocation(object.getBucketName(), object.getKey());
+    return new CloudObjectLocation(bucketName, object.key());
   }
 
   static String constructSegmentPath(String baseKey, String storageDir)
@@ -229,11 +288,42 @@ public class S3Utils
     ) + "/";
   }
 
-  static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
+  static Grant grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
   {
-    final AccessControlList acl = s3Client.getBucketAcl(bucket);
-    acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
-    return acl;
+    final String ownerId = s3Client.getBucketAcl(bucket).owner().id();
+    return Grant.builder()
+        .grantee(Grantee.builder()
+            .type(Type.CANONICAL_USER)
+            .id(ownerId)
+            .build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+  }
+
+  /**
+   * Builds the header value for {@code x-amz-grant-full-control}.
+   *
+   * AWS expects this header to include both the grantee type and value, e.g. {@code id="..."}.
+   */
+  @Nullable
+  static String grantFullControlHeaderValue(@Nullable Grant grant)
+  {
+    if (grant == null || grant.grantee() == null) {
+      return null;
+    }
+
+    final Grantee grantee = grant.grantee();
+    if (grantee.id() != null) {
+      return StringUtils.format("id=\"%s\"", grantee.id());
+    }
+    if (grantee.emailAddress() != null) {
+      return StringUtils.format("emailAddress=\"%s\"", grantee.emailAddress());
+    }
+    if (grantee.uri() != null) {
+      return StringUtils.format("uri=\"%s\"", grantee.uri());
+    }
+
+    return null;
   }
 
   public static String extractS3Key(URI uri)
@@ -250,13 +340,13 @@ public class S3Utils
   }
 
   /**
-   * Gets a single {@link ObjectMetadata} from s3.
+   * Gets a single {@link HeadObjectResponse} from s3.
    *
    * @param s3Client s3 client
    * @param bucket   s3 bucket
    * @param key      s3 object key
    */
-  public static ObjectMetadata getSingleObjectMetadata(ServerSideEncryptingAmazonS3 s3Client, String bucket, String key)
+  public static HeadObjectResponse getSingleObjectMetadata(ServerSideEncryptingAmazonS3 s3Client, String bucket, String key)
   {
     try {
       return retryS3Operation(() -> s3Client.getObjectMetadata(bucket, key));
@@ -283,7 +373,7 @@ public class S3Utils
       int maxListingLength,
       String bucket,
       String prefix,
-      Predicate<S3ObjectSummary> filter
+      Predicate<S3Object> filter
   )
       throws Exception
   {
@@ -295,14 +385,14 @@ public class S3Utils
       int maxListingLength,
       String bucket,
       String prefix,
-      Predicate<S3ObjectSummary> filter,
+      Predicate<S3Object> filter,
       int maxRetries
   )
       throws Exception
   {
     log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
-    final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(maxListingLength);
+    final List<ObjectIdentifier> keysToDelete = new ArrayList<>(maxListingLength);
     final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
         s3Client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
@@ -310,9 +400,9 @@ public class S3Utils
     );
 
     while (iterator.hasNext()) {
-      final S3ObjectSummary nextObject = iterator.next();
+      final S3Object nextObject = iterator.next();
       if (filter.apply(nextObject)) {
-        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(nextObject.getKey()));
+        keysToDelete.add(ObjectIdentifier.builder().key(nextObject.key()).build());
         if (keysToDelete.size() == maxListingLength) {
           deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
           keysToDelete.clear();
@@ -328,18 +418,21 @@ public class S3Utils
   public static void deleteBucketKeys(
       ServerSideEncryptingAmazonS3 s3Client,
       String bucket,
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      List<ObjectIdentifier> keysToDelete,
       int retries
   )
       throws Exception
   {
     if (keysToDelete != null && log.isDebugEnabled()) {
       List<String> keys = keysToDelete.stream()
-                                      .map(DeleteObjectsRequest.KeyVersion::getKey)
+                                      .map(ObjectIdentifier::key)
                                       .collect(Collectors.toList());
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
-    DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
+    DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
+        .bucket(bucket)
+        .delete(Delete.builder().objects(keysToDelete).build())
+        .build();
     S3Utils.retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);
       return null;
@@ -361,64 +454,73 @@ public class S3Utils
       String bucket,
       String key,
       File file
-  ) throws InterruptedException
+  )
   {
-    final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
-
-    if (!disableAcl) {
-      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
-    }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.upload(putObjectRequest);
+    service.upload(bucket, key, file, disableAcl ? null : S3Utils.grantFullControlToBucketOwner(service, bucket));
   }
 
-  @Nullable
-  private static Protocol parseProtocol(@Nullable String protocol)
+  /**
+   * Determines whether to use HTTP or HTTPS protocol based on configuration.
+   */
+  public static boolean useHttps(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
   {
-    if (protocol == null) {
+    String protocol = clientConfig.getProtocol();
+    final String endpointUrl = endpointConfig.getUrl();
+
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {
+      final URI uri = URIs.parse(endpointUrl, protocol != null ? protocol : "https");
+      String scheme = uri.getScheme();
+      if (scheme != null) {
+        boolean endpointUsesHttps = scheme.equalsIgnoreCase("https");
+        boolean configUsesHttps = protocol == null || protocol.equalsIgnoreCase("https");
+        if (endpointUsesHttps != configUsesHttps) {
+          log.warn("[%s] protocol will be used for endpoint [%s]", scheme, endpointUrl);
+        }
+        return endpointUsesHttps;
+      }
+    }
+
+    return protocol == null || protocol.equalsIgnoreCase("https");
+  }
+
+  /**
+   * Ensures an endpoint URL string includes an HTTP scheme.
+   * <p>
+   * Many configs provide endpoints as host:port (no scheme). AWS SDK v2 requires a fully-qualified URI for
+   * endpoint overrides.
+   */
+  public static String ensureEndpointHasScheme(String endpointUrl, boolean useHttps)
+  {
+    if (org.apache.commons.lang3.StringUtils.isEmpty(endpointUrl)) {
+      return endpointUrl;
+    }
+    if (endpointUrl.startsWith("http://") || endpointUrl.startsWith("https://")) {
+      return endpointUrl;
+    }
+    return (useHttps ? "https://" : "http://") + endpointUrl;
+  }
+
+  public static ProxyConfiguration buildProxyConfiguration(AWSProxyConfig proxyConfig)
+  {
+    if (org.apache.commons.lang3.StringUtils.isEmpty(proxyConfig.getHost())) {
       return null;
     }
 
-    if (protocol.equalsIgnoreCase("http")) {
-      return Protocol.HTTP;
-    } else if (protocol.equalsIgnoreCase("https")) {
-      return Protocol.HTTPS;
-    } else {
-      throw new IAE("Unknown protocol[%s]", protocol);
-    }
-  }
+    ProxyConfiguration.Builder proxyBuilder = ProxyConfiguration.builder();
 
-  public static Protocol determineProtocol(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
-  {
-    final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
-    final String endpointUrl = endpointConfig.getUrl();
-    if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {
-      //noinspection ConstantConditions
-      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
-      final Protocol protocol = parseProtocol(uri.getScheme());
-      if (protocol != null && (protocol != protocolFromClientConfig)) {
-        log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);
-      }
-      return protocol;
-    } else {
-      return protocolFromClientConfig;
-    }
-  }
+    String scheme = "http";
+    int port = proxyConfig.getPort() != -1 ? proxyConfig.getPort() : 80;
 
-  public static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
-  {
-    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getHost())) {
-      conf.setProxyHost(proxyConfig.getHost());
-    }
-    if (proxyConfig.getPort() != -1) {
-      conf.setProxyPort(proxyConfig.getPort());
-    }
+    proxyBuilder.endpoint(URI.create(scheme + "://" + proxyConfig.getHost() + ":" + port));
+
     if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
-      conf.setProxyUsername(proxyConfig.getUsername());
+      proxyBuilder.username(proxyConfig.getUsername());
     }
     if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
-      conf.setProxyPassword(proxyConfig.getPassword());
+      proxyBuilder.password(proxyConfig.getPassword());
     }
-    return conf;
+
+    return proxyBuilder.build();
   }
 }

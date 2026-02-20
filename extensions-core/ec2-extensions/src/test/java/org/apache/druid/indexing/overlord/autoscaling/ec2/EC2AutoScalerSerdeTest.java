@@ -81,7 +81,7 @@ public class EC2AutoScalerSerdeTest
                   .getNodeData()
                   .getIamProfile()
                   .toIamInstanceProfileSpecification()
-                  .getName()
+                  .name()
     );
     Assert.assertEquals(
         "bar",
@@ -89,7 +89,7 @@ public class EC2AutoScalerSerdeTest
                   .getNodeData()
                   .getIamProfile()
                   .toIamInstanceProfileSpecification()
-                  .getArn()
+                  .arn()
     );
 
     // userData

@@ -186,8 +186,9 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
       Assert.assertEquals(taskStatusPlus.getStatusCode(), TaskState.FAILED);
       Assert.assertNotNull(taskStatusPlus.getErrorMsg());
       Assert.assertTrue(
-          taskStatusPlus.getErrorMsg().contains("com.amazonaws.services.s3.model.AmazonS3Exception"),
-          "Expect task to fail with AmazonS3Exception");
+          taskStatusPlus.getErrorMsg().contains("software.amazon.awssdk.services.s3.model.S3Exception")
+          || taskStatusPlus.getErrorMsg().contains("S3Exception"),
+          "Expect task to fail with S3Exception");
     }
     finally {
       // If the test pass, then there is no datasource to unload

@@ -19,9 +19,6 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
@@ -30,6 +27,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,10 +65,12 @@ public class S3Entity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
-    request.setRange(offset);
+    GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
+        .bucket(object.getBucket())
+        .key(object.getPath())
+        .range("bytes=" + offset + "-"); // AWS SDK V2 move to explicit byte range, bytes=300- means byte 300 to EOF
     try {
-      final S3Object s3Object = s3Client.getObject(request);
+      final ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(requestBuilder);
       if (s3Object == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
@@ -76,9 +79,9 @@ public class S3Entity extends RetryingInputEntity
             offset
         );
       }
-      return s3Object.getObjectContent();
+      return s3Object;
     }
-    catch (AmazonS3Exception e) {
+    catch (S3Exception e) {
       throw new IOException(e);
     }
   }

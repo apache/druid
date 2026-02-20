@@ -219,6 +219,90 @@ notice: |
 
 ---
 
+name: AWS SDK for Java (Kinesis Client Library)
+license_category: binary
+module: extensions-core/kinesis-indexing-service
+license_name: Apache License version 2.0
+version: 1.12.3
+libraries:
+  - com.amazonaws: aws-java-sdk-kinesis
+  - com.amazonaws: jmespath-java
+notice: |
+  AWS SDK for Java
+  Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+  This product includes software developed by
+  Amazon Technologies, Inc (http://www.amazon.com/).
+
+---
+
+name: AWS SDK for Java 2
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.40.0
+libraries:
+  - software.amazon.awssdk: annotations
+  - software.amazon.awssdk: apache-client
+  - software.amazon.awssdk: arns
+  - software.amazon.awssdk: auth
+  - software.amazon.awssdk: aws-core
+  - software.amazon.awssdk: aws-query-protocol
+  - software.amazon.awssdk: aws-xml-protocol
+  - software.amazon.awssdk: checksums
+  - software.amazon.awssdk: checksums-spi
+  - software.amazon.awssdk: crt-core
+  - software.amazon.awssdk: ec2
+  - software.amazon.awssdk: endpoints-spi
+  - software.amazon.awssdk: http-auth
+  - software.amazon.awssdk: http-auth-aws
+  - software.amazon.awssdk: http-auth-aws-eventstream
+  - software.amazon.awssdk: http-auth-spi
+  - software.amazon.awssdk: http-client-spi
+  - software.amazon.awssdk: identity-spi
+  - software.amazon.awssdk: json-utils
+  - software.amazon.awssdk: kinesis
+  - software.amazon.awssdk: metrics-spi
+  - software.amazon.awssdk: netty-nio-client
+  - software.amazon.awssdk: profiles
+  - software.amazon.awssdk: protocol-core
+  - software.amazon.awssdk: rds
+  - software.amazon.awssdk: regions
+  - software.amazon.awssdk: retries
+  - software.amazon.awssdk: retries-spi
+  - software.amazon.awssdk: s3
+  - software.amazon.awssdk: s3-transfer-manager
+  - software.amazon.awssdk: sdk-core
+  - software.amazon.awssdk: sts
+  - software.amazon.awssdk: third-party-jackson-core
+  - software.amazon.awssdk: utils
+  - software.amazon.awssdk: utils-lite
+  - software.amazon.awssdk: aws-cbor-protocol
+  - software.amazon.awssdk: aws-json-protocol
+  - software.amazon.awssdk: third-party-jackson-dataformat-cbor
+  - software.amazon.eventstream: eventstream
+notice: |
+  AWS SDK for Java 2.0
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+  This product includes software developed by
+  Amazon Technologies, Inc (http://www.amazon.com/).
+
+---
+
+name: Amazon Event Stream
+license_category: binary
+module: extensions-core/s3-extensions
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - software.amazon.eventstream: eventstream
+notice: |
+  AWS SDK for Java 2.0
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
 name: Jackson
 license_category: binary
 module: java-core
@@ -2899,11 +2983,11 @@ libraries:
 
 name: Kinesis Client
 license_category: binary
-version: 1.14.4
+version: 2.6.0
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
-  - com.amazonaws: amazon-kinesis-client
+  - software.amazon.kinesis: amazon-kinesis-client
 
 ---
 

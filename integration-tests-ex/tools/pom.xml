@@ -65,9 +65,9 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>amazon-kinesis-producer</artifactId>
-			<version>0.13.1</version>
+			<groupId>software.amazon.awssdk</groupId>
+      <version>${aws.sdk.v2.version}</version>
+			<artifactId>kinesis</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.avro</groupId>
@@ -224,8 +224,24 @@
 			<artifactId>jakarta.validation-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-core</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>auth</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sdk-core</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>regions</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>aws-core</artifactId>
+      <version>${aws.sdk.v2.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>

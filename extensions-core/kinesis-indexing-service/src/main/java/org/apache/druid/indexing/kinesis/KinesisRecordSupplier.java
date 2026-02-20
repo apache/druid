@@ -19,29 +19,6 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
-import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
-import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
-import com.amazonaws.services.kinesis.model.GetRecordsRequest;
-import com.amazonaws.services.kinesis.model.GetRecordsResult;
-import com.amazonaws.services.kinesis.model.InvalidArgumentException;
-import com.amazonaws.services.kinesis.model.ListShardsRequest;
-import com.amazonaws.services.kinesis.model.ListShardsResult;
-import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.kinesis.model.Record;
-import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
-import com.amazonaws.services.kinesis.model.Shard;
-import com.amazonaws.services.kinesis.model.ShardIteratorType;
-import com.amazonaws.services.kinesis.model.StreamDescription;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -64,17 +41,41 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.KinesisClientBuilder;
+import software.amazon.awssdk.services.kinesis.model.DescribeStreamRequest;
+import software.amazon.awssdk.services.kinesis.model.DescribeStreamResponse;
+import software.amazon.awssdk.services.kinesis.model.ExpiredIteratorException;
+import software.amazon.awssdk.services.kinesis.model.GetRecordsRequest;
+import software.amazon.awssdk.services.kinesis.model.GetRecordsResponse;
+import software.amazon.awssdk.services.kinesis.model.GetShardIteratorRequest;
+import software.amazon.awssdk.services.kinesis.model.InvalidArgumentException;
+import software.amazon.awssdk.services.kinesis.model.ListShardsRequest;
+import software.amazon.awssdk.services.kinesis.model.ListShardsResponse;
+import software.amazon.awssdk.services.kinesis.model.ProvisionedThroughputExceededException;
+import software.amazon.awssdk.services.kinesis.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.kinesis.model.Shard;
+import software.amazon.awssdk.services.kinesis.model.ShardIteratorType;
+import software.amazon.awssdk.services.kinesis.model.StreamDescription;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.kinesis.retrieval.AggregatorUtil;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -209,7 +210,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
         }
 
         // used for retrying on InterruptedException
-        GetRecordsResult recordsResult = null;
+        GetRecordsResponse recordsResult = null;
         OrderedPartitionableRecord<String, String, KinesisRecordEntity> currRecord;
         long recordBufferOfferWaitMillis;
         try {
@@ -240,28 +241,33 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
             return;
           }
 
-          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator));
+          recordsResult = kinesis.getRecords(
+              GetRecordsRequest.builder().shardIterator(shardIterator).build()
+          );
 
-          currentLagMillis = recordsResult.getMillisBehindLatest();
+          currentLagMillis = recordsResult.millisBehindLatest();
 
           // list will come back empty if there are no records
-          for (Record kinesisRecord : recordsResult.getRecords()) {
-            final List<KinesisRecordEntity> data;
+          for (software.amazon.awssdk.services.kinesis.model.Record kinesisRecord : recordsResult.records()) {
+            final List<KinesisRecordEntity> data = new ArrayList<>();
 
-            if (deaggregateHandle == null || getDataHandle == null) {
-              throw new ISE("deaggregateHandle or getDataHandle is null!");
-            }
+            // Convert SDK v2 Record to KinesisClientRecord for KCL v2 deaggregation
+            KinesisClientRecord clientRecord = KinesisClientRecord.builder()
+                .sequenceNumber(kinesisRecord.sequenceNumber())
+                .partitionKey(kinesisRecord.partitionKey())
+                .data(kinesisRecord.data().asByteBuffer())
+                .approximateArrivalTimestamp(kinesisRecord.approximateArrivalTimestamp())
+                .build();
 
-            data = new ArrayList<>();
-
-            final List<UserRecord> userRecords = (List<UserRecord>) deaggregateHandle.invokeExact(
-                Collections.singletonList(kinesisRecord)
+            // Deaggregate using KCL v2's AggregatorUtil
+            final List<KinesisClientRecord> userRecords = aggregatorUtil.deaggregate(
+                Collections.singletonList(clientRecord)
             );
 
             int recordSize = 0;
-            for (UserRecord userRecord : userRecords) {
+            for (KinesisClientRecord userRecord : userRecords) {
               KinesisRecordEntity kinesisRecordEntity = new KinesisRecordEntity(userRecord);
-              recordSize += kinesisRecordEntity.getBuffer().array().length;
+              recordSize += kinesisRecordEntity.getBuffer().remaining();
               data.add(kinesisRecordEntity);
             }
 
@@ -269,7 +275,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
             currRecord = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
                 streamPartition.getPartitionId(),
-                kinesisRecord.getSequenceNumber(),
+                kinesisRecord.sequenceNumber(),
                 data
             );
 
@@ -307,7 +313,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
             }
           }
 
-          shardIterator = recordsResult.getNextShardIterator(); // will be null if the shard has been closed
+          shardIterator = recordsResult.nextShardIterator(); // will be null if the shard has been closed
 
           scheduleBackgroundFetch(fetchDelayMillis);
         }
@@ -337,7 +343,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
               fetchDelayMillis
           );
           if (recordsResult != null) {
-            shardIterator = recordsResult.getNextShardIterator(); // will be null if the shard has been closed
+            shardIterator = recordsResult.nextShardIterator(); // will be null if the shard has been closed
             scheduleBackgroundFetch(fetchDelayMillis);
           } else {
             throw new ISE("can't reschedule fetch records runnable, recordsResult is null??");
@@ -348,7 +354,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
-        catch (AmazonClientException e) {
+        catch (SdkException e) {
           if (AWSClientUtil.isClientExceptionRecoverable(e)) {
             log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
             scheduleBackgroundFetch(EXCEPTION_RETRY_DELAY_MS);
@@ -374,12 +380,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           sequenceNumber != null ? sequenceNumber : iteratorEnum.toString()
       );
 
-      shardIterator = wrapExceptions(() -> kinesis.getShardIterator(
-          streamPartition.getStream(),
-          streamPartition.getPartitionId(),
-          iteratorEnum.toString(),
-          sequenceNumber
-      ).getShardIterator());
+      GetShardIteratorRequest.Builder requestBuilder = GetShardIteratorRequest.builder()
+          .streamName(streamPartition.getStream())
+          .shardId(streamPartition.getPartitionId())
+          .shardIteratorType(iteratorEnum);
+
+      if (sequenceNumber != null) {
+        requestBuilder.startingSequenceNumber(sequenceNumber);
+      }
+
+      shardIterator = wrapExceptions(() -> kinesis.getShardIterator(requestBuilder.build()).shardIterator());
     }
 
     private long getPartitionTimeLag()
@@ -388,11 +398,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     }
   }
 
-  // used for deaggregate
-  private final MethodHandle deaggregateHandle;
-  private final MethodHandle getDataHandle;
-
-  private final AmazonKinesis kinesis;
+  private final KinesisClient kinesis;
+  private final AggregatorUtil aggregatorUtil = new AggregatorUtil();
   private final int fetchDelayMillis;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
@@ -413,7 +420,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   private final AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
   public KinesisRecordSupplier(
-      AmazonKinesis amazonKinesis,
+      KinesisClient kinesisClient,
       int fetchDelayMillis,
       int fetchThreads,
       int recordBufferSizeBytes,
@@ -424,8 +431,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       boolean useListShards
   )
   {
-    Preconditions.checkNotNull(amazonKinesis);
-    this.kinesis = amazonKinesis;
+    Preconditions.checkNotNull(kinesisClient);
+    this.kinesis = kinesisClient;
     this.fetchDelayMillis = fetchDelayMillis;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
@@ -435,28 +442,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
-
-    // The deaggregate function is implemented by the amazon-kinesis-client, whose license was formerly not compatible
-    // with Apache. The code here avoids the license issue by using reflection, but is no longer necessary since
-    // amazon-kinesis-client is now Apache-licensed and is now a dependency of Druid. This code could safely be
-    // modified to use regular calls rather than reflection.
-    try {
-      Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
-      MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-
-      Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
-      Method getDataMethod = kclUserRecordclass.getMethod("getData");
-
-      deaggregateHandle = lookup.unreflect(deaggregateMethod);
-      getDataHandle = lookup.unreflect(getDataMethod);
-    }
-    catch (ClassNotFoundException e) {
-      throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-                       + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
 
     if (backgroundFetchEnabled) {
       log.info(
@@ -474,45 +459,89 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     records = new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
   }
 
-  public static AmazonKinesis getAmazonKinesisClient(
+  public static KinesisClient getAmazonKinesisClient(
       String endpoint,
       AWSCredentialsConfig awsCredentialsConfig,
       String awsAssumedRoleArn,
       String awsExternalId
   )
   {
-    AWSCredentialsProvider awsCredentialsProvider = AWSCredentialsUtils.defaultAWSCredentialsProviderChain(
+    AwsCredentialsProvider credentialsProvider = AWSCredentialsUtils.defaultAWSCredentialsProviderChain(
         awsCredentialsConfig
     );
+
+    final Region regionFromEndpoint = parseRegionFromEndpoint(endpoint);
 
     if (awsAssumedRoleArn != null) {
       log.info("Assuming role [%s] with externalId [%s]", awsAssumedRoleArn, awsExternalId);
 
-      STSAssumeRoleSessionCredentialsProvider.Builder builder = new STSAssumeRoleSessionCredentialsProvider
-          .Builder(awsAssumedRoleArn, StringUtils.format("druid-kinesis-%s", UUID.randomUUID().toString()))
-          .withStsClient(AWSSecurityTokenServiceClientBuilder.standard()
-                                                             .withCredentials(awsCredentialsProvider)
-                                                             .build());
+      AssumeRoleRequest.Builder assumeRoleBuilder = AssumeRoleRequest.builder()
+          .roleArn(awsAssumedRoleArn)
+          .roleSessionName(StringUtils.format("druid-kinesis-%s", UUID.randomUUID().toString()));
 
       if (awsExternalId != null) {
-        builder.withExternalId(awsExternalId);
+        assumeRoleBuilder.externalId(awsExternalId);
       }
 
-      awsCredentialsProvider = builder.build();
+      StsClientBuilder stsClientBuilder = StsClient.builder()
+          .credentialsProvider(credentialsProvider);
+
+      if (regionFromEndpoint != null) {
+        stsClientBuilder.region(regionFromEndpoint);
+      }
+
+      StsClient stsClient = stsClientBuilder.build();
+
+      credentialsProvider = StsAssumeRoleCredentialsProvider.builder()
+          .stsClient(stsClient)
+          .refreshRequest(assumeRoleBuilder.build())
+          .build();
     }
 
-    return AmazonKinesisClientBuilder.standard()
-                                     .withCredentials(awsCredentialsProvider)
-                                     .withClientConfiguration(new ClientConfiguration())
-                                     .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                                         endpoint,
-                                         AwsHostNameUtils.parseRegion(
-                                             endpoint,
-                                             null
-                                         )
-                                     )).build();
+    KinesisClientBuilder builder = KinesisClient.builder()
+        .credentialsProvider(credentialsProvider);
+
+    if (endpoint != null && !endpoint.isEmpty()) {
+      // Back-compat: historically this endpoint is often a hostname without a scheme
+      // (e.g. "kinesis.us-east-1.amazonaws.com"). SDK v2 requires a URI for endpointOverride.
+      final String endpointWithScheme = endpoint.contains("://") ? endpoint : "https://" + endpoint;
+      URI endpointUri = URI.create(endpointWithScheme);
+      builder.endpointOverride(endpointUri);
+    }
+
+    // SDK v2 requires a region; when endpoint matches AWS hostname pattern we can infer it.
+    if (regionFromEndpoint != null) {
+      builder.region(regionFromEndpoint);
+    }
+
+    return builder.build();
   }
 
+  /**
+   * Parse region from a Kinesis endpoint URL.
+   * Expected format: https://kinesis.{region}.amazonaws.com
+   */
+  @VisibleForTesting
+  static Region parseRegionFromEndpoint(String endpoint)
+  {
+    if (endpoint == null) {
+      return null;
+    }
+    // Try to extract region from endpoint like "https://kinesis.us-east-1.amazonaws.com"
+    String lowerEndpoint = endpoint.toLowerCase(Locale.ENGLISH);
+    if (lowerEndpoint.contains(".amazonaws.com")) {
+      int kinesisIndex = lowerEndpoint.indexOf("kinesis.");
+      if (kinesisIndex >= 0) {
+        int regionStart = kinesisIndex + "kinesis.".length();
+        int regionEnd = lowerEndpoint.indexOf(".amazonaws.com");
+        if (regionEnd > regionStart) {
+          String regionStr = endpoint.substring(regionStart, regionEnd);
+          return Region.of(regionStr);
+        }
+      }
+    }
+    return null;
+  }
 
   @VisibleForTesting
   public void start()
@@ -671,11 +700,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       // Reference: https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
       // Section: GetRecords Returns Empty Records Array Even When There is Data in the Stream
       String shardIterator = RetryUtils.retry(
-          () -> kinesis.getShardIterator(partition.getStream(),
-                                         partition.getPartitionId(),
-                                         ShardIteratorType.AT_SEQUENCE_NUMBER.name(),
-                                         kinesisSequence.get())
-                       .getShardIterator(),
+          () -> kinesis.getShardIterator(
+              GetShardIteratorRequest.builder()
+                  .streamName(partition.getStream())
+                  .shardId(partition.getPartitionId())
+                  .shardIteratorType(ShardIteratorType.AT_SEQUENCE_NUMBER)
+                  .startingSequenceNumber(kinesisSequence.get())
+                  .build()
+          ).shardIterator(),
           (throwable) -> {
             if (throwable instanceof ProvisionedThroughputExceededException) {
               log.warn(
@@ -687,18 +719,19 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
               );
               return true;
             }
-            if (throwable instanceof AmazonClientException) {
-              AmazonClientException ase = (AmazonClientException) throwable;
-              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            if (throwable instanceof SdkException) {
+              SdkException sdkException = (SdkException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(sdkException);
             }
             return false;
           },
           GET_SEQUENCE_NUMBER_RETRY_COUNT
       );
-      GetRecordsRequest getRecordsRequest = new GetRecordsRequest().withShardIterator(shardIterator);
-      List<Record> records = RetryUtils.retry(
-          () -> kinesis.getRecords(getRecordsRequest)
-                       .getRecords(),
+      GetRecordsRequest getRecordsRequest = GetRecordsRequest.builder()
+          .shardIterator(shardIterator)
+          .build();
+      List<software.amazon.awssdk.services.kinesis.model.Record> records = RetryUtils.retry(
+          () -> kinesis.getRecords(getRecordsRequest).records(),
           (throwable) -> {
             if (throwable instanceof ProvisionedThroughputExceededException) {
               log.warn(
@@ -710,15 +743,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
               );
               return true;
             }
-            if (throwable instanceof AmazonClientException) {
-              AmazonClientException ase = (AmazonClientException) throwable;
-              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            if (throwable instanceof SdkException) {
+              SdkException sdkException = (SdkException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(sdkException);
             }
             return false;
           },
           GET_SEQUENCE_NUMBER_RETRY_COUNT
       );
-      return !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
+      return !records.isEmpty() && records.get(0).sequenceNumber().equals(kinesisSequence.get());
     });
   }
 
@@ -740,16 +773,24 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   private Set<Shard> getShardsUsingDescribeStream(String stream)
   {
     ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
-    DescribeStreamRequest describeRequest = new DescribeStreamRequest();
-    describeRequest.setStreamName(stream);
-    while (describeRequest != null) {
-      StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
-      List<Shard> shardResult = description.getShards();
+    String exclusiveStartShardId = null;
+    boolean hasMoreShards = true;
+
+    while (hasMoreShards) {
+      DescribeStreamRequest.Builder requestBuilder = DescribeStreamRequest.builder()
+          .streamName(stream);
+      if (exclusiveStartShardId != null) {
+        requestBuilder.exclusiveStartShardId(exclusiveStartShardId);
+      }
+
+      DescribeStreamResponse response = kinesis.describeStream(requestBuilder.build());
+      StreamDescription description = response.streamDescription();
+      List<Shard> shardResult = description.shards();
       shards.addAll(shardResult);
-      if (description.isHasMoreShards()) {
-        describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
-      } else {
-        describeRequest = null;
+
+      hasMoreShards = description.hasMoreShards();
+      if (hasMoreShards && !shardResult.isEmpty()) {
+        exclusiveStartShardId = Iterables.getLast(shardResult).shardId();
       }
     }
     return shards.build();
@@ -768,16 +809,23 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   private Set<Shard> getShardsUsingListShards(String stream)
   {
     ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
-    ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
-    while (true) {
-      ListShardsResult result = kinesis.listShards(request);
-      shards.addAll(result.getShards());
-      String nextToken = result.getNextToken();
-      if (nextToken == null) {
-        return shards.build();
+    String nextToken = null;
+    boolean firstRequest = true;
+
+    while (firstRequest || nextToken != null) {
+      ListShardsRequest.Builder requestBuilder = ListShardsRequest.builder();
+      if (firstRequest) {
+        requestBuilder.streamName(stream);
+        firstRequest = false;
+      } else {
+        requestBuilder.nextToken(nextToken);
       }
-      request = new ListShardsRequest().withNextToken(nextToken);
+
+      ListShardsResponse result = kinesis.listShards(requestBuilder.build());
+      shards.addAll(result.shards());
+      nextToken = result.nextToken();
     }
+    return shards.build();
   }
 
   @Override
@@ -786,7 +834,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     return wrapExceptions(() -> {
       Set<String> partitionIds = new TreeSet<>();
       for (Shard shard : getShards(stream)) {
-        partitionIds.add(shard.getShardId());
+        partitionIds.add(shard.shardId());
       }
       return partitionIds;
     });
@@ -881,17 +929,23 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   private String getSequenceNumber(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
   {
     return wrapExceptions(() -> {
-      String shardIterator =
-          kinesis.getShardIterator(partition.getStream(), partition.getPartitionId(), iteratorEnum.toString())
-                 .getShardIterator();
+      String shardIterator = kinesis.getShardIterator(
+          GetShardIteratorRequest.builder()
+              .streamName(partition.getStream())
+              .shardId(partition.getPartitionId())
+              .shardIteratorType(iteratorEnum)
+              .build()
+      ).shardIterator();
 
       if (closed) {
         log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
         return null;
       }
-      final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
-                                                               .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
-      GetRecordsResult recordsResult = RetryUtils.retry(
+      final GetRecordsRequest request = GetRecordsRequest.builder()
+          .shardIterator(shardIterator)
+          .limit(GET_SEQUENCE_NUMBER_RECORD_COUNT)
+          .build();
+      GetRecordsResponse recordsResult = RetryUtils.retry(
           () -> kinesis.getRecords(request),
           (throwable) -> {
             if (throwable instanceof ProvisionedThroughputExceededException) {
@@ -904,22 +958,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
               );
               return true;
             }
-            if (throwable instanceof AmazonClientException) {
-              AmazonClientException ase = (AmazonClientException) throwable;
-              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            if (throwable instanceof SdkException) {
+              SdkException sdkException = (SdkException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(sdkException);
             }
             return false;
           },
           GET_SEQUENCE_NUMBER_RETRY_COUNT
       );
 
-      List<Record> records = recordsResult.getRecords();
+      List<software.amazon.awssdk.services.kinesis.model.Record> records = recordsResult.records();
 
       if (!records.isEmpty()) {
-        return records.get(0).getSequenceNumber();
+        return records.get(0).sequenceNumber();
       }
 
-      if (recordsResult.getNextShardIterator() == null) {
+      if (recordsResult.nextShardIterator() == null) {
         log.info("Partition[%s] is closed and empty", partition.getPartitionId());
         return KinesisSequenceNumber.END_OF_SHARD_MARKER;
       }
@@ -944,18 +998,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
 
   /**
    * Given a {@link StreamPartition} and an offset, create a 'shard iterator' for the offset and fetch a single record
-   * in order to get the lag: {@link GetRecordsResult#getMillisBehindLatest()}. This method is thread safe as it does
+   * in order to get the lag: {@link GetRecordsResponse#millisBehindLatest()}. This method is thread safe as it does
    * not depend on the internal state of the supplier (it doesn't use the {@link PartitionResource} which have been
    * assigned to the supplier), and the Kinesis client is thread safe.
    */
   private Long getPartitionTimeLag(StreamPartition<String> partition, String offset)
   {
     return wrapExceptions(() -> {
-      final String iteratorType;
+      final ShardIteratorType iteratorType;
       final String offsetToUse;
       if (offset == null || KinesisSupervisor.OFFSET_NOT_SET.equals(offset)) {
         if (useEarliestSequenceNumber) {
-          iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
+          iteratorType = ShardIteratorType.TRIM_HORIZON;
           offsetToUse = null;
         } else {
           // if offset is not set and not using earliest, it means we will start reading from latest,
@@ -963,35 +1017,42 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           return 0L;
         }
       } else {
-        iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
+        iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER;
         offsetToUse = offset;
       }
 
-      GetRecordsResult recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
+      GetRecordsResponse recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER, offsetToUse, partition);
 
       // If no more new data after offsetToUse, it means there is no lag for now.
       // So report lag points as 0L.
-      if (recordsResult.getRecords().isEmpty()) {
+      if (recordsResult.records().isEmpty()) {
         return 0L;
       } else {
         recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
       }
 
-      return recordsResult.getMillisBehindLatest();
+      return recordsResult.millisBehindLatest();
     });
   }
 
-  private GetRecordsResult getRecordsForLag(String iteratorType, String offsetToUse, StreamPartition<String> partition)
+  private GetRecordsResponse getRecordsForLag(ShardIteratorType iteratorType, String offsetToUse, StreamPartition<String> partition)
   {
-    String shardIterator = kinesis.getShardIterator(
-            partition.getStream(),
-            partition.getPartitionId(),
-            iteratorType,
-            offsetToUse
-    ).getShardIterator();
+    GetShardIteratorRequest.Builder iteratorRequestBuilder = GetShardIteratorRequest.builder()
+        .streamName(partition.getStream())
+        .shardId(partition.getPartitionId())
+        .shardIteratorType(iteratorType);
+
+    if (offsetToUse != null) {
+      iteratorRequestBuilder.startingSequenceNumber(offsetToUse);
+    }
+
+    String shardIterator = kinesis.getShardIterator(iteratorRequestBuilder.build()).shardIterator();
 
     return kinesis.getRecords(
-        new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+        GetRecordsRequest.builder()
+            .shardIterator(shardIterator)
+            .limit(1)
+            .build()
     );
   }
 

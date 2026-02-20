@@ -19,20 +19,32 @@
 
 package org.apache.druid.testing.tools;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.kinesis.producer.KinesisProducer;
-import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
-import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.commons.codec.digest.DigestUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.KinesisClientBuilder;
+import software.amazon.awssdk.services.kinesis.model.PutRecordsRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordsRequestEntry;
 
 import java.io.FileInputStream;
-import java.nio.ByteBuffer;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Properties;
 
 public class KinesisEventWriter implements StreamEventWriter
 {
-  private final KinesisProducer kinesisProducer;
+  private static final int MAX_BATCH_SIZE = 500; // Kinesis limit for PutRecords
+
+  private final KinesisClient kinesisClient;
+  private final List<PendingRecord> pendingRecords = new ArrayList<>();
+  private String currentStreamName;
 
   public KinesisEventWriter(String endpoint, boolean aggregate) throws Exception
   {
@@ -40,23 +52,57 @@ public class KinesisEventWriter implements StreamEventWriter
     Properties prop = new Properties();
     prop.load(new FileInputStream(pathToConfigFile));
 
-    AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
-        new BasicAWSCredentials(
+    StaticCredentialsProvider credentials = StaticCredentialsProvider.create(
+        AwsBasicCredentials.create(
             prop.getProperty("druid_kinesis_accessKey"),
             prop.getProperty("druid_kinesis_secretKey")
         )
     );
 
-    KinesisProducerConfiguration kinesisProducerConfiguration = new KinesisProducerConfiguration()
-        .setCredentialsProvider(credentials)
-        .setRegion(AwsHostNameUtils.parseRegion(endpoint, null))
-        .setRequestTimeout(600000L)
-        .setConnectTimeout(300000L)
-        .setRecordTtl(9223372036854775807L)
-        .setMetricsLevel("none")
-        .setAggregationEnabled(aggregate);
+    KinesisClientBuilder builder = KinesisClient.builder()
+        .credentialsProvider(credentials);
 
-    this.kinesisProducer = new KinesisProducer(kinesisProducerConfiguration);
+    final Region regionFromEndpoint = parseRegionFromEndpoint(endpoint);
+
+    if (endpoint != null && !endpoint.isEmpty()) {
+      final String endpointWithScheme = endpoint.contains("://") ? endpoint : "https://" + endpoint;
+      builder.endpointOverride(URI.create(endpointWithScheme));
+    }
+
+    if (regionFromEndpoint != null) {
+      builder.region(regionFromEndpoint);
+    }
+
+    this.kinesisClient = builder.build();
+    // Note: aggregate parameter is kept for API compatibility but aggregation
+    // is not implemented in v2 SDK migration (KPL aggregation was proprietary)
+  }
+
+  private static Region parseRegionFromEndpoint(String endpoint)
+  {
+    if (endpoint == null) {
+      return null;
+    }
+
+    // Try to parse region using AWS SDK utility
+    String host = endpoint.contains("://")
+        ? URI.create(endpoint).getHost()
+        : endpoint;
+    if (host == null) {
+      host = endpoint;
+    }
+
+    Optional<Region> region = AwsHostNameUtils.parseSigningRegion(host, "kinesis");
+    if (region.isPresent()) {
+      return region.get();
+    }
+
+    // For LocalStack or custom endpoints, default to US_EAST_1
+    String lowerEndpoint = endpoint.toLowerCase(Locale.ENGLISH);
+    if (lowerEndpoint.contains("localhost") || lowerEndpoint.contains("127.0.0.1")) {
+      return Region.US_EAST_1;
+    }
+    return null;
   }
 
   @Override
@@ -86,34 +132,99 @@ public class KinesisEventWriter implements StreamEventWriter
   @Override
   public void write(String streamName, byte[] event)
   {
-    kinesisProducer.addUserRecord(
-        streamName,
-        DigestUtils.sha1Hex(event),
-        ByteBuffer.wrap(event)
-    );
+    synchronized (pendingRecords) {
+      currentStreamName = streamName;
+      pendingRecords.add(new PendingRecord(streamName, event));
+
+      // Auto-flush if batch is full
+      if (pendingRecords.size() >= MAX_BATCH_SIZE) {
+        flushInternal();
+      }
+    }
   }
 
   @Override
   public void close()
   {
     flush();
+    kinesisClient.close();
   }
 
   @Override
   public void flush()
   {
-    kinesisProducer.flushSync();
+    synchronized (pendingRecords) {
+      flushInternal();
+    }
+  }
+
+  private void flushInternal()
+  {
+    if (pendingRecords.isEmpty()) {
+      return;
+    }
+
+    // Group records by stream name
+    List<PutRecordsRequestEntry> entries = new ArrayList<>();
+    String streamName = currentStreamName;
+
+    for (PendingRecord record : pendingRecords) {
+      entries.add(PutRecordsRequestEntry.builder()
+          .data(SdkBytes.fromByteArray(record.data))
+          .partitionKey(DigestUtils.sha1Hex(record.data))
+          .build());
+
+      // Flush batch when we hit the limit
+      if (entries.size() >= MAX_BATCH_SIZE) {
+        sendBatch(streamName, entries);
+        entries.clear();
+      }
+    }
+
+    // Send remaining records
+    if (!entries.isEmpty()) {
+      sendBatch(streamName, entries);
+    }
+
+    pendingRecords.clear();
+  }
+
+  private void sendBatch(String streamName, List<PutRecordsRequestEntry> entries)
+  {
     ITRetryUtil.retryUntil(
-        () -> kinesisProducer.getOutstandingRecordsCount() == 0,
+        () -> {
+          try {
+            kinesisClient.putRecords(PutRecordsRequest.builder()
+                .streamName(streamName)
+                .records(entries)
+                .build());
+            return true;
+          }
+          catch (Exception e) {
+            return false;
+          }
+        },
         true,
-        10000,
+        1000,
         30,
-        "Waiting for all Kinesis writes to be flushed"
+        "Sending batch to Kinesis"
     );
   }
 
-  protected KinesisProducer getKinesisProducer()
+  protected KinesisClient getKinesisClient()
   {
-    return kinesisProducer;
+    return kinesisClient;
+  }
+
+  private static class PendingRecord
+  {
+    final String streamName;
+    final byte[] data;
+
+    PendingRecord(String streamName, byte[] data)
+    {
+      this.streamName = streamName;
+      this.data = data;
+    }
   }
 }
