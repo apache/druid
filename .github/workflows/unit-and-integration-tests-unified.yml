@@ -56,8 +56,8 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   standard-its:
-      needs: [unit-tests]
-      uses: ./.github/workflows/standard-its.yml
+    needs: [unit-tests]
+    uses: ./.github/workflows/standard-its.yml
 
   docker-tests:
     needs: [unit-tests]

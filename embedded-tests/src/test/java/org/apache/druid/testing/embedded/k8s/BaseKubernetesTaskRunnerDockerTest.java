@@ -69,7 +69,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
     
     return cluster
         .useContainerFriendlyHostname()
-        .useDefaultTimeoutForLatchableEmitter(180)
+        .useDefaultTimeoutForLatchableEmitter(120)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)
