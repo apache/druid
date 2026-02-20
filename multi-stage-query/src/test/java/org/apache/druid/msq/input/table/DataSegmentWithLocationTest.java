@@ -21,15 +21,20 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -72,7 +77,19 @@ public class DataSegmentWithLocationTest
         new HashedPartitionsSpec(100000, null, List.of("dim1")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim1", "bar", "foo"))),
         List.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+        new CompactionTransformSpec(
+            new SelectorDimFilter("dim1", "foo", null),
+            VirtualColumns.create(
+                ImmutableList.of(
+                    new ExpressionVirtualColumn(
+                        "isRobotFiltered",
+                        "concat(isRobot, '_filtered')",
+                        ColumnType.STRING,
+                        ExprMacroTable.nil()
+                    )
+                )
+            )
+        ),
         MAPPER.convertValue(Map.of(), IndexSpec.class),
         MAPPER.convertValue(Map.of(), GranularitySpec.class),
         null

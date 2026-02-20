@@ -509,7 +509,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
     }
 
-    if (!remainingStart.equals(remainingEnd)) {
+    if (remainingStart.isBefore(remainingEnd)) {
       filteredIntervals.add(new Interval(remainingStart, remainingEnd));
     }
 
