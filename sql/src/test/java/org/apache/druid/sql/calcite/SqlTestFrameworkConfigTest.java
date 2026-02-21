@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.NumMergeBuffers;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCache;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
@@ -54,7 +53,6 @@ public class SqlTestFrameworkConfigTest
   @NumMergeBuffers(3)
   static class C extends B
   {
-    @MinTopNThreshold(1)
     public void imaginaryTestMethod1()
     {
     }
@@ -64,7 +62,6 @@ public class SqlTestFrameworkConfigTest
     }
   }
 
-  @MinTopNThreshold(2)
   static class D extends C
   {
     @NumMergeBuffers(1)
@@ -74,7 +71,6 @@ public class SqlTestFrameworkConfigTest
 
     @ResultCache(ResultCacheMode.DISABLED)
     @NumMergeBuffers(1)
-    @MinTopNThreshold(1)
     public void imaginaryTestMethod4()
     {
     }
@@ -86,7 +82,6 @@ public class SqlTestFrameworkConfigTest
     List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(C.class, D.class.getMethod("imaginaryTestMethod1"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
-    assertEquals(1, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
   }
@@ -97,7 +92,6 @@ public class SqlTestFrameworkConfigTest
     List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod2"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
-    assertEquals(2, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
   }
@@ -108,7 +102,6 @@ public class SqlTestFrameworkConfigTest
     List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod3"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
-    assertEquals(2, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
   }
@@ -119,7 +112,6 @@ public class SqlTestFrameworkConfigTest
     List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod4"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
-    assertEquals(1, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);
     assertEquals(ResultCacheMode.DISABLED, config.resultCache);
   }
@@ -136,7 +128,7 @@ public class SqlTestFrameworkConfigTest
     );
 
     assertEquals(
-        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, minTopNThreshold, resultCache, componentSupplier, datasets]]",
+        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, resultCache, componentSupplier, datasets]]",
         e.getMessage()
     );
   }

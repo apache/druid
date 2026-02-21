@@ -2224,12 +2224,6 @@ If runtime property only contains `druid.query.default.context.maxQueuedBytes=y`
 `druid.query.default.context.maxQueuedBytes`, `y`, is use (given that query does not have `maxQueuedBytes` in the
 context). If query does have `maxQueuedBytes` in the context, then that value is use instead.
 
-### TopN query config
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.|1000|
-
 ### Search query config
 
 |Property|Description|Default|
