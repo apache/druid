@@ -125,6 +125,7 @@
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
+        <opentelemetry.proto.version>0.19.0-alpha</opentelemetry.proto.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.8.4</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
@@ -265,6 +266,7 @@
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
         <module>extensions-contrib/druid-ranger-security</module>
+        <module>extensions-contrib/opentelemetry-metrics-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
@@ -1259,6 +1261,11 @@
                <groupId>org.postgresql</groupId>
                <artifactId>postgresql</artifactId>
                <version>${postgresql.version}</version>
+           </dependency>
+           <dependency>
+               <groupId>io.opentelemetry.proto</groupId>
+               <artifactId>opentelemetry-proto</artifactId>
+               <version>${opentelemetry.proto.version}</version>
            </dependency>
 
             <!-- GCP -->
