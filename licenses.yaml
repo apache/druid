@@ -904,7 +904,7 @@ libraries:
 
 name: kubernetes official java client
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 19.0.0
 libraries:
@@ -929,7 +929,7 @@ libraries:
 
 name: org.apache.commons commons-collections4
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 4.4
 libraries:
@@ -939,7 +939,7 @@ libraries:
 
 name: io.sundr builder-annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 0.22.0
 libraries:
@@ -949,7 +949,7 @@ libraries:
 
 name: com.squareup.okio okio
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.17.2
 libraries:
@@ -959,7 +959,7 @@ libraries:
 
 name: io.gsonfire gson-fire
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.8.5
 libraries:
@@ -969,7 +969,7 @@ libraries:
 
 name: io.swagger swagger-annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.6.12
 libraries:
@@ -979,7 +979,7 @@ libraries:
 
 name: io.swagger swagger-annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.6.11
 libraries:
@@ -989,7 +989,7 @@ libraries:
 
 name: io.swagger swagger-annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 2.8.6
 libraries:
@@ -1000,7 +1000,7 @@ libraries:
 
 name: org.bitbucket.b_c jose4j
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 0.9.6
 libraries:
@@ -1010,7 +1010,7 @@ libraries:
 
 name: org.joda joda-convert
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 2.2.1
 libraries:
@@ -1030,7 +1030,7 @@ libraries:
 
 name: com.squareup.okhttp3 okhttp
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 4.12.0
 libraries:
@@ -1041,7 +1041,7 @@ libraries:
 
 name: com.squareup.okhttp3 okhttp logging-interceptor
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 4.11.0
 libraries:
@@ -1051,7 +1051,7 @@ libraries:
 
 name: com.squareup.okio okio
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 3.6.0
 libraries:
@@ -1062,7 +1062,7 @@ libraries:
 
 name: io.prometheus simpleclient
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 0.16.0
 libraries:
@@ -1097,7 +1097,7 @@ libraries:
 
 name: org.yaml snakeyaml
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 2.2
 libraries:
@@ -1107,7 +1107,7 @@ libraries:
 
 name: com.flipkart.zjsonpatch zjsonpatch
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 0.4.14
 libraries:
@@ -1117,7 +1117,7 @@ libraries:
 
 name: org.bouncycastle bcprov-jdk18on
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: MIT License
 version: "1.81"
 libraries:
@@ -1130,7 +1130,7 @@ libraries:
 
 name: com.github.vladimir-bukhtoyarov bucket4j-core
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
 version: 7.6.0
 libraries:
@@ -6818,3 +6818,14 @@ copyright: Paul Henschel
 version: 4.5.5
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end
+
+---
+
+name: Consul API
+license_category: binary
+module: extensions-contrib/consul-extensions
+license_name: Apache License version 2.0
+version: 1.4.5
+copyright: Ecwid
+libraries:
+  - com.ecwid.consul: consul-api

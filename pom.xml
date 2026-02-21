@@ -236,6 +236,7 @@
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
+        <module>extensions-contrib/consul-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/druid-exact-count-bitmap</module>
@@ -429,6 +430,11 @@
             </dependency>
             <!-- Transitive dependency of kubernetes-client java and docker-java-core
             in kubernetes-extensions and it-integration tests -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.81</version>
+            </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
@@ -1163,7 +1169,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>5.2.0</version>
+                <version>5.4.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

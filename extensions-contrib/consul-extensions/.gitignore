@@ -1,0 +1,11 @@
+
+# Docker volumes and runtime data
+*.log
+/tmp/
+.env.local
+
+# Consul test runtime data
+consul-data/
+.consul-data/
+consul.pid
+
