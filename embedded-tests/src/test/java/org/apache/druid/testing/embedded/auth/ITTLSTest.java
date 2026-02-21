@@ -286,7 +286,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     verifyGetStatusHttpsIsOk(wrongHostnameClient, routerWithCustomCertChecker);
 
     // Verify that access to Broker fails
-    checkFailedAccess(
+    verifyRequestFails(
         wrongHostnameClient,
         HttpMethod.POST,
         getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/v2",
@@ -295,7 +295,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     );
 
     // Verify that access to Coordinator works
-    makeRequest(
+    verifyRequestIsOk(
         wrongHostnameClient,
         HttpMethod.GET,
         getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/coordinator/v1/leader"
@@ -304,7 +304,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
   private void verifyGetHttpsFailsWith(String expectedMessage, EmbeddedDruidServer<?> server, HttpClient httpClient)
   {
-    checkFailedAccess(
+    verifyRequestFails(
         httpClient,
         HttpMethod.GET,
         getServerHttpsUrl(server),
@@ -390,7 +390,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     );
   }
 
-  private void checkFailedAccess(
+  private void verifyRequestFails(
       HttpClient httpClient,
       HttpMethod method,
       String url,
@@ -401,7 +401,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     try {
       RetryUtils.retry(
           () -> {
-            makeRequest(httpClient, method, url);
+            verifyRequestIsOk(httpClient, method, url);
             return 0;
           },
           e -> isRetriable(Throwables.getRootCause(e)),
@@ -422,15 +422,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
   private void verifyGetStatusIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
-    makeRequest(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
+    verifyRequestIsOk(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
   }
   
   private void verifyGetStatusHttpsIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
-    makeRequest(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");
+    verifyRequestIsOk(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");
   }
 
-  private void makeRequest(
+  private void verifyRequestIsOk(
       HttpClient httpClient,
       HttpMethod method,
       String url
