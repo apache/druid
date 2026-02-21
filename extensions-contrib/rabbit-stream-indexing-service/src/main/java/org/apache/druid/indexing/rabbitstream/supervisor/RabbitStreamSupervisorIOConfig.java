@@ -84,7 +84,8 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         LagAggregator.DEFAULT,
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
-        stopTaskCount
+        stopTaskCount,
+        null
     );
 
     this.consumerProperties = consumerProperties;

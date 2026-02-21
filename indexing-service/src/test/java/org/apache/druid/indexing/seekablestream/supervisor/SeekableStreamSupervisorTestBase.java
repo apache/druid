@@ -177,7 +177,8 @@ public abstract class SeekableStreamSupervisorTestBase
         TreeMap<Integer, Map<String, String>> sequenceOffsets,
         SeekableStreamIndexTaskIOConfig taskIoConfig,
         SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-        RowIngestionMetersFactory rowIngestionMetersFactory
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        @Nullable List<Integer> serverPrioritiesToAssign
     )
     {
       return null;
@@ -533,6 +534,7 @@ public abstract class SeekableStreamSupervisorTestBase
         null,
         autoScalerConfig,
         LagAggregator.DEFAULT,
+        null,
         null,
         null,
         null

@@ -73,11 +73,14 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final LockGranularity lockGranularityToUse;
   protected final TaskLockType lockTypeToUse;
   protected final String supervisorId;
+  @Nullable
+  protected final Integer serverPriority;
 
   // Lazily initialized to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
+
 
   public SeekableStreamIndexTask(
       final String id,
@@ -87,7 +90,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final String groupId
+      @Nullable final String groupId,
+      @Nullable final Integer serverPriority
   )
   {
     super(
@@ -108,6 +112,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
     this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
+    this.serverPriority = serverPriority;
   }
 
   protected static String getFormattedGroupId(String supervisorId, String type)
@@ -317,5 +322,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> getRunner()
   {
     return runnerSupplier.get();
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getServerPriority()
+  {
+    return serverPriority;
   }
 }

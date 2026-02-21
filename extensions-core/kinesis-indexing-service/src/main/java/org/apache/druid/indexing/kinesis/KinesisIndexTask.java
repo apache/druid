@@ -83,7 +83,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        null
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;

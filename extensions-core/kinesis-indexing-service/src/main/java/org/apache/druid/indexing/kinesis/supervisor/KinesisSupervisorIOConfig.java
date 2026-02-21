@@ -96,6 +96,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         LagAggregator.DEFAULT,
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
+        null,
         null
     );
 

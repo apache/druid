@@ -482,33 +482,46 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             Duration.standardHours(2).getStandardMinutes()
         ),
-        new KafkaIndexTaskTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        supervisor.getTuningConfig(),
+        null,
         null
     ).get(0);
     Assert.assertTrue(indexTask.getRunner() instanceof KafkaIndexTaskRunner);
+    Assert.assertNull(indexTask.getServerPriority());
+  }
+
+  @Test
+  public void testCreateIndexTasksWithServerPrioritiesToAssign() throws JsonProcessingException
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList =
+        supervisor.createIndexTasks(
+            3,
+            "seq",
+            OBJECT_MAPPER,
+            new TreeMap<>(),
+            new KafkaIndexTaskIOConfig(
+                0,
+                "seq",
+                new SeekableStreamStartSequenceNumbers<>("test", Collections.emptyMap(), Collections.emptySet()),
+                new SeekableStreamEndSequenceNumbers<>("test", Collections.emptyMap()),
+                Collections.emptyMap(),
+                null,
+                null,
+                null,
+                null,
+                INPUT_FORMAT,
+                null,
+                Duration.standardHours(2).getStandardMinutes()
+            ),
+            supervisor.getTuningConfig(),
+            null,
+            List.of(10, 20, 20)
+        );
+    Assert.assertEquals(3, taskList.size());
+    Assert.assertEquals(Integer.valueOf(10), taskList.get(0).getServerPriority());
+    Assert.assertEquals(Integer.valueOf(20), taskList.get(1).getServerPriority());
+    Assert.assertEquals(Integer.valueOf(20), taskList.get(2).getServerPriority());
   }
 
   @Test
@@ -5449,7 +5462,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         idleConfig,
         null,
-        true
+        true,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5543,7 +5557,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5637,7 +5652,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5786,7 +5802,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        null
     );
   }
 

@@ -31,6 +31,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 
 public abstract class SeekableStreamSupervisorIOConfig
@@ -51,6 +52,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final AutoScalerConfig autoScalerConfig;
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
+  @Nullable private final Map<Integer, Integer> serverPriorityToReplicaCount;
 
   private final LagAggregator lagAggregator;
   private final boolean autoScalerEnabled;
@@ -71,12 +73,12 @@ public abstract class SeekableStreamSupervisorIOConfig
       LagAggregator lagAggregator,
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
-      @Nullable Integer stopTaskCount
+      @Nullable Integer stopTaskCount,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicaCount
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.inputFormat = inputFormat;
-    this.replicas = replicas != null ? replicas : 1;
 
     InvalidInput.conditionalException(
         lagAggregator != null,
@@ -119,6 +121,21 @@ public abstract class SeekableStreamSupervisorIOConfig
     }
 
     this.idleConfig = idleConfig;
+    this.serverPriorityToReplicaCount = serverPriorityToReplicaCount;
+    if (this.serverPriorityToReplicaCount != null) {
+      final int replicaCount = this.serverPriorityToReplicaCount.values().stream().mapToInt(Integer::intValue).sum();
+      if (replicas != null && replicas != replicaCount) {
+        throw InvalidInput.exception(
+            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicaCount[%s].",
+            replicas, replicaCount, serverPriorityToReplicaCount
+        );
+      }
+
+      // We also explicitly set replicas since the supervisor logic for replicas is already implemented.
+      this.replicas = replicaCount;
+    } else {
+      this.replicas = replicas != null ? replicas : 1;
+    }
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -143,6 +160,13 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Integer getReplicas()
   {
     return replicas;
+  }
+
+  @Nullable
+  @JsonProperty
+  public Map<Integer, Integer> getServerPriorityToReplicaCount()
+  {
+    return serverPriorityToReplicaCount;
   }
 
   @Nullable
