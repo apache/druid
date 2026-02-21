@@ -37,6 +37,7 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -78,8 +79,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
+        FilterSegmentPruner.create(originalQuery.getFilter()),
         minStageNumber,
         false
     );

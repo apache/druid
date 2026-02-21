@@ -44,13 +44,13 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -132,7 +132,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
       return Collections.emptyList();
     }
 
-    final Set<DartQueryableSegment> prunedSegments =
+    final Collection<DartQueryableSegment> prunedSegments =
         findQueryableDataSegments(
             tableInputSpec,
             timeline,
@@ -222,7 +222,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Pull the list of {@link DataSegment} that we should query, along with a clipping interval for each one, and
    * a worker to get it from.
    */
-  private Set<DartQueryableSegment> findQueryableDataSegments(
+  private Collection<DartQueryableSegment> findQueryableDataSegments(
       final TableInputSpec tableInputSpec,
       final TimelineLookup<?, ServerSelector> timeline,
       final ToIntFunction<ServerSelector> toWorkersFunction
@@ -242,14 +242,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                   })
                                   .filter(segment -> !segment.getSegment().isTombstone())
                       );
-
-    return DimFilterUtils.filterShards(
-        tableInputSpec.getFilter(),
-        tableInputSpec.getFilterFields(),
-        allSegments,
-        segment -> segment.getSegment().getShardSpec(),
-        new HashMap<>()
-    );
+    return tableInputSpec.filterSegments(allSegments, DartQueryableSegment::getSegment);
   }
 
   private DartQueryableSegment toDartQueryableSegment(

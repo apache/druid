@@ -44,7 +44,6 @@ import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -157,7 +156,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     return makeSlices(tableInputSpec, assignments);
   }
 
-  private Set<DataSegmentWithInterval> getPrunedSegmentSet(final TableInputSpec tableInputSpec)
+  private Collection<DataSegmentWithInterval> getPrunedSegmentSet(final TableInputSpec tableInputSpec)
   {
     final TimelineLookup<String, DataSegment> timeline =
         getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
@@ -182,13 +181,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
                                              .map(segment -> new DataSegmentWithInterval(segment, holder.getInterval()))
                         ).iterator();
 
-      return DimFilterUtils.filterShards(
-          tableInputSpec.getFilter(),
-          tableInputSpec.getFilterFields(),
-          () -> dataSegmentIterator,
-          segment -> segment.getSegment().getShardSpec(),
-          new HashMap<>()
-      );
+      return tableInputSpec.filterSegments(() -> dataSegmentIterator, DataSegmentWithInterval::getSegment);
     }
   }
 
