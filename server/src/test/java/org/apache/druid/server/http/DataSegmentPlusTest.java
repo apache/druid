@@ -32,10 +32,15 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -58,6 +63,7 @@ public class DataSegmentPlusTest
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE);
     injectableValues.addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
   }
@@ -95,7 +101,19 @@ public class DataSegmentPlusTest
                            DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                        ),
                        ImmutableList.of(new CountAggregatorFactory("cnt")),
-                       new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                       new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               ImmutableList.of(
+                                   new ExpressionVirtualColumn(
+                                       "isRobotFiltered",
+                                       "concat(isRobot, '_filtered')",
+                                       ColumnType.STRING,
+                                       ExprMacroTable.nil()
+                                   )
+                               )
+                           )
+                       ),
                        MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                        MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
                        null

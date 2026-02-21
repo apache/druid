@@ -276,6 +276,29 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     return result;
   }
 
+  /**
+   * Creates a builder initialized with all fields from this config.
+   * Useful for creating modified copies of an existing config.
+   */
+  public Builder toBuilder()
+  {
+    return new Builder()
+        .forDataSource(this.dataSource)
+        .withTaskPriority(this.taskPriority)
+        .withInputSegmentSizeBytes(this.inputSegmentSizeBytes)
+        .withMaxRowsPerSegment(this.maxRowsPerSegment)
+        .withSkipOffsetFromLatest(this.skipOffsetFromLatest)
+        .withTuningConfig(this.tuningConfig)
+        .withGranularitySpec(this.granularitySpec)
+        .withDimensionsSpec(this.dimensionsSpec)
+        .withMetricsSpec(this.metricsSpec)
+        .withTransformSpec(this.transformSpec)
+        .withProjections(this.projections)
+        .withIoConfig(this.ioConfig)
+        .withEngine(this.engine)
+        .withTaskContext(this.taskContext);
+  }
+
   public static class Builder
   {
     private String dataSource;
@@ -357,6 +380,34 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     )
     {
       this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Builder withSegmentGranularity(Granularity segmentGranularity)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(segmentGranularity, null, null);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            segmentGranularity,
+            this.granularitySpec.getQueryGranularity(),
+            this.granularitySpec.isRollup()
+        );
+      }
+      return this;
+    }
+
+    public Builder withQueryGranularityAndRollup(Granularity queryGranularity, Boolean rollup)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(null, queryGranularity, rollup);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            this.granularitySpec.getSegmentGranularity(),
+            queryGranularity,
+            rollup
+        );
+      }
       return this;
     }
 

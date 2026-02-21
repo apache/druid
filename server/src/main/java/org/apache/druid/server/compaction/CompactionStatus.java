@@ -60,6 +60,7 @@ public class CompactionStatus
   private static final Logger log = new Logger(CompactionStatus.class);
 
   private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
+  public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
   {
@@ -86,7 +87,7 @@ public class CompactionStatus
       Evaluator::rollupIsUpToDate,
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
-      Evaluator::transformSpecFilterIsUpToDate,
+      Evaluator::transformSpecIsUpToDate,
       Evaluator::projectionsAreUpToDate
   );
 
@@ -522,7 +523,7 @@ public class CompactionStatus
       if (uncompactedSegments.isEmpty()) {
         return COMPLETE;
       } else {
-        return CompactionStatus.pending("not compacted yet");
+        return CompactionStatus.pending(NEVER_COMPACTED_REASON);
       }
     }
 
@@ -566,9 +567,9 @@ public class CompactionStatus
       return evaluateForAllCompactionStates(this::metricsSpecIsUpToDate);
     }
 
-    private CompactionStatus transformSpecFilterIsUpToDate()
+    private CompactionStatus transformSpecIsUpToDate()
     {
-      return evaluateForAllCompactionStates(this::transformSpecFilterIsUpToDate);
+      return evaluateForAllCompactionStates(this::transformSpecIsUpToDate);
     }
 
     private CompactionStatus partitionsSpecIsUpToDate(CompactionState lastCompactionState)
@@ -750,17 +751,22 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus transformSpecFilterIsUpToDate(CompactionState lastCompactionState)
+    private CompactionStatus transformSpecIsUpToDate(CompactionState lastCompactionState)
     {
-      if (compactionConfig.getTransformSpec() == null) {
+      final CompactionTransformSpec configuredSpec = compactionConfig.getTransformSpec();
+      if (configuredSpec == null
+          || (configuredSpec.getFilter() == null && configuredSpec.getVirtualColumns().isEmpty())) {
         return COMPLETE;
       }
 
-      CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
+      final CompactionTransformSpec existingSpec = Configs.valueOrDefault(
+          lastCompactionState.getTransformSpec(),
+          new CompactionTransformSpec(null, null)
+      );
       return CompactionStatus.completeIfNullOrEqual(
-          "transformSpec filter",
-          compactionConfig.getTransformSpec().getFilter(),
-          existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
+          "transformSpec",
+          configuredSpec,
+          existingSpec,
           String::valueOf
       );
     }
