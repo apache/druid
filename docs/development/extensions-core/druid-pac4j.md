@@ -55,6 +55,7 @@ druid.auth.authenticator.jwt.type=jwt
 |`druid.auth.pac4j.oidc.discoveryURI`|discovery URI for fetching OP metadata [see this](http://openid.net/specs/openid-connect-discovery-1_0.html).|none|Yes|
 |`druid.auth.pac4j.oidc.oidcClaim`|[claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) that will be extracted from the ID Token after validation.|name|No|
 |`druid.auth.pac4j.oidc.scope`| scope is used by an application during authentication to authorize access to a user's details.|`openid profile email`|No|
+|`druid.auth.pac4j.oidc.roleClaimPath`| Dot-separated path to the claim containing user roles|none|No|
 
 :::info
 Users must set a strong passphrase to ensure that an attacker is not able to guess it simply by brute force.
