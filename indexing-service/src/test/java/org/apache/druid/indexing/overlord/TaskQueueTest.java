@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.HttpInputSource;
@@ -87,8 +86,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.initialization.IndexerZkConfig;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -193,7 +190,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testManageQueuedTasksDoesNothingWhenInactive() throws Exception
+  public void testManageQueuedTasksDoesNothingWhenInactive()
   {
     // Add a task to the queue while active
     final TestTask task = new TestTask("t1", Intervals.of("2021-01/P1M"));
@@ -767,8 +764,6 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
     );
   }
