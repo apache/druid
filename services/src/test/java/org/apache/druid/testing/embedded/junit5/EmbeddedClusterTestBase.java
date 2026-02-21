@@ -70,9 +70,9 @@ public abstract class EmbeddedClusterTestBase
   }
 
   /**
-   * Returns the TLS-enabled url of the given server.
+   * Returns the TLS-enabled HTTPS url of the given server.
    */
-  protected static String getServerTlsUrl(EmbeddedDruidServer<?> server)
+  protected static String getServerHttpsUrl(EmbeddedDruidServer<?> server)
   {
     final DruidNode node = server.bindings().selfNode();
     return StringUtils.format(

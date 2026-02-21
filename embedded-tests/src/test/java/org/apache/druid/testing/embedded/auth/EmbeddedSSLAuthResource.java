@@ -30,9 +30,15 @@ import java.io.IOException;
 
 /**
  * {@link EmbeddedResource} used to enable SSL on Druid services.
- * This resource generates the certificates and keystores needed by both the
- * server and client, and then configures the Druid cluster with the appropriate
- * keystore and truststore paths.
+ * This resource is responsible for the following:
+ * <ul>
+ * <li>Generate client certificates using script
+ * {@code integration-tests/docker/tls/generate-client-certs-and-keystores.sh}</li>
+ * <li>Generate server truststore using script
+ * {@code integration-tests/docker/tls/generate-server-certs-and-keystores.sh}</li>
+ * <li>Keeps the generated certificates in the {@code TestFolder} used by the cluster</li>
+ * <li>Configures the cluster with the appropriate keystore/truststore paths.</li>
+ * </ul>
  */
 public class EmbeddedSSLAuthResource implements EmbeddedResource
 {

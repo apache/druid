@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.auth;
 import com.google.common.base.Throwables;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
@@ -38,6 +39,7 @@ import org.apache.druid.server.security.TLSUtils;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
@@ -47,16 +49,20 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
 
 public class ITTLSTest extends EmbeddedClusterTestBase
 {
+  private static final int MAX_BROKEN_PIPE_RETRIES = 10;
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
+
+  private static final String ERROR_CERTIFICATE_UNKNOWN = "Received fatal alert: certificate_unknown";
 
   private DruidHttpClientConfig httpClientConfig;
   private TLSCertificateChecker certificateChecker;
@@ -68,18 +74,21 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedRouter router = new EmbeddedRouter();
 
-  // Router which accepts any certificate
-  private final EmbeddedRouter permissiveAnyCertRouter = new EmbeddedRouter()
+  private final EmbeddedRouter routerAcceptsAnyCert = new EmbeddedRouter()
       .addProperty("druid.plaintextPort", "8889")
       .addProperty("druid.tlsPort", "9089")
       .addProperty("druid.server.https.validateHostnames", "false");
 
-  // Router which does not require a client certificate
-  private final EmbeddedRouter noClientAuthRouter = new EmbeddedRouter()
+  private final EmbeddedRouter routerNeedsNoClientCert = new EmbeddedRouter()
       .addProperty("druid.plaintextPort", "8890")
       .addProperty("druid.tlsPort", "9090")
       .addProperty("druid.server.https.requireClientCertificate", "false")
       .addProperty("druid.server.https.validateHostnames", "false");
+
+  private final EmbeddedRouter routerWithCustomCertChecker = new EmbeddedRouter()
+      .addProperty("druid.plaintextPort", "8891")
+      .addProperty("druid.tlsPort", "9091")
+      .addProperty("druid.tls.certificateChecker", ITTLSCertificateCheckerModule.IT_CHECKER_TYPE);
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -87,14 +96,16 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .addResource(new EmbeddedBasicAuthResource())
+        .addExtension(ITTLSCertificateCheckerModule.class)
         .addResource(sslAuthResource)
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(broker)
         .addServer(historical)
         .addServer(router)
-        .addServer(permissiveAnyCertRouter)
-        .addServer(noClientAuthRouter);
+        .addServer(routerAcceptsAnyCert)
+        .addServer(routerNeedsNoClientCert)
+        .addServer(routerWithCustomCertChecker);
   }
 
   @BeforeAll
@@ -111,13 +122,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         new BasicCredentials("admin", "priest"),
         overlord.bindings().globalHttpClient()
     );
-    makeRequest(adminClient, getServerUrl(coordinator) + "/status");
-    makeRequest(adminClient, getServerUrl(overlord) + "/status");
-    makeRequest(adminClient, getServerUrl(broker) + "/status");
-    makeRequest(adminClient, getServerUrl(historical) + "/status");
-    makeRequest(adminClient, getServerUrl(router) + "/status");
-    makeRequest(adminClient, getServerUrl(permissiveAnyCertRouter) + "/status");
-    makeRequest(adminClient, getServerUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusIsOk(adminClient, coordinator);
+    verifyGetStatusIsOk(adminClient, overlord);
+    verifyGetStatusIsOk(adminClient, broker);
+    verifyGetStatusIsOk(adminClient, historical);
+    verifyGetStatusIsOk(adminClient, router);
+    verifyGetStatusIsOk(adminClient, routerAcceptsAnyCert);
+    verifyGetStatusIsOk(adminClient, routerNeedsNoClientCert);
   }
 
   @Test
@@ -127,13 +138,13 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/client.jks",
         "druid"
     );
-    makeRequest(adminClient, getServerTlsUrl(coordinator) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(overlord) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(broker) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(historical) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(router) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
-    makeRequest(adminClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(adminClient, coordinator);
+    verifyGetStatusHttpsIsOk(adminClient, overlord);
+    verifyGetStatusHttpsIsOk(adminClient, broker);
+    verifyGetStatusHttpsIsOk(adminClient, historical);
+    verifyGetStatusHttpsIsOk(adminClient, router);
+    verifyGetStatusHttpsIsOk(adminClient, routerAcceptsAnyCert);
+    verifyGetStatusHttpsIsOk(adminClient, routerNeedsNoClientCert);
   }
 
   @Test
@@ -143,27 +154,28 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/intermediate_ca_client.jks",
         "intermediate_ca_client"
     );
-    makeRequest(intermediateCertClient, getServerTlsUrl(coordinator) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(overlord) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(broker) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(historical) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(router) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
-    makeRequest(intermediateCertClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(intermediateCertClient, coordinator);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, overlord);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, broker);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, historical);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, router);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, routerAcceptsAnyCert);
+    verifyGetStatusHttpsIsOk(intermediateCertClient, routerNeedsNoClientCert);
   }
 
   @Test
   public void checkAccessWithNoCert()
   {
     HttpClient certlessClient = makeCertlessClient();
-    makeRequest(certlessClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(certlessClient, routerNeedsNoClientCert);
 
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(coordinator));
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(overlord));
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(broker));
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(historical));
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(router));
-    checkFailedAccessNoCert(certlessClient, getServerTlsUrl(permissiveAnyCertRouter));
+    final String sslErrorMessage = "Received fatal alert: bad_certificate";
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, certlessClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, certlessClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, certlessClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, certlessClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, certlessClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, routerAcceptsAnyCert, certlessClient);
   }
 
   @Test
@@ -173,13 +185,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/invalid_hostname_client.jks",
         "invalid_hostname_client"
     );
-    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(coordinator));
-    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(overlord));
-    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(broker));
-    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(historical));
-    checkFailedAccessWrongHostname(wrongHostnameClient, getServerTlsUrl(router));
-    makeRequest(wrongHostnameClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
-    makeRequest(wrongHostnameClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(wrongHostnameClient, routerAcceptsAnyCert);
+    verifyGetStatusHttpsIsOk(wrongHostnameClient, routerNeedsNoClientCert);
+
+    final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, wrongHostnameClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, wrongHostnameClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, wrongHostnameClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, wrongHostnameClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, wrongHostnameClient);
   }
 
   @Test
@@ -189,13 +203,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/client_another_root.jks",
         "druid_another_root"
     );
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(coordinator));
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(overlord));
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(broker));
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(historical));
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(router));
-    checkFailedAccessWrongRoot(wrongRootClient, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(wrongRootClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(wrongRootClient, routerNeedsNoClientCert);
+
+    final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, wrongRootClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, wrongRootClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, wrongRootClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, wrongRootClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, wrongRootClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, routerAcceptsAnyCert, wrongRootClient);
   }
 
   @Test
@@ -205,13 +221,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/revoked_client.jks",
         "revoked_druid"
     );
-    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(coordinator));
-    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(overlord));
-    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(broker));
-    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(historical));
-    checkFailedAccessRevoked(revokedClient, getServerTlsUrl(router));
-    makeRequest(revokedClient, getServerTlsUrl(permissiveAnyCertRouter) + "/status");
-    makeRequest(revokedClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(revokedClient, routerAcceptsAnyCert);
+    verifyGetStatusHttpsIsOk(revokedClient, routerNeedsNoClientCert);
+
+    final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, revokedClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, revokedClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, revokedClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, revokedClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, revokedClient);
   }
 
   @Test
@@ -221,13 +239,15 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/expired_client.jks",
         "expired_client"
     );
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(coordinator));
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(overlord));
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(broker));
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(historical));
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(router));
-    checkFailedAccessExpired(expiredClient, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(expiredClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    verifyGetStatusHttpsIsOk(expiredClient, routerNeedsNoClientCert);
+
+    final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, expiredClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, expiredClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, expiredClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, expiredClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, expiredClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, routerAcceptsAnyCert, expiredClient);
   }
 
   @Test
@@ -237,103 +257,59 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/invalid_ca_client.jks",
         "invalid_ca_client"
     );
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(coordinator));
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(overlord));
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(broker));
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(historical));
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(router));
-    checkFailedAccessNotCA(notCAClient, getServerTlsUrl(permissiveAnyCertRouter));
-    makeRequest(notCAClient, getServerTlsUrl(noClientAuthRouter) + "/status");
+    final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
+    verifyGetHttpsFailsWith(sslErrorMessage, coordinator, notCAClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, overlord, notCAClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, broker, notCAClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, historical, notCAClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, router, notCAClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, routerAcceptsAnyCert, notCAClient);
+
+    verifyGetStatusHttpsIsOk(notCAClient, routerNeedsNoClientCert);
   }
 
   @Test
-  @Disabled("Add custom ITTLSCertificateChecker to enable this test")
   public void checkAccessWithCustomCertificateChecks()
   {
-    HttpClient wrongHostnameClient = makeCustomHttpClient(
-        "client_tls/invalid_hostname_client.jks",
-        "invalid_hostname_client",
-        null // new ITTLSCertificateChecker()
+    // Verify GET over HTTPS fails with default HttpClient
+    verifyGetHttpsFailsWith(
+        ERROR_CERTIFICATE_UNKNOWN,
+        routerWithCustomCertChecker,
+        overlord.bindings().escalatedHttpClient()
     );
 
-    // checkFailedAccessWrongHostname(httpClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl());
+    final HttpClient wrongHostnameClient = makeCustomHttpClient(
+        "client_tls/invalid_hostname_client.jks",
+        "invalid_hostname_client",
+        new ITTLSCertificateChecker()
+    );
+    verifyGetStatusHttpsIsOk(wrongHostnameClient, routerWithCustomCertChecker);
 
-    // makeRequest(wrongHostnameClient, HttpMethod.GET, config.getCustomCertCheckRouterTLSUrl() + "/status", null);
-
+    // Verify that access to Broker fails
     checkFailedAccess(
         wrongHostnameClient,
         HttpMethod.POST,
-        getServerTlsUrl(router) + "/druid/v2",
+        getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/v2",
         ISE.class,
-        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input"
+        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request]"
     );
 
-    makeRequest(wrongHostnameClient, getServerTlsUrl(router) + "/druid/coordinator/v1/leader");
+    // Verify that access to Coordinator works
+    makeRequest(
+        wrongHostnameClient,
+        HttpMethod.GET,
+        getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/coordinator/v1/leader"
+    );
   }
 
-  private void checkFailedAccessNoCert(HttpClient httpClient, String url)
+  private void verifyGetHttpsFailsWith(String expectedMessage, EmbeddedDruidServer<?> server, HttpClient httpClient)
   {
     checkFailedAccess(
         httpClient,
         HttpMethod.GET,
-        url + "/status",
+        getServerHttpsUrl(server),
         SSLException.class,
-        "Received fatal alert: bad_certificate"
-    );
-  }
-
-  private void checkFailedAccessWrongHostname(HttpClient httpClient, String url)
-  {
-    checkFailedAccess(
-        httpClient,
-        HttpMethod.GET,
-        url + "/status",
-        SSLException.class,
-        "Received fatal alert: certificate_unknown"
-    );
-  }
-
-  private void checkFailedAccessWrongRoot(HttpClient httpClient, String url)
-  {
-    checkFailedAccess(
-        httpClient,
-        HttpMethod.GET,
-        url + "/status",
-        SSLException.class,
-        "Received fatal alert: certificate_unknown"
-    );
-  }
-
-  private void checkFailedAccessRevoked(HttpClient httpClient, String url)
-  {
-    checkFailedAccess(
-        httpClient,
-        HttpMethod.GET,
-        url + "/status",
-        SSLException.class,
-        "Received fatal alert: certificate_unknown"
-    );
-  }
-
-  private void checkFailedAccessExpired(HttpClient httpClient, String url)
-  {
-    checkFailedAccess(
-        httpClient,
-        HttpMethod.GET,
-        url + "/status",
-        SSLException.class,
-        "Received fatal alert: certificate_unknown"
-    );
-  }
-
-  private void checkFailedAccessNotCA(HttpClient httpClient, String url)
-  {
-    checkFailedAccess(
-        httpClient,
-        HttpMethod.GET,
-        url + "/status",
-        SSLException.class,
-        "Received fatal alert: certificate_unknown"
+        expectedMessage
     );
   }
 
@@ -423,28 +399,35 @@ public class ITTLSTest extends EmbeddedClusterTestBase
   )
   {
     try {
-      makeRequest(httpClient, method, url);
-      Assertions.fail(StringUtils.format("Test failed, did not get %s.", expectedException));
-    }
-    catch (RuntimeException re) {
-      Throwable rootCause = Throwables.getRootCause(re);
-
-      Assertions.assertTrue(
-          expectedException.isInstance(rootCause),
-          StringUtils.format(
-              "Expected %s but found %s instead.",
-              expectedException,
-              Throwables.getStackTraceAsString(rootCause)
-          )
+      RetryUtils.retry(
+          () -> {
+            makeRequest(httpClient, method, url);
+            return 0;
+          },
+          e -> isRetriable(Throwables.getRootCause(e)),
+          MAX_BROKEN_PIPE_RETRIES
       );
 
-      Assertions.assertTrue(rootCause.getMessage().contains(expectedExceptionMsg));
+      Assertions.fail("Did not get expected exception: " + expectedException);
+    }
+    catch (Exception e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (expectedException.isInstance(rootCause)) {
+        Assertions.assertTrue(rootCause.getMessage().contains(expectedExceptionMsg));
+      } else {
+        Assertions.fail("Got a different exception instead of expected: " + expectedException, rootCause);
+      }
     }
   }
 
-  private void makeRequest(HttpClient httpClient, String url)
+  private void verifyGetStatusIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
-    makeRequest(httpClient, HttpMethod.GET, url);
+    makeRequest(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
+  }
+  
+  private void verifyGetStatusHttpsIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
+  {
+    makeRequest(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");
   }
 
   private void makeRequest(
@@ -473,5 +456,20 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private boolean isRetriable(Throwable ex)
+  {
+    if (!(ex instanceof IOException)) {
+      return false;
+    }
+
+    if (ex instanceof ClosedChannelException) {
+      return true;
+    }
+
+    return null != ex.getMessage()
+           && ("Broken pipe".equals(ex.getMessage())
+               || "Connection reset by peer".contains(ex.getMessage()));
   }
 }
