@@ -41,6 +41,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -88,8 +89,10 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
+        new FilterSegmentPruner(
+            originalQuery.getFilter(),
+            null
+        ),
         minStageNumber,
         false
     );

@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -72,7 +71,8 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
@@ -91,8 +91,10 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -442,32 +444,31 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
-      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache;
-      final Set<String> filterFieldsForPruning;
+      final SegmentPruner pruner;
 
       final boolean trySecondaryPartititionPruning =
           query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled();
 
       if (trySecondaryPartititionPruning) {
-        dimensionRangeCache = new HashMap<>();
-        filterFieldsForPruning =
-            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), ev::isBaseColumn);
+        final Set<String> baseFields = new HashSet<>();
+        for (final String field : query.getFilter().getRequiredColumns()) {
+          if (ev.isBaseColumn(field)) {
+            baseFields.add(field);
+          }
+        }
+        pruner = new FilterSegmentPruner(query.getFilter(), baseFields);
       } else {
-        dimensionRangeCache = null;
-        filterFieldsForPruning = null;
+        pruner = null;
       }
 
       boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        final Set<PartitionChunk<ServerSelector>> filteredChunks;
+        final Collection<PartitionChunk<ServerSelector>> filteredChunks;
         if (trySecondaryPartititionPruning) {
-          filteredChunks = DimFilterUtils.filterShards(
-              query.getFilter(),
-              filterFieldsForPruning,
+          filteredChunks = pruner.prune(
               holder.getObject(),
-              partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
-              dimensionRangeCache
+              partitionChunk -> partitionChunk.getObject().getSegment()
           );
         } else {
           filteredChunks = Sets.newLinkedHashSet(holder.getObject());

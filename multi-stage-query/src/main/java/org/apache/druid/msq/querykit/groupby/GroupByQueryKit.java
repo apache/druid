@@ -43,6 +43,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -83,8 +84,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
+        new FilterSegmentPruner(
+            originalQuery.getFilter(),
+            null
+        ),
         minStageNumber,
         false
     );

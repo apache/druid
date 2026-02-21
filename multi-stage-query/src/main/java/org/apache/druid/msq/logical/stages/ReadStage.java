@@ -139,7 +139,7 @@ public class ReadStage extends AbstractFrameProcessorStage
   {
     if (dataSource instanceof TableDataSource) {
       TableDataSource ids = (TableDataSource) dataSource;
-      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null, null);
+      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
       return inputSpec;
     }
     if (dataSource instanceof InlineDataSource) {
