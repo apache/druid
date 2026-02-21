@@ -54,6 +54,8 @@ public class DruidProcessingConfig implements ColumnConfig
   private final DruidProcessingIndexesConfig indexes;
   @JsonProperty
   private final int numTimeoutThreads;
+  @JsonProperty
+  private final boolean parallelPoolInit;
 
   private final AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
   private final boolean numThreadsConfigured;
@@ -69,6 +71,7 @@ public class DruidProcessingConfig implements ColumnConfig
       @JsonProperty("tmpDir") @Nullable String tmpDir,
       @JsonProperty("buffer") DruidProcessingBufferConfig buffer,
       @JsonProperty("indexes") DruidProcessingIndexesConfig indexes,
+      @JsonProperty("parallelPoolInit") @Nullable Boolean parallelPoolInit,
       @JacksonInject RuntimeInfo runtimeInfo
   )
   {
@@ -86,6 +89,7 @@ public class DruidProcessingConfig implements ColumnConfig
     this.tmpDir = Configs.valueOrDefault(tmpDir, System.getProperty("java.io.tmpdir"));
     this.buffer = Configs.valueOrDefault(buffer, new DruidProcessingBufferConfig());
     this.indexes = Configs.valueOrDefault(indexes, new DruidProcessingIndexesConfig());
+    this.parallelPoolInit = parallelPoolInit != null && parallelPoolInit;
 
     this.numThreadsConfigured = numThreads != null;
     this.numMergeBuffersConfigured = numMergeBuffers != null;
@@ -95,7 +99,7 @@ public class DruidProcessingConfig implements ColumnConfig
   @VisibleForTesting
   public DruidProcessingConfig()
   {
-    this(null, null, null, null, null, null, null, null, JvmUtils.getRuntimeInfo());
+    this(null, null, null, null, null, null, null, null, null, JvmUtils.getRuntimeInfo());
   }
 
   private void initializeBufferSize(RuntimeInfo runtimeInfo)
@@ -201,6 +205,11 @@ public class DruidProcessingConfig implements ColumnConfig
   public boolean isNumMergeBuffersConfigured()
   {
     return numMergeBuffersConfigured;
+  }
+
+  public boolean isParallelPoolInit()
+  {
+    return parallelPoolInit;
   }
 }
 

@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Pool that pre-generates objects up to a limit, then permits possibly-blocking "take" operations.
@@ -56,11 +57,30 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       int limit
   )
   {
+    this(generator, limit, false);
+  }
+
+  public DefaultBlockingPool(
+      Supplier<T> generator,
+      int limit,
+      boolean parallelInit
+  )
+  {
     this.objects = new ArrayDeque<>(limit);
     this.maxSize = limit;
 
-    for (int i = 0; i < limit; i++) {
-      objects.add(generator.get());
+    // Parallize allocations can significantly speed up node boot times
+    if (parallelInit) {
+      objects.addAll(
+          IntStream.range(0, limit)
+                   .parallel()
+                   .mapToObj(i -> generator.get())
+                   .collect(Collectors.toCollection(ArrayList::new))
+      );
+    } else {
+      for (int i = 0; i < limit; i++) {
+        objects.add(generator.get());
+      }
     }
 
     this.lock = new ReentrantLock();
