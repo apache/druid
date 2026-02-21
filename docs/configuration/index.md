@@ -2020,6 +2020,8 @@ log4j config to route these logs to different sources based on the feed of the e
 |--------|-----------|--------|
 |`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
+|`druid.emitter.logging.shouldFilterMetrics`|When true, only metrics listed in the allowlist are emitted; non-metric events (e.g. alerts) are always emitted. When false, all events are logged (backward-compatible).|false|
+|`druid.emitter.logging.allowedMetricsPath`|Path to a JSON file whose keys are the allowed metric names. Only used when `shouldFilterMetrics` is true. If null or empty, the bundled classpath resource `defaultMetrics.json` is used. If a path is set but the file is missing, a warning is logged and the emitter falls back to the default classpath resource.|null|
 
 #### HTTP emitter module
 
