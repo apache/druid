@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -49,21 +50,23 @@ public class FilterSegmentPruner implements SegmentPruner
 
   @JsonCreator
   public FilterSegmentPruner(
-      @JsonProperty("filter") DimFilter filter,
+      @JsonProperty("filter") @Nullable DimFilter filter,
       @JsonProperty("filterFields") @Nullable Set<String> filterFields
   )
   {
     this.filter = filter;
-    this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
+    this.filterFields = filterFields == null && filter != null ? filter.getRequiredColumns() : filterFields;
     this.rangeCache = new HashMap<>();
   }
 
+  @Nullable
   @JsonProperty
   public DimFilter getFilter()
   {
     return filter;
   }
 
+  @Nullable
   @JsonProperty
   public Set<String> getFilterFields()
   {
@@ -87,6 +90,10 @@ public class FilterSegmentPruner implements SegmentPruner
   @Override
   public <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter)
   {
+    if (filter == null) {
+      // ImmutableSet.copyOf retains order from "input".
+      return ImmutableSet.copyOf(input);
+    }
     // LinkedHashSet retains order from "input".
     final Set<T> retSet = new LinkedHashSet<>();
 
@@ -103,12 +110,10 @@ public class FilterSegmentPruner implements SegmentPruner
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
           if (filterFields == null || filterFields.contains(dimension)) {
-            Optional<RangeSet<String>> optFilterRangeSet = rangeCache
-                .computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
+            Optional<RangeSet<String>> optFilterRangeSet =
+                rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
 
-            if (optFilterRangeSet.isPresent()) {
-              filterDomain.put(dimension, optFilterRangeSet.get());
-            }
+            optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
           }
         }
         if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
