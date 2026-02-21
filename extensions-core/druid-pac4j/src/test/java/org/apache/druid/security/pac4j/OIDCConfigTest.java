@@ -46,6 +46,7 @@ public class OIDCConfigTest
     Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
     Assert.assertEquals("name", conf.getOidcClaim());
     Assert.assertEquals("testscope", conf.getScope());
+    Assert.assertNull(conf.getClientAuthenticationMethod());
   }
 
   @Test
@@ -71,5 +72,32 @@ public class OIDCConfigTest
     Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
     Assert.assertEquals("email", conf.getOidcClaim());
     Assert.assertEquals("testscope", conf.getScope());
+  }
+
+  @Test
+  public void testSerdeWithClientAuthenticationMethod() throws Exception
+  {
+    ObjectMapper jsonMapper = new ObjectMapper();
+
+    String jsonStr = "{\n"
+                     + "  \"clientID\": \"testid\",\n"
+                     + "  \"clientSecret\": \"testsecret\",\n"
+                     + "  \"discoveryURI\": \"testdiscoveryuri\",\n"
+                     + "  \"oidcClaim\": \"email\",\n"
+                     + "  \"scope\": \"testscope\",\n"
+                     + "  \"clientAuthenticationMethod\": \"client_secret_post\"\n"
+                     + "}\n";
+
+    OIDCConfig conf = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(jsonMapper.readValue(jsonStr, OIDCConfig.class)),
+        OIDCConfig.class
+    );
+
+    Assert.assertEquals("testid", conf.getClientID());
+    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assert.assertEquals("email", conf.getOidcClaim());
+    Assert.assertEquals("testscope", conf.getScope());
+    Assert.assertEquals("client_secret_post", conf.getClientAuthenticationMethod());
   }
 }
