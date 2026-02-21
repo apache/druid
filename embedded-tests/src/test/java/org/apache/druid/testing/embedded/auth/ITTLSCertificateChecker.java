@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.auth;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.TLSCertificateChecker;
 
 import javax.net.ssl.SSLEngine;
@@ -29,8 +28,6 @@ import java.security.cert.X509Certificate;
 
 public class ITTLSCertificateChecker implements TLSCertificateChecker
 {
-  private static final Logger log = new Logger(ITTLSCertificateChecker.class);
-
   @Override
   public void checkClient(
       X509Certificate[] chain,

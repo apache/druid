@@ -15,20 +15,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd /tls
+mkdir -p server_tls
+rm -f server_tls/*
 
-FILE_CHECK_IF_RAN=/tls/server.key
+cp scripts/root.cnf server_tls/root.cnf
+cp scripts/root2.cnf server_tls/root2.cnf
+
+cp scripts/root.key server_tls/root.key
+cp scripts/root.pem server_tls/root.pem
+cp scripts/untrusted_root.key server_tls/untrusted_root.key
+cp scripts/untrusted_root.pem server_tls/untrusted_root.pem
+
+FILE_CHECK_IF_RAN=server_tls/server.key
 if [ -f "$FILE_CHECK_IF_RAN" ]; then
-  echo "Using existing certs/keys since /tls/server.key exists. Skipping generation (most likely this script was ran previously). To generate new certs, delete /tls/server.key"
+  echo "Using existing certs/keys since server_tls/server.key exists. Skipping generation (most likely this script was ran previously). To generate new certs, delete server_tls/server.key"
   exit
 fi
 
+cd server_tls
 rm -f cert_db.txt
 touch cert_db.txt
 
-export DOCKER_IP=$(cat /docker_ip)
 export MY_HOSTNAME=$(hostname)
-export MY_IP=$(hostname -i)
 
 cat <<EOT > csr.conf
 [req]
@@ -45,16 +53,14 @@ L=Druid City
 O=Druid
 OU=IntegrationTests
 emailAddress=integration-test@druid.apache.org
-CN = ${MY_IP}
+CN = 127.0.0.1
 
 [ req_ext ]
 subjectAltName = @alt_names
 basicConstraints=CA:FALSE,pathlen:0
 
 [ alt_names ]
-IP.1 = ${DOCKER_IP}
-IP.2 = ${MY_IP}
-IP.3 = 127.0.0.1
+IP.1 = 127.0.0.1
 DNS.1 = ${MY_HOSTNAME}
 DNS.2 = localhost
 
@@ -72,15 +78,15 @@ openssl pkcs12 -export -in server.pem -inkey server.key -out server.p12 -name dr
 keytool -import -alias druid-it-root -keystore truststore.jks -file root.pem -storepass druid123 -noprompt
 
 # Revoke one of the client certs
-openssl ca -revoke /client_tls/revoked_client.pem -config root.cnf -cert root.pem -keyfile root.key
+openssl ca -revoke ../client_tls/revoked_client.pem -config root.cnf -cert root.pem -keyfile root.key
 
 # Create the CRL
-openssl ca -gencrl -config root.cnf -cert root.pem -keyfile root.key -out /tls/revocations.crl
+openssl ca -gencrl -config root.cnf -cert root.pem -keyfile root.key -out revocations.crl
 
 # Generate empty CRLs for the intermediate cert test case
 rm -f cert_db2.txt
 touch cert_db2.txt
-openssl ca -gencrl -config root2.cnf -cert /client_tls/ca_intermediate.pem -keyfile /client_tls/ca_intermediate.key -out /tls/empty-revocations-intermediate.crl
+openssl ca -gencrl -config root2.cnf -cert ../client_tls/ca_intermediate.pem -keyfile ../client_tls/ca_intermediate.key -out empty-revocations-intermediate.crl
 
 # Append CRLs
 cat empty-revocations-intermediate.crl >> revocations.crl

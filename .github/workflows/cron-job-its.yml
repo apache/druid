@@ -56,21 +56,6 @@ jobs:
         run: |
           ./it.sh ci
 
-  integration-query-tests-middleManager:
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [ security ]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    needs: build
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      use_indexer: middleManager
-      override_config_path: ./environment-configs/test-groups/prepopulated-data
-      group: ${{ matrix.testing_group }}
-
   security_vulnerabilities:
     if: github.repository == 'apache/druid'
     name: security vulnerabilities
