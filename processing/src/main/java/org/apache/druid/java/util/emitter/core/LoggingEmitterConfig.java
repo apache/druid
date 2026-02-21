@@ -35,6 +35,12 @@ public class LoggingEmitterConfig
   @JsonProperty
   private String logLevel = "info";
 
+  @JsonProperty
+  private boolean filterMetrics;
+
+  @JsonProperty
+  private String metricAllowlistPath;
+
   public String getLoggerClass()
   {
     return loggerClass;
@@ -45,12 +51,24 @@ public class LoggingEmitterConfig
     return logLevel;
   }
 
+  public boolean isFilterMetrics()
+  {
+    return filterMetrics;
+  }
+
+  public String getMetricAllowlistPath()
+  {
+    return metricAllowlistPath;
+  }
+
   @Override
   public String toString()
   {
     return "LoggingEmitterConfig{" +
            "loggerClass='" + loggerClass + '\'' +
            ", logLevel='" + logLevel + '\'' +
+           ", filterMetrics=" + filterMetrics +
+           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
            '}';
   }
 }
