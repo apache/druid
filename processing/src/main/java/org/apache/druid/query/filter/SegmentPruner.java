@@ -32,5 +32,5 @@ import java.util.function.Function;
 })
 public interface SegmentPruner
 {
-  <T> Collection<T> prune(final Iterable<T> input, final Function<T, DataSegment> converter);
+  <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter);
 }

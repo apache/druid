@@ -51,7 +51,7 @@ public class TableInputSpec implements InputSpec
 {
   public static TableInputSpec fullScan(String datasource)
   {
-    return new TableInputSpec(datasource,null, null, null);
+    return new TableInputSpec(datasource, null, null, null);
   }
 
   private final String dataSource;
