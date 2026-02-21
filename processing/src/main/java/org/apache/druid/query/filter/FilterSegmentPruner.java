@@ -21,8 +21,8 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 
@@ -44,18 +44,34 @@ import java.util.function.Function;
   */
 public class FilterSegmentPruner implements SegmentPruner
 {
+  @Nullable
+  public static FilterSegmentPruner create(
+      @Nullable DimFilter filter
+  )
+  {
+    if (filter == null) {
+      return null;
+    }
+
+    return new FilterSegmentPruner(
+        filter,
+        null
+    );
+  }
+
   private final DimFilter filter;
   private final Set<String> filterFields;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
 
   @JsonCreator
   public FilterSegmentPruner(
-      @JsonProperty("filter") @Nullable DimFilter filter,
+      @JsonProperty("filter") DimFilter filter,
       @JsonProperty("filterFields") @Nullable Set<String> filterFields
   )
   {
+    InvalidInput.conditionalException(filter != null, "filter must not be null");
     this.filter = filter;
-    this.filterFields = filterFields == null && filter != null ? filter.getRequiredColumns() : filterFields;
+    this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.rangeCache = new HashMap<>();
   }
 
@@ -90,10 +106,6 @@ public class FilterSegmentPruner implements SegmentPruner
   @Override
   public <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter)
   {
-    if (filter == null) {
-      // ImmutableSet.copyOf retains order from "input".
-      return ImmutableSet.copyOf(input);
-    }
     // LinkedHashSet retains order from "input".
     final Set<T> retSet = new LinkedHashSet<>();
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.TestHelper;
@@ -69,6 +70,16 @@ class FilterSegmentPrunerTest
         pruner,
         mapper.readValue(mapper.writeValueAsString(pruner), SegmentPruner.class)
     );
+  }
+
+  @Test
+  void testNullFilter()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new FilterSegmentPruner(null, null)
+    );
+    Assertions.assertEquals("filter must not be null", t.getMessage());
   }
 
   @Test

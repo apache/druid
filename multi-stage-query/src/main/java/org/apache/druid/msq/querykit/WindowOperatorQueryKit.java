@@ -79,10 +79,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        new FilterSegmentPruner(
-            originalQuery.getFilter(),
-            null
-        ),
+        FilterSegmentPruner.create(originalQuery.getFilter()),
         minStageNumber,
         false
     );

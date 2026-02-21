@@ -84,10 +84,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        new FilterSegmentPruner(
-            originalQuery.getFilter(),
-            null
-        ),
+        FilterSegmentPruner.create(originalQuery.getFilter()),
         minStageNumber,
         false
     );
