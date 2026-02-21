@@ -145,6 +145,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -2022,6 +2023,89 @@ public class CompactionTaskTest
         .attemptId("1")
         .emitter(emitter)
         .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
+        .build();
+  }
+
+  /**
+   * Scenario:
+   * - Multiple segments exist in the same interval with non-consecutive partition numbers (0, 2, 4, 6, 7, 8, 10, 12)
+   * - We want to compact only segments 6,7,8 (which ARE consecutive)
+   *
+   * This test demonstrates:
+   * 1. findSegmentsToLock() correctly filters to only the specified segments
+   * 2. The filtered segments (6, 7, 8) are consecutive and would pass validation
+   * 3. If ALL segments were validated, it would fail because of gaps (e.g., between 0 and 2)
+   */
+  @Test
+  public void testSpecificSegmentsSpecFiltersSegmentsInFindSegmentsToLock() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final String version = "2024-11-17T23:49:06.823Z";
+
+    // Create segments with non-consecutive partition numbers in the same interval
+    // This simulates the real-world scenario where segments 0, 2, 4, 6, 7, 8, 10, 12 exist
+    final List<DataSegment> allSegmentsInInterval = new ArrayList<>();
+
+    // Add segments with gaps: 0, 2, 4, 6, 7, 8, 10, 12
+    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 0));
+    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 2));
+    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 4));
+
+    final DataSegment segment6 = createSegmentWithPartition(testInterval, version, 6);
+    final DataSegment segment7 = createSegmentWithPartition(testInterval, version, 7);
+    final DataSegment segment8 = createSegmentWithPartition(testInterval, version, 8);
+    allSegmentsInInterval.add(segment6);
+    allSegmentsInInterval.add(segment7);
+    allSegmentsInInterval.add(segment8);
+
+    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 10));
+    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 12));
+
+    // Verify that if we validate ALL segments, it would fail due to non-consecutive rootPartitionId ranges
+    Assert.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(allSegmentsInInterval)
+    );
+
+    // Use ArrayList instead of ImmutableList because SpecificSegmentsSpec constructor sorts the list in-place
+    final SpecificSegmentsSpec specificSegmentsSpec = new SpecificSegmentsSpec(
+        new ArrayList<>(
+            ImmutableList.of(
+                segment6.getId().toString(),
+                segment7.getId().toString(),
+                segment8.getId().toString()
+            )
+        )
+    );
+
+    // Create CompactionTask with SpecificSegmentsSpec using Builder
+    final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+        .inputSpec(specificSegmentsSpec)
+        .build();
+
+    // Create TaskActionClient that returns ALL segments in the interval
+    // This simulates what RetrieveUsedSegmentsAction would return
+    final TestTaskActionClient taskActionClient = new TestTaskActionClient(allSegmentsInInterval);
+
+    // Verify that findSegmentsToLock() returns only the 3 specific segments, not all segments
+    final List<DataSegment> segmentsToLock = compactionTask.findSegmentsToLock(
+        taskActionClient,
+        ImmutableList.of(testInterval)
+    );
+    Assert.assertEquals(3, segmentsToLock.size());
+
+    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 6));
+    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 7));
+    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 8));
+
+    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segmentsToLock);
+  }
+
+  private DataSegment createSegmentWithPartition(Interval interval, String version, int partitionNum)
+  {
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, partitionNum))
+        .shardSpec(new NumberedShardSpec(partitionNum, 0))
+        .size(100)
         .build();
   }
 
