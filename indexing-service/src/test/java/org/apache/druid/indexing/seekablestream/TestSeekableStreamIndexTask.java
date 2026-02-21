@@ -63,7 +63,24 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
       @Nullable RecordSupplier<String, String, ByteEntity> recordSupplier
   )
   {
-    super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null);
+    this(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, streamingTaskRunner, recordSupplier, null);
+  }
+
+  public TestSeekableStreamIndexTask(
+      String id,
+      @Nullable String supervisorId,
+      @Nullable TaskResource taskResource,
+      DataSchema dataSchema,
+      SeekableStreamIndexTaskTuningConfig tuningConfig,
+      SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
+      @Nullable Map<String, Object> context,
+      @Nullable String groupId,
+      @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner,
+      @Nullable RecordSupplier<String, String, ByteEntity> recordSupplier,
+      @Nullable Integer serverPriority
+  )
+  {
+    super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, serverPriority);
     this.streamingTaskRunner = streamingTaskRunner;
     this.recordSupplier = recordSupplier;
   }

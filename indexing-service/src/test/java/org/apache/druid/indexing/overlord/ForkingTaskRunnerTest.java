@@ -24,20 +24,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -60,7 +67,9 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest.createSupervisorTuningConfig;
 import static org.junit.Assert.assertEquals;
 
 public class ForkingTaskRunnerTest
@@ -588,6 +597,78 @@ public class ForkingTaskRunnerTest
     };
     forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(task).get();
+    assertEquals(TaskState.SUCCESS, status.getStatusCode());
+  }
+
+  @Test
+  public void testTaskCommandIncludesServerPriorityIfConfigured() throws Exception
+  {
+    final TaskConfig taskConfig = makeDefaultTaskConfigBuilder().build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final Task task = new TestSeekableStreamIndexTask(
+        "id2",
+        null,
+        null,
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(new DimensionsSpec(List.of()))
+                  .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), List.of()))
+                  .build(),
+        createSupervisorTuningConfig().convertToTaskTuningConfig(),
+        new TestSeekableStreamIndexTaskIOConfig(),
+        null,
+        "1",
+        null,
+        null,
+        2
+    );
+
+    final AtomicReference<List<String>> observedCommandRef = new AtomicReference<>(List.of());
+
+    final ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        taskConfig,
+        workerConfig,
+        new Properties(),
+        new NoopTaskLogs(),
+        mapper,
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig(),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      {
+        observedCommandRef.set(command);
+        for (String param : command) {
+          if (param.endsWith(task.getId())) {
+            final String basePath = getTracker().pickStorageSlot(task.getId()).getDirectory().getAbsolutePath();
+            File resultFile = Paths.get(basePath, task.getId(), "attempt", "1", "status.json").toFile();
+            mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
+            break;
+          }
+        }
+        MockTestProcess mockTestProcess = new MockTestProcess()
+        {
+          @Override
+          public int waitFor()
+          {
+            return 0;
+          }
+        };
+        return new ForkingTaskRunner.ProcessHolder(mockTestProcess, logFile, taskLocation);
+      }
+    };
+
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    final TaskStatus status = forkingTaskRunner.run(task).get();
+    Assert.assertNotNull(observedCommandRef);
+    final List<String> observedCommand = observedCommandRef.get();
+    Assert.assertTrue(observedCommand.contains("-Ddruid.server.priority=2"));
     assertEquals(TaskState.SUCCESS, status.getStatusCode());
   }
 

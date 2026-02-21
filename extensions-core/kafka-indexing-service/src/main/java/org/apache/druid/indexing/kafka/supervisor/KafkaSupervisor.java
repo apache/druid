@@ -60,6 +60,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -244,8 +245,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-
-
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KafkaIndexTask(
           taskId,
@@ -256,7 +255,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
           sortingMapper,
-          serverPrioritiesToAssign == null || serverPrioritiesToAssign.isEmpty() ? null : serverPrioritiesToAssign.get(i)
+          CollectionUtils.isNullOrEmpty(serverPrioritiesToAssign) ? null : serverPrioritiesToAssign.get(i)
       ));
     }
     return taskList;

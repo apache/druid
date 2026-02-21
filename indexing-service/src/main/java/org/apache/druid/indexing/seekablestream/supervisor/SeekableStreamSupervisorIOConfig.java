@@ -124,16 +124,14 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.serverPriorityToReplicaCount = serverPriorityToReplicaCount;
     if (this.serverPriorityToReplicaCount != null) {
       final int replicaCount = this.serverPriorityToReplicaCount.values().stream().mapToInt(Integer::intValue).sum();
-
       if (replicas != null && replicas != replicaCount) {
-        throw new IAE(
-            "replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicaCount[%s]",
-            replicas,
-            replicaCount,
-            serverPriorityToReplicaCount
+        throw InvalidInput.exception(
+            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicaCount[%s].",
+            replicas, replicaCount, serverPriorityToReplicaCount
         );
       }
 
+      // We also explicitly set replicas since the supervisor logic for replicas is already implemented.
       this.replicas = replicaCount;
     } else {
       this.replicas = replicas != null ? replicas : 1;

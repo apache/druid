@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
@@ -33,7 +32,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -51,7 +49,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Rule;
@@ -394,24 +391,6 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return null;
-    }
-  }
-
-  private static class TestSeekableStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
-  {
-    public TestSeekableStreamIndexTaskIOConfig()
-    {
-      super(
-          null,
-          "someSequence",
-          new SeekableStreamStartSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap(), null),
-          new SeekableStreamEndSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap()),
-          false,
-          DateTimes.nowUtc().minusDays(2),
-          DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0, null),
-          Duration.standardHours(2).getStandardMinutes()
-      );
     }
   }
 

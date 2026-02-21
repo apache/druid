@@ -4536,10 +4536,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   );
 
   /**
-   * Creates a list of specific kafka/kinesis index tasks using
-   * the given replicas count and {@code serverPrioritiesToAssign} for each task, if null or non-empty.
+   * Creates a list of {@link SeekableStreamIndexTask}s using the given {@code replicas} and
+   * {@code serverPrioritiesToAssign} for each task, if it is non-null/non-empty.
    *
-   * @return list of specific Kafka/Kinesis index tasks
+   * @return a list of {@link SeekableStreamIndexTask}s
    * @throws JsonProcessingException if task serialization fails
    */
   protected abstract List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>> createIndexTasks(

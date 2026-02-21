@@ -2860,7 +2860,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return createSupervisorTuningConfigWithWorkerThreads(1);
   }
 
-  private static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
+  public static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
   {
     return createSupervisorTuningConfigWithWorkerThreads(null);
   }

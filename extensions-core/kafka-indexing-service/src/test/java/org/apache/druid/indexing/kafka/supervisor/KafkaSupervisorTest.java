@@ -482,30 +482,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             Duration.standardHours(2).getStandardMinutes()
         ),
-        new KafkaIndexTaskTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        supervisor.getTuningConfig(),
         null,
         null
     ).get(0);
@@ -517,10 +494,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testCreateIndexTasksWithServerPrioritiesToAssign() throws JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
-    final List<Integer> serverPrioritiesToAssign = Arrays.asList(10, 20);
     final List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList =
         supervisor.createIndexTasks(
-            2,
+            3,
             "seq",
             OBJECT_MAPPER,
             new TreeMap<>(),
@@ -538,36 +514,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 null,
                 Duration.standardHours(2).getStandardMinutes()
             ),
-            new KafkaIndexTaskTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
+            supervisor.getTuningConfig(),
             null,
-            serverPrioritiesToAssign
+            List.of(10, 20, 20)
         );
-    Assert.assertEquals(2, taskList.size());
+    Assert.assertEquals(3, taskList.size());
     Assert.assertEquals(Integer.valueOf(10), taskList.get(0).getServerPriority());
     Assert.assertEquals(Integer.valueOf(20), taskList.get(1).getServerPriority());
+    Assert.assertEquals(Integer.valueOf(20), taskList.get(2).getServerPriority());
   }
 
   @Test
