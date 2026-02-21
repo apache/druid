@@ -24,6 +24,16 @@ order by 1;
       "type" : "table",
       "dataSource" : "wikipedia",
       "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
+      "pruner" : {
+        "type" : "query-filter",
+        "filter" : {
+          "type" : "inType",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "sortedValues" : [ "Aarhus", "New York" ]
+        },
+        "filterFields" : [ "cityName" ]
+      },
       "filter" : {
         "type" : "inType",
         "column" : "cityName",

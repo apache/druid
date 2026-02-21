@@ -14,6 +14,16 @@ where w1.cityName='New York';
       "type" : "table",
       "dataSource" : "wikipedia",
       "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
+      "pruner" : {
+        "type" : "query-filter",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "filterFields" : [ "cityName" ]
+      },
       "filter" : {
         "type" : "equals",
         "column" : "cityName",
@@ -255,6 +265,16 @@ LogicalJoin:[[broadcast inheritPath:[0, 0]]]
       "type" : "table",
       "dataSource" : "wikipedia",
       "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
+      "pruner" : {
+        "type" : "query-filter",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "filterFields" : [ "cityName" ]
+      },
       "filter" : {
         "type" : "equals",
         "column" : "cityName",
@@ -497,6 +517,16 @@ LogicalJoin:[[sort_merge inheritPath:[0, 0]]]
       "type" : "table",
       "dataSource" : "wikipedia",
       "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
+      "pruner" : {
+        "type" : "query-filter",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "filterFields" : [ "cityName" ]
+      },
       "filter" : {
         "type" : "equals",
         "column" : "cityName",
