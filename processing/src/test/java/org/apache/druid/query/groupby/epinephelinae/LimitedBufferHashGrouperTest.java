@@ -307,6 +307,62 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     Assert.assertEquals(LIMIT, i);
   }
 
+  @Test
+  public void testMaxMergeBufferUsedBytesTracksMaxUsageAfterReset()
+  {
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 20000);
+
+    Assert.assertEquals(0L, grouper.getMergeBufferUsedBytes());
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+
+    Assert.assertTrue(String.valueOf(KEY_BASE), grouper.aggregate(new IntKey(KEY_BASE)).isOk());
+    final long usagePerEntry = grouper.getMergeBufferUsedBytes();
+
+    grouper.reset();
+    Assert.assertEquals(0, grouper.getSize());
+    Assert.assertEquals(usagePerEntry, grouper.getMergeBufferUsedBytes());
+
+    // Add 10 entries after reset
+    for (int i = 0; i < 10; i++) {
+      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+    }
+
+    Assert.assertEquals(10 * usagePerEntry, grouper.getMergeBufferUsedBytes());
+  }
+
+  @Test
+  public void testMaxMergeBufferUsedBytesAfterBufferSwap()
+  {
+    // This test closely follows the flow of testLimitAndBufferSwapping().
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 20000);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+
+    // Calculate usage per entry from first entry
+    Assert.assertTrue(String.valueOf(KEY_BASE), grouper.aggregate(new IntKey(KEY_BASE)).isOk());
+    final long usagePerEntry = grouper.getMergeBufferUsedBytes();
+
+    // This results in 13 swaps and final size of 116 (100 keys + 16 new keys after last swap)
+    for (int i = 1; i < NUM_ROWS; i++) {
+      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+    }
+
+    Assert.assertEquals(13, grouper.getGrowthCount());
+    Assert.assertEquals(116, grouper.getSize());
+    Assert.assertEquals(168, grouper.getMaxSize());
+
+    final long bucketSizeWithHash = usagePerEntry - Integer.BYTES;
+    final long hashTablePeak = grouper.getMaxSize() * bucketSizeWithHash;
+    // Heap can temporarily have LIMIT + 1 before removing one
+    final long heapPeak = ((long) LIMIT + 1) * Integer.BYTES;
+    // Peak usage is the sum of hash table peak and heap peak, which peak at different sizes...
+    final long expectedPeakUsage = hashTablePeak + heapPeak;
+
+    Assert.assertEquals(expectedPeakUsage, grouper.getMergeBufferUsedBytes());
+  }
+
   private static LimitedBufferHashGrouper<IntKey> makeGrouper(
       GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize

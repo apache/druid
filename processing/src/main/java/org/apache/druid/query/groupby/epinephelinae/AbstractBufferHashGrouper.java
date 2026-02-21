@@ -174,6 +174,18 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   }
 
   /**
+   * Retrieves the size of the merge buffers used for this groupby query. This value is retrieved when
+   * {@link SpillingGrouper#close()} is called.
+   * <p></p>
+   * This method is implemented to return the highest memory value used, this is helpful especially in
+   * reporting the highest number of bytes used throughout the entire query lifecycle.
+   */
+  public long getMergeBufferUsedBytes()
+  {
+    return hashTable.getMaxMergeBufferUsedBytes();
+  }
+
+  /**
    * Populate a {@link ReusableEntry} with values from a particular bucket.
    */
   protected Entry<KeyType> populateBucketEntryForOffset(
