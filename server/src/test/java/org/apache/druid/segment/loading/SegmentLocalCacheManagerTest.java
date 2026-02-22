@@ -832,7 +832,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
 
     manager.bootstrap(dataSegment, SegmentLazyLoadFailCallback.NOOP);
-    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment).orElse(null);
+    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment.getId()).orElse(null);
     Assert.assertNotNull(actualBootstrapSegment);
     Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
     Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
@@ -869,7 +869,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
 
     manager.bootstrap(dataSegment, () -> {});
-    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment).orElse(null);
+    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment.getId()).orElse(null);
     Assert.assertNotNull(actualBootstrapSegment);
     Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
     Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
@@ -918,7 +918,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     manager.load(segmentToLoad);
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
-    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad.getId()).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
     AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
     Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
@@ -988,7 +988,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     manager.bootstrap(segmentToBootstrap, SegmentLazyLoadFailCallback.NOOP);
     Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
-    Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap).isPresent());
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap.getId()).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToBootstrap);
     AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
     Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
@@ -1138,7 +1138,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     manager.load(segmentToLoad);
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
-    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad.getId()).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
 
     // now drop it before we actually load it, but dropping a weakly held reference does not remove the entry from the
@@ -1306,7 +1306,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
                                              .build();
 
     manager.load(tombstone);
-    Segment segment = manager.acquireCachedSegment(tombstone).orElse(null);
+    Segment segment = manager.acquireCachedSegment(tombstone.getId()).orElse(null);
 
     Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());
