@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -34,9 +35,11 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
@@ -120,6 +123,21 @@ public class DartControllerModule implements DruidModule
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
     }
+  }
+
+  @Provides
+  @Dart
+  @ManageLifecycle
+  public ControllerThreadPool makeControllerThreadPool(DartControllerConfig dartControllerConfig)
+  {
+    return new ControllerThreadPool(
+        MoreExecutors.listeningDecorator(
+            Execs.multiThreaded(
+                dartControllerConfig.getConcurrentQueries(),
+                "dart-controller-%s"
+            )
+        )
+    );
   }
 
   @Override

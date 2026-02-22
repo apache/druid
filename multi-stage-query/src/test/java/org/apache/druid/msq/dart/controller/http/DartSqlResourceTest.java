@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -36,6 +37,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClient;
@@ -149,7 +151,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   private SqlResource sqlResource;
   private DartControllerRegistry controllerRegistry;
-  private ExecutorService controllerExecutor;
+  private ControllerThreadPool controllerThreadPool;
   private AutoCloseable mockCloser;
   private final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
 
@@ -255,9 +257,13 @@ public class DartSqlResourceTest extends MSQTestBase
           }
         },
         objectMapper.convertValue(ImmutableMap.of(), DartControllerConfig.class),
-        controllerExecutor = Execs.multiThreaded(
-            MAX_CONTROLLERS,
-            StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
+        controllerThreadPool = new ControllerThreadPool(
+            MoreExecutors.listeningDecorator(
+                Execs.multiThreaded(
+                    MAX_CONTROLLERS,
+                    StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
+                )
+            )
         ),
         new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
         injector.getInstance(MultiQueryKit.class),
@@ -291,9 +297,9 @@ public class DartSqlResourceTest extends MSQTestBase
     mockCloser.close();
 
     // shutdown(), not shutdownNow(), to ensure controllers stop timely on their own.
-    controllerExecutor.shutdown();
+    controllerThreadPool.getExecutorService().shutdown();
 
-    if (!controllerExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
+    if (!controllerThreadPool.getExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
       throw new IAE("controllerExecutor.awaitTermination() timed out");
     }
 
@@ -744,7 +750,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     // Block up the controllerExecutor so the controller runs long enough to cancel it.
-    final Future<?> sleepFuture = controllerExecutor.submit(() -> {
+    final Future<?> sleepFuture = controllerThreadPool.getExecutorService().submit(() -> {
       try {
         Thread.sleep(3_600_000);
       }
@@ -798,19 +804,38 @@ public class DartSqlResourceTest extends MSQTestBase
 
     // Wait for the SQL POST to come back.
     Assertions.assertNull(doPostFuture.get());
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
-    // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
-    final Map<String, Object> e = objectMapper.readValue(
-        asyncResponse.baos.toByteArray(),
-        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
-    Assertions.assertEquals("Canceled", e.get("errorCode"));
-    Assertions.assertEquals("CANCELED", e.get("category"));
-    Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
-        e.get("errorMessage")
-    );
+    if (fullReport) {
+      // Buffered report path -- should get a cancellation error in the report.
+      Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+
+      final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          new TypeReference<>() {}
+      );
+
+      final MSQTaskReport report = (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
+      final MSQStatusReport statusReport = report.getPayload().getStatus();
+
+      Assertions.assertEquals(TaskState.FAILED, statusReport.getStatus());
+      Assertions.assertEquals(CanceledFault.userRequest(), statusReport.getErrorReport().getFault());
+
+    } else {
+      // Streaming path -- should get a serialized DruidException.
+      Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+
+      // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
+      final Map<String, Object> e = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      Assertions.assertEquals("Canceled", e.get("errorCode"));
+      Assertions.assertEquals("CANCELED", e.get("category"));
+      Assertions.assertEquals(
+          MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
+          e.get("errorMessage")
+      );
+    }
   }
 
   @Test
