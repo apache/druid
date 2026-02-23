@@ -1223,7 +1223,8 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         Set.of("dummyTask"),
-        Collections.emptySet()
+        Collections.emptySet(),
+        null
     );
 
     supervisor.start();

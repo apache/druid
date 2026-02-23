@@ -695,7 +695,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        null,
         null
     )
     {
@@ -802,7 +801,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        null,
         null
     )
     {
@@ -1102,7 +1100,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        null,
         null
     ) {};
 
@@ -1321,8 +1318,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        stopTaskCount,
-        null
+        stopTaskCount
     )
     {
     };
@@ -1557,7 +1553,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        null,
         null
     )
     {
@@ -1894,8 +1889,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -1904,8 +1898,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
     Map<String, Map<String, Object>> stats = supervisor.getStats();
 
@@ -1942,8 +1935,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -1952,8 +1944,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     Assert.assertEquals(1, supervisor.getActiveTaskGroupsCount());
@@ -2004,8 +1995,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2052,8 +2042,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task0"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
     final SeekableStreamSupervisor.TaskGroup taskGroup1 = supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition("1"),
@@ -2061,8 +2050,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
     final SeekableStreamSupervisor.TaskGroup taskGroup2 = supervisor.addTaskGroupToPendingCompletionTaskGroup(
         supervisor.getTaskGroupIdForPartition("2"),
@@ -2070,8 +2058,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final PendingSegmentRecord pendingSegmentRecord0 = PendingSegmentRecord.create(
@@ -2124,7 +2111,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
-
+    
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
@@ -2150,8 +2137,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2160,8 +2146,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2170,8 +2155,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task3"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2224,8 +2208,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2234,8 +2217,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2244,8 +2226,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task3"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2302,8 +2283,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2312,8 +2292,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2371,8 +2350,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2381,8 +2359,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2416,8 +2393,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2426,8 +2402,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     verifyAll();
@@ -2457,8 +2432,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2467,8 +2441,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     verifyAll();
@@ -2509,8 +2482,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2519,8 +2491,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of(),
-        null
+        ImmutableSet.of()
     );
 
     verifyAll();
@@ -2708,7 +2679,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         null,
-        null,
         null
     )
     {
@@ -2772,8 +2742,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         lagAggregator,
         null,
         null,
-        1, // ensure this is overridden
-        null
+        1 // ensure this is overridden
     )
     {
     };
@@ -2852,7 +2821,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         null,
-        null,
         null
     )
     {
@@ -2884,7 +2852,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return createSupervisorTuningConfigWithWorkerThreads(1);
   }
 
-  public static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
+  private static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
   {
     return createSupervisorTuningConfigWithWorkerThreads(null);
   }
@@ -3053,8 +3021,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         TreeMap<Integer, Map<String, String>> sequenceOffsets,
         SeekableStreamIndexTaskIOConfig taskIoConfig,
         SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-        RowIngestionMetersFactory rowIngestionMetersFactory,
-        @Nullable List<Integer> serverPrioritiesToAssign
+        RowIngestionMetersFactory rowIngestionMetersFactory
     )
     {
       return ImmutableList.of(new TestSeekableStreamIndexTask(

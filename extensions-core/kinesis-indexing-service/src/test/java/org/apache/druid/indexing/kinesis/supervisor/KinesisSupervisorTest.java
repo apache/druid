@@ -3738,7 +3738,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -3747,7 +3748,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
@@ -3977,7 +3979,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         minMessageTime,
         maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");

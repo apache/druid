@@ -71,6 +71,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -133,6 +134,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -2436,7 +2438,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2444,7 +2447,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -2593,7 +2597,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2601,7 +2606,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -2929,7 +2935,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2937,7 +2944,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -4382,7 +4390,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -4391,7 +4400,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1"))
@@ -4424,7 +4434,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -4433,7 +4444,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     ParseExceptionReport exception1 = new ParseExceptionReport(
@@ -4646,7 +4658,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         minMessageTime,
         maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
@@ -5255,6 +5268,112 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     // Verify that partitionOffsets have not been cleared either
     Assert.assertFalse(supervisor.getPartitionOffsets().isEmpty());
+  }
+
+  @Test
+  public void testGetUnassignedServerPriorities_MultipleReplicasPerPriority()
+  {
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        topic,
+        null,
+        INPUT_FORMAT,
+        null,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        null,
+        null,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        Map.of(
+            10, 2,
+            20, 3
+        )
+    );
+
+    Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
+
+    final KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null);
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        KafkaSupervisorTuningConfig.defaultConfig(),
+        kafkaSupervisorIOConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKafkaSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup1 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            0,
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            Set.of(),
+            Set.of(),
+            Map.of()
+        );
+
+    Assert.assertEquals(List.of(10, 10, 20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup1, 5));
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup2 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            1,  // different taskGroupId to avoid conflict
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            ImmutableSet.of("task1", "task2"),
+            ImmutableSet.of(),
+            ImmutableMap.of("task1", 10, "task2", 10)  // 2 tasks at priority 10
+        );
+
+    Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup3 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            2,  // different taskGroupId
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            ImmutableSet.of("task1", "task2", "task3"),
+            ImmutableSet.of(),
+            ImmutableMap.of("task1", 10, "task2", 10, "task3", 20)
+        );
+
+    Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception

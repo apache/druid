@@ -1712,7 +1712,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @Nullable DateTime minMsgTime,
       @Nullable DateTime maxMsgTime,
       Set<String> tasks,
-      Set<PartitionIdType> exclusiveStartingSequencePartitions
+      Set<PartitionIdType> exclusiveStartingSequencePartitions,
+      @Nullable Map<String, Integer> taskIdToServerPriority
   )
   {
     TaskGroup group = new TaskGroup(
@@ -1724,6 +1725,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         exclusiveStartingSequencePartitions
     );
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskIdToServerPriority != null) {
+      group.taskIdToServerPriority.putAll(taskIdToServerPriority);
+    }
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
           "trying to add taskGroup with id [%s] to actively reading task groups, but group already exists.",
@@ -1740,7 +1744,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @Nullable DateTime minMsgTime,
       @Nullable DateTime maxMsgTime,
       Set<String> tasks,
-      Set<PartitionIdType> exclusiveStartingSequencePartitions
+      Set<PartitionIdType> exclusiveStartingSequencePartitions,
+      @Nullable Map<String, Integer> taskIdToServerPriority
   )
   {
     TaskGroup group = new TaskGroup(
@@ -1752,6 +1757,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         exclusiveStartingSequencePartitions
     );
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskIdToServerPriority != null) {
+      group.taskIdToServerPriority.putAll(taskIdToServerPriority);
+    }
     pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
                                .add(group);
     return group;
@@ -4240,27 +4248,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ioConfig
     );
 
-    final Map<Integer, Integer> priorityToReplicaCount = ioConfig.getServerPriorityToReplicaCount();
-    List<Integer> unassignedServerPriorities = new ArrayList<>();
-    if (priorityToReplicaCount != null) {
-      final Set<Integer> assignedPriorities = new HashSet<>(group.taskIdToServerPriority.values());
-      unassignedServerPriorities = priorityToReplicaCount.keySet()
-                                                         .stream()
-                                                         .sorted()
-                                                         .filter(priority -> !assignedPriorities.contains(priority))
-                                                         .collect(Collectors.toList());
-
-      log.info("Task server priorities[%s] have already been assigned. Unassigned server priorities[%s] for taskGroupId[%d] with replicas[%d]",
-               group.taskIdToServerPriority.values(), unassignedServerPriorities, groupId, replicas);
-    }
-
-    // Validate
-    if (!unassignedServerPriorities.isEmpty()) {
-      if (unassignedServerPriorities.size() < replicas) {
-        // This indicates a bug in the code as this invariant should have already been validated in the constructor.
-        throw DruidException.defensive("Found unassignedServerPriorities[%s] of size[%d] < total replicas[%d]", unassignedServerPriorities, unassignedServerPriorities.size(), replicas);
-      }
-    }
+    final List<Integer> unassignedServerPriorities = computeUnassignedServerPriorities(group, replicas);
 
     List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>> taskList = createIndexTasks(
         replicas,
@@ -4295,6 +4283,51 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.error("Failed to get task queue because I'm not the leader!");
       }
     }
+  }
+
+  /**
+   * Computes the remaining unassigned server priorities for the given task group.
+   *
+   * @return the unassigned server priorities, or {@code null} if
+   *         {@link SeekableStreamSupervisorIOConfig#getServerPriorityToReplicaCount()} is not configured
+   */
+  @Nullable
+  public List<Integer> computeUnassignedServerPriorities(final TaskGroup group, final int replicas)
+  {
+    final Map<Integer, Integer> priorityToReplicaCount = ioConfig.getServerPriorityToReplicaCount();
+    if (priorityToReplicaCount == null) {
+      return null;
+    }
+
+    // Build the full list of all required priorities (with duplicates)
+    final List<Integer> allRequiredPriorities = new ArrayList<>();
+    for (Map.Entry<Integer, Integer> entry : priorityToReplicaCount.entrySet()) {
+      for (int i = 0; i < entry.getValue(); i++) {
+        allRequiredPriorities.add(entry.getKey());
+      }
+    }
+    Collections.sort(allRequiredPriorities);
+
+    // Remove already assigned priorities
+    final List<Integer> assignedPriorities = new ArrayList<>(group.taskIdToServerPriority.values());
+    final List<Integer> unassignedServerPriorities = new ArrayList<>(allRequiredPriorities);
+    for (Integer assigned : assignedPriorities) {
+      unassignedServerPriorities.remove(assigned);
+    }
+
+    log.info(
+        "Task server priorities[%s] have already been assigned. Server priorities[%s] to be assigned for new tasks in taskGroupId[%d] with replicas[%d]",
+        group.taskIdToServerPriority.values(), unassignedServerPriorities, group.groupId, replicas
+    );
+
+    if (unassignedServerPriorities.size() < replicas) {
+      // Sanity check: if this triggers, this suggests a bug as the invariant should already be validated in the ctr.
+      throw DruidException.defensive(
+          "Found unassignedServerPriorities[%s] of size[%d] < total replicas[%d] for taskGroupId[%d]",
+          unassignedServerPriorities, unassignedServerPriorities.size(), replicas, group.groupId
+      );
+    }
+    return unassignedServerPriorities;
   }
 
   /**

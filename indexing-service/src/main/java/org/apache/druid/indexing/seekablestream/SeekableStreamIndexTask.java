@@ -55,6 +55,7 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 
 import javax.annotation.Nullable;
@@ -146,6 +147,17 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public String getSupervisorId()
   {
     return supervisorId;
+  }
+
+  /**
+   * @return the server priority this task belongs to, if specified. When set, this value
+   * maps to {@link DruidServerMetadata#getPriority()} on the corresponding Peon server.
+   */
+  @JsonProperty
+  @Nullable
+  public Integer getServerPriority()
+  {
+    return serverPriority;
   }
 
   @JsonProperty
@@ -322,12 +334,5 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> getRunner()
   {
     return runnerSupplier.get();
-  }
-
-  @JsonProperty
-  @Nullable
-  public Integer getServerPriority()
-  {
-    return serverPriority;
   }
 }
