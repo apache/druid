@@ -61,7 +61,7 @@ import java.nio.channels.ClosedChannelException;
  * Embedded test to verify communication with Druid services over TLS with
  * various certificate states - expired, revoked, invalid hostname, etc.
  */
-public class ITTLSTest extends EmbeddedClusterTestBase
+public class TLSTest extends EmbeddedClusterTestBase
 {
   private static final int MAX_BROKEN_PIPE_RETRIES = 30;
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
