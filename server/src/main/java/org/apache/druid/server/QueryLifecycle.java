@@ -138,7 +138,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
-    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig; // can only be null if not running on the broker
     this.startMs = startMs;
     this.startNs = startNs;
   }
