@@ -32,12 +32,13 @@ import java.io.IOException;
  * {@link EmbeddedResource} used to enable SSL on Druid services.
  * This resource is responsible for the following:
  * <ul>
+ * <li>Enable TLS port on the Druid services</li>
  * <li>Generate client certificates using script
  * {@code integration-tests/docker/tls/generate-client-certs-and-keystores.sh}</li>
  * <li>Generate server truststore using script
  * {@code integration-tests/docker/tls/generate-server-certs-and-keystores.sh}</li>
- * <li>Keeps the generated certificates in the {@code TestFolder} used by the cluster</li>
- * <li>Configures the cluster with the appropriate keystore/truststore paths.</li>
+ * <li>Keep the generated certificates in the {@code TestFolder} used by the cluster</li>
+ * <li>Configure the cluster with the appropriate keystore/truststore paths.</li>
  * </ul>
  */
 public class EmbeddedSSLAuthResource implements EmbeddedResource
@@ -60,30 +61,30 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
 
     // Generate client certificates and keystores
     final ProcessBuilder generateClientCertificates = new ProcessBuilder(
-        "bash",
+        "/bin/bash",
         new File(tlsScripts, "generate-client-certs-and-keystores.sh").getAbsolutePath()
-    );
-    generateClientCertificates.directory(tlsDir);
-    generateClientCertificates.redirectErrorStream(true);
-    generateClientCertificates.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+    )
+        .directory(tlsDir)
+        .redirectErrorStream(true)
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT);
 
     int exitCode = generateClientCertificates.start().waitFor();
     if (exitCode != 0) {
-      throw new ISE("Client certificate generation failed");
+      throw new ISE("Client certificate generation failed with code[%s]", exitCode);
     }
 
     // Generate server certificates and keystores
     final ProcessBuilder generateServerCertificates = new ProcessBuilder(
-        "bash",
+        "/bin/bash",
         new File(tlsScripts, "generate-server-certs-and-keystores.sh").getAbsolutePath()
-    );
-    generateServerCertificates.directory(tlsDir);
-    generateServerCertificates.redirectErrorStream(true);
-    generateServerCertificates.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+    )
+        .directory(tlsDir)
+        .redirectErrorStream(true)
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT);
 
     exitCode = generateServerCertificates.start().waitFor();
     if (exitCode != 0) {
-      throw new ISE("Server certificate generation failed");
+      throw new ISE("Server certificate generation failed with code[%s]", exitCode);
     }
   }
 

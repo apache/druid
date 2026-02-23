@@ -59,7 +59,7 @@ import java.nio.channels.ClosedChannelException;
 
 public class ITTLSTest extends EmbeddedClusterTestBase
 {
-  private static final int MAX_BROKEN_PIPE_RETRIES = 10;
+  private static final int MAX_BROKEN_PIPE_RETRIES = 30;
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
 
   private static final String ERROR_CERTIFICATE_UNKNOWN = "Received fatal alert: certificate_unknown";
@@ -85,7 +85,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
       .addProperty("druid.server.https.requireClientCertificate", "false")
       .addProperty("druid.server.https.validateHostnames", "false");
 
-  private final EmbeddedRouter routerWithCustomCertChecker = new EmbeddedRouter()
+  private final EmbeddedRouter routerUsesCustomCertChecker = new EmbeddedRouter()
       .addProperty("druid.plaintextPort", "8891")
       .addProperty("druid.tlsPort", "9091")
       .addProperty("druid.tls.certificateChecker", ITTLSCertificateCheckerModule.IT_CHECKER_TYPE);
@@ -105,7 +105,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         .addServer(router)
         .addServer(routerAcceptsAnyCert)
         .addServer(routerNeedsNoClientCert)
-        .addServer(routerWithCustomCertChecker);
+        .addServer(routerUsesCustomCertChecker);
   }
 
   @BeforeAll
@@ -274,7 +274,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     // Verify GET over HTTPS fails with default HttpClient
     verifyGetHttpsFailsWith(
         ERROR_CERTIFICATE_UNKNOWN,
-        routerWithCustomCertChecker,
+        routerUsesCustomCertChecker,
         overlord.bindings().escalatedHttpClient()
     );
 
@@ -283,22 +283,22 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "invalid_hostname_client",
         new ITTLSCertificateChecker()
     );
-    verifyGetStatusHttpsIsOk(wrongHostnameClient, routerWithCustomCertChecker);
+    verifyGetStatusHttpsIsOk(wrongHostnameClient, routerUsesCustomCertChecker);
 
     // Verify that access to Broker fails
     verifyRequestFails(
         wrongHostnameClient,
         HttpMethod.POST,
-        getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/v2",
+        getServerHttpsUrl(routerUsesCustomCertChecker) + "/druid/v2",
         ISE.class,
         "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request]"
     );
 
     // Verify that access to Coordinator works
-    verifyRequestIsOk(
+    makeRequest(
         wrongHostnameClient,
         HttpMethod.GET,
-        getServerHttpsUrl(routerWithCustomCertChecker) + "/druid/coordinator/v1/leader"
+        getServerHttpsUrl(routerUsesCustomCertChecker) + "/druid/coordinator/v1/leader"
     );
   }
 
@@ -401,7 +401,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     try {
       RetryUtils.retry(
           () -> {
-            verifyRequestIsOk(httpClient, method, url);
+            makeRequest(httpClient, method, url);
             return 0;
           },
           e -> isRetriable(Throwables.getRootCause(e)),
@@ -422,26 +422,27 @@ public class ITTLSTest extends EmbeddedClusterTestBase
 
   private void verifyGetStatusIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
-    verifyRequestIsOk(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
+    makeRequest(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
   }
   
   private void verifyGetStatusHttpsIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
-    verifyRequestIsOk(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");
+    makeRequest(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");
   }
 
-  private void verifyRequestIsOk(
+  private void makeRequest(
       HttpClient httpClient,
       HttpMethod method,
       String url
   )
   {
     try {
-      Request request = new Request(method, new URL(url));
-      StatusResponseHolder response = httpClient.go(
-          request,
-          StatusResponseHandler.getInstance()
-      ).get();
+      final Request request = new Request(method, new URL(url));
+      final StatusResponseHolder response = RetryUtils.retry(
+          () -> httpClient.go(request, StatusResponseHandler.getInstance()).get(),
+          e -> isRetriable(Throwables.getRootCause(e)),
+          MAX_BROKEN_PIPE_RETRIES
+      );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         String errMsg = StringUtils.format(
