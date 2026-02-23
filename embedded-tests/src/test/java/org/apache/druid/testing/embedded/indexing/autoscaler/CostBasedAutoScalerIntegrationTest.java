@@ -102,14 +102,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     cluster.useLatchableEmitter()
            .useDefaultTimeoutForLatchableEmitter(60)
+           .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
            .addServer(historical)
-           .addExtension(KafkaIndexTaskModule.class)
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.5s")
-           .addResource(kafkaServer)
            .addServer(new EmbeddedRouter());
 
     return cluster;
