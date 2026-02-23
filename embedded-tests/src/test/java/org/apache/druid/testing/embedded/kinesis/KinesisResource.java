@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
-  private static final String IMAGE = "localstack/localstack:latest";
+  private static final String IMAGE = "localstack/localstack:4.13.1";
 
   private AmazonKinesis amazonKinesis;
 

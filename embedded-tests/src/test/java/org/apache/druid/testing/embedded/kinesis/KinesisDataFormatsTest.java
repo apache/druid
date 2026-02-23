@@ -98,12 +98,11 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
             1,
             Period.millis(500),
             Period.millis(10),
-            Period.millis(500),
+            Period.millis(10),
             true,
             Period.seconds(5),
-            null, null, null, null, null,
-            null, null, // AWS stuff
-            null, false
+            null, null, null, null, null, null, null, null,
+            false
         ),
         Map.of(),
         false,

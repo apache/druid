@@ -25,10 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Wrapper over a {@link TestcontainerResource} that can be used for testing
- * streaming ingestion. This is used as a fixture in embedded tests to allow
- * reuse of the same test methods for various types of streaming ingestion, e.g,
- * Kafka, Kinesis, etc.
+ * {@link TestcontainerResource} that can be used for testing streaming ingestion.
  */
 public abstract class StreamIngestResource<C extends GenericContainer<C>> extends TestcontainerResource<C>
 {
