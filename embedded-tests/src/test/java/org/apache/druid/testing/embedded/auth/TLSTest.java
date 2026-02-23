@@ -173,7 +173,9 @@ public class TLSTest extends EmbeddedClusterTestBase
     HttpClient certlessClient = makeCertlessClient();
     verifyGetStatusHttpsIsOk(certlessClient, routerNeedsNoClientCert);
 
-    final String sslErrorMessage = "Received fatal alert: bad_certificate";
+    // Mac environments seem to throw a 'bad_certificate' error
+    // whereas Ubuntu environments throw a 'handshake_failure' error
+    final String sslErrorMessage = "Received fatal alert";
     verifyGetHttpsFailsWith(sslErrorMessage, coordinator, certlessClient);
     verifyGetHttpsFailsWith(sslErrorMessage, overlord, certlessClient);
     verifyGetHttpsFailsWith(sslErrorMessage, broker, certlessClient);
