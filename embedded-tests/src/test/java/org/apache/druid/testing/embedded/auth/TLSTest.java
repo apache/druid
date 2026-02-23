@@ -417,9 +417,18 @@ public class TLSTest extends EmbeddedClusterTestBase
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);
       if (expectedException.isInstance(rootCause)) {
-        Assertions.assertTrue(rootCause.getMessage().contains(expectedExceptionMsg));
+        Assertions.assertTrue(
+            rootCause.getMessage().contains(expectedExceptionMsg),
+            StringUtils.format(
+                "Got error message[%s] instead of expected[%s]",
+                rootCause.getMessage(), expectedExceptionMsg
+            )
+        );
       } else {
-        Assertions.fail("Got a different exception instead of expected: " + expectedException, rootCause);
+        Assertions.fail(
+            StringUtils.format("Got a different exception[%s] instead of expected[%s]", rootCause, expectedException),
+            rootCause
+        );
       }
     }
   }
