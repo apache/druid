@@ -5271,7 +5271,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetUnassignedServerPriorities_MultipleReplicasPerPriority()
+  public void testComputeUnassignedServerPriorities_MultipleReplicasPerPriority()
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", kafkaHost);
@@ -5357,14 +5357,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             ImmutableSet.of("task1", "task2"),
             ImmutableSet.of(),
-            ImmutableMap.of("task1", 10, "task2", 10)  // 2 tasks at priority 10
+            ImmutableMap.of("task1", 10, "task2", 10)
         );
 
     Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
 
     final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup3 =
         supervisor.addTaskGroupToActivelyReadingTaskGroup(
-            2,  // different taskGroupId
+            2,
             ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
             null,
             null,

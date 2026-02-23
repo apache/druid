@@ -52,7 +52,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final AutoScalerConfig autoScalerConfig;
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
-  @Nullable private final Map<Integer, Integer> serverPriorityToReplicaCount;
+  @Nullable private final Map<Integer, Integer> serverPriorityToReplicas;
 
   private final LagAggregator lagAggregator;
   private final boolean autoScalerEnabled;
@@ -74,7 +74,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
       @Nullable Integer stopTaskCount,
-      @Nullable Map<Integer, Integer> serverPriorityToReplicaCount
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -121,13 +121,13 @@ public abstract class SeekableStreamSupervisorIOConfig
     }
 
     this.idleConfig = idleConfig;
-    this.serverPriorityToReplicaCount = serverPriorityToReplicaCount;
-    if (this.serverPriorityToReplicaCount != null) {
-      final int replicaCount = this.serverPriorityToReplicaCount.values().stream().mapToInt(Integer::intValue).sum();
+    this.serverPriorityToReplicas = serverPriorityToReplicas;
+    if (this.serverPriorityToReplicas != null) {
+      final int replicaCount = this.serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum();
       if (replicas != null && replicas != replicaCount) {
         throw InvalidInput.exception(
-            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicaCount[%s].",
-            replicas, replicaCount, serverPriorityToReplicaCount
+            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicas[%s].",
+            replicas, replicaCount, serverPriorityToReplicas
         );
       }
 
@@ -164,9 +164,9 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public Map<Integer, Integer> getServerPriorityToReplicaCount()
+  public Map<Integer, Integer> getserverPriorityToReplicas()
   {
-    return serverPriorityToReplicaCount;
+    return serverPriorityToReplicas;
   }
 
   @Nullable

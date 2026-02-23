@@ -90,7 +90,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertNull(config.getStopTaskCount());
     Assert.assertEquals(lagAggregator, config.getLagAggregator());
     Assert.assertEquals(1, config.getMaxAllowedStops());
-    Assert.assertNull(config.getServerPriorityToReplicaCount());
+    Assert.assertNull(config.getserverPriorityToReplicas());
   }
 
   @Test
@@ -378,10 +378,10 @@ public class SeekableStreamSupervisorIOConfigTest
   }
 
   @Test
-  public void testReplicasIsSetWhenServerPriorityToReplicaCount()
+  public void testReplicasIsSetWhenserverPriorityToReplicas()
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(null, serverPriorityToReplica);
-    Assert.assertEquals(serverPriorityToReplica, config.getServerPriorityToReplicaCount());
+    Assert.assertEquals(serverPriorityToReplica, config.getserverPriorityToReplicas());
     Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
   }
 
@@ -390,7 +390,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(4, null);
     Assert.assertEquals(Integer.valueOf(4), config.getReplicas());
-    Assert.assertNull(config.getServerPriorityToReplicaCount());
+    Assert.assertNull(config.getserverPriorityToReplicas());
   }
 
   @Test
@@ -398,7 +398,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(5, serverPriorityToReplica);
     Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
-    Assert.assertEquals(serverPriorityToReplica, config.getServerPriorityToReplicaCount());
+    Assert.assertEquals(serverPriorityToReplica, config.getserverPriorityToReplicas());
   }
 
   @Test
@@ -411,14 +411,14 @@ public class SeekableStreamSupervisorIOConfigTest
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
-                "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicaCount[%s].",
+                "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicas[%s].",
                 serverPriorityToReplica
             )
         )
     );
   }
 
-  private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicaCount)
+  private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicas)
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
@@ -437,7 +437,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
-        serverPriorityToReplicaCount
+        serverPriorityToReplicas
     )
     {
     };
