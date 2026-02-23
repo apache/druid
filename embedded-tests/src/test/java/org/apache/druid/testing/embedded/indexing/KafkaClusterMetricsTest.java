@@ -108,7 +108,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
-           .useDefaultTimeoutForLatchableEmitter(600)
+           .useDefaultTimeoutForLatchableEmitter(60)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
