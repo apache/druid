@@ -103,6 +103,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
   {
     final String truststore = getTlsFilePath("server_tls/truststore.jks");
     final String keystore = getTlsFilePath("server_tls/server.p12");
+    final String crlPath = getTlsFilePath("server_tls/revocations.crl");
 
     cluster.addExtension(SSLContextModule.class)
            .addCommonProperty("druid.enableTlsPort", "true")
@@ -117,6 +118,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
            .addCommonProperty("druid.server.https.trustStorePassword", "druid123")
            .addCommonProperty("druid.server.https.trustStorePath", truststore)
            .addCommonProperty("druid.server.https.validateHostnames", "true")
+           .addCommonProperty("druid.server.https.crlPath", crlPath)
 
            .addCommonProperty("druid.client.https.protocol", "TLSv1.2")
            .addCommonProperty("druid.client.https.certAlias", "druid")

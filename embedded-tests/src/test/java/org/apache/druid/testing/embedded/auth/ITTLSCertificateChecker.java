@@ -37,7 +37,7 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
   ) throws CertificateException
   {
     // only the integration test client with "thisisprobablynottherighthostname" cert is allowed to talk to me
-    if (!chain[0].toString().contains("thisisprobablynottherighthostname") || !engine.getPeerHost().contains("172.172.172.1")) {
+    if (!chain[0].toString().contains("thisisprobablynottherighthostname")) {
       throw new CertificateException("Custom check rejected request from client.");
     }
   }
@@ -53,7 +53,7 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
     baseTrustManager.checkServerTrusted(chain, authType, engine);
 
     // fail intentionally when trying to talk to the broker
-    if (chain[0].toString().contains("172.172.172.60")) {
+    if (chain[0].toString().contains(":8282")) {
       throw new CertificateException("Custom check intentionally terminated request to broker.");
     }
   }

@@ -221,7 +221,6 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         "client_tls/revoked_client.jks",
         "revoked_druid"
     );
-    verifyGetStatusHttpsIsOk(revokedClient, routerAcceptsAnyCert);
     verifyGetStatusHttpsIsOk(revokedClient, routerNeedsNoClientCert);
 
     final String sslErrorMessage = ERROR_CERTIFICATE_UNKNOWN;
@@ -230,6 +229,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
     verifyGetHttpsFailsWith(sslErrorMessage, broker, revokedClient);
     verifyGetHttpsFailsWith(sslErrorMessage, historical, revokedClient);
     verifyGetHttpsFailsWith(sslErrorMessage, router, revokedClient);
+    verifyGetHttpsFailsWith(sslErrorMessage, routerAcceptsAnyCert, revokedClient);
   }
 
   @Test
@@ -291,7 +291,7 @@ public class ITTLSTest extends EmbeddedClusterTestBase
         HttpMethod.POST,
         getServerHttpsUrl(routerUsesCustomCertChecker) + "/druid/v2",
         ISE.class,
-        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request]"
+        "Error while making request to url[https://localhost:9091/druid/v2] status[400 Bad Request]"
     );
 
     // Verify that access to Coordinator works
