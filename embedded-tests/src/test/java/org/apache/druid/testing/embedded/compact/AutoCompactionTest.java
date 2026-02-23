@@ -1528,7 +1528,7 @@ public class AutoCompactionTest extends CompactionTestBase
           NO_SKIP_OFFSET,
           null,
           null,
-          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null)),
+          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null), null),
           null,
           false,
           CompactionEngine.NATIVE

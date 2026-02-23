@@ -1289,7 +1289,8 @@ public class CompactSegmentsTest
                                               .withTuningConfig(getTuningConfig(3))
                                               .withTransformSpec(
                                             new CompactionTransformSpec(
-                                                new SelectorDimFilter("dim1", "foo", null)
+                                                new SelectorDimFilter("dim1", "foo", null),
+                                                null
                                             )
                                         )
                                               .withEngine(engine)

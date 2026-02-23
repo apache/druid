@@ -585,7 +585,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
-      clearAllocationInfo();
+      clearPartitionAssignmentsForScaling();
       emitter.emit(ServiceMetricEvent.builder()
                                      .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                      .setDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -621,18 +621,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Clears allocation information including active task groups, partition groups, partition offsets, and partition IDs.
+   * Clears previous partition assignments in preparation for an upcoming scaling event.
    * <p>
    * Note: Does not clear {@link #pendingCompletionTaskGroups} so that the supervisor remembers that these
    * tasks are publishing and auto-scaler does not repeatedly attempt a scale down until these tasks
    * complete. If this is cleared, the next {@link #discoverTasks()} might add these tasks to
    * {@link #activelyReadingTaskGroups}.
+   * <p>
+   * Also does not clear {@link #partitionOffsets} so that the new tasks remember
+   * where the previous tasks had left off.
+   * <p>
+   * Since both of these are in-memory structures, a change in Overlord leadership
+   * might cause duplicate scaling actions and/or intermittent task failures if
+   * the new generation tasks start with stale offsets.
    */
-  private void clearAllocationInfo()
+  @VisibleForTesting
+  public void clearPartitionAssignmentsForScaling()
   {
+    // All previous tasks should now be publishing and not actively reading anymore
     activelyReadingTaskGroups.clear();
+
+    // partitionGroups will change as taskCount has changed due to scaling
     partitionGroups.clear();
-    partitionOffsets.clear();
+
+    // partitionIds will be rediscovered from the stream and assigned to respective taskGroups
     partitionIds.clear();
   }
 
@@ -3337,6 +3349,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Checks the duration of {@link #activelyReadingTaskGroups}, requests them
+   * to checkpoint themselves if they have exceeded the specified run duration
+   * or if early stop has been requested. If checkpoint is successful, the
+   * {@link #partitionOffsets} are updated and checkpointed tasks are moved to
+   * {@link #pendingCompletionTaskGroups}.
+   */
   private void checkTaskDuration() throws ExecutionException, InterruptedException
   {
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
@@ -3463,7 +3482,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         changeTaskCountInIOConfig(rolloverTaskCount);
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
-        clearAllocationInfo();
+        clearPartitionAssignmentsForScaling();
 
         ServiceMetricEvent.Builder event = ServiceMetricEvent
             .builder()
@@ -3976,6 +3995,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .collect(Collectors.toSet());
         }
 
+        log.info("Initializing taskGroup[%d] with startingOffsets[%s].", groupId, simpleStartingOffsets);
         activelyReadingTaskGroups.put(
             groupId,
             new TaskGroup(

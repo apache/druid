@@ -1018,7 +1018,8 @@ public class MSQReplaceTest extends MSQTestBase
                              GranularityType.HOUR,
                              Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"),
                              new CompactionTransformSpec(
-                                 new RangeFilter("v0", ColumnType.LONG, 1466989200000L, 1466992800000L, false, true, null)
+                                 new RangeFilter("v0", ColumnType.LONG, 1466989200000L, 1466992800000L, false, true, null),
+                                 null
                              )
                          )
                      )
@@ -1735,7 +1736,7 @@ public class MSQReplaceTest extends MSQTestBase
                              ),
                              GranularityType.DAY,
                              Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                          )
                      )
                      .verifyResults();
@@ -2206,7 +2207,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.QUARTER,
                          Intervals.of("2000-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z"),
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2287,7 +2288,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.DAY,
                          Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2334,7 +2335,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.HOUR,
                          Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00"),
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2383,7 +2384,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.DAY,
                          Intervals.of("2016-06-29T00:00:00.000Z/2016-07-03T00:00:00.000Z"),
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2432,7 +2433,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.DAY,
                          Intervals.of("2016-05-25T00:00:00.000Z/2016-06-03T00:00:00.000Z"),
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2481,7 +2482,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.DAY,
                          Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2528,7 +2529,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.ALL,
                          Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2575,7 +2576,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.ALL,
                          Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2615,7 +2616,7 @@ public class MSQReplaceTest extends MSQTestBase
                          List.of(new StringDimensionSchema("dim1"), new LongDimensionSchema("cnt")),
                          GranularityType.ALL,
                          Intervals.ETERNITY,
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2686,7 +2687,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ),
                          GranularityType.DAY,
                          Intervals.of("2016-06-01T00:00:00.000Z/2016-06-03T00:00:00.000Z"),
-                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)))
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
