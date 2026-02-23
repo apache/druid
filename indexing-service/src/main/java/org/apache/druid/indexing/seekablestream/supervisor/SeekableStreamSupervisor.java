@@ -4299,14 +4299,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return null;
     }
 
-    // Build the full list of all required priorities (with duplicates)
+    // Build the full list of all required priorities and sort them from highest to lowest priorities
     final List<Integer> allRequiredPriorities = new ArrayList<>();
     for (Map.Entry<Integer, Integer> entry : serverPriorityToReplicas.entrySet()) {
       for (int i = 0; i < entry.getValue(); i++) {
         allRequiredPriorities.add(entry.getKey());
       }
     }
-    Collections.sort(allRequiredPriorities);
+    allRequiredPriorities.sort(Collections.reverseOrder());
 
     // Remove already assigned priorities
     final List<Integer> assignedPriorities = new ArrayList<>(group.taskIdToServerPriority.values());
