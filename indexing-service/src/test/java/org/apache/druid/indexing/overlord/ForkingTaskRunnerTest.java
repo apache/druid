@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
@@ -69,7 +70,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest.createSupervisorTuningConfig;
 import static org.junit.Assert.assertEquals;
 
 public class ForkingTaskRunnerTest
@@ -616,7 +616,7 @@ public class ForkingTaskRunnerTest
                   .withDimensions(new DimensionsSpec(List.of()))
                   .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), List.of()))
                   .build(),
-        createSupervisorTuningConfig().convertToTaskTuningConfig(),
+        SeekableStreamSupervisorStateTest.createSupervisorTuningConfig().convertToTaskTuningConfig(),
         new TestSeekableStreamIndexTaskIOConfig(),
         null,
         "1",

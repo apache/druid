@@ -4652,7 +4652,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         tuningConfigBuilder().build()
     );
 
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+    SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup = supervisor.addTaskGroupToActivelyReadingTaskGroup(
         42,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
         minMessageTime,
@@ -4661,6 +4661,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ImmutableSet.of(),
         null
     );
+
+    Assert.assertNull(supervisor.computeUnassignedServerPriorities(taskGroup, 3));
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
@@ -5355,9 +5357,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
             null,
             null,
-            ImmutableSet.of("task1", "task2"),
-            ImmutableSet.of(),
-            ImmutableMap.of("task1", 10, "task2", 10)
+            Set.of("task1", "task2"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10)
         );
 
     Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
@@ -5368,9 +5370,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
             null,
             null,
-            ImmutableSet.of("task1", "task2", "task3"),
-            ImmutableSet.of(),
-            ImmutableMap.of("task1", 10, "task2", 10, "task3", 20)
+            Set.of("task1", "task2", "task3"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10, "task3", 20)
         );
 
     Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
