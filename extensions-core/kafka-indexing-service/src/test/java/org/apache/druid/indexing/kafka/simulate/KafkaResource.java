@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.TestcontainerResource;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;
 import org.apache.kafka.clients.admin.NewPartitions;
@@ -32,6 +33,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +46,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * {@link #KAFKA_IMAGE} can be overriden via system property to use a different Kafka Docker image.
  * </p>
  */
-public class KafkaResource extends TestcontainerResource<KafkaContainer>
+public class KafkaResource extends StreamIngestResource<KafkaContainer>
 {
   /**
    * Kafka Docker image used in embedded tests. The image name is
@@ -75,6 +77,34 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
         return cluster.getEmbeddedHostname().useInHostAndPort(super.getBootstrapServers());
       }
     };
+  }
+
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    cluster.addExtension(KafkaIndexTaskModule.class);
+  }
+
+  @Override
+  public void createStreamWithPartitions(String stream, int partitionCount)
+  {
+    createTopicWithPartitions(stream, partitionCount);
+  }
+
+  @Override
+  public void publishRecordsToStream(String stream, List<byte[]> records)
+  {
+    publishRecordsToStream(stream, records, null);
+  }
+
+  @Override
+  public void publishRecordsToStream(String stream, List<byte[]> records, Map<String, Object> properties)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(stream, record));
+    }
+    produceRecordsToTopic(producerRecords, properties);
   }
 
   public String getBootstrapServerUrl()

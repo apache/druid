@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
@@ -31,26 +30,26 @@ import org.testcontainers.redpanda.RedpandaContainer;
  * Uses Redpanda testcontainers under the hood which offers built in schema registry support that is confluent
  * compatible while having a much smaller image size than the official confluent schema registry image.
  */
-public class KafkaSchemaRegistryResource extends TestcontainerResource<RedpandaContainer>
+public class SchemaRegistryResource extends TestcontainerResource<RedpandaContainer>
 {
   private static final String SCHEMA_REGISTRY_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v25.3.5";
   private static final int SCHEMA_REGISTRY_PORT = 8081;
 
-  private final KafkaResource kafkaResource;
+  private final TestcontainerResource<?> targetResource;
   private String connectURI;
   private String embeddedHostname;
 
-  KafkaSchemaRegistryResource(KafkaResource kafkaResource)
+  public SchemaRegistryResource(TestcontainerResource<?> targetResource)
   {
     super();
-    this.kafkaResource = kafkaResource;
+    this.targetResource = targetResource;
   }
 
   @Override
   protected RedpandaContainer createContainer()
   {
     return new RedpandaContainer(SCHEMA_REGISTRY_IMAGE)
-        .dependsOn(kafkaResource.getContainer());
+        .dependsOn(targetResource.getContainer());
   }
 
   @Override
