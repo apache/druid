@@ -17,25 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.testing.guice;
+package org.apache.druid.testing.embedded.auth;
 
 import com.google.inject.Binder;
 import com.google.inject.name.Names;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.security.TLSCertificateChecker;
-import org.apache.druid.testing.utils.ITTLSCertificateChecker;
 
-public class ITTLSCertificateCheckerModule implements DruidModule
+public class TestTLSCertificateCheckerModule implements DruidModule
 {
-  private final ITTLSCertificateChecker INSTANCE = new ITTLSCertificateChecker();
+  private final TestTLSCertificateChecker INSTANCE = new TestTLSCertificateChecker();
 
-  public static final String IT_CHECKER_TYPE = "integration-test";
+  public static final String CHECKER_TYPE = "embedded-test";
 
   @Override
   public void configure(Binder binder)
   {
     binder.bind(TLSCertificateChecker.class)
-          .annotatedWith(Names.named(IT_CHECKER_TYPE))
+          .annotatedWith(Names.named(CHECKER_TYPE))
           .toInstance(INSTANCE);
   }
 }
