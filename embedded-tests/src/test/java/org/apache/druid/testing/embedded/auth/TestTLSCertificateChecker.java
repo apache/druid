@@ -26,7 +26,10 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class ITTLSCertificateChecker implements TLSCertificateChecker
+/**
+ * Certificate checker with custom behaviour used in embedded tests.
+ */
+public class TestTLSCertificateChecker implements TLSCertificateChecker
 {
   @Override
   public void checkClient(

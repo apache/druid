@@ -92,7 +92,7 @@ public class TLSTest extends EmbeddedClusterTestBase
   private final EmbeddedRouter routerUsesCustomCertChecker = new EmbeddedRouter()
       .addProperty("druid.plaintextPort", "8891")
       .addProperty("druid.tlsPort", "9091")
-      .addProperty("druid.tls.certificateChecker", ITTLSCertificateCheckerModule.IT_CHECKER_TYPE);
+      .addProperty("druid.tls.certificateChecker", TestTLSCertificateCheckerModule.CHECKER_TYPE);
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -100,7 +100,7 @@ public class TLSTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .addResource(new EmbeddedBasicAuthResource())
-        .addExtension(ITTLSCertificateCheckerModule.class)
+        .addExtension(TestTLSCertificateCheckerModule.class)
         .addResource(sslAuthResource)
         .addServer(coordinator)
         .addServer(overlord)
@@ -285,7 +285,7 @@ public class TLSTest extends EmbeddedClusterTestBase
     final HttpClient wrongHostnameClient = makeCustomHttpClient(
         "client_tls/invalid_hostname_client.jks",
         "invalid_hostname_client",
-        new ITTLSCertificateChecker()
+        new TestTLSCertificateChecker()
     );
     verifyGetStatusHttpsIsOk(wrongHostnameClient, routerUsesCustomCertChecker);
 
