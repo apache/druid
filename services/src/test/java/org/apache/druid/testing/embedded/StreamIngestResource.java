@@ -29,9 +29,15 @@ import java.util.Map;
  */
 public abstract class StreamIngestResource<C extends GenericContainer<C>> extends TestcontainerResource<C>
 {
-  public abstract void createStreamWithPartitions(String stream, int partitionCount);
+  public abstract void createTopicWithPartitions(String topic, int partitionCount);
 
-  public abstract void publishRecordsToStream(String stream, List<byte[]> records);
+  public abstract void deleteTopic(String topic);
+  
+  public abstract void increasePartitionsInTopic(String topic, int newPartitionCount);
 
-  public abstract void publishRecordsToStream(String stream, List<byte[]> records, Map<String, Object> properties);
+  public abstract void publishRecordsToTopic(String topic, List<byte[]> records);
+
+  public abstract void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records);
+
+  public abstract void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties);
 }

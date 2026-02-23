@@ -103,7 +103,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
   private StreamIngestResource<?> streamResource;
   private SchemaRegistryResource schemaRegistry;
 
-  protected abstract StreamIngestResource<?> createStreamResource();
+  protected abstract StreamIngestResource<?> getStreamResource();
 
   protected abstract SupervisorSpec createSupervisor(
       String dataSource,
@@ -125,7 +125,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    streamResource = createStreamResource();
+    streamResource = getStreamResource();
     schemaRegistry = new SchemaRegistryResource(streamResource);
 
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper().useContainerFriendlyHostname();
@@ -152,9 +152,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat_withParser() throws Exception
+  public void test_avroDataFormat_withParser() throws Exception
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
@@ -189,9 +189,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat() throws Exception
+  public void test_avroDataFormat() throws Exception
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     
@@ -221,9 +221,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry_withParser()
+  public void test_avroDataFormatWithSchemaRegistry_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublish(dataSource, serializer, true);
@@ -260,9 +260,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry()
+  public void test_avroDataFormatWithSchemaRegistry()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublish(dataSource, serializer, true);
@@ -286,9 +286,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat()
+  public void test_csvDataFormat()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new CsvEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
@@ -304,9 +304,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat_withParser()
+  public void test_csvDataFormat_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new CsvEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     CSVParseSpec parseSpec = new CSVParseSpec(
@@ -331,9 +331,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat_withParser()
+  public void test_jsonDataFormat_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     JSONParseSpec parseSpec = new JSONParseSpec(
@@ -357,9 +357,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat()
+  public void test_jsonDataFormat()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
 
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
@@ -375,9 +375,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormat_withParser()
+  public void test_protobufDataFormat_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
@@ -405,9 +405,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
   }
 
   @Test
-  public void test_indexKafka_protobufDataFormat()
+  public void test_protobufDataFormat()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufEventSerializer();
 
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
@@ -430,9 +430,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry_withParser()
+  public void test_protobufDataFormatWithSchemaRegistry_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublish(dataSource, serializer, true);
@@ -465,9 +465,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry()
+  public void test_protobufDataFormatWithSchemaRegistry()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublish(dataSource, serializer, true);
@@ -490,9 +490,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat_withParser()
+  public void test_tsvDataFormat_withParser()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new DelimitedEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     // Build DelimitedParseSpec with proper object construction for TSV
@@ -519,9 +519,9 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat()
+  public void test_tsvDataFormat()
   {
-    streamResource.createStreamWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new DelimitedEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     DelimitedInputFormat inputFormat = new DelimitedInputFormat(
@@ -570,13 +570,13 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     List<byte[]> records = streamGenerator.generateEvents(10);
 
     if (useSchemaRegistry) {
-      streamResource.publishRecordsToStream(
+      streamResource.publishRecordsToTopic(
           topic,
           records,
           Map.of("schema.registry.url", schemaRegistry.getConnectURI())
       );
     } else {
-      streamResource.publishRecordsToStream(topic, records);
+      streamResource.publishRecordsToTopic(topic, records);
     }
     return records.size();
   }

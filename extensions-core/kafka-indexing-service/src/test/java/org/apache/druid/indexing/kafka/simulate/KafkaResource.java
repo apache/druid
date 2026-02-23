@@ -86,23 +86,27 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
   }
 
   @Override
-  public void createStreamWithPartitions(String stream, int partitionCount)
+  public void publishRecordsToTopic(String topic, List<byte[]> records)
   {
-    createTopicWithPartitions(stream, partitionCount);
+    publishRecordsToTopic(topic, records, null);
   }
 
   @Override
-  public void publishRecordsToStream(String stream, List<byte[]> records)
-  {
-    publishRecordsToStream(stream, records, null);
-  }
-
-  @Override
-  public void publishRecordsToStream(String stream, List<byte[]> records, Map<String, Object> properties)
+  public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
   {
     ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
     for (byte[] record : records) {
-      producerRecords.add(new ProducerRecord<>(stream, record));
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsWithoutTransaction(producerRecords);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
     }
     produceRecordsToTopic(producerRecords, properties);
   }
@@ -120,6 +124,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
     return props;
   }
 
+  @Override
   public void createTopicWithPartitions(String topicName, int numPartitions)
   {
     try (Admin admin = newAdminClient()) {
@@ -142,6 +147,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
     }
   }
 
+  @Override
   public void deleteTopic(String topicName)
   {
     try (Admin admin = newAdminClient()) {
@@ -157,6 +163,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
    * already exist. This method waits until the increase in the partition count
    * has started (but not necessarily finished).
    */
+  @Override
   public void increasePartitionsInTopic(String topic, int newPartitionCount)
   {
     try (Admin admin = newAdminClient()) {

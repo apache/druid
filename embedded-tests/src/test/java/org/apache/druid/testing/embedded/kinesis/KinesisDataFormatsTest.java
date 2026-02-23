@@ -29,6 +29,7 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexDataFormatsTestBase;
 import org.joda.time.Period;
@@ -43,9 +44,15 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
   private final KinesisResource kinesis = new KinesisResource();
 
   @Override
-  protected StreamIngestResource<?> createStreamResource()
+  protected StreamIngestResource<?> getStreamResource()
   {
     return kinesis;
+  }
+
+  @Override
+  public EmbeddedDruidCluster createCluster()
+  {
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(120);
   }
 
   @Override
@@ -77,17 +84,12 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
     return new KinesisSupervisorSpec(
         dataSource,
         null,
-        new DataSchema(
-            dataSource,
-            new TimestampSpec("timestamp", null, null),
-            DimensionsSpec.EMPTY,
-            null,
-            new UniformGranularitySpec(Granularities.HOUR, null, null),
-            null,
-            null,
-            null,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource(dataSource)
+                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
+                  .withDimensions(DimensionsSpec.EMPTY)
+                  .build(),
         null,
         new KinesisSupervisorIOConfig(
             topic,

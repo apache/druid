@@ -137,6 +137,7 @@
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
@@ -406,6 +407,11 @@
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

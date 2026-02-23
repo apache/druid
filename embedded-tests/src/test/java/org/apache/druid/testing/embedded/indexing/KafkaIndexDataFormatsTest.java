@@ -33,7 +33,7 @@ public class KafkaIndexDataFormatsTest extends StreamIndexDataFormatsTestBase
   private final KafkaResource kafka = new KafkaResource();
 
   @Override
-  protected StreamIngestResource<?> createStreamResource()
+  protected StreamIngestResource<?> getStreamResource()
   {
     return kafka;
   }

@@ -27,8 +27,15 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
+import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
+import com.amazonaws.services.kinesis.model.ScalingType;
+import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.StreamDescription;
+import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
+import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.waiters.WaiterParameters;
+import com.google.common.collect.Iterables;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
@@ -39,8 +46,11 @@ import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
@@ -84,7 +94,7 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   }
 
   @Override
-  public void createStreamWithPartitions(String stream, int partitionCount)
+  public void createTopicWithPartitions(String stream, int partitionCount)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(stream, partitionCount);
     if (createStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
@@ -98,11 +108,43 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   }
 
   @Override
-  public void publishRecordsToStream(String stream, List<byte[]> records)
+  public void deleteTopic(String topic)
+  {
+    DeleteStreamResult deleteStreamResult = amazonKinesis.deleteStream(topic);
+    if (deleteStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
+      throw new ISE("Cannot delete stream for integration test");
+    }
+  }
+
+  @Override
+  public void increasePartitionsInTopic(String topic, int newPartitionCount)
+  {
+    final int originalShardCount = getStreamShardCount(topic);
+    if (originalShardCount == newPartitionCount) {
+      return;
+    }
+
+    UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
+    updateShardCountRequest.setStreamName(topic);
+    updateShardCountRequest.setTargetShardCount(newPartitionCount);
+    updateShardCountRequest.setScalingType(ScalingType.UNIFORM_SCALING);
+    UpdateShardCountResult updateShardCountResult = amazonKinesis.updateShardCount(updateShardCountRequest);
+    if (updateShardCountResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
+      throw new ISE("Cannot update stream's shard count for integration test");
+    }
+
+    // TODO: wait until the sharding has finished
+    amazonKinesis.waiters().streamExists().run(
+        new WaiterParameters<>(new DescribeStreamRequest().withStreamName(topic))
+    );
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records)
   {
     for (byte[] record : records) {
       amazonKinesis.putRecord(
-          stream,
+          topic,
           ByteBuffer.wrap(record),
           DigestUtils.sha1Hex(record)
       );
@@ -110,9 +152,15 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   }
 
   @Override
-  public void publishRecordsToStream(String stream, List<byte[]> records, Map<String, Object> properties)
+  public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
   {
-    publishRecordsToStream(stream, records);
+    publishRecordsToTopic(topic, records);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
+  {
+    publishRecordsToTopic(topic, records);
   }
 
   private AmazonKinesis newClient()
@@ -127,5 +175,26 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
                 getContainer().getRegion()
             )
         ).build();
+  }
+
+  private int getStreamShardCount(String topic)
+  {
+    Set<String> shardIds = new HashSet<>();
+    DescribeStreamRequest request = new DescribeStreamRequest();
+    request.setStreamName(topic);
+    while (request != null) {
+      StreamDescription description = amazonKinesis.describeStream(request).getStreamDescription();
+      List<String> shardIdResult = description.getShards()
+                                              .stream()
+                                              .map(Shard::getShardId)
+                                              .collect(Collectors.toList());
+      shardIds.addAll(shardIdResult);
+      if (description.isHasMoreShards()) {
+        request.setExclusiveStartShardId(Iterables.getLast(shardIdResult));
+      } else {
+        request = null;
+      }
+    }
+    return shardIds.size();
   }
 }
