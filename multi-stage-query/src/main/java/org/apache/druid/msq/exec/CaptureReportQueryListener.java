@@ -19,13 +19,12 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * A {@link QueryListener} wrapper that captures the report from {@link #onQueryComplete(MSQTaskReportPayload)}.
@@ -40,6 +39,14 @@ public class CaptureReportQueryListener implements QueryListener
   public CaptureReportQueryListener(final QueryListener delegate)
   {
     this.delegate = delegate;
+  }
+
+  /**
+   * Whether this listener has captured a report. Will be true if the query has completed, false otherwise.
+   */
+  public boolean hasReport()
+  {
+    return report != null;
   }
 
   /**
@@ -61,18 +68,15 @@ public class CaptureReportQueryListener implements QueryListener
   }
 
   @Override
-  public void onResultsStart(
-      final List<MSQResultsReport.ColumnAndType> signature,
-      @Nullable final List<SqlTypeName> sqlTypeNames
-  )
+  public void onResultsStart(final FrameReader frameReader)
   {
-    delegate.onResultsStart(signature, sqlTypeNames);
+    delegate.onResultsStart(frameReader);
   }
 
   @Override
-  public boolean onResultRow(final Object[] row)
+  public boolean onResultBatch(RowsAndColumns rac)
   {
-    return delegate.onResultRow(row);
+    return delegate.onResultBatch(rac);
   }
 
   @Override

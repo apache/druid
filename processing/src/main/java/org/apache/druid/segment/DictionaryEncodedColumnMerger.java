@@ -581,8 +581,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   private boolean allNull(Indexed<T> dimValues)
   {
-    for (int i = 0, size = dimValues.size(); i < size; i++) {
-      if (dimValues.get(i) != null) {
+    for (T dimValue : dimValues) {
+      if (dimValue != null) {
         return false;
       }
     }

@@ -71,7 +71,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -123,7 +122,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -5218,12 +5216,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         hasPendingTasks
     );
 
-    // Now call clearAllocationInfo() - this is where the bug was
-    // The bug was that this method cleared pendingCompletionTaskGroups
-    supervisor.testClearAllocationInfo();
+    // Clear the partition assignments (this is called when task count has changed)
+    supervisor.clearPartitionAssignmentsForScaling();
 
-    // THE KEY ASSERTION: Verify pendingCompletionTaskGroups is still NOT empty after clearAllocationInfo
-    // This is the fix - clearAllocationInfo should preserve pendingCompletionTaskGroups
+    // Verify that pendingCompletionTaskGroups has not been cleared
     boolean stillHasPendingTasks = false;
     for (int groupId = 0; groupId < 3; groupId++) {
       if (supervisor.getPendingCompletionTaskGroupsCount(groupId) > 0) {
@@ -5243,6 +5239,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         0,
         supervisor.getActivelyReadingTaskGroupsCount()
     );
+
+    // Verify that partitionOffsets have not been cleared either
+    Assert.assertFalse(supervisor.getPartitionOffsets().isEmpty());
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
@@ -5961,13 +5960,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       CopyOnWriteArrayList<?> groups = getPendingCompletionTaskGroups(groupId);
       return groups != null ? groups.size() : 0;
-    }
-
-    public void testClearAllocationInfo() throws Exception
-    {
-      Method method = SeekableStreamSupervisor.class.getDeclaredMethod("clearAllocationInfo");
-      method.setAccessible(true);
-      method.invoke(this);
     }
   }
 

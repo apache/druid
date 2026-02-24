@@ -23,16 +23,10 @@ sidebar_label: Front-coded dictionaries
   ~ under the License.
 -->
 
-:::info
-Front coding is an [experimental feature](../development/experimental.md) introduced in Druid 25.0.0.
-:::
-
-Apache Druid encodes string columns into dictionaries for better compression.
-Front coding is an incremental encoding strategy that lets you store STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+Apache Druid stores STRING columns using dictionary encoding for better compression, where each string value is added to a lexicographically sorted dictionary and the actual column just stores a pointer to a dictionary entry.
+Front coding is an optional incremental encoding strategy that lets you further compress STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
+Front-coded dictionaries can reduce storage and improve performance by optimizing values with a shared common prefix to avoid storing duplicate data.
 For example, if you are tracking website visits, most URLs start with `https://domain.xyz/`, and front coding is able to exploit this pattern for more optimal compression when storing such datasets.
-Druid performs the optimization automatically, which means that the performance of string columns is generally not affected when they don't match the front-coded pattern.
-Consequently, you can enable this feature universally without having to know the underlying data shapes of the columns.
 
 You can use front coding with all types of ingestion.
 
@@ -43,7 +37,7 @@ To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontC
 You can specify the following optional properties:
 
 * `bucketSize`: Number of values to place in a bucket to perform delta encoding. Setting this property instructs indexing tasks to write segments using compressed dictionaries of the specified bucket size. You can set it to any power of 2 less than or equal to 128. `bucketSize` defaults to 4.
-* `formatVersion`: Specifies which front coding version to use. Options are 0 and 1 (supported for Druid versions 26.0.0 and higher). `formatVersion` defaults to 0.
+* `formatVersion`: Specifies which front coding version to use. Options are 0 and 1 (the latter supported for Druid versions 26.0.0 and higher). `formatVersion` defaults to 1.
 
 For example:
 
@@ -53,7 +47,7 @@ For example:
     "stringDictionaryEncoding": {
       "type":"frontCoded",
       "bucketSize": 4,
-      "formatVersion": 0
+      "formatVersion": 1
     }
   }
 }
@@ -86,8 +80,8 @@ For API calls to the SQL-based ingestion API, include the `indexSpec` in the con
   "stringDictionaryEncoding": {
     "type": "frontCoded",
     "bucketSize": 4,
-    "formatVersion": 1}
-    }
+    "formatVersion": 1
+   }
   }
 }
 ```

@@ -63,6 +63,8 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -75,6 +77,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -2953,5 +2956,59 @@ public class MSQSelectTest extends MSQTestBase
   public boolean isPageSizeLimited(String contextName)
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testTimeBoundaryGroupBy(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("EXPR$0", ColumnType.LONG)
+                                                  .add("EXPR$1", ColumnType.LONG)
+                                                  .build();
+
+    testSelectQuery()
+        .setSql("SELECT MIN(__time), MAX(__time) FROM foo")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                                  .setGranularity(Granularities.ALL)
+                                  .setAggregatorSpecs(
+                                      aggregators(
+                                          new LongMinAggregatorFactory("a0", ColumnHolder.TIME_COLUMN_NAME),
+                                          new LongMaxAggregatorFactory("a1", ColumnHolder.TIME_COLUMN_NAME)
+                                      )
+                                  )
+                                  .setContext(context)
+                                  .build()
+                   )
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("a0", "EXPR$0"),
+                               new ColumnMapping("a1", "EXPR$1")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{
+                    DateTimes.of("2000-01-01").getMillis(),
+                    DateTimes.of("2001-01-03").getMillis()
+                }
+            )
+        )
+        .verifyResults();
   }
 }

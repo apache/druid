@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -150,6 +151,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
+    if (lastKnownMetrics == null) {
+      log.debug("Metrics not available for supervisorId [%s], skipping scaling action", supervisorId);
+      return -1;
+    }
+
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
@@ -402,7 +408,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Extracts the average 15-minute moving average processing rate from task stats.
+   * Extracts the average 15-minute, 5-minute, or 1-minute moving average processing rate
+   * from task stats, depending on which is available, in this order.
    * This rate represents the historical throughput (records per second) for each task,
    * averaged across all tasks.
    *
@@ -448,7 +455,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     return count > 0 ? sum / count : -1;
   }
 
-  private CostMetrics collectMetrics()
+  @Nullable
+  CostMetrics collectMetrics()
   {
     if (spec.isSuspended()) {
       log.debug("Supervisor [%s] is suspended, skipping a metrics collection", supervisorId);
@@ -466,19 +474,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
     final double movingAvgRate = extractMovingAverage(taskStats);
-    final double pollIdleRatio = extractPollIdleRatio(taskStats);
-
-    final double avgPartitionLag = lagStats.getAvgLag();
-
-    // Use an actual 15-minute moving average processing rate if available
-    final double avgProcessingRate;
-    if (movingAvgRate > 0) {
-      avgProcessingRate = movingAvgRate;
-    } else {
-      // Fallback: estimate processing rate based on the idle ratio
-      final double utilizationRatio = Math.max(0.01, 1.0 - pollIdleRatio);
-      avgProcessingRate = config.getDefaultProcessingRate() * utilizationRatio;
+    // If moving average is not available, we stop scaling effort.
+    if (movingAvgRate < 0) {
+      return null;
     }
+    final double pollIdleRatio = extractPollIdleRatio(taskStats);
+    final double avgPartitionLag = lagStats.getAvgLag();
 
     return new CostMetrics(
         avgPartitionLag,
@@ -486,7 +487,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         partitionCount,
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
-        avgProcessingRate
+        movingAvgRate
     );
   }
 

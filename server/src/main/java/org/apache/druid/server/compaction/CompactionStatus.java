@@ -62,6 +62,7 @@ import java.util.stream.Collectors;
 public class CompactionStatus
 {
   public static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, "", null, null);
+  public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
   {
@@ -88,7 +89,7 @@ public class CompactionStatus
       Evaluator::rollupIsUpToDate,
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
-      Evaluator::transformSpecFilterIsUpToDate,
+      Evaluator::transformSpecIsUpToDate,
       Evaluator::projectionsAreUpToDate
   );
 
@@ -553,7 +554,7 @@ public class CompactionStatus
       if (uncompactedSegments.isEmpty()) {
         return null;
       } else {
-        return "not compacted yet";
+        return NEVER_COMPACTED_REASON;
       }
     }
 
@@ -597,9 +598,9 @@ public class CompactionStatus
       return evaluateForAllCompactionStates(this::metricsSpecIsUpToDate);
     }
 
-    private String transformSpecFilterIsUpToDate()
+    private String transformSpecIsUpToDate()
     {
-      return evaluateForAllCompactionStates(this::transformSpecFilterIsUpToDate);
+      return evaluateForAllCompactionStates(this::transformSpecIsUpToDate);
     }
 
     private String partitionsSpecIsUpToDate(CompactionState lastCompactionState)
@@ -782,17 +783,22 @@ public class CompactionStatus
       }
     }
 
-    private String transformSpecFilterIsUpToDate(CompactionState lastCompactionState)
+    private String transformSpecIsUpToDate(CompactionState lastCompactionState)
     {
-      if (compactionConfig.getTransformSpec() == null) {
+      final CompactionTransformSpec configuredSpec = compactionConfig.getTransformSpec();
+      if (configuredSpec == null
+          || (configuredSpec.getFilter() == null && configuredSpec.getVirtualColumns().isEmpty())) {
         return null;
       }
 
-      CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
+      final CompactionTransformSpec existingSpec = Configs.valueOrDefault(
+          lastCompactionState.getTransformSpec(),
+          new CompactionTransformSpec(null, null)
+      );
       return getConfigMismatchReason(
-          "transformSpec filter",
-          compactionConfig.getTransformSpec().getFilter(),
-          existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
+          "transformSpec",
+          configuredSpec,
+          existingSpec,
           String::valueOf
       );
     }

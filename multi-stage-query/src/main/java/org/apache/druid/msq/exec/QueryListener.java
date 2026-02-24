@@ -19,12 +19,10 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-
-import javax.annotation.Nullable;
-import java.util.List;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 /**
  * Object passed to {@link Controller#run(QueryListener)} to enable retrieval of results, status, counters, etc.
@@ -39,27 +37,21 @@ public interface QueryListener
   /**
    * Called when results start coming in.
    *
-   * @param signature    signature of results
-   * @param sqlTypeNames SQL type names of results; same length as the signature
+   * @param frameReader reader for frames that will be passed to {@link #onResultBatch(RowsAndColumns)}
    */
-  void onResultsStart(
-      List<MSQResultsReport.ColumnAndType> signature,
-      @Nullable List<SqlTypeName> sqlTypeNames
-  );
+  void onResultsStart(FrameReader frameReader);
 
   /**
-   * Called for each result row. Follows a call to {@link #onResultsStart(List, List)}.
-   *
-   * @param row result row
+   * Called for each result batch. Follows a call to {@link #onResultsStart}.
    *
    * @return whether the controller should keep reading results
    */
-  boolean onResultRow(Object[] row);
+  boolean onResultBatch(RowsAndColumns rac);
 
   /**
-   * Called after the last result has been delivered by {@link #onResultRow(Object[])}. Only called if results are
-   * actually complete. If results are truncated due to {@link #readResults()} or {@link #onResultRow(Object[])}
-   * returning false, this method is not called.
+   * Called after the last result has been delivered by {@link #onResultBatch(RowsAndColumns)}. Only called if results
+   * are actually complete. If results are truncated due to {@link #readResults()} or
+   * {@link #onResultBatch(RowsAndColumns)} returning false, this method is not called.
    */
   void onResultsComplete();
 

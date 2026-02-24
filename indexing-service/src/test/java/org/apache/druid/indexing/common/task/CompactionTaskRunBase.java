@@ -592,7 +592,7 @@ public abstract class CompactionTaskRunBase
 
     final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity)
         .interval(inputInterval, true)
-        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null), null))
         .build();
 
     Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
@@ -608,7 +608,7 @@ public abstract class CompactionTaskRunBase
         segmentGranularity,
         DEFAULT_QUERY_GRAN,
         List.of(inputInterval)
-    ).toBuilder().transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null))).build();
+    ).toBuilder().transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null), null)).build();
     Assert.assertEquals(expectedCompactionState, segments.get(0).getLastCompactionState());
   }
 

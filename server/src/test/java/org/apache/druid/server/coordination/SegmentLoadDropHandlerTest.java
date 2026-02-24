@@ -159,7 +159,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(segment), segmentAnnouncer.getObservedSegments());
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 
@@ -210,7 +210,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 

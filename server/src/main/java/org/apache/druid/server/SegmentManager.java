@@ -182,9 +182,17 @@ public class SegmentManager
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
    * {@link #acquireSegment(DataSegment)} instead.
    */
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  {
+    return cacheManager.acquireCachedSegment(segmentId);
+  }
+
+  /**
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId)} that accepts a {@link DataSegment}.
+   */
   public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
-    return cacheManager.acquireCachedSegment(dataSegment);
+    return acquireCachedSegment(dataSegment.getId());
   }
 
   /**
@@ -311,7 +319,7 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment);
+            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment.getId());
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -378,7 +386,7 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
+                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
                 long numberOfRows = oldSegment.map(segment -> {
                   closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);

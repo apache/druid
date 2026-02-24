@@ -1,0 +1,279 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.compaction;
+
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.function.BiFunction;
+
+public class InlineReindexingRuleProviderTest
+{
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
+
+  private static final Interval INTERVAL_100_DAYS_OLD = Intervals.of(
+      "2025-09-01T00:00:00Z/2025-09-02T00:00:00Z"
+  ); // Ends 109 days before reference time
+
+  private static final Interval INTERVAL_50_DAYS_OLD = Intervals.of(
+      "2025-10-20T00:00:00Z/2025-10-21T00:00:00Z"
+  ); // Ends 59 days before reference time
+
+  private static final Interval INTERVAL_20_DAYS_OLD = Intervals.of(
+      "2025-11-20T00:00:00Z/2025-11-21T00:00:00Z"
+  ); // Ends 28 days before reference time
+
+  @Test
+  public void test_constructor_nullListsDefaultToEmpty()
+  {
+    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assertions.assertNotNull(provider.getDeletionRules());
+    Assertions.assertTrue(provider.getDeletionRules().isEmpty());
+    Assertions.assertNotNull(provider.getIOConfigRules());
+    Assertions.assertTrue(provider.getIOConfigRules().isEmpty());
+    Assertions.assertNotNull(provider.getSegmentGranularityRules());
+    Assertions.assertTrue(provider.getSegmentGranularityRules().isEmpty());
+    Assertions.assertNotNull(provider.getTuningConfigRules());
+    Assertions.assertTrue(provider.getTuningConfigRules().isEmpty());
+    Assertions.assertTrue(provider.getDataSchemaRules().isEmpty());
+  }
+
+  @Test
+  public void test_reindexingRules_validateAdditivity()
+  {
+    ReindexingDeletionRule rule30d = createFilterRule("filter-30d", Period.days(30));
+    ReindexingDeletionRule rule60d = createFilterRule("filter-60d", Period.days(60));
+    ReindexingDeletionRule rule90d = createFilterRule("filter-90d", Period.days(90));
+
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(rule30d, rule60d, rule90d))
+        .build();
+
+    List<ReindexingDeletionRule> noMatch = provider.getDeletionRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    Assertions.assertTrue(noMatch.isEmpty(), "No rules should match interval that's too recent");
+
+    List<ReindexingDeletionRule> oneMatch = provider.getDeletionRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    Assertions.assertEquals(1, oneMatch.size(), "Only rule30d should match");
+    Assertions.assertEquals("filter-30d", oneMatch.get(0).getId());
+
+    List<ReindexingDeletionRule> multiMatch = provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    Assertions.assertEquals(3, multiMatch.size(), "All 3 additive rules should be returned");
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-30d")));
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-60d")));
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-90d")));
+  }
+
+  @Test
+  public void test_allNonAdditiveRules_validateNonAdditivity()
+  {
+    // Test IOConfig rules
+    testNonAdditivity(
+        "ioConfig",
+        this::createIOConfigRule,
+        InlineReindexingRuleProvider.Builder::ioConfigRules,
+        InlineReindexingRuleProvider::getIOConfigRule
+    );
+
+    // Test segment granularity rules
+    testNonAdditivity(
+        "segmentGranularity",
+        this::createSegmentGranularityRule,
+        InlineReindexingRuleProvider.Builder::segmentGranularityRules,
+        InlineReindexingRuleProvider::getSegmentGranularityRule
+    );
+
+    // Test tuning config rules
+    testNonAdditivity(
+        "tuningConfig",
+        this::createTuningConfigRule,
+        InlineReindexingRuleProvider.Builder::tuningConfigRules,
+        InlineReindexingRuleProvider::getTuningConfigRule
+    );
+
+    testNonAdditivity(
+        "dataSchema",
+        this::createDataSchemaRule,
+        InlineReindexingRuleProvider.Builder::dataSchemaRules,
+        InlineReindexingRuleProvider::getDataSchemaRule
+    );
+  }
+
+  @Test
+  public void test_allRuleTypesWireCorrectly_withInterval()
+  {
+    ReindexingDeletionRule filterRule = createFilterRule("filter", Period.days(30));
+    ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
+    ReindexingSegmentGranularityRule segmentGranularityRule = createSegmentGranularityRule("segmentGranularity", Period.days(30));
+    ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
+    ReindexingDataSchemaRule dataSchemaRule = createDataSchemaRule("dataSchema", Period.days(30));
+
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(filterRule))
+        .ioConfigRules(ImmutableList.of(ioConfigRule))
+        .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
+        .tuningConfigRules(ImmutableList.of(tuningConfigRule))
+        .dataSchemaRules(ImmutableList.of(dataSchemaRule))
+        .build();
+
+    Assertions.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assertions.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assertions.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+
+    Assertions.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+
+    Assertions.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+
+    Assertions.assertEquals("dataSchema", provider.getDataSchemaRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+  }
+
+  /**
+   * Generic test helper for validating non-additive rule behavior.
+   * <p>
+   * Tests that when multiple rules match an interval, only the rule with the oldest threshold
+   * (largest period) is returned.
+   *
+   * @param ruleTypeName descriptive name for error messages
+   * @param ruleFactory function to create a rule instance
+   * @param builderSetter function to set rules on the builder
+   * @param ruleGetter function to retrieve the applicable rule from the provider
+   */
+  private <T extends ReindexingRule> void testNonAdditivity(
+      String ruleTypeName,
+      BiFunction<String, Period, T> ruleFactory,
+      BiFunction<InlineReindexingRuleProvider.Builder, List<T>, InlineReindexingRuleProvider.Builder> builderSetter,
+      TriFunction<InlineReindexingRuleProvider, Interval, DateTime, T> ruleGetter
+  )
+  {
+    T rule30d = ruleFactory.apply(ruleTypeName + "-30d", Period.days(30));
+    T rule60d = ruleFactory.apply(ruleTypeName + "-60d", Period.days(60));
+    T rule90d = ruleFactory.apply(ruleTypeName + "-90d", Period.days(90));
+
+    InlineReindexingRuleProvider.Builder builder = InlineReindexingRuleProvider.builder();
+    builder = builderSetter.apply(builder, ImmutableList.of(rule30d, rule60d, rule90d));
+    InlineReindexingRuleProvider provider = builder.build();
+
+    Assertions.assertNull(
+        ruleGetter.apply(provider, INTERVAL_20_DAYS_OLD, REFERENCE_TIME),
+        ruleTypeName + ": No rule should match interval that's too recent"
+    );
+
+    T oneMatch = ruleGetter.apply(provider, INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    Assertions.assertEquals(
+        ruleTypeName + "-30d",
+        oneMatch.getId(),
+        ruleTypeName + ": Only 30d rule should match"
+    );
+
+    T multiMatch = ruleGetter.apply(provider, INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    Assertions.assertEquals(
+        ruleTypeName + "-90d",
+        multiMatch.getId(),
+        ruleTypeName + ": Should return rule with oldest threshold (P90D)"
+    );
+  }
+
+  @FunctionalInterface
+  private interface TriFunction<T, U, V, R>
+  {
+    R apply(T t, U u, V v);
+  }
+
+  @Test
+  public void test_getType_returnsInline()
+  {
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
+    Assertions.assertEquals("inline", provider.getType());
+  }
+
+  private ReindexingDeletionRule createFilterRule(String id, Period period)
+  {
+    return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
+  }
+
+  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
+  {
+    return new ReindexingIOConfigRule(id, null, period, new UserCompactionTaskIOConfig(null));
+  }
+
+  private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)
+  {
+    return new ReindexingSegmentGranularityRule(
+        id,
+        null,
+        period,
+        Granularities.DAY
+    );
+  }
+
+  private ReindexingTuningConfigRule createTuningConfigRule(String id, Period period)
+  {
+    return new ReindexingTuningConfigRule(
+        id,
+        null,
+        period,
+        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null, null
+        )
+    );
+  }
+
+  private ReindexingDataSchemaRule createDataSchemaRule(String id, Period period)
+  {
+    return new ReindexingDataSchemaRule(
+        id,
+        null,
+        period,
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.DAY,
+        true,
+        ImmutableList.of(new AggregateProjectionSpec(
+            "test_projection",
+            null,
+            null,
+            null,
+            new AggregatorFactory[]{new CountAggregatorFactory("count")}
+        ))
+    );
+  }
+}

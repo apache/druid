@@ -88,8 +88,6 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );

@@ -498,7 +498,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.16.1
+version: 1.17.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -653,7 +653,7 @@ name: Apache Commons DBCP
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.1
+version: 2.11.0
 libraries:
   - org.apache.commons: commons-dbcp2
 notices:
@@ -702,7 +702,7 @@ name: Apache Commons Pool
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.12.0
 libraries:
   - org.apache.commons: commons-pool2
 notices:
@@ -2977,6 +2977,16 @@ libraries:
 
 ---
 
+name: jakarta.transaction
+version: 1.3.3
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 2.0
+libraries:
+  - jakarta.transaction: jakarta.transaction-api
+
+---
+
 name: javax.ws.rs-api
 version: 2.1.1
 license_category: binary
@@ -3400,7 +3410,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.0.16
+version: 2.0.17
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -5132,7 +5142,7 @@ name: Docker Java
 license_category: binary
 module: extensions-core/druid-testcontainers
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.7.0
 libraries:
   - com.github.docker-java: docker-java-api
   - com.github.docker-java: docker-java-transport
