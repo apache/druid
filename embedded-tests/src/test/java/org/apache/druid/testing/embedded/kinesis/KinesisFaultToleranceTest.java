@@ -42,7 +42,7 @@ public class KinesisFaultToleranceTest extends StreamIndexFaultToleranceTest
       if (publishToSingleShard.get()) {
         super.publishRecordsToTopicWithoutTransaction(topic, records);
       } else {
-        super.publishRecordsToTopicPartition(topic, 1, records);
+        super.publishRecordsToTopicPartition(topic, "O", records);
       }
     }
   };
