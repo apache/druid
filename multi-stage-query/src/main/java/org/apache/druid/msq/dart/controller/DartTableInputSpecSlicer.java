@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.QueryableDruidServer;
@@ -44,11 +45,13 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -122,7 +125,11 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(final InputSpec inputSpec, final int maxNumSlices)
+  public List<InputSlice> sliceStatic(
+      final InputSpec inputSpec,
+      @Nullable final SegmentPruner segmentPruner,
+      final int maxNumSlices
+  )
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
     final TimelineLookup<String, ServerSelector> timeline =
@@ -135,6 +142,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     final Collection<DartQueryableSegment> prunedSegments =
         findQueryableDataSegments(
             tableInputSpec,
+            segmentPruner,
             timeline,
             serverSelector -> findWorkerForServerSelector(serverSelector, maxNumSlices)
         );
@@ -183,6 +191,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   @Override
   public List<InputSlice> sliceDynamic(
       final InputSpec inputSpec,
+      @Nullable final SegmentPruner segmentPruner,
       final int maxNumSlices,
       final int maxFilesPerSlice,
       final long maxBytesPerSlice
@@ -224,6 +233,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   private Collection<DartQueryableSegment> findQueryableDataSegments(
       final TableInputSpec tableInputSpec,
+      @Nullable final SegmentPruner segmentPruner,
       final TimelineLookup<?, ServerSelector> timeline,
       final ToIntFunction<ServerSelector> toWorkersFunction
   )
@@ -242,7 +252,10 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                   })
                                   .filter(segment -> !segment.getSegment().isTombstone())
                       );
-    return tableInputSpec.filterSegments(allSegments, DartQueryableSegment::getSegment);
+    if (segmentPruner == null) {
+      return ImmutableSet.copyOf(allSegments);
+    }
+    return segmentPruner.prune(allSegments, DartQueryableSegment::getSegment);
   }
 
   private DartQueryableSegment toDartQueryableSegment(

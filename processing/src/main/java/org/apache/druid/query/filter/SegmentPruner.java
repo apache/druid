@@ -19,17 +19,11 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collection;
 import java.util.function.Function;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "query-filter", value = FilterSegmentPruner.class)
-})
 public interface SegmentPruner
 {
   <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter);

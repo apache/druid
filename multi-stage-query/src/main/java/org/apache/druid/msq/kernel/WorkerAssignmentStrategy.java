@@ -27,7 +27,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -48,11 +50,12 @@ public enum WorkerAssignmentStrategy
         final InputSpec inputSpec,
         final Int2IntMap stageWorkerCountMap,
         final InputSpecSlicer slicer,
+        @Nullable final SegmentPruner segmentPruner,
         final int maxInputFilesPerSlice,
         final long maxInputBytesPerSlice
     )
     {
-      return slicer.sliceStatic(inputSpec, stageDef.getMaxWorkerCount());
+      return slicer.sliceStatic(inputSpec, segmentPruner, stageDef.getMaxWorkerCount());
     }
   },
 
@@ -69,6 +72,7 @@ public enum WorkerAssignmentStrategy
         final InputSpec inputSpec,
         final Int2IntMap stageWorkerCountMap,
         final InputSpecSlicer slicer,
+        @Nullable final SegmentPruner segmentPruner,
         final int maxInputFilesPerSlice,
         final long maxInputBytesPerSlice
     )
@@ -76,6 +80,7 @@ public enum WorkerAssignmentStrategy
       if (slicer.canSliceDynamic(inputSpec)) {
         return slicer.sliceDynamic(
             inputSpec,
+            segmentPruner,
             stageDef.getMaxWorkerCount(),
             maxInputFilesPerSlice,
             maxInputBytesPerSlice
@@ -92,7 +97,7 @@ public enum WorkerAssignmentStrategy
         final IntSet inputStages = stageDef.getInputStageNumbers();
         final OptionalInt maxInputStageWorkerCount = inputStages.intStream().map(stageWorkerCountMap).max();
         final int workerCount = Math.min(stageDef.getMaxWorkerCount(), maxInputStageWorkerCount.orElse(1));
-        return slicer.sliceStatic(inputSpec, workerCount);
+        return slicer.sliceStatic(inputSpec, segmentPruner, workerCount);
       }
     }
   };
@@ -127,6 +132,7 @@ public enum WorkerAssignmentStrategy
       InputSpec inputSpec,
       Int2IntMap stageWorkerCountMap,
       InputSpecSlicer slicer,
+      @Nullable SegmentPruner segmentPruner,
       int maxInputFilesPerSlice,
       long maxInputBytesPerSlice
   );

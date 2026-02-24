@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
@@ -44,49 +42,19 @@ import java.util.function.Function;
   */
 public class FilterSegmentPruner implements SegmentPruner
 {
-  @Nullable
-  public static FilterSegmentPruner create(
-      @Nullable DimFilter filter
-  )
-  {
-    if (filter == null) {
-      return null;
-    }
-
-    return new FilterSegmentPruner(
-        filter,
-        null
-    );
-  }
-
   private final DimFilter filter;
   private final Set<String> filterFields;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
 
-  @JsonCreator
   public FilterSegmentPruner(
-      @JsonProperty("filter") DimFilter filter,
-      @JsonProperty("filterFields") @Nullable Set<String> filterFields
+      DimFilter filter,
+      @Nullable Set<String> filterFields
   )
   {
     InvalidInput.conditionalException(filter != null, "filter must not be null");
     this.filter = filter;
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.rangeCache = new HashMap<>();
-  }
-
-  @Nullable
-  @JsonProperty
-  public DimFilter getFilter()
-  {
-    return filter;
-  }
-
-  @Nullable
-  @JsonProperty
-  public Set<String> getFilterFields()
-  {
-    return filterFields;
   }
 
    /**

@@ -19,14 +19,11 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -44,34 +41,6 @@ import java.util.function.Function;
 
 class FilterSegmentPrunerTest
 {
-  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
-
-  @Test
-  void testSerde() throws JsonProcessingException
-  {
-    SegmentPruner pruner = new FilterSegmentPruner(
-        new EqualityFilter("dim", ColumnType.STRING, "val", null),
-        Collections.singleton("dim")
-    );
-    Assertions.assertEquals(
-        pruner,
-        mapper.readValue(mapper.writeValueAsString(pruner), SegmentPruner.class)
-    );
-  }
-
-  @Test
-  void testSerdeNullFieldsSet() throws JsonProcessingException
-  {
-    SegmentPruner pruner = new FilterSegmentPruner(
-        new EqualityFilter("dim", ColumnType.STRING, "val", null),
-        null
-    );
-    Assertions.assertEquals(
-        pruner,
-        mapper.readValue(mapper.writeValueAsString(pruner), SegmentPruner.class)
-    );
-  }
-
   @Test
   void testNullFilter()
   {

@@ -25,10 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,11 +44,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
-        null,
-        new FilterSegmentPruner(
-            new EqualityFilter("dim", ColumnType.STRING, "val", null),
-            Collections.singleton("dim")
-        )
+        null
     );
 
     Assert.assertEquals(
@@ -60,24 +53,6 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testSerdeEmptyFilterFields() throws Exception
-  {
-    final TableInputSpec spec = new TableInputSpec(
-        "myds",
-        Collections.singletonList(Intervals.of("2000/P1M")),
-        null,
-        new FilterSegmentPruner(
-            new EqualityFilter("dim", ColumnType.STRING, "val", null),
-            Collections.emptySet()
-        )
-    );
-
-    Assert.assertEquals(
-        spec,
-        mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
-    );
-  }
 
   @Test
   public void testSerdeEternityInterval() throws Exception
@@ -85,11 +60,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Intervals.ONLY_ETERNITY,
-        null,
-        new FilterSegmentPruner(
-            new EqualityFilter("dim", ColumnType.STRING, "val", null),
-            null
-        )
+        null
     );
 
     Assert.assertEquals(
@@ -104,49 +75,12 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
-        Collections.singletonList(new SegmentDescriptor(Intervals.of("2000/P1M"), "version", 0)),
-        new FilterSegmentPruner(
-            new EqualityFilter("dim", ColumnType.STRING, "val", null),
-            Collections.singleton("dim")
-        )
+        Collections.singletonList(new SegmentDescriptor(Intervals.of("2000/P1M"), "version", 0))
     );
 
     Assert.assertEquals(
         spec,
         mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
-    );
-  }
-
-  @Test
-  public void testSerdeLegacy() throws Exception
-  {
-    // missing pruner
-    final String legacy = "{\n"
-                          + "  \"type\" : \"table\",\n"
-                          + "  \"dataSource\" : \"myds\",\n"
-                          + "  \"intervals\" : [ \"2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z\" ],\n"
-                          + "  \"filter\" : {\n"
-                          + "    \"type\" : \"equals\",\n"
-                          + "    \"column\" : \"dim\",\n"
-                          + "    \"matchValueType\" : \"STRING\",\n"
-                          + "    \"matchValue\" : \"val\"\n"
-                          + "  },\n"
-                          + "  \"filterFields\" : [ \"dim\" ],\n"
-                          + "  \"intervalsForSerialization\" : [ \"2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z\" ]\n"
-                          + "}";
-    final TableInputSpec expected = new TableInputSpec(
-        "myds",
-        Collections.singletonList(Intervals.of("2000/P1M")),
-        null,
-        new FilterSegmentPruner(
-            new EqualityFilter("dim", ColumnType.STRING, "val", null),
-            Collections.singleton("dim")
-        )
-    );
-
-    Assert.assertEquals(
-        expected,
-        mapper.readValue(legacy, InputSpec.class)
     );
   }
 

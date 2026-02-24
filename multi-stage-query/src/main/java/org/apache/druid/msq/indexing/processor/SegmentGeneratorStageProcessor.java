@@ -46,10 +46,12 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -269,6 +271,13 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
   public ExtraInfoHolder makeExtraInfoHolder(final List<SegmentIdWithShardSpec> segmentIdsWithShardSpecs)
   {
     return new SegmentGeneratorExtraInfoHolder(segmentIdsWithShardSpecs);
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
   }
 
   private static AppenderatorConfig makeAppenderatorConfig(

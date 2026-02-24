@@ -45,10 +45,12 @@ import org.apache.druid.msq.input.stage.StripedReadablePartitions;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -466,7 +468,7 @@ public class WorkerInputsTest
     );
 
     Mockito.verify(testInputSpecSlicer, times(0)).canSliceDynamic(inputSpecToSplit);
-    Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), anyInt());
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), any(), anyInt());
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -511,7 +513,7 @@ public class WorkerInputsTest
     );
 
     Mockito.verify(testInputSpecSlicer, times(1)).canSliceDynamic(inputSpecToSplit);
-    Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), anyInt(), anyInt(), anyLong());
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), any(), anyInt(), anyInt(), anyLong());
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -657,7 +659,7 @@ public class WorkerInputsTest
     }
 
     @Override
-    public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+    public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
     {
       final TestInputSpec testInputSpec = (TestInputSpec) inputSpec;
       final List<List<Long>> assignments =
@@ -672,6 +674,7 @@ public class WorkerInputsTest
     @Override
     public List<InputSlice> sliceDynamic(
         InputSpec inputSpec,
+        @Nullable SegmentPruner segmentPruner,
         int maxNumSlices,
         int maxFilesPerSlice,
         long maxBytesPerSlice

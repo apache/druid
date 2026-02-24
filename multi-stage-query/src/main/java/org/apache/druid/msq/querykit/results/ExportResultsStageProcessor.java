@@ -41,10 +41,12 @@ import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
@@ -199,6 +201,13 @@ public class ExportResultsStageProcessor implements StageProcessor<List<String>,
     }
 
     return NilExtraInfoHolder.instance();
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
   }
 
   private static String getExportFilePath(String queryId, int workerNumber, int partitionNumber, ResultFormat exportFormat)

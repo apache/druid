@@ -57,7 +57,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
-import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -135,8 +134,6 @@ public class DataSourcePlan
    * @param dataSource       datasource to plan
    * @param querySegmentSpec intervals for mandatory pruning. Must be {@link MultipleIntervalSegmentSpec}. The returned
    *                         plan is guaranteed to be filtered to this interval.
-   * @param pruner           best-effort early pruning. Query processing must still apply the filters to generated
-   *                         correct results.
    * @param minStageNumber   starting stage number for subqueries
    * @param broadcast        whether the plan should broadcast data for this datasource
    */
@@ -145,31 +142,21 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final SegmentPruner pruner,
       final int minStageNumber,
       final boolean broadcast
   )
   {
-    final SegmentPruner prunerToUse;
-    if (!queryContext.isSecondaryPartitionPruningEnabled()) {
-      // Clear filter, we don't want to prune today.
-      prunerToUse = null;
-    } else {
-      prunerToUse = pruner;
-    }
 
     if (dataSource instanceof TableDataSource) {
       return forTable(
           (TableDataSource) dataSource,
           querySegmentSpec,
-          prunerToUse,
           broadcast
       );
     } else if (dataSource instanceof RestrictedDataSource) {
       return forRestricted(
           (RestrictedDataSource) dataSource,
           querySegmentSpec,
-          prunerToUse,
           broadcast
       );
     } else if (dataSource instanceof ExternalDataSource) {
@@ -212,7 +199,6 @@ public class DataSourcePlan
           queryContext,
           (UnionDataSource) dataSource,
           querySegmentSpec,
-          prunerToUse,
           minStageNumber,
           broadcast
       );
@@ -231,7 +217,6 @@ public class DataSourcePlan
               queryContext,
               joinDataSource,
               querySegmentSpec,
-              prunerToUse,
               minStageNumber,
               broadcast
           );
@@ -357,7 +342,6 @@ public class DataSourcePlan
   private static DataSourcePlan forTable(
       final TableDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final SegmentPruner pruner,
       final boolean broadcast
   )
   {
@@ -372,7 +356,7 @@ public class DataSourcePlan
     List<Interval> intervals = querySegmentSpec.getIntervals();
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
-        List.of(new TableInputSpec(dataSource.getName(), intervals, segments, pruner)),
+        List.of(new TableInputSpec(dataSource.getName(), intervals, segments)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -381,14 +365,13 @@ public class DataSourcePlan
   private static DataSourcePlan forRestricted(
       final RestrictedDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final SegmentPruner pruner,
       final boolean broadcast
   )
   {
     DataSource restricted = (broadcast && dataSource.isGlobal())
                             ? dataSource
                             : new RestrictedInputNumberDataSource(0, dataSource.getPolicy());
-    return forTable(dataSource.getBase(), querySegmentSpec, pruner, broadcast).withDataSource(restricted);
+    return forTable(dataSource.getBase(), querySegmentSpec, broadcast).withDataSource(restricted);
   }
 
   private static DataSourcePlan forExternal(
@@ -476,7 +459,6 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null,
         minStageNumber,
         broadcast
     );
@@ -512,7 +494,6 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null,
         minStageNumber,
         broadcast
     );
@@ -541,7 +522,6 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final UnionDataSource unionDataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final SegmentPruner pruner,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -560,7 +540,6 @@ public class DataSourcePlan
           queryContext,
           child,
           querySegmentSpec,
-          pruner,
           Math.max(minStageNumber, subqueryDefBuilder.getNextStageNumber()),
           broadcast
       );
@@ -588,7 +567,6 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final SegmentPruner pruner,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -601,7 +579,6 @@ public class DataSourcePlan
         queryContext,
         analysis.getBaseDataSource(),
         querySegmentSpec,
-        pruner,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -618,7 +595,6 @@ public class DataSourcePlan
           queryContext,
           clause.getDataSource(),
           new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
-          null, // Don't push down pruner for right-hand side: needs some work to ensure it works properly.
           Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
           true // Always broadcast right-hand side of the join.
       );

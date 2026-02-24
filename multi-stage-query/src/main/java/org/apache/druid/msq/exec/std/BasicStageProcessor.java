@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.StageProcessor;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
+import org.apache.druid.query.filter.SegmentPruner;
 
 import javax.annotation.Nullable;
 
@@ -53,5 +55,12 @@ public abstract class BasicStageProcessor implements StageProcessor<Long, Object
     }
 
     return NilExtraInfoHolder.instance();
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
   }
 }

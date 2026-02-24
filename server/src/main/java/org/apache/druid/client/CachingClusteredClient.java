@@ -71,7 +71,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.QueryResource;
@@ -94,7 +93,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -444,28 +442,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
-      final SegmentPruner pruner;
-
-      final boolean trySecondaryPartititionPruning =
-          query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled();
-
-      if (trySecondaryPartititionPruning) {
-        final Set<String> baseFields = new HashSet<>();
-        for (final String field : query.getFilter().getRequiredColumns()) {
-          if (ev.isBaseColumn(field)) {
-            baseFields.add(field);
-          }
-        }
-        pruner = new FilterSegmentPruner(query.getFilter(), baseFields);
-      } else {
-        pruner = null;
-      }
+      final SegmentPruner pruner  = ev.getSegmentPruner();
 
       boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Collection<PartitionChunk<ServerSelector>> filteredChunks;
-        if (trySecondaryPartititionPruning) {
+        if (pruner != null) {
           filteredChunks = pruner.prune(
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment()
