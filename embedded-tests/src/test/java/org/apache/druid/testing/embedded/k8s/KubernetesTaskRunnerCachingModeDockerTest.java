@@ -19,11 +19,14 @@
 
 package org.apache.druid.testing.embedded.k8s;
 
+import org.junit.jupiter.api.Disabled;
+
 /**
  * Runs ingestion tests using SharedInformer caching mode.
  * Uses Fabric8 SharedInformers to maintain a local cache of Jobs and Pods,
  * reducing load on the Kubernetes API server.
  */
+@Disabled("requires charts.datainfra.io chart, see https://github.com/apache/druid/pull/19047")
 public class KubernetesTaskRunnerCachingModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
 {
   @Override

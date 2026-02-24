@@ -145,6 +145,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -1972,11 +1973,16 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
       {
-        return Optional.of(
-            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
-        );
+        for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
+          if (entry.getKey().getId().equals(segmentId)) {
+            return Optional.of(
+                new QueryableIndexSegment(indexIO.loadIndex(entry.getValue()), segmentId)
+            );
+          }
+        }
+        return Optional.empty();
       }
 
       @Override

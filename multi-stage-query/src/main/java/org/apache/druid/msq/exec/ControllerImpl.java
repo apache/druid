@@ -2839,9 +2839,6 @@ public class ControllerImpl implements Controller
         final ControllerQueryResultsReader resultsReader = new ControllerQueryResultsReader(
             resultsChannel,
             queryDef.getFinalStageDefinition().getFrameReader(),
-            querySpec.getColumnMappings(),
-            resultsContext,
-            context.jsonMapper(),
             queryListener
         );
 

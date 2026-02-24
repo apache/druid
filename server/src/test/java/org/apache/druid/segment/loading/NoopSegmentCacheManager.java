@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -95,7 +96,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
   {
     throw new UnsupportedOperationException();
   }
