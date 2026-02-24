@@ -54,6 +54,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * @deprecated use MSQCompactionRunner instead.
+ */
+@Deprecated
 public class NativeCompactionRunner implements CompactionRunner
 {
   public static final String TYPE = "native";
