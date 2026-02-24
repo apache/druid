@@ -19,7 +19,6 @@
 import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Column } from 'react-table';
 import ReactTable from 'react-table';
@@ -78,7 +77,6 @@ function summarizeTableInput(tableStageInput: StageInput): string {
   return assemble(
     `Datasource: ${tableStageInput.dataSource}`,
     `Interval: ${tableStageInput.intervals.join('; ')}`,
-    tableStageInput.filter && `Filter: ${JSONBig.stringify(tableStageInput.filter)}`,
   ).join('\n');
 }
 

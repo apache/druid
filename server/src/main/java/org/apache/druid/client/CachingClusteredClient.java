@@ -442,14 +442,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
-      final SegmentPruner pruner  = ev.getSegmentPruner();
+      final SegmentPruner segmentPruner = ev.getSegmentPruner();
 
       boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Collection<PartitionChunk<ServerSelector>> filteredChunks;
-        if (pruner != null) {
-          filteredChunks = pruner.prune(
+        if (segmentPruner != null) {
+          filteredChunks = segmentPruner.prune(
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment()
           );
