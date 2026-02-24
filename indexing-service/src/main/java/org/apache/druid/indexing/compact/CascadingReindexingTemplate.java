@@ -305,7 +305,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           skipOffsetFromNow,
           effectiveEndTime
       );
-      skipOffsetInfo = new ReindexingTimelineView.SkipOffsetInfo(applied, null);
+      skipOffsetInfo = ReindexingTimelineView.SkipOffsetInfo.applied(applied);
     } else if (skipOffsetFromLatest != null) {
       // skipOffsetFromLatest requires actual timeline data, so we can't apply it in preview mode
       ReindexingTimelineView.NotAppliedSkipOffset notApplied = new ReindexingTimelineView.NotAppliedSkipOffset(
@@ -313,7 +313,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           skipOffsetFromLatest,
           "Requires actual segment timeline data"
       );
-      skipOffsetInfo = new ReindexingTimelineView.SkipOffsetInfo(null, notApplied);
+      skipOffsetInfo = ReindexingTimelineView.SkipOffsetInfo.notApplied(notApplied);
     }
 
     // Build configs for each interval

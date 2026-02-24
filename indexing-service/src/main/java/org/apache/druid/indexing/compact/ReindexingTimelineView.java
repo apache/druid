@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -64,7 +65,7 @@ public class ReindexingTimelineView
     this.dataSource = dataSource;
     this.referenceTime = referenceTime;
     this.skipOffset = skipOffset;
-    this.intervals = intervals;
+    this.intervals = Collections.unmodifiableList(intervals);
     this.validationError = validationError;
   }
 
@@ -226,18 +227,32 @@ public class ReindexingTimelineView
 
   /**
    * Information about skip offsets and whether they were applied.
+   * Exactly one of {@code applied} or {@code notApplied} must be non-null.
    */
   public static class SkipOffsetInfo
   {
     private final AppliedSkipOffset applied;
     private final NotAppliedSkipOffset notApplied;
 
+    public static SkipOffsetInfo applied(AppliedSkipOffset applied)
+    {
+      return new SkipOffsetInfo(applied, null);
+    }
+
+    public static SkipOffsetInfo notApplied(NotAppliedSkipOffset notApplied)
+    {
+      return new SkipOffsetInfo(null, notApplied);
+    }
+
     @JsonCreator
-    public SkipOffsetInfo(
+    SkipOffsetInfo(
         @JsonProperty("applied") @Nullable AppliedSkipOffset applied,
         @JsonProperty("notApplied") @Nullable NotAppliedSkipOffset notApplied
     )
     {
+      if ((applied == null) == (notApplied == null)) {
+        throw new IllegalArgumentException("Exactly one of 'applied' or 'notApplied' must be non-null");
+      }
       this.applied = applied;
       this.notApplied = notApplied;
     }
@@ -422,7 +437,7 @@ public class ReindexingTimelineView
       this.interval = interval;
       this.ruleCount = ruleCount;
       this.config = config;
-      this.appliedRules = appliedRules;
+      this.appliedRules = Collections.unmodifiableList(appliedRules);
     }
 
     @JsonProperty
