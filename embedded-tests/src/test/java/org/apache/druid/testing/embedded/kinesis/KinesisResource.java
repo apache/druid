@@ -80,8 +80,8 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 
     cluster
         .addExtensions(AWSModule.class, KinesisIndexingServiceModule.class)
-        .addCommonProperty("druid.s3.accessKey", getContainer().getAccessKey())
-        .addCommonProperty("druid.s3.secretKey", getContainer().getSecretKey());
+        .addCommonProperty("druid.kinesis.accessKey", getContainer().getAccessKey())
+        .addCommonProperty("druid.kinesis.secretKey", getContainer().getSecretKey());
   }
 
   public String getEndpoint()
