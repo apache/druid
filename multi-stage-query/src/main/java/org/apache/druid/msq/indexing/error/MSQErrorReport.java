@@ -164,6 +164,14 @@ public class MSQErrorReport
     return druidException;
   }
 
+  /**
+   * Returns a copy of this error report with a new fault code.
+   */
+  public MSQErrorReport withFault(final MSQFault newFault)
+  {
+    return new MSQErrorReport(taskId, host, stageNumber, newFault, exceptionStackTrace);
+  }
+
   @Override
   public boolean equals(Object o)
   {
