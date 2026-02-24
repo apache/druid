@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 
 import type { useQueryManager as UseQueryManager } from '../../hooks';
 import * as hooks from '../../hooks';
@@ -333,10 +333,10 @@ describe('ReindexingTimeline', () => {
       const { getByText } = render(<ReindexingTimeline supervisorId="test-supervisor" />);
 
       const button = getByText('Query latest timestamp');
-      fireEvent.click(button);
-
-      // Wait for async operation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+      });
 
       // Should show error toast
       expect(mockAppToasterShow).toHaveBeenCalledWith(
@@ -368,10 +368,10 @@ describe('ReindexingTimeline', () => {
       const { getByText } = render(<ReindexingTimeline supervisorId="test-supervisor" />);
 
       const button = getByText('Query latest timestamp');
-      fireEvent.click(button);
-
-      // Wait for async operation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+      });
 
       // Should show warning toast
       expect(mockAppToasterShow).toHaveBeenCalledWith(
@@ -406,10 +406,10 @@ describe('ReindexingTimeline', () => {
       const { getByText } = render(<ReindexingTimeline supervisorId="test-supervisor" />);
 
       const button = getByText('Query latest timestamp');
-      fireEvent.click(button);
-
-      // Wait for async operation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+      });
 
       // Should show warning toast
       expect(mockAppToasterShow).toHaveBeenCalledWith(

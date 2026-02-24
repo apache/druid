@@ -19,6 +19,7 @@
 import { Button, Callout, Card, Dialog, Intent, Tag, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Duration, Timezone } from 'chronoshift';
+import copy from 'copy-to-clipboard';
 import { format as formatDate } from 'date-fns';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
@@ -60,7 +61,7 @@ interface DimFilter {
 
 interface TransformSpec {
   filter?: DimFilter;
-  virtualColumns?: any;
+  virtualColumns?: Record<string, unknown>[];
 }
 
 interface GranularitySpec {
@@ -71,21 +72,20 @@ interface GranularitySpec {
 
 interface CompactionConfig {
   granularitySpec?: GranularitySpec;
-  metricsSpec?: any[];
+  metricsSpec?: Record<string, unknown>[];
   dimensionsSpec?: {
-    dimensions?: any[];
+    dimensions?: Record<string, unknown>[];
   };
-  projections?: any[];
+  projections?: Record<string, unknown>[];
   transformSpec?: TransformSpec;
-  tuningConfig?: any;
-  ioConfig?: any;
+  tuningConfig?: Record<string, unknown>;
+  ioConfig?: Record<string, unknown>;
 }
 
 interface ReindexingRule {
   type: string;
   id?: string;
   olderThan?: string;
-  [key: string]: any;
 }
 
 interface IntervalConfig {
@@ -280,7 +280,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             content="The reference time used in conjunction with each rule's 'olderThan' attribute to calculate which intervals a rule should apply to."
             position="bottom"
           >
-            <strong style={{ borderBottom: '1px dotted #5c7080', cursor: 'help' }}>
+            <strong className="help-hint">
               Reference Time:
             </strong>
           </Tooltip>{' '}
@@ -315,7 +315,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                   small
                   onClick={() => void handleQueryMaxTime()}
                   loading={queryingMaxTime}
-                  style={{ marginLeft: '10px' }}
+                  className="query-button"
                 />
               </>
             )}
@@ -344,15 +344,13 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 
             return (
               <div
-                key={idx}
+                key={interval.interval}
                 className={`timeline-segment ${isSelected ? 'selected' : ''} ${
                   isSkipped ? 'skipped' : ''
                 }`}
                 style={{
                   backgroundColor: isSkipped ? SKIPPED_INTERVAL_COLOR : getIntervalColor(idx),
                   flex: 1,
-                  opacity: isSelected ? 1 : 0.7,
-                  cursor: isSkipped ? 'default' : 'pointer',
                 }}
                 role={isSkipped ? undefined : 'button'}
                 tabIndex={isSkipped ? undefined : 0}
@@ -434,7 +432,7 @@ function formatInterval(interval: string): string {
 
 function handleCopyToClipboard(data: CompactionConfig | ReindexingRule[], label: string): void {
   const jsonValue = JSONBig.stringify(data, undefined, 2);
-  void navigator.clipboard.writeText(jsonValue);
+  copy(jsonValue, { format: 'text/plain' });
   AppToaster.show({
     message: `${label} copied to clipboard`,
     intent: Intent.SUCCESS,

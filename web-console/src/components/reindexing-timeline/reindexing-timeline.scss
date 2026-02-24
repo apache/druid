@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .reindexing-timeline {
   padding: 20px;
   max-width: 1200px;
@@ -30,7 +32,7 @@
         line-height: 1.6;
 
         code {
-          background-color: rgba(0, 0, 0, 0.1);
+          background-color: rgba($black, 0.1);
           padding: 2px 6px;
           border-radius: 3px;
           font-family: monospace;
@@ -67,17 +69,26 @@
 
       .spacer {
         margin: 0 10px;
-        color: #5c7080;
+        color: $gray1;
       }
 
       strong {
         margin-right: 5px;
+      }
+
+      .help-hint {
+        border-bottom: 1px dotted $gray1;
+        cursor: help;
       }
     }
 
     .skip-offset-info {
       display: flex;
       gap: 10px;
+
+      .query-button {
+        margin-left: 10px;
+      }
     }
   }
 
@@ -94,6 +105,7 @@
 
       .timeline-segment {
         cursor: pointer;
+        opacity: 0.7;
         transition: all 0.2s ease;
         display: flex;
         flex-direction: column;
@@ -104,22 +116,30 @@
         border-radius: 3px;
         position: relative;
 
+        &:hover,
+        &.selected {
+          opacity: 1;
+        }
+
         &:hover {
-          opacity: 1 !important;
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 4px 8px rgba($black, 0.2);
         }
 
         &.selected {
-          box-shadow: 0 0 0 3px rgba(19, 124, 189, 0.6);
+          box-shadow: 0 0 0 3px rgba($blue3, 0.6);
           transform: translateY(-2px);
         }
 
+        &.skipped {
+          cursor: default;
+        }
+
         .segment-label {
-          color: white;
+          color: $white;
           text-align: center;
           font-size: 11px;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+          text-shadow: 0 1px 2px rgba($black, 0.3);
 
           .segment-date {
             margin-bottom: 2px;
@@ -130,8 +150,8 @@
             margin-top: 8px;
 
             .bp5-tag {
-              background-color: rgba(255, 255, 255, 0.9);
-              color: #333;
+              background-color: rgba($white, 0.9);
+              color: $dark-gray3;
             }
           }
         }
@@ -142,7 +162,7 @@
       margin-top: 10px;
       text-align: center;
       font-size: 12px;
-      color: #5c7080;
+      color: $gray1;
       font-style: italic;
     }
   }
@@ -157,7 +177,7 @@
       align-items: flex-start;
       margin-bottom: 20px;
       padding-bottom: 15px;
-      border-bottom: 1px solid #d3d8de;
+      border-bottom: 1px solid $light-gray1;
 
       h3 {
         margin: 0 0 10px 0;
@@ -176,7 +196,7 @@
       .full-config-section {
         margin-top: 20px;
         padding-top: 20px;
-        border-top: 1px solid #d3d8de;
+        border-top: 1px solid $light-gray1;
         display: flex;
         gap: 10px;
         justify-content: center;

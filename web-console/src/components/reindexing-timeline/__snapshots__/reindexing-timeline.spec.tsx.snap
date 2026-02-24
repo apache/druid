@@ -129,8 +129,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with normal int
         class="bp5-popover-target"
       >
         <strong
-          class=""
-          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          class="help-hint"
           tabindex="0"
         >
           Reference Time:
@@ -153,7 +152,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with normal int
         aria-selected="false"
         class="timeline-segment  "
         role="button"
-        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        style="background-color: rgb(92, 112, 128); flex: 1;"
         tabindex="0"
         title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
 3 rule(s) applied"
@@ -190,7 +189,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with normal int
         aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
         aria-selected="false"
         class="timeline-segment  skipped"
-        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1;"
         title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
 Skipped (beyond skip offset)"
       >
@@ -256,8 +255,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         class="bp5-popover-target"
       >
         <strong
-          class=""
-          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          class="help-hint"
           tabindex="0"
         >
           Reference Time:
@@ -314,7 +312,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         aria-selected="false"
         class="timeline-segment  "
         role="button"
-        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        style="background-color: rgb(92, 112, 128); flex: 1;"
         tabindex="0"
         title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
 3 rule(s) applied"
@@ -351,7 +349,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
         aria-selected="false"
         class="timeline-segment  skipped"
-        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1;"
         title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
 Skipped (beyond skip offset)"
       >
@@ -417,8 +415,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         class="bp5-popover-target"
       >
         <strong
-          class=""
-          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          class="help-hint"
           tabindex="0"
         >
           Reference Time:
@@ -464,8 +461,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         </span>
       </span>
       <button
-        class="bp5-button bp5-small"
-        style="margin-left: 10px;"
+        class="bp5-button bp5-small query-button"
         type="button"
       >
         <span
@@ -506,7 +502,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         aria-selected="false"
         class="timeline-segment  "
         role="button"
-        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        style="background-color: rgb(92, 112, 128); flex: 1;"
         tabindex="0"
         title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
 3 rule(s) applied"
@@ -543,7 +539,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
         aria-selected="false"
         class="timeline-segment  skipped"
-        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1;"
         title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
 Skipped (beyond skip offset)"
       >
