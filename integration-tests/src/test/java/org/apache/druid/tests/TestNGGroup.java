@@ -25,10 +25,6 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
-  /**
-   * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
-   */
-  public static final String SECURITY = "security";
 
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.

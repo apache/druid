@@ -43,7 +43,7 @@ public class CompactionStateTest
     DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
     List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
     IndexSpec indexSpec = IndexSpec.getDefault();
     UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,
@@ -75,7 +75,7 @@ public class CompactionStateTest
     DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
     List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
     IndexSpec indexSpec = IndexSpec.getDefault();
     UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,
@@ -111,7 +111,7 @@ public class CompactionStateTest
     DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
     List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
     IndexSpec indexSpec = IndexSpec.getDefault();
     UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,
@@ -156,7 +156,7 @@ public class CompactionStateTest
     DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
     List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
     IndexSpec indexSpec = IndexSpec.getDefault();
     UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,
@@ -197,7 +197,7 @@ public class CompactionStateTest
     DynamicPartitionsSpec partitionsSpec2 = new DynamicPartitionsSpec(200, null);
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
     List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
     IndexSpec indexSpec = IndexSpec.getDefault();
     UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,

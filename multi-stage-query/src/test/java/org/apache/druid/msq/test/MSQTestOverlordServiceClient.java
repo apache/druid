@@ -31,6 +31,8 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
@@ -45,6 +47,7 @@ import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
@@ -52,12 +55,16 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
+import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -172,10 +179,14 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
       testTaskDetails.addController(controller);
 
+      final ResultsContext resultsContext = new ResultsContext(cTask.getSqlTypeNames(), cTask.getSqlResultsContext());
       queryListener =
           new TestQueryListener(
               cTask.getId(),
-              cTask.getQuerySpec().getDestination()
+              cTask.getQuerySpec().getDestination(),
+              objectMapper,
+              cTask.getQuerySpec().getColumnMappings(),
+              resultsContext
           );
 
       try {
@@ -296,17 +307,30 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     private final String taskId;
     private final MSQDestination destination;
+    private final ObjectMapper jsonMapper;
     private final List<Object[]> results = new ArrayList<>();
+    private final ColumnMappings columnMappings;
+    private final ResultsContext resultsContext;
 
+    private FrameReader frameReader;
     private List<MSQResultsReport.ColumnAndType> signature;
     private List<SqlTypeName> sqlTypeNames;
     private boolean resultsTruncated = true;
     private TaskReport.ReportMap reportMap;
 
-    public TestQueryListener(final String taskId, final MSQDestination destination)
+    public TestQueryListener(
+        final String taskId,
+        final MSQDestination destination,
+        final ObjectMapper jsonMapper,
+        final ColumnMappings columnMappings,
+        final ResultsContext resultsContext
+    )
     {
       this.taskId = taskId;
       this.destination = destination;
+      this.jsonMapper = jsonMapper;
+      this.columnMappings = columnMappings;
+      this.resultsContext = resultsContext;
     }
 
     @Override
@@ -316,18 +340,29 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     }
 
     @Override
-    public void onResultsStart(List<MSQResultsReport.ColumnAndType> signature, @Nullable List<SqlTypeName> sqlTypeNames)
+    public void onResultsStart(final FrameReader frameReader)
     {
-      this.signature = signature;
-      this.sqlTypeNames = sqlTypeNames;
+      this.frameReader = frameReader;
+      this.signature = TaskReportQueryListener.computeResultSignature(frameReader, columnMappings);
+      this.sqlTypeNames = resultsContext != null ? resultsContext.getSqlTypeNames() : null;
     }
 
     @Override
-    public boolean onResultRow(Object[] row)
+    public boolean onResultBatch(RowsAndColumns rac)
     {
       if (destination.getRowsInTaskReport() == MSQDestination.UNLIMITED
           || results.size() < destination.getRowsInTaskReport()) {
-        results.add(row);
+        final Iterator<Object[]> resultIterator = SqlStatementResourceHelper.getResultIterator(
+            rac.as(Frame.class),
+            frameReader,
+            columnMappings,
+            resultsContext,
+            jsonMapper
+        );
+        while (resultIterator.hasNext()) {
+          final Object[] row = resultIterator.next();
+          results.add(row);
+        }
         return true;
       } else {
         return false;

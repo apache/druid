@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.auth;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.TLSCertificateChecker;
 
 import javax.net.ssl.SSLEngine;
@@ -27,10 +26,11 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class ITTLSCertificateChecker implements TLSCertificateChecker
+/**
+ * Certificate checker with custom behaviour used in embedded tests.
+ */
+public class TestTLSCertificateChecker implements TLSCertificateChecker
 {
-  private static final Logger log = new Logger(ITTLSCertificateChecker.class);
-
   @Override
   public void checkClient(
       X509Certificate[] chain,
@@ -40,7 +40,7 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
   ) throws CertificateException
   {
     // only the integration test client with "thisisprobablynottherighthostname" cert is allowed to talk to me
-    if (!chain[0].toString().contains("thisisprobablynottherighthostname") || !engine.getPeerHost().contains("172.172.172.1")) {
+    if (!chain[0].toString().contains("thisisprobablynottherighthostname")) {
       throw new CertificateException("Custom check rejected request from client.");
     }
   }
@@ -56,7 +56,7 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
     baseTrustManager.checkServerTrusted(chain, authType, engine);
 
     // fail intentionally when trying to talk to the broker
-    if (chain[0].toString().contains("172.172.172.60")) {
+    if (chain[0].toString().contains(":8282")) {
       throw new CertificateException("Custom check intentionally terminated request to broker.");
     }
   }

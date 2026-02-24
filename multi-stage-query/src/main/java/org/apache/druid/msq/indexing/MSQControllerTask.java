@@ -269,12 +269,15 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         injector.getInstance(MSQTaskQueryKitSpecFactory.class)
     );
 
+    final ResultsContext resultsContext = new ResultsContext(getSqlTypeNames(), getSqlResultsContext());
     final TaskReportQueryListener queryListener = new TaskReportQueryListener(
         () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
         toolbox.getJsonMapper(),
         getId(),
         getContext(),
-        querySpec.getDestination().getRowsInTaskReport()
+        querySpec.getDestination().getRowsInTaskReport(),
+        querySpec.getColumnMappings(),
+        resultsContext
     );
 
     controller.run(queryListener);
