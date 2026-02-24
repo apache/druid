@@ -25,8 +25,6 @@ import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexFaultToleranceTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -71,41 +69,47 @@ public class KinesisFaultToleranceTest extends StreamIndexFaultToleranceTest
     return super.createCluster().useDefaultTimeoutForLatchableEmitter(120);
   }
 
-  @Override
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {false})
-  public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
+  @Test
+  public void test_supervisorRecovers_afterCoordinatorRestart() throws Exception
   {
-    super.test_supervisorRecovers_afterOverlordRestart(useTransactions);
+    publishRecords_whileCoordinatorRestarts();
   }
 
-  @Override
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {false})
-  public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
+  @Test
+  public void test_supervisorRecovers_afterHistoricalRestart() throws Exception
   {
-    super.test_supervisorRecovers_afterSuspendResume(useTransactions);
+    publishRecords_whileHistoricalRestarts();
   }
 
-  @Override
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {false})
-  public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
+  @Test
+  public void test_supervisorRecovers_afterOverlordRestart() throws Exception
   {
-    super.test_supervisorRecovers_afterChangeInTopicPartitions(useTransactions);
+    publishRecords_whileOverlordRestarts(false);
+  }
+
+  @Test
+  public void test_supervisorRecovers_afterSuspendResume()
+  {
+    publishRecords_andSuspendResumeSupervisor(false);
+  }
+
+  @Test
+  public void test_supervisorRecovers_afterChangeInTopicPartitions()
+  {
+    publishRecords_andIncreaseTopicPartitions(false);
   }
 
   @Test
   public void test_supervisorRecovers_afterSuspendResume_withEmptyShards()
   {
     publishToSingleShard.set(true);
-    super.test_supervisorRecovers_afterSuspendResume(false);
+    publishRecords_andSuspendResumeSupervisor(false);
   }
 
   @Test
-  public void test_supervisorRecovers_afterChangeInShardCount_withEmptyShards()
+  public void test_supervisorRecovers_afterChangeInTopicPartitions_withEmptyShards()
   {
     publishToSingleShard.set(true);
-    super.test_supervisorRecovers_afterChangeInTopicPartitions(false);
+    publishRecords_andIncreaseTopicPartitions(false);
   }
 }

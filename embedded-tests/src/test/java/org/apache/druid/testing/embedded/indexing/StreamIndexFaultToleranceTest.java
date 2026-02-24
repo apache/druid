@@ -30,8 +30,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
@@ -70,7 +68,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
     verifyRowCount(totalRecords);
   }
 
-  public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
+  protected void publishRecords_whileOverlordRestarts(boolean useTransactions) throws Exception
   {
     totalRecords = publish1kRecords(topic, useTransactions);
     waitUntilPublishedRecordsAreIngested(totalRecords);
@@ -82,8 +80,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @Test
-  public void test_supervisorRecovers_afterCoordinatorRestart() throws Exception
+  protected void publishRecords_whileCoordinatorRestarts() throws Exception
   {
     final boolean useTransactions = true;
     totalRecords = publish1kRecords(topic, useTransactions);
@@ -96,8 +93,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @Test
-  public void test_supervisorRecovers_afterHistoricalRestart() throws Exception
+  protected void publishRecords_whileHistoricalRestarts() throws Exception
   {
     final boolean useTransactions = false;
     totalRecords = publish1kRecords(topic, useTransactions);
@@ -110,7 +106,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
+  protected void publishRecords_andSuspendResumeSupervisor(boolean useTransactions)
   {
     totalRecords = publish1kRecords(topic, useTransactions);
     waitUntilPublishedRecordsAreIngested(totalRecords);
@@ -122,9 +118,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {true, false})
-  public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
+  public void publishRecords_andIncreaseTopicPartitions(boolean useTransactions)
   {
     totalRecords = publish1kRecords(topic, useTransactions);
 

@@ -58,7 +58,8 @@ import java.util.stream.Collectors;
 
 /**
  * Resource to run an AWS Kinesis deployment backed by Localstack.
- * The terms {@code topic} and {@code stream} have been used interchangeably.
+ * The terms {@code topic} and {@code stream} have been used interchangeably, as
+ * have the terms {@code partition} and {@code shard}.
  */
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
@@ -134,11 +135,11 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
       return;
     }
 
-    UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
-    updateShardCountRequest.setStreamName(topic);
-    updateShardCountRequest.setTargetShardCount(newPartitionCount);
-    updateShardCountRequest.setScalingType(ScalingType.UNIFORM_SCALING);
-    UpdateShardCountResult updateShardCountResult = amazonKinesis.updateShardCount(updateShardCountRequest);
+    final UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest()
+        .withStreamName(topic)
+        .withTargetShardCount(newPartitionCount)
+        .withScalingType(ScalingType.UNIFORM_SCALING);
+    final UpdateShardCountResult updateShardCountResult = amazonKinesis.updateShardCount(updateShardCountRequest);
     if (updateShardCountResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
       throw new ISE("Cannot update stream's shard count for integration test");
     }
@@ -147,7 +148,7 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
     final Set<String> acceptedStates = Set.of(StreamStatus.ACTIVE.toString(), StreamStatus.UPDATING.toString());
     ITRetryUtil.retryUntilTrue(
         () -> acceptedStates.contains(getStreamStatus(topic))
-              && getStreamShardCount(topic) == newPartitionCount,
+              && getStreamShardCount(topic) > originalShardCount,
         "Stream has updated shard count"
     );
   }

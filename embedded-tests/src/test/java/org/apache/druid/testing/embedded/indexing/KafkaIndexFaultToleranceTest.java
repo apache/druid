@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.indexing;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -41,27 +42,36 @@ public class KafkaIndexFaultToleranceTest extends StreamIndexFaultToleranceTest
     return createKafkaSupervisor(kafkaResource).withId("supe_" + dataSource).build(dataSource, topic);
   }
 
-  @Override
+  @Test
+  public void test_supervisorRecovers_afterCoordinatorRestart() throws Exception
+  {
+    publishRecords_whileCoordinatorRestarts();
+  }
+
+  @Test
+  public void test_supervisorRecords_afterHistoricalRestart() throws Exception
+  {
+    publishRecords_whileHistoricalRestarts();
+  }
+
   @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
   {
-    super.test_supervisorRecovers_afterOverlordRestart(useTransactions);
+    publishRecords_whileOverlordRestarts(useTransactions);
   }
 
-  @Override
   @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
   {
-    super.test_supervisorRecovers_afterSuspendResume(useTransactions);
+    publishRecords_andSuspendResumeSupervisor(useTransactions);
   }
 
-  @Override
   @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
   {
-    super.test_supervisorRecovers_afterChangeInTopicPartitions(useTransactions);
+    publishRecords_andIncreaseTopicPartitions(useTransactions);
   }
 }
