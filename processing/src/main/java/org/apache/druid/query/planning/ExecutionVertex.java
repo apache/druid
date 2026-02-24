@@ -218,6 +218,9 @@ public class ExecutionVertex
   public SegmentPruner getSegmentPruner()
   {
     final Set<String> baseFields = new HashSet<>();
+    if (topQuery.getFilter() == null) {
+      return null;
+    }
     for (final String field : topQuery.getFilter().getRequiredColumns()) {
       if (isBaseColumn(field)) {
         baseFields.add(field);
