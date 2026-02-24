@@ -23,12 +23,35 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexFaultToleranceTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class KinesisFaultToleranceTest extends StreamIndexFaultToleranceTest
 {
-  private final KinesisResource kinesis = new KinesisResource();
+  private final AtomicBoolean publishToSingleShard = new AtomicBoolean(false);
+  private final KinesisResource kinesis = new KinesisResource()
+  {
+    @Override
+    public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
+    {
+      if (publishToSingleShard.get()) {
+        super.publishRecordsToTopicWithoutTransaction(topic, records);
+      } else {
+        super.publishRecordsToTopicPartition(topic, 1, records);
+      }
+    }
+  };
+
+  @BeforeEach
+  public void resetState()
+  {
+    publishToSingleShard.set(false);
+  }
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
@@ -70,5 +93,19 @@ public class KinesisFaultToleranceTest extends StreamIndexFaultToleranceTest
   public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
   {
     super.test_supervisorRecovers_afterChangeInTopicPartitions(useTransactions);
+  }
+
+  @Test
+  public void test_supervisorRecovers_afterSuspendResume_withEmptyShards()
+  {
+    publishToSingleShard.set(true);
+    super.test_supervisorRecovers_afterSuspendResume(false);
+  }
+
+  @Test
+  public void test_supervisorRecovers_afterChangeInShardCount_withEmptyShards()
+  {
+    publishToSingleShard.set(true);
+    super.test_supervisorRecovers_afterChangeInTopicPartitions(false);
   }
 }

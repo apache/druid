@@ -29,19 +29,23 @@ import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
+import com.amazonaws.services.kinesis.model.DescribeStreamResult;
+import com.amazonaws.services.kinesis.model.PutRecordRequest;
 import com.amazonaws.services.kinesis.model.ScalingType;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
+import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
-import com.amazonaws.waiters.WaiterParameters;
 import com.google.common.collect.Iterables;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -52,6 +56,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Resource to run an AWS Kinesis deployment backed by Localstack.
+ * The terms {@code topic} and {@code stream} have been used interchangeably.
+ */
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
   private static final String IMAGE = "localstack/localstack:4.13.1";
@@ -94,16 +102,18 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   }
 
   @Override
-  public void createTopicWithPartitions(String stream, int partitionCount)
+  public void createTopicWithPartitions(String topic, int partitionCount)
   {
-    CreateStreamResult createStreamResult = amazonKinesis.createStream(stream, partitionCount);
+    CreateStreamResult createStreamResult = amazonKinesis.createStream(topic, partitionCount);
     if (createStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
       throw new ISE("Cannot create stream for integration test");
     }
 
-    // Use SDK waiter (AWS SDK v1)
-    amazonKinesis.waiters().streamExists().run(
-        new WaiterParameters<>(new DescribeStreamRequest().withStreamName(stream))
+    // Wait until stream is ACTIVE or UPDATING
+    final Set<String> acceptedStates = Set.of(StreamStatus.ACTIVE.toString(), StreamStatus.UPDATING.toString());
+    ITRetryUtil.retryUntilTrue(
+        () -> acceptedStates.contains(getStreamStatus(topic)),
+        "Stream is in state " + acceptedStates
     );
   }
 
@@ -133,9 +143,12 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
       throw new ISE("Cannot update stream's shard count for integration test");
     }
 
-    // TODO: wait until the sharding has finished
-    amazonKinesis.waiters().streamExists().run(
-        new WaiterParameters<>(new DescribeStreamRequest().withStreamName(topic))
+    // Wait until the stream is active/updating and shard count is updated
+    final Set<String> acceptedStates = Set.of(StreamStatus.ACTIVE.toString(), StreamStatus.UPDATING.toString());
+    ITRetryUtil.retryUntilTrue(
+        () -> acceptedStates.contains(getStreamStatus(topic))
+              && getStreamShardCount(topic) == newPartitionCount,
+        "Stream has updated shard count"
     );
   }
 
@@ -161,6 +174,17 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
   {
     publishRecordsToTopic(topic, records);
+  }
+
+  public void publishRecordsToTopicPartition(String topic, String partitionKey, List<byte[]> records)
+  {
+    for (byte[] record : records) {
+      final PutRecordRequest putRequest = new PutRecordRequest()
+          .withStreamName(topic)
+          .withPartitionKey(partitionKey)
+          .withData(ByteBuffer.wrap(record));
+      amazonKinesis.putRecord(putRequest);
+    }
   }
 
   private AmazonKinesis newClient()
@@ -196,5 +220,19 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
       }
     }
     return shardIds.size();
+  }
+
+  private String getStreamStatus(String streamName)
+  {
+    return StringUtils.toUpperCase(getStreamDescription(streamName).getStreamStatus());
+  }
+
+  private StreamDescription getStreamDescription(String streamName)
+  {
+    DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
+    if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
+      throw new ISE("Cannot get stream description for integration test");
+    }
+    return describeStreamResult.getStreamDescription();
   }
 }
