@@ -369,7 +369,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
-    if (CompactionMode.NOT_APPLICABLE.equals(candidate.getMode())) {
+    if (!CompactionMode.NOT_APPLICABLE.equals(candidate.getMode())) {
       autoCompactionContext.put(
           COMPACTION_REASON_KEY,
           GuavaUtils.firstNonNull(candidate.getPolicyNote(), candidate.getEligibility().getReason())
