@@ -30,6 +30,8 @@ import org.apache.druid.segment.loading.StorageLocationStats;
 import org.apache.druid.segment.loading.StorageStats;
 import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -59,13 +61,23 @@ public class StorageMonitor extends AbstractMonitor
   public static final String VSF_REJECT_COUNT = "storage/virtual/reject/count";
 
   private final SegmentCacheManager cacheManager;
+  private final Map<String, Object> extraDimensions;
 
   @Inject
   public StorageMonitor(
       SegmentCacheManager cacheManager
   )
   {
+    this(cacheManager, null);
+  }
+
+  public StorageMonitor(
+      SegmentCacheManager cacheManager,
+      @Nullable Map<String, Object> extraDimensions
+  )
+  {
     this.cacheManager = cacheManager;
+    this.extraDimensions = extraDimensions == null ? Collections.emptyMap() : extraDimensions;
   }
 
   @Override
@@ -78,6 +90,9 @@ public class StorageMonitor extends AbstractMonitor
         final StorageLocationStats staticStats = location.getValue();
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
             .setDimension(LOCATION_DIMENSION, location.getKey());
+        for (Map.Entry<String, Object> entry : extraDimensions.entrySet()) {
+          builder.setDimension(entry.getKey(), entry.getValue());
+        }
         emitter.emit(builder.setMetric(USED_BYTES, staticStats.getUsedBytes()));
         emitter.emit(builder.setMetric(LOAD_COUNT, staticStats.getLoadCount()));
         emitter.emit(builder.setMetric(LOAD_BYTES, staticStats.getLoadBytes()));
@@ -91,6 +106,9 @@ public class StorageMonitor extends AbstractMonitor
             LOCATION_DIMENSION,
             location.getKey()
         );
+        for (Map.Entry<String, Object> entry : extraDimensions.entrySet()) {
+          builder.setDimension(entry.getKey(), entry.getValue());
+        }
         emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
         emitter.emit(builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount()));
         emitter.emit(builder.setMetric(VSF_HIT_BYTES, weakStats.getHitBytes()));

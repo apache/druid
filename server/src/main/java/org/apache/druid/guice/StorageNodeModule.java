@@ -39,6 +39,8 @@ import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.server.metrics.StorageMonitor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -60,6 +62,8 @@ public class StorageNodeModule implements Module
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    binder.bind(StorageMonitor.class).in(LazySingleton.class);
+    MetricsModule.register(binder, StorageMonitor.class);
   }
 
   @Provides
