@@ -217,15 +217,19 @@ public class ExecutionVertex
   @Nullable
   public SegmentPruner getSegmentPruner()
   {
-    final Set<String> baseFields = new HashSet<>();
+    if (!topQuery.context().isSecondaryPartitionPruningEnabled()) {
+      return null;
+    }
     if (topQuery.getFilter() == null) {
       return null;
     }
+    final Set<String> baseFields = new HashSet<>();
     for (final String field : topQuery.getFilter().getRequiredColumns()) {
       if (isBaseColumn(field)) {
         baseFields.add(field);
       }
     }
+
     return new FilterSegmentPruner(
         topQuery.getFilter(),
         baseFields

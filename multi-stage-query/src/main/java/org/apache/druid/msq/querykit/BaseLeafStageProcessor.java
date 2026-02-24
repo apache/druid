@@ -181,10 +181,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   @Override
   public SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
   {
-    if (query.context().isSecondaryPartitionPruningEnabled()) {
-      return executionVertexSupplier.get().getSegmentPruner();
-    }
-    return null;
+    return executionVertexSupplier.get().getSegmentPruner();
   }
 
   private ProcessorManager<Object, Long> createBaseLeafProcessorManagerWithHandoff(
