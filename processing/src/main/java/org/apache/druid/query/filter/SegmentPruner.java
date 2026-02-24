@@ -26,5 +26,9 @@ import java.util.function.Function;
 
 public interface SegmentPruner
 {
+  /**
+   * Filter the given {@link Iterable} of objects containing a {@link DataSegment} (obtained from the converter
+   * function), to reduce the overall working set which need to be processed.
+   */
   <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter);
 }

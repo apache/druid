@@ -80,6 +80,13 @@ public interface StageProcessor<R, ExtraInfoType>
   @SuppressWarnings("rawtypes")
   ExtraInfoHolder makeExtraInfoHolder(@Nullable ExtraInfoType extra);
 
+  /**
+   * Produces an optional {@link SegmentPruner}, which can used for best-effort pruning of {@link DataSegment} objects
+   * by processors which deal with them
+   */
   @Nullable
-  SegmentPruner getPruner(InputSpec inputSpec, int inputNumber);
+  default SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
+  }
 }

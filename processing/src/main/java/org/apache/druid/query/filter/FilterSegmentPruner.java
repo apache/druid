@@ -58,16 +58,16 @@ public class FilterSegmentPruner implements SegmentPruner
   }
 
    /**
-    * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,
-    * does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The returned set
-    * contains the filtered objects in the same order as they appear in input.
+    * Filter the given iterable of objects by removing any object whose {@link DataSegment}, obtained from the converter
+    * function, does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The
+    * returned set contains the filtered objects in the same order as they appear in input.
     *
     * {@link #rangeCache} stores the RangeSets of different dimensions for the filter, so it can be re-used between
     * calls to save redundant evaluation of {@link DimFilter#getDimensionRangeSet(String)} on the same columns.
     *
-    * @param input               The iterable of objects to be filtered
-    * @param converter           The function to convert T to ShardSpec that can be filtered by
-    * @param <T>                 This can be any type, as long as transform function is provided to extract a ShardSpec
+    * @param input      The iterable of objects to be filtered
+    * @param converter  The function to convert T to {@link DataSegment} that can be filtered by
+    * @param <T>        This can be any type, as long as transform function is provided to extract a {@link DataSegment}
     *
     * @return The set of pruned object, in the same order as input
     */
