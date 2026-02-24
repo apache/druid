@@ -96,7 +96,7 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
    * </p>
    *
    * @param candidateSegments the {@link CompactionCandidate}
-   * @param expectedFilter the expected filter (as a NotDimFilter wrapping an OrDimFilter)
+   * @param expectedFilter    the expected filter (as a NotDimFilter wrapping an OrDimFilter)
    * @param fingerprintMapper the fingerprint mapper to retrieve applied rules from segment fingerprints
    * @return the set of unapplied deletion rules wrapped in a NotDimFilter, or null if all rules have been applied
    */
@@ -233,11 +233,11 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
       DataSourceCompactionConfig config
   )
   {
-    if (candidate.getCurrentStatus() == null) {
+    if (CompactionStatus.State.NOT_ELIGIBLE.equals(candidate.getEligibility().getState())) {
       return false;
     }
-
-    if (candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON)) {
+    if (CompactionStatus.State.ELIGIBLE.equals(candidate.getEligibility().getState())
+        && CompactionStatus.NEVER_COMPACTED_REASON.equals(candidate.getEligibility().getReason())) {
       return false;
     }
 

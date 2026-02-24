@@ -283,7 +283,7 @@ public class CompactionCandidate
   public String toString()
   {
     return "SegmentsToCompact{" +
-           ", proposedCompaction=" + proposedCompaction +
+           "proposedCompaction=" + proposedCompaction +
            ", eligibility=" + eligibility +
            ", policyNote=" + policyNote +
            ", mode=" + mode +

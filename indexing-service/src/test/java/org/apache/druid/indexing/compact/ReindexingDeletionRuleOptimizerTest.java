@@ -40,6 +40,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -89,8 +90,8 @@ public class ReindexingDeletionRuleOptimizerTest
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     NotDimFilter expectedFilter = new NotDimFilter(filterA);
 
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -108,8 +109,8 @@ public class ReindexingDeletionRuleOptimizerTest
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(filterB);
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -130,8 +131,8 @@ public class ReindexingDeletionRuleOptimizerTest
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -152,8 +153,8 @@ public class ReindexingDeletionRuleOptimizerTest
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -180,8 +181,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC, filterD))
     );
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -213,8 +214,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC, filterD))
     );
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1", "fp2");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -246,8 +247,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1", "fp2");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -272,8 +273,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -296,8 +297,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -315,13 +316,11 @@ public class ReindexingDeletionRuleOptimizerTest
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
     DimFilter filterC = new SelectorDimFilter("country", "FR", null);
-
-    CompactionCandidate candidate = createCandidateWithNullFingerprints(3);
-
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(config, 3);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -329,8 +328,6 @@ public class ReindexingDeletionRuleOptimizerTest
     // No fingerprints, all filters should remain
     Assertions.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
-
-
 
 
   // Helper methods
@@ -345,9 +342,9 @@ public class ReindexingDeletionRuleOptimizerTest
                                             : new CompactionTransformSpec(filter, virtualColumns);
 
     return InlineSchemaDataSourceCompactionConfig.builder()
-        .forDataSource(TestDataSource.WIKI)
-        .withTransformSpec(transformSpec)
-        .build();
+                                                 .forDataSource(TestDataSource.WIKI)
+                                                 .withTransformSpec(transformSpec)
+                                                 .build();
   }
 
   private CompactionJobParams createParams()
@@ -358,23 +355,33 @@ public class ReindexingDeletionRuleOptimizerTest
     return mockParams;
   }
 
-  private CompactionCandidate createCandidateWithFingerprints(String... fingerprints)
+  private CompactionCandidate createCandidateWithFingerprints(DataSourceCompactionConfig config, String... fingerprints)
   {
-    List<DataSegment> segments = Arrays.stream(fingerprints)
-                                       .map(fp -> DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(fp).build())
-                                       .collect(Collectors.toList());
-    return CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
+    List<DataSegment> segments =
+        Arrays.stream(fingerprints)
+              .map(fp -> DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(fp).build())
+              .collect(Collectors.toList());
+    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
+    return new NewestSegmentFirstPolicy(null).createCandidate(
+        proposed,
+        CompactionStatus.compute(proposed, config, fingerprintMapper)
+    );
   }
 
-  private CompactionCandidate createCandidateWithNullFingerprints(int count)
+  private CompactionCandidate createCandidateWithNullFingerprints(DataSourceCompactionConfig config, int count)
   {
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
+      segments.add(DataSegment.builder(WIKI_SEGMENT)
+                              .indexingStateFingerprint(null)
+                              .lastCompactionState(CompactionState.builder().indexSpec(IndexSpec.getDefault()).build())
+                              .build());
     }
-    return CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
+    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
+    return new NewestSegmentFirstPolicy(null).createCandidate(
+        proposed,
+        CompactionStatus.compute(proposed, config, fingerprintMapper)
+    );
   }
 
   private CompactionState createStateWithFilters(DimFilter... filters)
@@ -445,8 +452,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter notFilter = new NotDimFilter(filter);
 
     // Candidate has no filters applied, so all filters remain
-    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(config, 1);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -482,8 +489,8 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter notFilter = new NotDimFilter(filter);
 
     // Candidate has no filters applied
-    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(config, 1);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -500,10 +507,11 @@ public class ReindexingDeletionRuleOptimizerTest
     // Candidate with NEVER_COMPACTED status
     List<DataSegment> segments = new ArrayList<>();
     segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
-    CompactionCandidate candidate = CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending(CompactionStatus.NEVER_COMPACTED_REASON));
 
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
+    CompactionStatus eligibility = CompactionStatus.compute(proposed, config, fingerprintMapper);
+    CompactionCandidate candidate = new NewestSegmentFirstPolicy(null).createCandidate(proposed, eligibility);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
@@ -517,10 +525,10 @@ public class ReindexingDeletionRuleOptimizerTest
   {
     // Config without transform spec
     InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig.builder()
-        .forDataSource(TestDataSource.WIKI)
-        .build();
+                                                                                          .forDataSource(TestDataSource.WIKI)
+                                                                                          .build();
 
-    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    CompactionCandidate candidate = createCandidateWithFingerprints(config, "fp1");
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);

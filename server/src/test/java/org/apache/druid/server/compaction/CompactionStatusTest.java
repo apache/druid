@@ -504,9 +504,9 @@ public class CompactionStatusTest
 
     DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null), compactionConfig, fingerprintMapper
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), null), compactionConfig, fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.COMPLETE, status.getState());
   }
 
   @Test
@@ -537,9 +537,9 @@ public class CompactionStatusTest
 
     DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null), compactionConfig, fingerprintMapper
+        CompactionCandidate.ProposedCompaction.from(List.of(segment), null), compactionConfig, fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
     Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }
 
@@ -572,9 +572,9 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(oldFingerprint).build()
     );
     CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null), newConfig, fingerprintMapper
+        CompactionCandidate.ProposedCompaction.from(segments, null), newConfig, fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, status.getState());
     Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }
 
