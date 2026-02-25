@@ -58,18 +58,6 @@ import java.util.List;
  * Validates that segments and intermediate shuffle data written to S3 by one version can be
  * read by the other.
  * <p>
- * Use this test to verify rolling upgrade safety for any change that affects
- * how data is written to or read from deep storage or MSQ durable shuffle
- * storage (e.g. storage format changes, SDK upgrades, serialization changes).
- * <p>
- * <h3>Cluster architecture</h3>
- * <ul>
- * <li>Overlord, Coordinator, Broker, Historical, Indexer (new) -- embedded (current version)</li>
- * <li>Indexer (old) -- Docker container ({@link DruidContainer.Image#APACHE_33})</li>
- * <li>Deep Storage + MSQ Shuffle -- MinIO (S3-compatible)</li>
- * <li>Metadata -- PostgreSQL (required for Docker container access)</li>
- * </ul>
- *
  * <h3>Task distribution guarantees</h3>
  * The Overlord uses {@code EqualDistributionWorkerSelectStrategy} by default,
  * which assigns each task to the worker with the most available capacity.
@@ -87,9 +75,6 @@ import java.util.List;
  *     controller task fills one slot, so the two worker tasks are distributed
  *     across both indexers. This guarantees cross-version S3 shuffle I/O.</li>
  * </ul>
- * <p>
- * This test does not implement {@link LatestImageDockerTest} and runs in the
- * {@code mvn test} phase.
  */
 public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
 {

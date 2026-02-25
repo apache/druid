@@ -86,8 +86,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       buildV2Record(jb("2008", "a", "y", "10", "20.0", "1.0"), "0"),
       buildV2Record(jb("2009", "b", "y", "10", "20.0", "1.0"), "1")
   );
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_EMPTY_V2 = ImmutableList.of();
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_V2 = ImmutableList.of(
+  private static final List<Record> SHARD1_RECORDS_EMPTY_V2 = ImmutableList.of();
+  private static final List<Record> SHARD1_RECORDS_V2 = ImmutableList.of(
       buildV2Record(jb("2011", "d", "y", "10", "20.0", "1.0"), "0"),
       buildV2Record(jb("2011", "e", "y", "10", "20.0", "1.0"), "1"),
       buildV2Record(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"), "2"),
@@ -139,9 +139,9 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
   }
 
-  private static software.amazon.awssdk.services.kinesis.model.Record buildV2Record(ByteBuffer data, String sequenceNumber)
+  private static Record buildV2Record(ByteBuffer data, String sequenceNumber)
   {
-    return software.amazon.awssdk.services.kinesis.model.Record.builder()
+    return Record.builder()
         .data(SdkBytes.fromByteBuffer(data.duplicate()))
         .sequenceNumber(sequenceNumber)
         .partitionKey("key")
@@ -149,7 +149,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         .build();
   }
 
-  private static KinesisClientRecord toKinesisClientRecord(software.amazon.awssdk.services.kinesis.model.Record v2Record)
+  private static KinesisClientRecord toKinesisClientRecord(Record v2Record)
   {
     return KinesisClientRecord.builder()
         .data(v2Record.data().asByteBuffer())
@@ -800,7 +800,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             // "0" sequence - returns record with sequence "5" (doesn't match)
             return GetRecordsResponse.builder()
                 .records(Collections.singletonList(
-                    software.amazon.awssdk.services.kinesis.model.Record.builder()
+                    Record.builder()
                         .sequenceNumber("5")
                         .data(SdkBytes.fromUtf8String("test"))
                         .partitionKey("key")
@@ -812,7 +812,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             // "10" sequence - returns record with sequence "10" (matches)
             return GetRecordsResponse.builder()
                 .records(Collections.singletonList(
-                    software.amazon.awssdk.services.kinesis.model.Record.builder()
+                    Record.builder()
                         .sequenceNumber("10")
                         .data(SdkBytes.fromUtf8String("test"))
                         .partitionKey("key")
