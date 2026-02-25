@@ -36,6 +36,7 @@ import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -370,7 +371,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     // For testing purposes, we simulate an S3Exception being thrown
     S3Exception s3Exception = (S3Exception) S3Exception.builder()
         .message("MultiObjectDeleteException")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("MultiObjectDeleteException")
             .errorMessage("Failed to delete: " + KEY_1_PATH)
             .build())
@@ -395,7 +396,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
     S3Exception s3Exception1 = (S3Exception) S3Exception.builder()
         .message("MultiObjectDeleteException")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("MultiObjectDeleteException")
             .errorMessage("Failed to delete: " + KEY_1_PATH)
             .build())
@@ -404,7 +405,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.expectLastCall().andThrow(s3Exception1).once();
     S3Exception s3Exception2 = (S3Exception) S3Exception.builder()
         .message("MultiObjectDeleteException")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("MultiObjectDeleteException")
             .errorMessage("Failed to delete: " + KEY_2_PATH)
             .build())
@@ -456,10 +457,10 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     // First call throws retryable exception, then succeeds
     S3Exception retryableException = (S3Exception) S3Exception.builder()
         .message("RequestLimitExceeded")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
-            .errorCode("RequestLimitExceeded")
-            .errorMessage("Request limit exceeded")
-            .build())
+        .awsErrorDetails(AwsErrorDetails.builder()
+                                        .errorCode("RequestLimitExceeded")
+                                        .errorMessage("Request limit exceeded")
+                                        .build())
         .statusCode(503)
         .build();
     EasyMock.expectLastCall()

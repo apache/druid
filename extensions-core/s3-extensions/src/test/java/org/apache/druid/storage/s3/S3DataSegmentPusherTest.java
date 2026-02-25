@@ -32,6 +32,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
@@ -166,10 +167,10 @@ public class S3DataSegmentPusherTest
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
     final S3Exception e = (S3Exception) S3Exception.builder()
         .message("whoa too many bytes")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
-            .errorCode(S3Utils.ERROR_ENTITY_TOO_LARGE)
-            .errorMessage("whoa too many bytes")
-            .build())
+        .awsErrorDetails(AwsErrorDetails.builder()
+                                        .errorCode(S3Utils.ERROR_ENTITY_TOO_LARGE)
+                                        .errorMessage("whoa too many bytes")
+                                        .build())
         .statusCode(400)
         .build();
 

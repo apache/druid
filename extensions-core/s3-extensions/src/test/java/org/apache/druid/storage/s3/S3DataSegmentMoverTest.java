@@ -29,6 +29,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
@@ -209,8 +212,8 @@ public class S3DataSegmentMoverTest
     {
       // Return a minimal mock - actual operations are overridden in this class
       return S3Client.builder()
-          .region(software.amazon.awssdk.regions.Region.US_EAST_1)
-          .credentialsProvider(software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider.create())
+          .region(Region.US_EAST_1)
+          .credentialsProvider(AnonymousCredentialsProvider.create())
           .build();
     }
 
@@ -286,10 +289,10 @@ public class S3DataSegmentMoverTest
       } else {
         throw (S3Exception) S3Exception.builder()
             .message("S3DataSegmentMoverTest")
-            .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
-                .errorCode("NoSuchKey")
-                .errorMessage("S3DataSegmentMoverTest")
-                .build())
+            .awsErrorDetails(AwsErrorDetails.builder()
+                                            .errorCode("NoSuchKey")
+                                            .errorMessage("S3DataSegmentMoverTest")
+                                            .build())
             .statusCode(404)
             .build();
       }
