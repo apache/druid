@@ -449,8 +449,8 @@ public class OverlordCompactionSchedulerTest
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
         new ClusterCompactionConfig(null, null, null, null, null, null)
     );
-    Assert.assertEquals(1, simulateResult.getCompactionStates().size());
-    final Table pendingCompactionTable = simulateResult.getCompactionStates().get(null);
+    Assert.assertEquals(0, simulateResult.getCompactionStates().size());
+    final Table pendingCompactionTable = simulateResult.getQueuedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingCompactionTable.getColumnNames()

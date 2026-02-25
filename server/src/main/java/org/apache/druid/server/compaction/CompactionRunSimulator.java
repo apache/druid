@@ -95,7 +95,6 @@ public class CompactionRunSimulator
       @Override
       public void onSkippedCandidate(
           CompactionCandidateAndStatus candidateSegments,
-          DataSourceCompactionConfig config,
           @Nullable String policyNote
       )
       {
@@ -104,32 +103,6 @@ public class CompactionRunSimulator
             null,
             GuavaUtils.firstNonNull(policyNote, candidateSegments.getStatus().getReason())
         ));
-      }
-
-      @Override
-      public void onCompactionCandidates(
-          CompactionCandidateAndStatus candidateSegments,
-          DataSourceCompactionConfig config
-      )
-      {
-        switch (candidateSegments.getStatus().getState()) {
-          case NOT_ELIGIBLE:
-            skippedIntervals.addRow(createRow(
-                candidateSegments.getCandidate(),
-                null,
-                candidateSegments.getStatus().getReason()
-            ));
-            break;
-          case ELIGIBLE:
-            queuedIntervals.addRow(createRow(
-                candidateSegments.getCandidate(),
-                ClientCompactionTaskQueryTuningConfig.from(config),
-                candidateSegments.getStatus().getReason()
-            ));
-            break;
-          default:
-            throw DruidException.defensive("unexpected compaction state[%s]", candidateSegments.getStatus().getState());
-        }
       }
 
       @Override

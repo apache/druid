@@ -77,6 +77,9 @@ public interface CompactionCandidateSearchPolicy
       if (eligible && compactionMode == null) {
         throw DruidException.defensive("Missing compaction mode for eligible compaction candidate");
       }
+      if (!eligible && compactionMode != null) {
+        throw DruidException.defensive("Compaction mode[%s] for ineligible compaction candidate", compactionMode);
+      }
       this.compactionMode = compactionMode;
     }
 

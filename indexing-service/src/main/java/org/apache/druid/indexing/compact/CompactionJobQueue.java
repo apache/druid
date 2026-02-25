@@ -217,7 +217,7 @@ public class CompactionJobQueue
     final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      if (startJobIfPendingAndReady(job, pendingJobs, slotManager)) {
+      if (startJobIfPendingAndReady(job, searchPolicy, pendingJobs, slotManager)) {
         runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
       }
     }
@@ -267,6 +267,7 @@ public class CompactionJobQueue
    */
   private boolean startJobIfPendingAndReady(
       CompactionJob job,
+      CompactionCandidateSearchPolicy policy,
       List<CompactionJob> pendingJobs,
       CompactionSlotManager slotManager
   )
@@ -280,12 +281,13 @@ public class CompactionJobQueue
       return false;
     }
 
-    CompactionCandidateSearchPolicy.Eligibility eligibility = searchPolicy.checkEligibilityForCompaction(candidate);
+    CompactionCandidateSearchPolicy.Eligibility eligibility = policy.checkEligibilityForCompaction(candidate);
     if (!eligibility.isEligible()) {
+      statusTracker.onSkippedCandidate(candidate, eligibility.getReason());
       return false;
     }
     // Check if the job is already running or succeeded
-    final TaskState candidateState = getCurrentTaskStateForJob(job);
+    final TaskState candidateState = statusTracker.computeCompactionTaskState(job.getCandidate().getCandidate());
     if (candidateState != null) {
       switch (candidateState) {
         case RUNNING:
@@ -293,6 +295,7 @@ public class CompactionJobQueue
         case SUCCESS:
           snapshotBuilder.moveFromPendingToCompleted(candidate.getCandidate());
           return false;
+        case FAILED:
         default:
           throw DruidException.defensive("unexpected compaction candidate state[%s]", candidateState);
       }
@@ -378,13 +381,6 @@ public class CompactionJobQueue
       );
       indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetIndexingState());
     }
-  }
-
-  @Nullable
-  public TaskState getCurrentTaskStateForJob(CompactionJob job)
-  {
-    statusTracker.onCompactionCandidates(job.getCandidate(), null);
-    return statusTracker.computeCompactionTaskState(job.getCandidate().getCandidate());
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

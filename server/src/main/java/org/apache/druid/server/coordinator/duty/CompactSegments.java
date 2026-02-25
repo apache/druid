@@ -260,7 +260,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         case ELIGIBLE:
           CompactionCandidateSearchPolicy.Eligibility eligibility = policy.checkEligibilityForCompaction(candidateAndStatus);
           if (!eligibility.isEligible()) {
-            statusTracker.onSkippedCandidate(candidateAndStatus, config, eligibility.getReason());
+            statusTracker.onSkippedCandidate(candidateAndStatus, eligibility.getReason());
             snapshotBuilder.addToSkipped(candidate);
             continue;
           }
@@ -429,7 +429,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.onSkippedCandidate(entry, datasourceToConfig.get(entry.getDataSource()), null);
+      statusTracker.onSkippedCandidate(entry, null);
       snapshotBuilder.addToSkipped(entry.getCandidate());
     });
 

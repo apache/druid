@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.CompactionState;
@@ -145,7 +146,9 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         config,
         timeline,
         Intervals.complementOf(searchInterval),
-        params.getClusterCompactionConfig().getCompactionPolicy(),
+        // This policy is used only while creating jobs
+        // The actual order of jobs is determined by the policy used in CompactionJobQueue
+        new NewestSegmentFirstPolicy(null),
         params.getFingerprintMapper()
     );
 

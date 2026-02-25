@@ -108,16 +108,7 @@ public class CompactionStatusTracker
    */
   public void onSkippedCandidate(
       CompactionCandidateAndStatus candidateSegments,
-      DataSourceCompactionConfig config,
       @Nullable String policyNote
-  )
-  {
-    // Nothing to do, used by simulator
-  }
-
-  public void onCompactionCandidates(
-      CompactionCandidateAndStatus candidateSegments,
-      DataSourceCompactionConfig config
   )
   {
     // Nothing to do, used by simulator
