@@ -1609,13 +1609,14 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         new UserCompactionTaskIOConfig(true)
     );
 
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-                                                                  .segmentGranularityRules(List.of(segGran7d, segGran30d))
-                                                                  .dataSchemaRules(List.of(dataSchema15d))
-                                                                  .deletionRules(List.of(deletion10d, deletion20d))
-                                                                  .tuningConfigRules(List.of(tuning7d))
-                                                                  .ioConfigRules(List.of(io7d))
-                                                                  .build();
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(segGran7d, segGran30d))
+        .dataSchemaRules(List.of(dataSchema15d))
+        .deletionRules(List.of(deletion10d, deletion20d))
+        .tuningConfigRules(List.of(tuning7d))
+        .ioConfigRules(List.of(io7d))
+        .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
         "testDS",
@@ -1640,7 +1641,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     // Verify we have multiple intervals (splitting should occur)
     Assertions.assertTrue(timeline.getIntervals().size() >= 2, "Expected at least 2 intervals");
 
-    // Verify each interval has correct structure
+    // Verify each interval has correct structure and track which rule types appear across all intervals
+    boolean foundSegmentGranRule = false;
+    boolean foundDataSchemaRule = false;
+    boolean foundDeletionRule = false;
+    boolean foundTuningRule = false;
+    boolean foundIORule = false;
+
     for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
       Assertions.assertNotNull(intervalConfig.getInterval());
       Assertions.assertTrue(intervalConfig.getRuleCount() > 0, "Rule count should be > 0");
@@ -1657,29 +1664,30 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
       Assertions.assertNotNull(config.getGranularitySpec(), "Should have granularity spec");
       Assertions.assertNotNull(config.getGranularitySpec().getSegmentGranularity(), "Should have segment granularity");
 
-      // Verify appliedRules contain expected rule types
-      boolean hasTuningRule = intervalConfig.getAppliedRules().stream()
-                                            .anyMatch(r -> r instanceof ReindexingTuningConfigRule);
-      boolean hasIORule = intervalConfig.getAppliedRules().stream()
-                                        .anyMatch(r -> r instanceof ReindexingIOConfigRule);
-      boolean hasDataSchemaRule = intervalConfig.getAppliedRules().stream()
-                                                .anyMatch(r -> r instanceof ReindexingDataSchemaRule);
-      boolean hasDeletionRule = intervalConfig.getAppliedRules().stream()
-                                              .anyMatch(r -> r instanceof ReindexingDeletionRule);
-      boolean hasSegmentGranRule = intervalConfig.getAppliedRules().stream()
-                                                 .anyMatch(r -> r instanceof ReindexingSegmentGranularityRule);
-
-      // Most recent intervals should have more rules applied
-      if (intervalConfig.getInterval().getEnd().isAfter(referenceTime.minusDays(10))) {
-        Assertions.assertTrue(hasTuningRule, "Recent intervals should have tuning rules");
-        Assertions.assertTrue(hasIORule, "Recent intervals should have IO rules");
+      // Track which rule types appear
+      for (ReindexingRule rule : intervalConfig.getAppliedRules()) {
+        if (rule instanceof ReindexingSegmentGranularityRule) {
+          foundSegmentGranRule = true;
+        } else if (rule instanceof ReindexingDataSchemaRule) {
+          foundDataSchemaRule = true;
+        } else if (rule instanceof ReindexingDeletionRule) {
+          foundDeletionRule = true;
+        } else if (rule instanceof ReindexingTuningConfigRule) {
+          foundTuningRule = true;
+        } else if (rule instanceof ReindexingIOConfigRule) {
+          foundIORule = true;
+        }
       }
     }
+
+    // All configured rule types should appear somewhere in the timeline
+    Assertions.assertTrue(foundSegmentGranRule, "Timeline should contain a segmentGranularity rule");
+    Assertions.assertTrue(foundDataSchemaRule, "Timeline should contain a dataSchema rule");
+    Assertions.assertTrue(foundDeletionRule, "Timeline should contain a deletion rule");
+    Assertions.assertTrue(foundTuningRule, "Timeline should contain a tuningConfig rule");
+    Assertions.assertTrue(foundIORule, "Timeline should contain an ioConfig rule");
   }
 
-  /**
-   * Test that skipOffsetFromNow correctly skips intervals and populates skipOffset.applied
-   */
   @Test
   public void test_getReindexingTimelineView_skipOffsetFromNow_skipsProperIntervals()
   {
@@ -1688,12 +1696,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     // Create rules where the most recent rule has a period SMALLER than the skip offset
     // This ensures the interval would extend beyond the effectiveEndTime and get clamped
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-                                                                  .segmentGranularityRules(List.of(
-                                                                      new ReindexingSegmentGranularityRule("seg-3d", null, Period.days(3), Granularities.HOUR),
-                                                                      new ReindexingSegmentGranularityRule("seg-30d", null, Period.days(30), Granularities.DAY)
-                                                                  ))
-                                                                  .build();
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("seg-3d", null, Period.days(3), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("seg-30d", null, Period.days(30), Granularities.DAY)
+        ))
+        .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
         "testDS",
@@ -1728,9 +1737,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     }
   }
 
-  /**
-   * Test validation error when granularity timeline is invalid
-   */
   @Test
   public void test_getReindexingTimelineView_validationError_invalidGranularityTimeline()
   {
@@ -1740,26 +1746,27 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     // Older data (P90D) has DAY granularity, newer data (P30D) has HOUR granularity
     // This means as we move from past to present, granularity gets finer (valid)
     // But then if we add MONTH for recent data, it becomes coarser (invalid)
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-                                                                  .segmentGranularityRules(List.of(
-                                                                      new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
-                                                                      new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
-                                                                  ))
-                                                                  .dataSchemaRules(List.of(
-                                                                      // This will trigger prepending an interval with default granularity (MONTH)
-                                                                      // which is coarser than HOUR, causing validation failure
-                                                                      new ReindexingDataSchemaRule(
-                                                                          "metrics-7d",
-                                                                          null,
-                                                                          Period.days(7),
-                                                                          null,
-                                                                          new AggregatorFactory[]{new CountAggregatorFactory("count")},
-                                                                          null,
-                                                                          null,
-                                                                          null
-                                                                      )
-                                                                  ))
-                                                                  .build();
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
+        ))
+        .dataSchemaRules(List.of(
+            // This will trigger prepending an interval with default granularity (MONTH)
+            // which is coarser than HOUR, causing validation failure
+            new ReindexingDataSchemaRule(
+                "metrics-7d",
+                null,
+                Period.days(7),
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                null,
+                null,
+                null
+            )
+        ))
+        .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
         "testDS",
@@ -1796,9 +1803,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assertions.assertTrue(timeline.getIntervals().isEmpty(), "Intervals should be empty on validation error");
   }
 
-  /**
-   * Test graceful handling when rule provider is not ready
-   */
   @Test
   public void test_getReindexingTimelineView_ruleProviderNotReady()
   {
