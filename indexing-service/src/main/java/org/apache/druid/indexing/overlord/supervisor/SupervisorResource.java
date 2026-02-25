@@ -371,7 +371,7 @@ public class SupervisorResource
           Optional<SupervisorSpec> specOptional = manager.getSupervisorSpec(id);
           if (!specOptional.isPresent()) {
             return Response.status(Response.Status.NOT_FOUND)
-                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .entity(ImmutableMap.of("error", StringUtils.format("Supervisor[%s] does not exist", id)))
                            .build();
           }
 
@@ -381,7 +381,7 @@ public class SupervisorResource
                            .entity(ImmutableMap.of(
                                "error",
                                StringUtils.format(
-                                   "[%s] is not a compaction supervisor (type: %s)",
+                                   "Supervisor[%s] is not a compaction supervisor",
                                    id,
                                    spec.getClass().getSimpleName()
                                )
@@ -400,7 +400,7 @@ public class SupervisorResource
               return Response.status(Response.Status.BAD_REQUEST)
                              .entity(ImmutableMap.of(
                                  "error",
-                                 StringUtils.format("Invalid referenceTime format: %s", referenceTimeStr)
+                                 StringUtils.format("Reference time[%s] is in invalid format. Use ISO 8601 standard format.")
                              ))
                              .build();
             }
@@ -414,8 +414,7 @@ public class SupervisorResource
                            .entity(ImmutableMap.of(
                                "error",
                                StringUtils.format(
-                                   "Reindexing timeline is only available for cascading reindexing supervisors. " +
-                                   "Supervisor [%s] uses template type: %s",
+                                   "Reindexing timeline is not available for supervisor[%s] as it does not use a cascading template",
                                    id,
                                    template.getClass().getSimpleName()
                                )
