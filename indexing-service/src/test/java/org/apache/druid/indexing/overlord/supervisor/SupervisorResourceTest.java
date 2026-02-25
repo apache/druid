@@ -1468,7 +1468,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Assert.assertEquals(400, response.getStatus());
     Map<String, Object> entity = (Map<String, Object>) response.getEntity();
-    Assert.assertTrue(entity.get("error").toString().contains("only available for cascading reindexing supervisors"));
+    Assert.assertTrue(entity.get("error").toString().contains("Reindexing timeline is not available for supervisor"));
     verifyAll();
     EasyMock.verify(compactionSpec, template);
   }
@@ -1508,7 +1508,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Assert.assertEquals(400, response.getStatus());
     Map<String, Object> entity = (Map<String, Object>) response.getEntity();
-    Assert.assertTrue(entity.get("error").toString().contains("Invalid referenceTime format"));
+    Assert.assertTrue(entity.get("error").toString().contains("is in invalid format. Use ISO 8601 standard format."));
     verifyAll();
     EasyMock.verify(compactionSpec);
   }
