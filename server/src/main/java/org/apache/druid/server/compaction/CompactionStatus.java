@@ -856,6 +856,12 @@ public class CompactionStatus
         CheckResult that = (CheckResult) o;
         return Objects.equals(reason, that.reason);
       }
+
+      @Override
+      public int hashCode()
+      {
+        return Objects.hash(reason);
+      }
     }
 
     private static UserCompactionTaskGranularityConfig getGranularitySpec(
