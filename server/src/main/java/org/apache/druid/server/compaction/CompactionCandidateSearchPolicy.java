@@ -69,9 +69,10 @@ public interface CompactionCandidateSearchPolicy
 
     private final boolean eligible;
     private final String reason;
+    @Nullable
     private final CompactionMode mode;
 
-    private Eligibility(boolean eligible, String reason, CompactionMode mode)
+    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode mode)
     {
       this.eligible = eligible;
       this.reason = reason;
@@ -113,13 +114,13 @@ public interface CompactionCandidateSearchPolicy
         return false;
       }
       Eligibility that = (Eligibility) object;
-      return eligible == that.eligible && Objects.equals(reason, that.reason);
+      return eligible == that.eligible && Objects.equals(reason, that.reason) && Objects.equals(mode, that.mode);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(eligible, reason);
+      return Objects.hash(eligible, reason, mode);
     }
 
     @Override
@@ -127,7 +128,8 @@ public interface CompactionCandidateSearchPolicy
     {
       return "Eligibility{" +
              "eligible=" + eligible +
-             ", reason='" + reason + '\'' +
+             ", reason='" + reason +
+             ", mode='" + mode + '\'' +
              '}';
     }
   }
