@@ -538,6 +538,12 @@
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
+      <artifactId>kinesis</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
       <artifactId>auth</artifactId>
       <version>${aws.sdk.v2.version}</version>
       <scope>test</scope>
