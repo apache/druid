@@ -2325,6 +2325,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   taskId, taskGroup.groupId, prevTaskData
                               );
                             }
+                            final Integer serverPriority = seekableStreamIndexTask.getServerPriority();
+                            if (serverPriority != null) {
+                              taskGroup.taskIdToServerPriority.putIfAbsent(taskId, serverPriority);
+                            }
                             verifySameSequenceNameForAllTasksInGroup(taskGroupId);
                           }
                         }
@@ -2721,6 +2725,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected CopyOnWriteArrayList<TaskGroup> getPendingCompletionTaskGroups(int groupId)
   {
     return pendingCompletionTaskGroups.get(groupId);
+  }
+
+  @VisibleForTesting
+  protected TaskGroup getActiveTaskGroup(int groupId)
+  {
+    return activelyReadingTaskGroups.get(groupId);
   }
 
   // Sanity check to ensure that tasks have the same sequence name as their task group
@@ -3647,6 +3657,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                         String taskId = setEndOffsetTaskIds.get(i);
                         killTask(taskId, "Failed to set end offsets, killing task");
                         taskGroup.tasks.remove(taskId);
+                        taskGroup.taskIdToServerPriority.remove(taskId);
                       }
                     }
                   }
@@ -4316,8 +4327,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     log.info(
-        "Task server priorities[%s] have already been assigned. Server priorities[%s] to be assigned for new tasks in taskGroupId[%d] with replicas[%d]",
-        group.taskIdToServerPriority.values(), unassignedServerPriorities, group.groupId, replicas
+        "Server priorities[%s] to be assigned for new tasks in taskGroupId[%d] with replicas[%d]. Task server priorities[%s] have already been assigned to tasks[%s].",
+        unassignedServerPriorities, group.groupId, replicas, group.taskIdToServerPriority.values(), group.taskIds()
     );
 
     if (unassignedServerPriorities.size() < replicas) {

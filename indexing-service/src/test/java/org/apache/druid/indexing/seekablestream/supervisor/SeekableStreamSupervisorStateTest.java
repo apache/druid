@@ -2679,7 +2679,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null
     );
-    SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig);
+    SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig, null);
     Assert.assertEquals(
         taskCountMax / DEFAULT_TASKS_PER_WORKER_THREAD,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
@@ -2808,28 +2808,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   @Test
   public void testComputeUnassignedServerPriorities_whenMultipleReplicasPerPriorityIsSet()
   {
-    final SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
-        STREAM,
-        new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false),
-        null,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        Map.of(
-            10, 2,
-            20, 3
-        )
-    ){};
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
 
     Assert.assertEquals(5, (int) ioConfig.getReplicas());
 
@@ -2915,18 +2894,27 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig()
   {
-    return createSupervisorIOConfig(1, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class));
+    return createSupervisorIOConfig(1, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class), null);
   }
 
   private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig(
       int taskCount,
-      @Nullable AutoScalerConfig autoScalerConfig
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
+  )
+  {
+    return createSupervisorIOConfig(taskCount, null, serverPriorityToReplicas);
+  }
+
+  private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig(
+      int taskCount,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
         new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
+        serverPriorityToReplicas == null ? 1 : serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum(),
         taskCount,
         new Period("PT1H"),
         new Period("P1D"),
@@ -2940,7 +2928,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        serverPriorityToReplicas
     )
     {
     };
@@ -3495,5 +3483,103 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )
     {
     };
+  }
+
+  @Test
+  public void testDiscoverExistingTasks_withServerPriorities()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
+
+    Assert.assertEquals(5, (int) ioConfig.getReplicas());
+
+    final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
+        0,
+        Map.of("0", "0"),
+        Map.of("0", "10"),
+        "test",
+        DateTimes.nowUtc(),
+        null,
+        Set.of(),
+        ioConfig
+    );
+
+    final TestSeekableStreamIndexTask task1 = createTestTask("task1", "0", 20, taskIoConfig, recordSupplier);
+    final TestSeekableStreamIndexTask task2 = createTestTask("task2", "0", 20, taskIoConfig, recordSupplier);
+    final TestSeekableStreamIndexTask task3 = createTestTask("task3", "0", 10, taskIoConfig, recordSupplier);
+
+    // Reset the spec mock to return our custom ioConfig
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of("0")).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task1")).andReturn(Optional.of(TaskStatus.running("task1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task2")).andReturn(Optional.of(TaskStatus.running("task2"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task3")).andReturn(Optional.of(TaskStatus.running("task3"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task1")).andReturn(Optional.of(task1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task2")).andReturn(Optional.of(task2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task3")).andReturn(Optional.of(task3)).anyTimes();
+
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(task1.getId(), task1, task2.getId(), task2, task3.getId(), task3))
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "5")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Verify that tasks were discovered and their server priorities were captured
+    SeekableStreamSupervisor.TaskGroup taskGroup = supervisor.getActiveTaskGroup(0);
+    Assert.assertEquals(0, taskGroup.groupId);
+    Assert.assertEquals(3, taskGroup.tasks.size());
+
+    // Verify server priorities were correctly stored
+    Map<String, Integer> taskIdToServerPriority = taskGroup.taskIdToServerPriority;
+    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task1"));
+    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task2"));
+    Assert.assertEquals(Integer.valueOf(10), taskIdToServerPriority.get("task3"));
+
+    verifyAll();
+  }
+
+
+  private static TestSeekableStreamIndexTask createTestTask(String taskId, String groupId, @Nullable Integer serverPriority, SeekableStreamIndexTaskIOConfig taskIoConfig, RecordSupplier recordSupplier)
+  {
+    return new TestSeekableStreamIndexTask(
+        taskId,
+        null,
+        null,
+        getDataSchema(),
+        getTuningConfig().convertToTaskTuningConfig(),
+        taskIoConfig,
+        null,
+        groupId,
+        null,
+        recordSupplier,
+        serverPriority
+    );
   }
 }
