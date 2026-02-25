@@ -87,7 +87,7 @@ public class CompactionRunSimulatorTest
     Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
     Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table queuedTable = compactionStates.get(null);
+    final Table queuedTable = simulateResult.getQueuedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         queuedTable.getColumnNames()
@@ -160,7 +160,7 @@ public class CompactionRunSimulatorTest
     Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
     Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table pendingTable = compactionStates.get(null);
+    final Table pendingTable = simulateResult.getQueuedIntervals();
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingTable.getColumnNames()

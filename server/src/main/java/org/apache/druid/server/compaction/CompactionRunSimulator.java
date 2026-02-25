@@ -163,7 +163,11 @@ public class CompactionRunSimulator
       public void onTaskSubmitted(String taskId, CompactionCandidateAndStatus candidateSegments)
       {
         // Add a row for each task in order of submission
-        queuedIntervals.addRow(createRow(candidateSegments.getCandidate(), null, candidateSegments.getStatus().getReason()));
+        queuedIntervals.addRow(createRow(
+            candidateSegments.getCandidate(),
+            null,
+            candidateSegments.getStatus().getReason()
+        ));
       }
     };
 
@@ -193,11 +197,12 @@ public class CompactionRunSimulator
     if (!runningIntervals.isEmpty()) {
       compactionStates.put(TaskState.RUNNING, runningIntervals);
     }
-    if (!queuedIntervals.isEmpty()) {
-      compactionStates.put(null, queuedIntervals);
-    }
 
-    return new CompactionSimulateResult(compactionStates, skippedIntervals);
+    return new CompactionSimulateResult(
+        compactionStates,
+        skippedIntervals,
+        queuedIntervals.isEmpty() ? null : queuedIntervals
+    );
   }
 
   private Object[] createRow(

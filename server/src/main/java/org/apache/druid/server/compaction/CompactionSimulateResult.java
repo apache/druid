@@ -29,15 +29,18 @@ public class CompactionSimulateResult
 {
   private final Map<TaskState, Table> compactionStates;
   private final Table skippedIntervals;
+  private final Table queuedIntervals;
 
   @JsonCreator
   public CompactionSimulateResult(
       @JsonProperty("compactionStates") Map<TaskState, Table> compactionStates,
-      @JsonProperty("skippedIntervals") Table skippedIntervals
+      @JsonProperty("skippedIntervals") Table skippedIntervals,
+      @JsonProperty("queuedIntervals") Table queuedIntervals
   )
   {
     this.compactionStates = compactionStates;
     this.skippedIntervals = skippedIntervals;
+    this.queuedIntervals = queuedIntervals;
   }
 
   @JsonProperty
@@ -50,5 +53,11 @@ public class CompactionSimulateResult
   public Table getSkippedIntervals()
   {
     return skippedIntervals;
+  }
+
+  @JsonProperty
+  public Table getQueuedIntervals()
+  {
+    return queuedIntervals;
   }
 }
