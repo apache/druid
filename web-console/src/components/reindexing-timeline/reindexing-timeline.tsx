@@ -84,16 +84,11 @@ interface IntervalConfig {
 }
 
 interface SkipOffsetInfo {
-  applied?: {
-    type: string;
-    period: string;
-    effectiveEndTime: string;
-  };
-  notApplied?: {
-    type: string;
-    period: string;
-    reason: string;
-  };
+  type: string;
+  period: string;
+  isApplied: boolean;
+  effectiveEndTime?: string;
+  reason?: string;
 }
 
 interface ValidationError {
@@ -183,8 +178,8 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 
   // Calculate effective end time if we have queried max time and skipOffsetFromLatest
   let effectiveEndTime: Date | undefined;
-  if (queriedMaxTime && skipOffset?.notApplied) {
-    const period = skipOffset.notApplied.period;
+  if (queriedMaxTime && skipOffset && !skipOffset.isApplied) {
+    const period = skipOffset.period;
     try {
       const duration = new Duration(period);
       effectiveEndTime = duration.shift(new Date(queriedMaxTime), Timezone.UTC, -1);
@@ -268,33 +263,30 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             content="The reference time used in conjunction with each rule's 'olderThan' attribute to calculate which intervals a rule should apply to."
             position="bottom"
           >
-            <strong className="help-hint">
-              Reference Time:
-            </strong>
+            <strong className="help-hint">Reference Time:</strong>
           </Tooltip>{' '}
           {formatDateTimeUTC(referenceTime)}
         </div>
         {skipOffset && (
           <div className="skip-offset-info">
-            {skipOffset.applied && (
+            {skipOffset.isApplied && (
               <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
-                Skip Offset: {skipOffset.applied.type} ({skipOffset.applied.period})
+                Skip Offset: {skipOffset.type} ({skipOffset.period})
               </Tag>
             )}
-            {skipOffset.notApplied && !queriedMaxTime && (
+            {!skipOffset.isApplied && !queriedMaxTime && (
               <>
                 <Tooltip
                   content={
                     `This supervisor is configured to skip compaction of any search interval that is covered by ` +
-                    `or overlaps the threshold of the latest timestamp in the data minus ${skipOffset.notApplied.period}. ` +
+                    `or overlaps the threshold of the latest timestamp in the data minus ${skipOffset.period}. ` +
                     `However, the underlying segment data is not available in this preview, so the timeline does not ` +
                     `reflect which intervals will be skipped during actual compaction.`
                   }
                   position="bottom"
                 >
                   <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
-                    {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in
-                    this preview
+                    {skipOffset.type} ({skipOffset.period}): Not reflected in this preview
                   </Tag>
                 </Tooltip>
                 <Button
@@ -307,9 +299,9 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                 />
               </>
             )}
-            {skipOffset.notApplied && queriedMaxTime && effectiveEndTime && (
+            {!skipOffset.isApplied && queriedMaxTime && effectiveEndTime && (
               <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
-                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest:{' '}
+                {skipOffset.type} ({skipOffset.period}): Applied (latest:{' '}
                 {formatDateTimeUTC(queriedMaxTime)})
               </Tag>
             )}
@@ -401,8 +393,18 @@ function formatDateShort(isoDate: string): string {
 }
 
 const UTC_MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 function formatDateTimeUTC(isoDate: string): string {
@@ -609,7 +611,6 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
     </>
   );
 }
-
 
 interface ConfigJsonViewerProps {
   config: CompactionConfig | ReindexingRule[];

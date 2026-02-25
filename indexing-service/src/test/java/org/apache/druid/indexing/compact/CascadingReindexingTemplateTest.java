@@ -1719,16 +1719,15 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
 
     // Verify skipOffset is applied
-    Assertions.assertNotNull(timeline.getSkipOffset(), "Skip offset should be present");
-    Assertions.assertNotNull(timeline.getSkipOffset().getApplied(), "Skip offset should be applied");
-    Assertions.assertNull(timeline.getSkipOffset().getNotApplied(), "Skip offset notApplied should be null");
-
-    ReindexingTimelineView.AppliedSkipOffset applied = timeline.getSkipOffset().getApplied();
-    Assertions.assertEquals("skipOffsetFromNow", applied.getType());
-    Assertions.assertEquals(skipOffset, applied.getPeriod());
+    ReindexingTimelineView.SkipOffsetInfo skipOffsetInfo = timeline.getSkipOffset();
+    Assertions.assertNotNull(skipOffsetInfo, "Skip offset should be present");
+    Assertions.assertTrue(skipOffsetInfo.isApplied(), "Skip offset should be applied");
+    Assertions.assertEquals("skipOffsetFromNow", skipOffsetInfo.getType());
+    Assertions.assertEquals(skipOffset, skipOffsetInfo.getPeriod());
+    Assertions.assertNull(skipOffsetInfo.getReason(), "Reason should be null for applied skip offset");
 
     DateTime expectedEffectiveEndTime = referenceTime.minus(skipOffset);
-    Assertions.assertEquals(expectedEffectiveEndTime, applied.getEffectiveEndTime());
+    Assertions.assertEquals(expectedEffectiveEndTime, skipOffsetInfo.getEffectiveEndTime());
 
     for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
       if (intervalConfig.getInterval().getEnd().isAfter(expectedEffectiveEndTime)) {

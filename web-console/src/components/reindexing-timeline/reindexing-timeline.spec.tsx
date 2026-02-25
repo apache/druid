@@ -215,11 +215,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              applied: {
-                type: 'skipOffsetFromNow',
-                period: 'P7D',
-                effectiveEndTime: '2024-11-08T12:00:00.000Z',
-              },
+              type: 'skipOffsetFromNow',
+              period: 'P7D',
+              isApplied: true,
+              effectiveEndTime: '2024-11-08T12:00:00.000Z',
             },
           },
         }),
@@ -236,11 +235,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              notApplied: {
-                type: 'skipOffsetFromLatest',
-                period: 'P7D',
-                reason: 'Requires actual segment timeline data',
-              },
+              type: 'skipOffsetFromLatest',
+              period: 'P7D',
+              isApplied: false,
+              reason: 'Requires actual segment timeline data',
             },
           },
         }),
@@ -295,11 +293,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              notApplied: {
-                type: 'skipOffsetFromLatest',
-                period: 'INVALID',
-                reason: 'Test',
-              },
+              type: 'skipOffsetFromLatest',
+              period: 'INVALID',
+              isApplied: false,
+              reason: 'Test',
             },
           },
         }),
@@ -319,11 +316,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              notApplied: {
-                type: 'skipOffsetFromLatest',
-                period: 'P7D',
-                reason: 'Test',
-              },
+              type: 'skipOffsetFromLatest',
+              period: 'P7D',
+              isApplied: false,
+              reason: 'Test',
             },
           },
         }),
@@ -354,11 +350,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              notApplied: {
-                type: 'skipOffsetFromLatest',
-                period: 'P7D',
-                reason: 'Test',
-              },
+              type: 'skipOffsetFromLatest',
+              period: 'P7D',
+              isApplied: false,
+              reason: 'Test',
             },
           },
         }),
@@ -392,11 +387,10 @@ describe('ReindexingTimeline', () => {
           data: {
             ...mockTimelineData,
             skipOffset: {
-              notApplied: {
-                type: 'skipOffsetFromLatest',
-                period: 'P7D',
-                reason: 'Test',
-              },
+              type: 'skipOffsetFromLatest',
+              period: 'P7D',
+              isApplied: false,
+              reason: 'Test',
             },
           },
         }),

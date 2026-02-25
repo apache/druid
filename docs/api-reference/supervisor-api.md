@@ -1540,11 +1540,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "dataSource": "my_datasource",
       "referenceTime": "2024-01-15T00:00:00.000Z",
       "skipOffset": {
-          "applied": {
-              "type": "period",
-              "period": "P1D",
-              "effectiveEndTime": "2024-01-14T00:00:00.000Z"
-          }
+          "type": "skipOffsetFromNow",
+          "period": "P1D",
+          "isApplied": true,
+          "effectiveEndTime": "2024-01-14T00:00:00.000Z"
       },
       "intervals": [
           {

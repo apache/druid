@@ -226,153 +226,29 @@ public class ReindexingTimelineView
   }
 
   /**
-   * Information about skip offsets and whether they were applied.
-   * Exactly one of {@code applied} or {@code notApplied} must be non-null.
+   * Information about the skip offset configuration and whether it was applied.
    */
   public static class SkipOffsetInfo
   {
-    private final AppliedSkipOffset applied;
-    private final NotAppliedSkipOffset notApplied;
-
-    public static SkipOffsetInfo applied(AppliedSkipOffset applied)
-    {
-      return new SkipOffsetInfo(applied, null);
-    }
-
-    public static SkipOffsetInfo notApplied(NotAppliedSkipOffset notApplied)
-    {
-      return new SkipOffsetInfo(null, notApplied);
-    }
-
-    @JsonCreator
-    SkipOffsetInfo(
-        @JsonProperty("applied") @Nullable AppliedSkipOffset applied,
-        @JsonProperty("notApplied") @Nullable NotAppliedSkipOffset notApplied
-    )
-    {
-      if ((applied == null) == (notApplied == null)) {
-        throw new IllegalArgumentException("Exactly one of 'applied' or 'notApplied' must be non-null");
-      }
-      this.applied = applied;
-      this.notApplied = notApplied;
-    }
-
-    @JsonProperty
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Nullable
-    public AppliedSkipOffset getApplied()
-    {
-      return applied;
-    }
-
-    @JsonProperty
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Nullable
-    public NotAppliedSkipOffset getNotApplied()
-    {
-      return notApplied;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      SkipOffsetInfo that = (SkipOffsetInfo) o;
-      return Objects.equals(applied, that.applied) &&
-             Objects.equals(notApplied, that.notApplied);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(applied, notApplied);
-    }
-  }
-
-  /**
-   * Information about a skip offset that was applied.
-   */
-  public static class AppliedSkipOffset
-  {
     private final String type;
     private final Period period;
+    private final boolean isApplied;
     private final DateTime effectiveEndTime;
-
-    @JsonCreator
-    public AppliedSkipOffset(
-        @JsonProperty("type") String type,
-        @JsonProperty("period") Period period,
-        @JsonProperty("effectiveEndTime") DateTime effectiveEndTime
-    )
-    {
-      this.type = type;
-      this.period = period;
-      this.effectiveEndTime = effectiveEndTime;
-    }
-
-    @JsonProperty
-    public String getType()
-    {
-      return type;
-    }
-
-    @JsonProperty
-    public Period getPeriod()
-    {
-      return period;
-    }
-
-    @JsonProperty
-    public DateTime getEffectiveEndTime()
-    {
-      return effectiveEndTime;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      AppliedSkipOffset that = (AppliedSkipOffset) o;
-      return Objects.equals(type, that.type) &&
-             Objects.equals(period, that.period) &&
-             Objects.equals(effectiveEndTime, that.effectiveEndTime);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(type, period, effectiveEndTime);
-    }
-  }
-
-  /**
-   * Information about a skip offset that was not applied.
-   */
-  public static class NotAppliedSkipOffset
-  {
-    private final String type;
-    private final Period period;
     private final String reason;
 
     @JsonCreator
-    public NotAppliedSkipOffset(
+    public SkipOffsetInfo(
         @JsonProperty("type") String type,
         @JsonProperty("period") Period period,
-        @JsonProperty("reason") String reason
+        @JsonProperty("isApplied") boolean isApplied,
+        @JsonProperty("effectiveEndTime") @Nullable DateTime effectiveEndTime,
+        @JsonProperty("reason") @Nullable String reason
     )
     {
       this.type = type;
       this.period = period;
+      this.isApplied = isApplied;
+      this.effectiveEndTime = effectiveEndTime;
       this.reason = reason;
     }
 
@@ -389,6 +265,22 @@ public class ReindexingTimelineView
     }
 
     @JsonProperty
+    public boolean isApplied()
+    {
+      return isApplied;
+    }
+
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Nullable
+    public DateTime getEffectiveEndTime()
+    {
+      return effectiveEndTime;
+    }
+
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Nullable
     public String getReason()
     {
       return reason;
@@ -403,16 +295,18 @@ public class ReindexingTimelineView
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      NotAppliedSkipOffset that = (NotAppliedSkipOffset) o;
-      return Objects.equals(type, that.type) &&
+      SkipOffsetInfo that = (SkipOffsetInfo) o;
+      return isApplied == that.isApplied &&
+             Objects.equals(type, that.type) &&
              Objects.equals(period, that.period) &&
+             Objects.equals(effectiveEndTime, that.effectiveEndTime) &&
              Objects.equals(reason, that.reason);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(type, period, reason);
+      return Objects.hash(type, period, isApplied, effectiveEndTime, reason);
     }
   }
 
