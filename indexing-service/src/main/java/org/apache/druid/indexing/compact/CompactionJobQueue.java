@@ -43,6 +43,7 @@ import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
+import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -294,18 +295,18 @@ public class CompactionJobQueue
       return false;
     }
 
-    if (latestTaskStatus != null) {
-      switch (latestTaskStatus.getState()) {
-        case RUNNING:
-          return false;
-        case SUCCESS:
-          snapshotBuilder.moveFromPendingToCompleted(candidate);
-          return false;
-        case FAILED:
-          // Retry this job. A job failing many times may have already been rejected by the policy.
-        default:
-          break;
-      }
+    final CompactionStatistics uncompactedStats = candidate.getUncompactedStats();
+    if (latestTaskStatus == null) {
+      // This job has not run yet
+    } else if (latestTaskStatus.getState() == TaskState.RUNNING) {
+      return false;
+    } else if (uncompactedStats != null && uncompactedStats.getNumSegments() > 0) {
+      // This job has already completed at least once (either SUCCESS or FAILURE)
+      // But it should be retried as there are still some uncompacted segments.
+    } else if (latestTaskStatus.getState() == TaskState.SUCCESS) {
+      // This job has completed successfully and there are no more uncompacted segments
+      snapshotBuilder.moveFromPendingToCompleted(candidate);
+      return false;
     }
 
     // Check if enough compaction task slots are available
