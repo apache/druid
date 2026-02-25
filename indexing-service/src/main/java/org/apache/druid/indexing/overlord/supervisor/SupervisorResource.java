@@ -382,8 +382,7 @@ public class SupervisorResource
                                "error",
                                StringUtils.format(
                                    "Supervisor[%s] is not a compaction supervisor",
-                                   id,
-                                   spec.getClass().getSimpleName()
+                                   id
                                )
                            ))
                            .build();
@@ -400,7 +399,10 @@ public class SupervisorResource
               return Response.status(Response.Status.BAD_REQUEST)
                              .entity(ImmutableMap.of(
                                  "error",
-                                 StringUtils.format("Reference time[%s] is in invalid format. Use ISO 8601 standard format.")
+                                 StringUtils.format(
+                                     "Reference time[%s] is in invalid format. Use ISO 8601 standard format.",
+                                     referenceTimeStr
+                                 )
                              ))
                              .build();
             }
@@ -415,8 +417,7 @@ public class SupervisorResource
                                "error",
                                StringUtils.format(
                                    "Reindexing timeline is not available for supervisor[%s] as it does not use a cascading template",
-                                   id,
-                                   template.getClass().getSimpleName()
+                                   id
                                )
                            ))
                            .build();
