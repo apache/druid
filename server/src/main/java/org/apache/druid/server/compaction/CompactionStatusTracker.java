@@ -81,7 +81,11 @@ public class CompactionStatusTracker
    * Checks if compaction can be started for the given {@link CompactionCandidate}.
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
+   *
+   * @deprecated This method is used only by Coordinator-based CompactSegments
+   * duty and will be removed in the future.
    */
+  @Deprecated
   public CompactionStatus computeCompactionStatus(
       CompactionCandidate candidate,
       CompactionCandidateSearchPolicy searchPolicy
