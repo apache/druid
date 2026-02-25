@@ -20,7 +20,6 @@ import { Button, Callout, Card, Dialog, Intent, Tag, Tooltip } from '@blueprintj
 import { IconNames } from '@blueprintjs/icons';
 import { Duration, Timezone } from 'chronoshift';
 import copy from 'copy-to-clipboard';
-import { format as formatDate } from 'date-fns';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
@@ -53,17 +52,6 @@ interface ReindexingTimelineProps {
   supervisorId: string;
 }
 
-interface DimFilter {
-  type: string;
-  field?: DimFilter;
-  fields?: DimFilter[];
-}
-
-interface TransformSpec {
-  filter?: DimFilter;
-  virtualColumns?: Record<string, unknown>[];
-}
-
 interface GranularitySpec {
   segmentGranularity?: string;
   queryGranularity?: string;
@@ -77,7 +65,7 @@ interface CompactionConfig {
     dimensions?: Record<string, unknown>[];
   };
   projections?: Record<string, unknown>[];
-  transformSpec?: TransformSpec;
+  transformSpec?: Record<string, unknown>;
   tuningConfig?: Record<string, unknown>;
   ioConfig?: Record<string, unknown>;
 }
@@ -404,13 +392,12 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 });
 
 function formatDateShort(isoDate: string): string {
-  // Handle start of time / very old dates
   if (isoDate.startsWith('-')) {
     return '-INF';
   }
 
-  // Format: "Feb 15, 2026"
-  return formatDate(new Date(isoDate), 'MMM d, yyyy');
+  const d = new Date(isoDate);
+  return `${UTC_MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 const UTC_MONTH_NAMES = [

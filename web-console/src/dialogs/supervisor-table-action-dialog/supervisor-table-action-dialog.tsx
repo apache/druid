@@ -42,6 +42,8 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
   const { supervisorId, actions, onClose } = props;
   const [activeTab, setActiveTab] = useState<SupervisorTableActionDialogTab>('status');
 
+  const isCompactionSupervisor = supervisorId.startsWith('autocompact__');
+
   const supervisorTableSideButtonMetadata: SideButtonMetaData[] = [
     {
       icon: 'dashboard',
@@ -67,12 +69,16 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       active: activeTab === 'history',
       onClick: () => setActiveTab('history'),
     },
-    {
-      icon: 'timeline-events',
-      text: 'Timeline',
-      active: activeTab === 'timeline',
-      onClick: () => setActiveTab('timeline'),
-    },
+    ...(isCompactionSupervisor
+      ? [
+          {
+            icon: 'timeline-events' as const,
+            text: 'Timeline',
+            active: activeTab === 'timeline',
+            onClick: () => setActiveTab('timeline'),
+          },
+        ]
+      : []),
   ];
 
   const supervisorEndpointBase = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`;
