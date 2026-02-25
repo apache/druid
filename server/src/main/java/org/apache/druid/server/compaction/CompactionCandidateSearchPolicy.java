@@ -21,7 +21,12 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Policy used by {@link CompactSegments} duty to pick segments for compaction.
@@ -42,14 +47,89 @@ public interface CompactionCandidateSearchPolicy
    * positive value if {@code candidateB} should be picked first or zero if the
    * order does not matter.
    */
-  int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
+  int compareCandidates(CompactionCandidateAndStatus candidateA, CompactionCandidateAndStatus candidateB);
 
   /**
-   * Creates a {@link CompactionCandidate} after applying policy-specific checks to the proposed compaction candidate.
+   * Checks if the given {@link CompactionCandidateAndStatus} is eligible for compaction
+   * in the current iteration. A policy may implement this method to skip
+   * compacting intervals or segments that do not fulfil some required criteria.
    *
-   * @param candidate the proposed compaction
-   * @param eligibility initial eligibility from compaction config checks
-   * @return final compaction candidate
+   * @return {@link Eligibility#OK} only if eligible.
    */
-  CompactionCandidate createCandidate(CompactionCandidate.ProposedCompaction candidate, CompactionStatus eligibility);
+  Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidateAndStatus);
+
+  /**
+   * Describes the eligibility of an interval for compaction.
+   */
+  class Eligibility
+  {
+    public static final Eligibility OK = new Eligibility(true, null, CompactionMode.FULL_COMPACTION);
+
+    private final boolean eligible;
+    private final String reason;
+    @Nullable
+    private final CompactionMode compactionMode;
+
+    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode compactionMode)
+    {
+      this.eligible = eligible;
+      this.reason = reason;
+      if (eligible && compactionMode == null) {
+        throw DruidException.defensive("Missing compaction mode for eligible compaction candidate");
+      }
+      this.compactionMode = compactionMode;
+    }
+
+    public boolean isEligible()
+    {
+      return eligible;
+    }
+
+    public String getReason()
+    {
+      return reason;
+    }
+
+    @Nullable
+    public CompactionMode getCompactionMode()
+    {
+      return compactionMode;
+    }
+
+    public static Eligibility fail(String messageFormat, Object... args)
+    {
+      return new Eligibility(false, StringUtils.format(messageFormat, args), null);
+    }
+
+    @Override
+    public boolean equals(Object object)
+    {
+      if (this == object) {
+        return true;
+      }
+      if (object == null || getClass() != object.getClass()) {
+        return false;
+      }
+      Eligibility that = (Eligibility) object;
+      return eligible == that.eligible
+             && Objects.equals(reason, that.reason)
+             && Objects.equals(compactionMode, that.compactionMode);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(eligible, reason, compactionMode);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Eligibility{" +
+             "eligible=" + eligible +
+             ", reason='" + reason +
+             ", compactionMode=" + compactionMode + '\'' +
+             '}';
+    }
+  }
 }

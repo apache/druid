@@ -74,7 +74,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   private final IndexingStateFingerprintMapper fingerprintMapper;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
-  private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
+  private final List<CompactionCandidateAndStatus> skippedSegments = new ArrayList<>();
 
   // This is needed for datasource that has segmentGranularity configured
   // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
@@ -83,7 +83,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   private final Set<Interval> queuedIntervals = new HashSet<>();
 
   private final CompactionCandidateSearchPolicy searchPolicy;
-  private final PriorityQueue<CompactionCandidate> queue;
+  private final PriorityQueue<CompactionCandidateAndStatus> queue;
 
   public DataSourceCompactibleSegmentIterator(
       DataSourceCompactionConfig config,
@@ -125,12 +125,12 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           if (!partialEternitySegments.isEmpty()) {
             // Do not use the target segment granularity in the CompactionCandidate
             // as Granularities.getIterable() will cause OOM due to the above issue
-            CompactionCandidate candidatesWithStatus =
-                CompactionMode.notEligible(
-                    CompactionCandidate.ProposedCompaction.from(partialEternitySegments, null),
-                    "Segments have partial-eternity intervals"
-                );
-            skippedSegments.add(candidatesWithStatus);
+            skippedSegments.add(
+                new CompactionCandidateAndStatus(
+                    CompactionCandidate.from(partialEternitySegments, null),
+                    CompactionStatus.notEligible("partial eternal")
+                )
+            );
             return;
           }
 
@@ -207,7 +207,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   @Override
-  public List<CompactionCandidate> getSkippedSegments()
+  public List<CompactionCandidateAndStatus> getSkippedSegments()
   {
     return skippedSegments;
   }
@@ -219,7 +219,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   @Override
-  public CompactionCandidate next()
+  public CompactionCandidateAndStatus next()
   {
     if (hasNext()) {
       return queue.poll();
@@ -335,40 +335,30 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      CompactionCandidate.ProposedCompaction proposed =
-          CompactionCandidate.ProposedCompaction.from(segments, config.getSegmentGranularity());
-      final CompactionStatus eligibility = CompactionStatus.compute(proposed, config, fingerprintMapper);
-      final CompactionCandidate candidate;
-      switch (eligibility.getState()) {
+      final CompactionCandidate candidate = CompactionCandidate.from(segments, config.getSegmentGranularity());
+      final CompactionCandidateAndStatus candidateAndStatus = new CompactionCandidateAndStatus(
+          candidate,
+          CompactionStatus.compute(
+              candidate,
+              config,
+              fingerprintMapper
+          )
+      );
+      switch (candidateAndStatus.getStatus().getState()) {
         case COMPLETE:
-          candidate = CompactionMode.complete(proposed);
+          compactedSegments.add(candidate);
           break;
         case NOT_ELIGIBLE:
-          candidate = CompactionMode.notEligible(proposed, eligibility.getReason());
+          skippedSegments.add(candidateAndStatus);
           break;
         case ELIGIBLE:
-          candidate = searchPolicy.createCandidate(proposed, eligibility);
-          break;
-        default:
-          throw DruidException.defensive("unknown compaction state[%s]", eligibility.getState());
-      }
-
-      switch (candidate.getMode()) {
-        case FULL_COMPACTION:
-          if (!queuedIntervals.contains(candidate.getProposedCompaction().getUmbrellaInterval())) {
-            queue.add(candidate);
-            queuedIntervals.add(candidate.getProposedCompaction().getUmbrellaInterval());
-          }
-          break;
-        case NOT_APPLICABLE:
-          if (CompactionStatus.State.COMPLETE.equals(candidate.getEligibility().getState())) {
-            compactedSegments.add(candidate);
-          } else {
-            skippedSegments.add(candidate);
+          if (!queuedIntervals.contains(candidate.getUmbrellaInterval())) {
+            queue.add(candidateAndStatus);
+            queuedIntervals.add(candidate.getUmbrellaInterval());
           }
           break;
         default:
-          throw DruidException.defensive("Unexpected compaction mode[%s]", candidate.getMode());
+          throw DruidException.defensive("unknown compaction state[%s]", candidateAndStatus.getStatus().getState());
       }
     }
   }
@@ -401,8 +391,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
-        final CompactionCandidate.ProposedCompaction candidates =
-            CompactionCandidate.ProposedCompaction.from(segments, config.getSegmentGranularity());
+        final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
 
         final String skipReason;
         if (candidates.getCompactionInterval().overlaps(latestSkipInterval)) {
@@ -411,8 +400,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           skipReason = "interval locked by another task";
         }
 
-        final CompactionCandidate candidatesWithStatus = CompactionMode.notEligible(candidates, skipReason);
-        skippedSegments.add(candidatesWithStatus);
+        skippedSegments.add(new CompactionCandidateAndStatus(candidates, CompactionStatus.notEligible(skipReason)));
       }
     }
 

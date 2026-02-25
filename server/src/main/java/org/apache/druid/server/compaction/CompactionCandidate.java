@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -29,7 +28,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,168 +37,53 @@ import java.util.stream.Collectors;
  */
 public class CompactionCandidate
 {
-  /**
-   * Non-empty list of segments of a datasource being proposed for compaction.
-   * A proposed compaction typically contains all the segments of a single time chunk.
-   */
-  public static class ProposedCompaction
-  {
-    private final List<DataSegment> segments;
-    private final Interval umbrellaInterval;
-    private final Interval compactionInterval;
-    private final String dataSource;
-    private final long totalBytes;
-    private final int numIntervals;
+  private final List<DataSegment> segments;
+  private final Interval umbrellaInterval;
+  private final Interval compactionInterval;
+  private final String dataSource;
+  private final long totalBytes;
+  private final int numIntervals;
 
-    public static ProposedCompaction from(
-        List<DataSegment> segments,
-        @Nullable Granularity targetSegmentGranularity
-    )
-    {
-      if (segments == null || segments.isEmpty()) {
-        throw InvalidInput.exception("Segments to compact must be non-empty");
-      }
-
-      final Set<Interval> segmentIntervals =
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
-      final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
-      final Interval compactionInterval =
-          targetSegmentGranularity == null
-          ? umbrellaInterval
-          : JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
-
-      return new ProposedCompaction(
-          segments,
-          umbrellaInterval,
-          compactionInterval,
-          segmentIntervals.size()
-      );
-    }
-
-    ProposedCompaction(
-        List<DataSegment> segments,
-        Interval umbrellaInterval,
-        Interval compactionInterval,
-        int numDistinctSegmentIntervals
-    )
-    {
-      this.segments = segments;
-      this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
-
-      this.umbrellaInterval = umbrellaInterval;
-      this.compactionInterval = compactionInterval;
-
-      this.numIntervals = numDistinctSegmentIntervals;
-      this.dataSource = segments.get(0).getDataSource();
-    }
-
-    /**
-     * @return Non-empty list of segments that make up this proposed compaction.
-     */
-    public List<DataSegment> getSegments()
-    {
-      return segments;
-    }
-
-    public long getTotalBytes()
-    {
-      return totalBytes;
-    }
-
-    public int numSegments()
-    {
-      return segments.size();
-    }
-
-    /**
-     * Umbrella interval of all the segments in this proposed compaction. This typically
-     * corresponds to a single time chunk in the segment timeline.
-     */
-    public Interval getUmbrellaInterval()
-    {
-      return umbrellaInterval;
-    }
-
-    /**
-     * Interval aligned to the target segment granularity used for the compaction
-     * task. This interval completely contains the {@link #umbrellaInterval}.
-     */
-    public Interval getCompactionInterval()
-    {
-      return compactionInterval;
-    }
-
-    public String getDataSource()
-    {
-      return dataSource;
-    }
-
-    public CompactionStatistics getStats()
-    {
-      return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ProposedCompaction that = (ProposedCompaction) o;
-      return totalBytes == that.totalBytes
-             && numIntervals == that.numIntervals
-             && segments.equals(that.segments)
-             && umbrellaInterval.equals(that.umbrellaInterval)
-             && compactionInterval.equals(that.compactionInterval)
-             && dataSource.equals(that.dataSource);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(segments, umbrellaInterval, compactionInterval, dataSource, totalBytes, numIntervals);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "ProposedCompaction{" +
-             "datasource=" + dataSource +
-             ", umbrellaInterval=" + umbrellaInterval +
-             ", compactionInterval=" + compactionInterval +
-             ", numIntervals=" + numIntervals +
-             ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-             ", totalSize=" + totalBytes +
-             '}';
-    }
-  }
-
-  private final ProposedCompaction proposedCompaction;
-
-  private final CompactionStatus eligibility;
-  @Nullable
-  private final String policyNote;
-  private final CompactionMode mode;
-
-  CompactionCandidate(
-      ProposedCompaction proposedCompaction,
-      CompactionStatus eligibility,
-      @Nullable String policyNote,
-      CompactionMode mode
+  public static CompactionCandidate from(
+      List<DataSegment> segments,
+      @Nullable Granularity targetSegmentGranularity
   )
   {
-    this.proposedCompaction = Preconditions.checkNotNull(proposedCompaction, "proposedCompaction");
-    this.eligibility = Preconditions.checkNotNull(eligibility, "eligibility");
-    this.policyNote = policyNote;
-    this.mode = Preconditions.checkNotNull(mode, "mode");
+    if (segments == null || segments.isEmpty()) {
+      throw InvalidInput.exception("Segments to compact must be non-empty");
+    }
+
+    final Set<Interval> segmentIntervals =
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
+    final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
+    final Interval compactionInterval =
+        targetSegmentGranularity == null
+        ? umbrellaInterval
+        : JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
+
+    return new CompactionCandidate(
+        segments,
+        umbrellaInterval,
+        compactionInterval,
+        segmentIntervals.size()
+    );
   }
 
-  public ProposedCompaction getProposedCompaction()
+  private CompactionCandidate(
+      List<DataSegment> segments,
+      Interval umbrellaInterval,
+      Interval compactionInterval,
+      int numDistinctSegmentIntervals
+  )
   {
-    return proposedCompaction;
+    this.segments = segments;
+    this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
+
+    this.umbrellaInterval = umbrellaInterval;
+    this.compactionInterval = compactionInterval;
+
+    this.numIntervals = numDistinctSegmentIntervals;
+    this.dataSource = segments.get(0).getDataSource();
   }
 
   /**
@@ -208,17 +91,17 @@ public class CompactionCandidate
    */
   public List<DataSegment> getSegments()
   {
-    return proposedCompaction.getSegments();
+    return segments;
   }
 
   public long getTotalBytes()
   {
-    return proposedCompaction.getTotalBytes();
+    return totalBytes;
   }
 
   public int numSegments()
   {
-    return proposedCompaction.numSegments();
+    return segments.size();
   }
 
   /**
@@ -227,52 +110,35 @@ public class CompactionCandidate
    */
   public Interval getUmbrellaInterval()
   {
-    return proposedCompaction.getUmbrellaInterval();
+    return umbrellaInterval;
   }
 
   /**
    * Interval aligned to the target segment granularity used for the compaction
-   * task. This interval completely contains the {@link #getUmbrellaInterval()}.
+   * task. This interval completely contains the {@link #umbrellaInterval}.
    */
   public Interval getCompactionInterval()
   {
-    return proposedCompaction.getCompactionInterval();
+    return compactionInterval;
   }
 
   public String getDataSource()
   {
-    return proposedCompaction.getDataSource();
+    return dataSource;
   }
 
   public CompactionStatistics getStats()
   {
-    return proposedCompaction.getStats();
-  }
-
-  @Nullable
-  public String getPolicyNote()
-  {
-    return policyNote;
-  }
-
-  public CompactionMode getMode()
-  {
-    return mode;
-  }
-
-  public CompactionStatus getEligibility()
-  {
-    return eligibility;
+    return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
   @Override
   public String toString()
   {
     return "SegmentsToCompact{" +
-           "proposedCompaction=" + proposedCompaction +
-           ", eligibility=" + eligibility +
-           ", policyNote=" + policyNote +
-           ", mode=" + mode +
+           "datasource=" + dataSource +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           ", totalSize=" + totalBytes +
            '}';
   }
 }

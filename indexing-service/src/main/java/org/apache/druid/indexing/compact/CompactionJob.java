@@ -22,7 +22,7 @@ package org.apache.druid.indexing.compact;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.timeline.CompactionState;
 
 /**
@@ -30,14 +30,14 @@ import org.apache.druid.timeline.CompactionState;
  */
 public class CompactionJob extends BatchIndexingJob
 {
-  private final CompactionCandidate candidate;
+  private final CompactionCandidateAndStatus candidate;
   private final int maxRequiredTaskSlots;
   private final String targetIndexingStateFingerprint;
   private final CompactionState targetIndexingState;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       int maxRequiredTaskSlots,
       String targetIndexingStateFingerprint,
       CompactionState targetIndexingState
@@ -52,7 +52,7 @@ public class CompactionJob extends BatchIndexingJob
 
   public CompactionJob(
       ClientSqlQuery msqQuery,
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       int maxRequiredTaskSlots,
       String targetIndexingStateFingerprint,
       CompactionState targetIndexingState
@@ -70,7 +70,7 @@ public class CompactionJob extends BatchIndexingJob
     return candidate.getDataSource();
   }
 
-  public CompactionCandidate getCandidate()
+  public CompactionCandidateAndStatus getCandidate()
   {
     return candidate;
   }

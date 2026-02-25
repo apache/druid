@@ -34,81 +34,32 @@ public class CompactionCandidateTest
   private static final String DATASOURCE = "test_datasource";
 
   @Test
-  public void testConstructorAndGetters()
+  public void testFrom()
   {
     List<DataSegment> segments = createTestSegments(3);
-    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
-    CompactionStatus eligibility = CompactionStatus.notEligible("test reason");
 
-    CompactionCandidate candidate = new CompactionCandidate(proposed, eligibility, null, CompactionMode.FULL_COMPACTION);
+    CompactionCandidate candidate = CompactionCandidate.from(segments, null);
 
-    Assert.assertEquals(proposed, candidate.getProposedCompaction());
-    Assert.assertEquals(eligibility, candidate.getEligibility());
     Assert.assertEquals(segments, candidate.getSegments());
     Assert.assertEquals(DATASOURCE, candidate.getDataSource());
     Assert.assertEquals(3, candidate.numSegments());
+    Assert.assertNotNull(candidate.getUmbrellaInterval());
+    Assert.assertNotNull(candidate.getCompactionInterval());
+    Assert.assertNotNull(candidate.getStats());
   }
 
   @Test
-  public void testProposedCompactionFrom()
-  {
-    List<DataSegment> segments = createTestSegments(3);
-
-    CompactionCandidate.ProposedCompaction proposed =
-        CompactionCandidate.ProposedCompaction.from(segments, null);
-
-    Assert.assertEquals(segments, proposed.getSegments());
-    Assert.assertEquals(DATASOURCE, proposed.getDataSource());
-    Assert.assertEquals(3, proposed.numSegments());
-    Assert.assertNotNull(proposed.getUmbrellaInterval());
-    Assert.assertNotNull(proposed.getCompactionInterval());
-    Assert.assertNotNull(proposed.getStats());
-  }
-
-  @Test
-  public void testProposedCompactionWithTargetGranularity()
-  {
-    List<DataSegment> segments = createTestSegments(5);
-
-    CompactionCandidate.ProposedCompaction proposed =
-        CompactionCandidate.ProposedCompaction.from(segments, Granularities.MONTH);
-
-    Assert.assertEquals(segments, proposed.getSegments());
-    Assert.assertEquals(5, proposed.numSegments());
-    Assert.assertNotNull(proposed.getUmbrellaInterval());
-    Assert.assertNotNull(proposed.getCompactionInterval());
-  }
-
-  @Test
-  public void testProposedCompactionThrowsOnNullOrEmptySegments()
+  public void testThrowsOnNullOrEmptySegments()
   {
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionCandidate.ProposedCompaction.from(null, null)
+        () -> CompactionCandidate.from(null, null)
     );
 
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionCandidate.ProposedCompaction.from(Collections.emptyList(), null)
+        () -> CompactionCandidate.from(Collections.emptyList(), null)
     );
-  }
-
-  @Test
-  public void testDelegationMethods()
-  {
-    List<DataSegment> segments = createTestSegments(3);
-    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
-    CompactionCandidate candidate = new CompactionCandidate(
-        proposed,
-        CompactionStatus.notEligible("test"),
-        null,
-        CompactionMode.FULL_COMPACTION
-    );
-
-    Assert.assertEquals(proposed.getTotalBytes(), candidate.getTotalBytes());
-    Assert.assertEquals(proposed.getUmbrellaInterval(), candidate.getUmbrellaInterval());
-    Assert.assertEquals(proposed.getCompactionInterval(), candidate.getCompactionInterval());
-    Assert.assertEquals(proposed.getStats().getTotalBytes(), candidate.getStats().getTotalBytes());
   }
 
   private static List<DataSegment> createTestSegments(int count)

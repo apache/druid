@@ -28,6 +28,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -59,7 +60,7 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
   @Override
   public DataSourceCompactionConfig optimizeConfig(
       DataSourceCompactionConfig config,
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       CompactionJobParams params
   )
   {
@@ -102,7 +103,7 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
    */
   @Nullable
   private NotDimFilter computeRequiredSetOfFilterRulesForCandidate(
-      CompactionCandidate candidateSegments,
+      CompactionCandidateAndStatus candidateSegments,
       NotDimFilter expectedFilter,
       IndexingStateFingerprintMapper fingerprintMapper
   )
@@ -114,7 +115,7 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
       expectedFilters = ((OrDimFilter) expectedFilter.getField()).getFields();
     }
 
-    Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
+    Set<String> uniqueFingerprints = candidateSegments.getCandidate().getSegments().stream()
                                                       .map(DataSegment::getIndexingStateFingerprint)
                                                       .filter(Objects::nonNull)
                                                       .collect(Collectors.toSet());
@@ -229,15 +230,15 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
    * Returns true only if the candidate has been compacted before and has a NotDimFilter.
    */
   private boolean shouldOptimizeFilterRules(
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       DataSourceCompactionConfig config
   )
   {
-    if (CompactionStatus.State.NOT_ELIGIBLE.equals(candidate.getEligibility().getState())) {
+    if (CompactionStatus.State.NOT_ELIGIBLE.equals(candidate.getStatus().getState())) {
       return false;
     }
-    if (CompactionStatus.State.ELIGIBLE.equals(candidate.getEligibility().getState())
-        && CompactionStatus.NEVER_COMPACTED_REASON.equals(candidate.getEligibility().getReason())) {
+    if (CompactionStatus.State.ELIGIBLE.equals(candidate.getStatus().getState())
+        && CompactionStatus.NEVER_COMPACTED_REASON.equals(candidate.getStatus().getReason())) {
       return false;
     }
 

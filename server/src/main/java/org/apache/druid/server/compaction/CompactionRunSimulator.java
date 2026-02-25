@@ -94,55 +94,47 @@ public class CompactionRunSimulator
 
       @Override
       public void onSkippedCandidate(
-          CompactionCandidate candidateSegments,
-          DataSourceCompactionConfig config
+          CompactionCandidateAndStatus candidateSegments,
+          DataSourceCompactionConfig config,
+          @Nullable String policyNote
       )
       {
         skippedIntervals.addRow(createRow(
-            candidateSegments,
+            candidateSegments.getCandidate(),
             null,
-            GuavaUtils.firstNonNull(
-                candidateSegments.getPolicyNote(),
-                candidateSegments.getEligibility().getReason()
-            )
+            GuavaUtils.firstNonNull(policyNote, candidateSegments.getStatus().getReason())
         ));
       }
 
       @Override
       public void onCompactionCandidates(
-          CompactionCandidate candidateSegments,
+          CompactionCandidateAndStatus candidateSegments,
           DataSourceCompactionConfig config
       )
       {
-        switch (candidateSegments.getMode()) {
-          case NOT_APPLICABLE:
+        switch (candidateSegments.getStatus().getState()) {
+          case NOT_ELIGIBLE:
             skippedIntervals.addRow(createRow(
-                candidateSegments,
+                candidateSegments.getCandidate(),
                 null,
-                GuavaUtils.firstNonNull(
-                    candidateSegments.getPolicyNote(),
-                    candidateSegments.getEligibility().getReason()
-                )
+                candidateSegments.getStatus().getReason()
             ));
             break;
-          case FULL_COMPACTION:
+          case ELIGIBLE:
             queuedIntervals.addRow(createRow(
-                candidateSegments,
+                candidateSegments.getCandidate(),
                 ClientCompactionTaskQueryTuningConfig.from(config),
-                GuavaUtils.firstNonNull(
-                    candidateSegments.getPolicyNote(),
-                    candidateSegments.getEligibility().getReason()
-                )
+                candidateSegments.getStatus().getReason()
             ));
             break;
           default:
-            throw DruidException.defensive("unexpected compaction mode[%s]", candidateSegments.getMode());
+            throw DruidException.defensive("unexpected compaction state[%s]", candidateSegments.getStatus().getState());
         }
       }
 
       @Override
       public void onCompactionTaskStateComputed(
-          CompactionCandidate candidateSegments,
+          CompactionCandidateAndStatus candidateSegments,
           TaskState taskState,
           DataSourceCompactionConfig config
       )
@@ -152,16 +144,13 @@ public class CompactionRunSimulator
         }
         switch (taskState) {
           case SUCCESS:
-            compactedIntervals.addRow(createRow(candidateSegments, null, null));
+            compactedIntervals.addRow(createRow(candidateSegments.getCandidate(), null, null));
             break;
           case RUNNING:
             runningIntervals.addRow(createRow(
-                candidateSegments,
+                candidateSegments.getCandidate(),
                 ClientCompactionTaskQueryTuningConfig.from(config),
-                GuavaUtils.firstNonNull(
-                    candidateSegments.getPolicyNote(),
-                    candidateSegments.getEligibility().getReason()
-                )
+                candidateSegments.getStatus().getReason()
             ));
             break;
           case FAILED:
@@ -171,14 +160,10 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
+      public void onTaskSubmitted(String taskId, CompactionCandidateAndStatus candidateSegments)
       {
         // Add a row for each task in order of submission
-        final String reason = GuavaUtils.firstNonNull(
-            candidateSegments.getPolicyNote(),
-            candidateSegments.getEligibility().getReason()
-        );
-        queuedIntervals.addRow(createRow(candidateSegments, null, reason));
+        queuedIntervals.addRow(createRow(candidateSegments.getCandidate(), null, candidateSegments.getStatus().getReason()));
       }
     };
 

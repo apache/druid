@@ -84,7 +84,10 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-  private final IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(new NoopIndexingStateCache(), mapper);
+  private final IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
+      new NoopIndexingStateCache(),
+      mapper
+  );
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -200,7 +203,7 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next().getSegments();
+      final List<DataSegment> segments = iterator.next().getCandidate().getSegments();
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -240,7 +243,7 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next().getSegments();
+      final List<DataSegment> segments = iterator.next().getCandidate().getSegments();
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -335,6 +338,7 @@ public class NewestSegmentFirstPolicyTest
     expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
 
     Set<List<DataSegment>> observedSegments = Streams.sequentialStreamFrom(iterator)
+                                                     .map(CompactionCandidateAndStatus::getCandidate)
                                                      .map(CompactionCandidate::getSegments)
                                                      .collect(Collectors.toSet());
     Assert.assertEquals(
@@ -406,7 +410,7 @@ public class NewestSegmentFirstPolicyTest
 
     Assert.assertTrue(iterator.hasNext());
     Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
-                                                        .flatMap(s -> s.getSegments().stream())
+                                                        .flatMap(s -> s.getCandidate().getSegments().stream())
                                                         .collect(Collectors.toSet());
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
@@ -444,7 +448,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next().getSegments();
+    List<DataSegment> actual = iterator.next().getCandidate().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     Assert.assertFalse(iterator.hasNext());
@@ -480,7 +484,7 @@ public class NewestSegmentFirstPolicyTest
 
     Assert.assertTrue(iterator.hasNext());
     Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
-                                                        .flatMap(s -> s.getSegments().stream())
+                                                        .flatMap(s -> s.getCandidate().getSegments().stream())
                                                         .collect(Collectors.toSet());
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
@@ -610,7 +614,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // Month of Nov
     Assert.assertTrue(iterator.hasNext());
@@ -622,7 +626,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // Month of Oct
     Assert.assertTrue(iterator.hasNext());
@@ -634,7 +638,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -661,7 +665,7 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
     );
     Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next().getSegments();
+    List<DataSegment> actual = iterator.next().getCandidate().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // Month of Jan
@@ -669,7 +673,7 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
     );
     Assert.assertTrue(iterator.hasNext());
-    actual = iterator.next().getSegments();
+    actual = iterator.next().getCandidate().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // No more
@@ -697,7 +701,7 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
     Assert.assertFalse(iterator.hasNext());
@@ -728,7 +732,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -841,7 +845,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -890,7 +894,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -940,7 +944,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -989,7 +993,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1067,7 +1071,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1078,7 +1082,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1162,7 +1166,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1173,7 +1177,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1260,7 +1264,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1271,7 +1275,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1282,7 +1286,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1402,7 +1406,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1488,7 +1492,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1499,7 +1503,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1510,7 +1514,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1613,7 +1617,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1624,7 +1628,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1635,7 +1639,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1677,7 +1681,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1725,7 +1729,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next().getSegments())
+        ImmutableSet.copyOf(iterator.next().getCandidate().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1975,7 +1979,7 @@ public class NewestSegmentFirstPolicyTest
     // Return all segments in 2023/2024 since at least one of them has data despite there being a tombstone.
     Assert.assertEquals(
         ImmutableList.of(tombstone2023, dataSegment2023),
-        iterator.next().getSegments()
+        iterator.next().getCandidate().getSegments()
     );
 
     final DataSegment tombstone2025Jan = new DataSegment(
@@ -2027,7 +2031,7 @@ public class NewestSegmentFirstPolicyTest
     // Does not skip the tombstones in 2025 since there are multiple of them which could potentially be condensed to one
     Assert.assertEquals(
         ImmutableList.of(tombstone2025Jan, tombstone2025Feb, tombstone2025Mar),
-        iterator.next().getSegments()
+        iterator.next().getCandidate().getSegments()
     );
   }
 
@@ -2065,12 +2069,12 @@ public class NewestSegmentFirstPolicyTest
 
     // Verify that the segments of WIKI are preferred even though they are older
     Assert.assertTrue(iterator.hasNext());
-    CompactionCandidate next = iterator.next();
+    CompactionCandidate next = iterator.next().getCandidate();
     Assert.assertEquals(TestDataSource.WIKI, next.getDataSource());
     Assert.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
 
     Assert.assertTrue(iterator.hasNext());
-    next = iterator.next();
+    next = iterator.next().getCandidate();
     Assert.assertEquals(TestDataSource.KOALA, next.getDataSource());
     Assert.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
   }
@@ -2096,7 +2100,7 @@ public class NewestSegmentFirstPolicyTest
   {
     Interval expectedSegmentIntervalStart = to;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next().getSegments();
+      final List<DataSegment> segments = iterator.next().getCandidate().getSegments();
 
       final Interval firstInterval = segments.get(0).getInterval();
       Assert.assertTrue(

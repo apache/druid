@@ -173,19 +173,18 @@ public class CompactionStatus
    *     current run (e.g., checking minimum segment count, bytes, or other policy criteria)</li>
    * </ol>
    *
-   * @param proposedCompaction the compaction candidate to evaluate
-   * @param config             the compaction configuration for the datasource
-   * @param fingerprintMapper  mapper for indexing state fingerprints
-   * @return a new {@link CompactionCandidate} with updated eligibility and status. For incremental
-   * compaction, returns a candidate containing only the uncompacted segments.
+   * @param candidate         the compaction candidate to evaluate
+   * @param config            the compaction configuration for the datasource
+   * @param fingerprintMapper mapper for indexing state fingerprints
+   * @return {@link CompactionStatus}
    */
   public static CompactionStatus compute(
-      CompactionCandidate.ProposedCompaction proposedCompaction,
+      CompactionCandidate candidate,
       DataSourceCompactionConfig config,
       IndexingStateFingerprintMapper fingerprintMapper
   )
   {
-    return new Evaluator(proposedCompaction, config, fingerprintMapper).evaluate();
+    return new Evaluator(candidate, config, fingerprintMapper).evaluate();
   }
 
   @Override
@@ -365,7 +364,7 @@ public class CompactionStatus
     private static final Logger log = new Logger(Evaluator.class);
 
     private final DataSourceCompactionConfig compactionConfig;
-    private final CompactionCandidate.ProposedCompaction proposedCompaction;
+    private final CompactionCandidate candidate;
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
@@ -380,12 +379,12 @@ public class CompactionStatus
     private final String targetFingerprint;
 
     private Evaluator(
-        CompactionCandidate.ProposedCompaction proposedCompaction,
+        CompactionCandidate candidate,
         DataSourceCompactionConfig compactionConfig,
         @Nullable IndexingStateFingerprintMapper fingerprintMapper
     )
     {
-      this.proposedCompaction = proposedCompaction;
+      this.candidate = candidate;
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
@@ -539,7 +538,7 @@ public class CompactionStatus
      */
     private String segmentsHaveBeenCompactedAtLeastOnce()
     {
-      for (DataSegment segment : proposedCompaction.getSegments()) {
+      for (DataSegment segment : candidate.getSegments()) {
         final String fingerprint = segment.getIndexingStateFingerprint();
         final CompactionState segmentState = segment.getLastCompactionState();
         if (fingerprint != null) {
@@ -646,10 +645,10 @@ public class CompactionStatus
     private String inputBytesAreWithinLimit()
     {
       final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
-      if (proposedCompaction.getTotalBytes() > inputSegmentSize) {
+      if (candidate.getTotalBytes() > inputSegmentSize) {
         return StringUtils.format(
             "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
-            proposedCompaction.getTotalBytes(), inputSegmentSize
+            candidate.getTotalBytes(), inputSegmentSize
         );
       }
       return null;

@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,6 +81,7 @@ public class CompactionStatusTracker
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
    */
+  @Nullable
   public TaskState computeCompactionTaskState(CompactionCandidate candidate)
   {
     // Skip intervals that already have a running task
@@ -105,15 +107,16 @@ public class CompactionStatusTracker
    * Used only by the {@link CompactionRunSimulator}.
    */
   public void onSkippedCandidate(
-      CompactionCandidate candidateSegments,
-      DataSourceCompactionConfig config
+      CompactionCandidateAndStatus candidateSegments,
+      DataSourceCompactionConfig config,
+      @Nullable String policyNote
   )
   {
     // Nothing to do, used by simulator
   }
 
   public void onCompactionCandidates(
-      CompactionCandidate candidateSegments,
+      CompactionCandidateAndStatus candidateSegments,
       DataSourceCompactionConfig config
   )
   {
@@ -121,7 +124,7 @@ public class CompactionStatusTracker
   }
 
   public void onCompactionTaskStateComputed(
-      CompactionCandidate candidateSegments,
+      CompactionCandidateAndStatus candidateSegments,
       TaskState taskState,
       DataSourceCompactionConfig config
   )
@@ -155,12 +158,12 @@ public class CompactionStatusTracker
 
   public void onTaskSubmitted(
       String taskId,
-      CompactionCandidate candidateSegments
+      CompactionCandidateAndStatus candidateSegments
   )
   {
-    submittedTaskIdToSegments.put(taskId, candidateSegments);
-    getOrComputeDatasourceStatus(candidateSegments.getDataSource())
-        .handleSubmittedTask(candidateSegments);
+    submittedTaskIdToSegments.put(taskId, candidateSegments.getCandidate());
+    getOrComputeDatasourceStatus(candidateSegments.getCandidate().getDataSource())
+        .handleSubmittedTask(candidateSegments.getCandidate());
   }
 
   public void onTaskFinished(String taskId, TaskStatus taskStatus)

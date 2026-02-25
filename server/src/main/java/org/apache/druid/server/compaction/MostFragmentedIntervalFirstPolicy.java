@@ -107,9 +107,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  protected Comparator<CompactionCandidate> getSegmentComparator()
+  protected Comparator<CompactionCandidateAndStatus> getSegmentComparator()
   {
-    return Comparator.comparing(o -> Objects.requireNonNull(o.getEligibility()), this::compare);
+    return Comparator.comparing(o -> Objects.requireNonNull(o.getStatus()), this::compare);
   }
 
   @Override
@@ -158,27 +158,20 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  public CompactionCandidate createCandidate(
-      CompactionCandidate.ProposedCompaction candidate,
-      CompactionStatus eligibility
-  )
+  public Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidate)
   {
-    final CompactionStatistics uncompacted = Objects.requireNonNull(eligibility.getUncompactedStats());
+    final CompactionStatistics uncompacted = Objects.requireNonNull(candidate.getStatus().getUncompactedStats());
 
     if (uncompacted.getNumSegments() < 1) {
-      return CompactionMode.failWithPolicyCheck(candidate, eligibility, "No uncompacted segments in interval");
+      return Eligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
-      return CompactionMode.failWithPolicyCheck(
-          candidate,
-          eligibility,
+      return Eligibility.fail(
           "Uncompacted segments[%,d] in interval must be at least [%,d]",
           uncompacted.getNumSegments(),
           minUncompactedCount
       );
     } else if (uncompacted.getTotalBytes() < minUncompactedBytes.getBytes()) {
-      return CompactionMode.failWithPolicyCheck(
-          candidate,
-          eligibility,
+      return Eligibility.fail(
           "Uncompacted bytes[%,d] in interval must be at least [%,d]",
           uncompacted.getTotalBytes(),
           minUncompactedBytes.getBytes()
@@ -187,15 +180,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
 
     final long avgSegmentSize = (uncompacted.getTotalBytes() / uncompacted.getNumSegments());
     if (avgSegmentSize > maxAverageUncompactedBytesPerSegment.getBytes()) {
-      return CompactionMode.failWithPolicyCheck(
-          candidate,
-          eligibility,
+      return Eligibility.fail(
           "Average size[%,d] of uncompacted segments in interval must be at most [%,d]",
           avgSegmentSize,
           maxAverageUncompactedBytesPerSegment.getBytes()
       );
     }
-    return CompactionMode.FULL_COMPACTION.createCandidate(candidate, eligibility);
+    return Eligibility.OK;
   }
 
   /**

@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.server.compaction.CompactionCandidate.ProposedCompaction;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
@@ -73,7 +73,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithNoSegmentGranularity()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    ProposedCompaction actual = ProposedCompaction.from(List.of(dataSegment1, dataSegment2, dataSegment3), null);
+    CompactionCandidate actual = CompactionCandidate.from(List.of(dataSegment1, dataSegment2, dataSegment3), null);
     Assert.assertEquals(Intervals.of("2015-02-12/2015-04-14"), actual.getCompactionInterval());
   }
 
@@ -81,7 +81,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWitSegmentGranularitySameAsSegment()
   {
     // The umbrella interval of segments is 2015-04-11/2015-04-12
-    ProposedCompaction actual = ProposedCompaction.from(List.of(dataSegment1), Granularities.DAY);
+    CompactionCandidate actual = CompactionCandidate.from(List.of(dataSegment1), Granularities.DAY);
     Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), actual.getCompactionInterval());
   }
 
@@ -89,7 +89,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithCoarserSegmentGranularity()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    ProposedCompaction actual = ProposedCompaction.from(
+    CompactionCandidate actual = CompactionCandidate.from(
         List.of(dataSegment1, dataSegment2, dataSegment3),
         Granularities.YEAR
     );
@@ -101,7 +101,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithFinerSegmentGranularityAndUmbrellaIntervalAlign()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    ProposedCompaction actual = ProposedCompaction.from(
+    CompactionCandidate actual = CompactionCandidate.from(
         List.of(dataSegment1, dataSegment2, dataSegment3),
         Granularities.DAY
     );
@@ -113,7 +113,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithFinerSegmentGranularityAndUmbrellaIntervalNotAlign()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    ProposedCompaction actual = ProposedCompaction.from(
+    CompactionCandidate actual = CompactionCandidate.from(
         List.of(dataSegment1, dataSegment2, dataSegment3),
         Granularities.WEEK
     );
