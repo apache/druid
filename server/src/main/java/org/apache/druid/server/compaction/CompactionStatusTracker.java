@@ -23,6 +23,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -58,6 +59,7 @@ public class CompactionStatusTracker
     datasourceStatuses.remove(datasource);
   }
 
+  @Nullable
   public CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidates)
   {
     return datasourceStatuses

@@ -43,8 +43,8 @@ import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -281,19 +281,33 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = getCurrentStatusForJob(job, policy);
-    switch (compactionStatus.getState()) {
-      case RUNNING:
-        return false;
-      case COMPLETE:
-        snapshotBuilder.moveFromPendingToCompleted(candidate);
-        return false;
-      case SKIPPED:
-        snapshotBuilder.moveFromPendingToSkipped(candidate);
-        return false;
-      default:
-        break;
+    // Check if the job is eligible
+
+    // Check if the job is already running, completed or skipped and is still eligible
+    final CompactionTaskStatus latestTaskStatus = statusTracker.getLatestTaskStatus(job.getCandidate());
+    final CompactionCandidateSearchPolicy.Eligibility eligibility =
+        policy.checkEligibilityForCompaction(candidate, latestTaskStatus);
+    if (!eligibility.isEligible()) {
+      log.debug(
+          "Skipping compaction job[%s] since policy rejected it due to reason[%s].",
+          job, eligibility.getReason()
+      );
+      snapshotBuilder.moveFromPendingToSkipped(candidate);
+      return false;
+    }
+
+    if (latestTaskStatus != null) {
+      switch (latestTaskStatus.getState()) {
+        case RUNNING:
+          return false;
+        case SUCCESS:
+          snapshotBuilder.moveFromPendingToCompleted(candidate);
+          return false;
+        case FAILED:
+          // Retry this job. A job failing many times may have already been rejected by the policy.
+        default:
+          break;
+      }
     }
 
     // Check if enough compaction task slots are available
@@ -376,14 +390,6 @@ public class CompactionJobQueue
       );
       indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetIndexingState());
     }
-  }
-
-  public CompactionStatus getCurrentStatusForJob(CompactionJob job, CompactionCandidateSearchPolicy policy)
-  {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
-    final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
-    statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
-    return compactionStatus;
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)
