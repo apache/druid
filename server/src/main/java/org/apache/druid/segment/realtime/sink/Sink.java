@@ -65,6 +65,15 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Accumulator for a single segment being built during ingestion. A sink is a segment builder that manages
+ * memory pressure using a list of {@link FireHydrant}, handling these key responsibilities:
+ * <ol>
+ * <li> Receives input rows via {@link Sink#add}, and delegates to the current hydrant's {@link IncrementalIndex}. </li>
+ * <li> When memory fills up, {@link Sink#swap} persists current hydrant to disk, and creates a new hydrant. </li>
+ * <li> Provides query access to all hydrants via {@link #acquireSegmentReferences(SegmentMapFunction, boolean)}. </li>
+ * </ol>
+ */
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
   private static final IncrementalIndexAddResult NOT_WRITABLE = new IncrementalIndexAddResult(-1, -1, "not writable");
