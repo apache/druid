@@ -308,7 +308,7 @@ public class ServerSideEncryptingAmazonS3Test
     // Create a mock FileUpload that returns a completed future
     FileUpload mockFileUpload = EasyMock.createMock(FileUpload.class);
     CompletedFileUpload completedUpload = CompletedFileUpload.builder()
-        .response(software.amazon.awssdk.services.s3.model.PutObjectResponse.builder().build())
+        .response(PutObjectResponse.builder().build())
         .build();
     CompletableFuture<CompletedFileUpload> completedFuture = CompletableFuture.completedFuture(completedUpload);
 
@@ -368,7 +368,7 @@ public class ServerSideEncryptingAmazonS3Test
     S3TransferManager mockTransferManager = EasyMock.createMock(S3TransferManager.class);
     FileUpload mockFileUpload = EasyMock.createMock(FileUpload.class);
     CompletedFileUpload completedUpload = CompletedFileUpload.builder()
-        .response(software.amazon.awssdk.services.s3.model.PutObjectResponse.builder().build())
+        .response(PutObjectResponse.builder().build())
         .build();
     CompletableFuture<CompletedFileUpload> completedFuture = CompletableFuture.completedFuture(completedUpload);
 

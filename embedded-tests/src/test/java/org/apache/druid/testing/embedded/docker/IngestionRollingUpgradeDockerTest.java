@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.docker;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
@@ -35,7 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
@@ -44,7 +44,6 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.apache.druid.testing.embedded.msq.MinIODurableStorageResource;
-import org.apache.druid.testing.embedded.psql.PostgreSQLMetadataResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,8 +52,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests that ingestion works correctly during a rolling upgrade, where the
- * cluster has a mix of old-version and new-version indexers (the assumption is that job logic is shared betwen indexers and MM/Peons, indexers are just easier to use in tests).
+ * Tests that ingestion works correctly during a rolling upgrade, by using a
+ * cluster which has a Historical/Indexer on an old version and
+ * another Indexer + all other services on the latest version.
  * Validates that segments and intermediate shuffle data written to S3 by one version can be
  * read by the other.
  * <p>
@@ -111,24 +111,25 @@ public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
         .usingImage(DruidContainer.Image.APACHE_33)
         .addMount(testDataMount);
 
+    DruidContainerResource historicalContainer = new DruidContainerResource(DruidCommand.Server.HISTORICAL)
+        .usingImage(DruidContainer.Image.APACHE_33);
+
     return EmbeddedDruidCluster
-        .withZookeeper()
+        .withEmbeddedDerbyAndZookeeper()
         .useContainerFriendlyHostname()
-        .useLatchableEmitter()
         .useDefaultTimeoutForLatchableEmitter(60)
         .addExtensions(S3StorageConnectorModule.class)
-        .addResource(new PostgreSQLMetadataResource())
         .addResource(storageResource)
         .addResource(durableStorageResource)
         .addResource(containerIndexer)
+        .addResource(historicalContainer)
         .addServer(new EmbeddedCoordinator())
         .addServer(overlord)
         .addServer(embeddedIndexer)
         .addServer(broker)
-        .addServer(new EmbeddedHistorical())
         .addCommonProperty(
             "druid.extensions.loadList",
-            "[\"druid-s3-extensions\", \"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            "[\"druid-s3-extensions\", \"druid-multi-stage-query\"]"
         );
   }
 
@@ -149,7 +150,7 @@ public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
    * and queryable by the Historical.
    */
   @Test
-  public void test_nativeBatchIngestion_mixedVersionIndexers()
+  public void test_nativeBatchIngestion_historicalsCanLoadSegments_withMixedVersionIndexers()
   {
     final int numSegmentsPerTask = 10;
 
@@ -184,7 +185,7 @@ public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
    * that subtasks land on both the old and new indexer.
    */
   @Test
-  public void test_indexParallelIngestion_mixedVersionIndexers()
+  public void test_nativeBatchIndexParallelIngestion_mixedVersionSubtasksShareShuffle_createsValidSegments()
   {
     final String ds = newDataSource();
     final String taskId = IdUtils.getRandomId();
@@ -203,6 +204,7 @@ public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
                    .tuningConfig(
                        t -> t.withMaxNumConcurrentSubTasks(3)
                              .withSplitHintSpec(new MaxSizeSplitHintSpec(1L, null))
+                             .withPartitionsSpec(new HashedPartitionsSpec(null, null, null))
                    )
                    .withId(taskId);
 
@@ -221,7 +223,7 @@ public class IngestionRollingUpgradeDockerTest extends EmbeddedClusterTestBase
    * files written to S3 by one version can be read by the other.
    */
   @Test
-  public void test_msqIngestion_withDurableShuffleStorage_mixedVersionIndexers()
+  public void test_msqIngestion_withDurableShuffleStorage_mixedVersionIndexersShareShuffle_createsValidSegments()
   {
     final String ds = newDataSource();
     final String sql = StringUtils.format(
