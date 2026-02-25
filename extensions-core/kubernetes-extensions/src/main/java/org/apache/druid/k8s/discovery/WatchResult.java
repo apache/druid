@@ -23,7 +23,7 @@ import io.kubernetes.client.util.Watch;
 
 import java.net.SocketTimeoutException;
 
-public interface WatchResult
+public interface WatchResult extends AutoCloseable
 {
   String ADDED = "ADDED";
   String DELETED = "DELETED";
@@ -32,6 +32,4 @@ public interface WatchResult
   boolean hasNext() throws SocketTimeoutException;
 
   Watch.Response<DiscoveryDruidNodeAndResourceVersion> next();
-
-  void close();
 }

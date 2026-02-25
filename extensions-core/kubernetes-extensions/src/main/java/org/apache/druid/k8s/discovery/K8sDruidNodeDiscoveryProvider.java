@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.kubernetes.client.util.Watch;
+import okhttp3.internal.http2.StreamResetException;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.BaseNodeRoleWatcher;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -252,45 +253,43 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     private void keepWatching(String labelSelector, String resourceVersion)
     {
       String nextResourceVersion = resourceVersion;
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-        try {
-          WatchResult iter =
-              k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole);
 
+      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+
+        try (WatchResult iter = k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole)) {
           if (iter == null) {
             // history not available, we need to start from scratch
             return;
           }
 
-          try {
-            while (iter.hasNext()) {
-              Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
-              if (item != null && item.type != null && item.object != null) {
-                switch (item.type) {
-                  case WatchResult.ADDED:
-                    baseNodeRoleWatcher.childAdded(item.object.getNode());
-                    break;
-                  case WatchResult.DELETED:
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode());
-                    break;
-                  default:
-                }
+          while (iter.hasNext()) {
+            Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
 
-                // This should be updated after the action has been dealt with successfully
-                nextResourceVersion = item.object.getResourceVersion();
-
-              } else {
-                // Try again by starting the watch from the beginning. This can happen if the
-                // watch goes bad.
-                LOGGER.debug("Received NULL item while watching role[%s]. Restarting watch.", this.nodeRole);
-                return;
-              }
+            if (item == null || item.type == null || item.object == null) {
+              LOGGER.debug("Received NULL item while watching role[%s]. Restarting watch.", this.nodeRole);
+              return;
             }
-          }
-          finally {
-            iter.close();
+
+            switch (item.type) {
+              case WatchResult.ADDED:
+                baseNodeRoleWatcher.childAdded(item.object.getNode());
+                break;
+              case WatchResult.DELETED:
+                baseNodeRoleWatcher.childRemoved(item.object.getNode());
+                break;
+              default:
+            }
+
+            // This should be updated after the action has been dealt with successfully
+            nextResourceVersion = item.object.getResourceVersion();
           }
 
+          LOGGER.trace("Watch closed normally for role[%s]", this.nodeRole);
+          return;
+        }
+        catch (StreamResetException ex) {
+          LOGGER.debug("Watch stream terminated normally for role[%s], restarting", this.nodeRole);
+          return;
         }
         catch (SocketTimeoutException ex) {
           // socket read timeout can happen normally due to k8s not having anything new to push leading to socket
