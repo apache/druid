@@ -274,7 +274,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -506,7 +506,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -592,7 +592,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -691,7 +691,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -1110,7 +1110,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             authMapper,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -1192,7 +1192,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
@@ -1297,7 +1297,7 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             authMapper,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+            Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
             null
         ),
         jsonMapper,
