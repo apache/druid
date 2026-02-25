@@ -178,20 +178,6 @@ public class CompactionCandidate
     }
   }
 
-  /**
-   * Used by {@link CompactionStatusTracker#computeCompactionTaskState(CompactionCandidate)}.
-   * The callsite then determines whether to launch compaction task or not.
-   */
-  public enum TaskState
-  {
-    // no other compaction candidate is running, we can start a new task
-    READY,
-    // compaction candidate is already running under a task
-    TASK_IN_PROGRESS,
-    // compaction candidate has recently been completed, and the segment timeline has not yet updated after that
-    RECENTLY_COMPLETED
-  }
-
   private final ProposedCompaction proposedCompaction;
 
   private final CompactionStatus eligibility;

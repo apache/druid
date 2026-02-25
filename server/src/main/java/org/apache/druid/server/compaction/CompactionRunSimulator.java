@@ -28,6 +28,7 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -52,6 +53,7 @@ import java.util.Set;
  * Simulates runs of auto-compaction duty to obtain the expected list of
  * compaction tasks that would be submitted by the actual compaction duty.
  */
+@Deprecated
 public class CompactionRunSimulator
 {
   private final CompactionStatusTracker statusTracker;
@@ -141,15 +143,18 @@ public class CompactionRunSimulator
       @Override
       public void onCompactionTaskStateComputed(
           CompactionCandidate candidateSegments,
-          CompactionCandidate.TaskState taskState,
+          TaskState taskState,
           DataSourceCompactionConfig config
       )
       {
+        if (taskState == null) {
+          return;
+        }
         switch (taskState) {
-          case RECENTLY_COMPLETED:
+          case SUCCESS:
             compactedIntervals.addRow(createRow(candidateSegments, null, null));
             break;
-          case TASK_IN_PROGRESS:
+          case RUNNING:
             runningIntervals.addRow(createRow(
                 candidateSegments,
                 ClientCompactionTaskQueryTuningConfig.from(config),
@@ -159,8 +164,7 @@ public class CompactionRunSimulator
                 )
             ));
             break;
-          case READY:
-            break;
+          case FAILED:
           default:
             throw DruidException.defensive("unknown compaction task state[%s]", taskState);
         }
@@ -197,15 +201,15 @@ public class CompactionRunSimulator
         stats
     );
 
-    final Map<CompactionCandidate.TaskState, Table> compactionStates = new HashMap<>();
+    final Map<TaskState, Table> compactionStates = new HashMap<>();
     if (!compactedIntervals.isEmpty()) {
-      compactionStates.put(CompactionCandidate.TaskState.RECENTLY_COMPLETED, compactedIntervals);
+      compactionStates.put(TaskState.SUCCESS, compactedIntervals);
     }
     if (!runningIntervals.isEmpty()) {
-      compactionStates.put(CompactionCandidate.TaskState.TASK_IN_PROGRESS, runningIntervals);
+      compactionStates.put(TaskState.RUNNING, runningIntervals);
     }
     if (!queuedIntervals.isEmpty()) {
-      compactionStates.put(CompactionCandidate.TaskState.READY, queuedIntervals);
+      compactionStates.put(null, queuedIntervals);
     }
 
     return new CompactionSimulateResult(compactionStates, skippedIntervals);

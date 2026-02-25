@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -80,13 +81,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
-    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
+    Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
+    Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table queuedTable = compactionStates.get(CompactionCandidate.TaskState.READY);
+    final Table queuedTable = compactionStates.get(null);
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         queuedTable.getColumnNames()
@@ -153,13 +154,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
-    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
+    Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
+    Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table pendingTable = compactionStates.get(CompactionCandidate.TaskState.READY);
+    final Table pendingTable = compactionStates.get(null);
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingTable.getColumnNames()

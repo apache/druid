@@ -37,6 +37,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -244,19 +245,10 @@ public class CompactSegments implements CoordinatorCustomDuty
       final String dataSourceName = entry.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionCandidate.TaskState compactionTaskState = statusTracker.computeCompactionTaskState(entry);
+      final TaskState compactionTaskState = statusTracker.computeCompactionTaskState(entry);
       statusTracker.onCompactionTaskStateComputed(entry, compactionTaskState, config);
-
-      switch (compactionTaskState) {
-        case READY:
-        case TASK_IN_PROGRESS:
-        case RECENTLY_COMPLETED:
-          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-          snapshotBuilder.addToComplete(entry);
-          break;
-        default:
-          throw DruidException.defensive("unexpected task state[%s]", compactionTaskState);
-      }
+      // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
+      snapshotBuilder.addToComplete(entry);
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
           entry,

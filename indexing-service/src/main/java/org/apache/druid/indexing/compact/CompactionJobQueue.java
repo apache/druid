@@ -280,18 +280,18 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
-    final CompactionCandidate.TaskState candidateState = getCurrentTaskStateForJob(job);
-    switch (candidateState) {
-      case TASK_IN_PROGRESS:
-        return false;
-      case RECENTLY_COMPLETED:
-        snapshotBuilder.moveFromPendingToCompleted(candidate);
-        return false;
-      case READY:
-        break;
-      default:
-        throw DruidException.defensive("unknown compaction candidate state[%s]", candidateState);
+    // Check if the job is already running or succeeded
+    final TaskState candidateState = getCurrentTaskStateForJob(job);
+    if (candidateState != null) {
+      switch (candidateState) {
+        case RUNNING:
+          return false;
+        case SUCCESS:
+          snapshotBuilder.moveFromPendingToCompleted(candidate);
+          return false;
+        default:
+          throw DruidException.defensive("unknown compaction candidate state[%s]", candidateState);
+      }
     }
 
     // Check if enough compaction task slots are available
@@ -376,7 +376,8 @@ public class CompactionJobQueue
     }
   }
 
-  public CompactionCandidate.TaskState getCurrentTaskStateForJob(CompactionJob job)
+  @Nullable
+  public TaskState getCurrentTaskStateForJob(CompactionJob job)
   {
     statusTracker.onCompactionCandidates(job.getCandidate(), null);
     return statusTracker.computeCompactionTaskState(job.getCandidate());

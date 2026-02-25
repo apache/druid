@@ -106,8 +106,8 @@ public class CompactionStatusTrackerTest
     final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     // Verify that interval is originally eligible for compaction
-    CompactionCandidate.TaskState status = statusTracker.computeCompactionTaskState(candidateSegments);
-    Assert.assertEquals(CompactionCandidate.TaskState.READY, status);
+    TaskState status = statusTracker.computeCompactionTaskState(candidateSegments);
+    Assert.assertNull(status);
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
@@ -115,12 +115,12 @@ public class CompactionStatusTrackerTest
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     status = statusTracker.computeCompactionTaskState(candidateSegments);
-    Assert.assertEquals(CompactionCandidate.TaskState.RECENTLY_COMPLETED, status);
+    Assert.assertEquals(TaskState.SUCCESS, status);
 
     // Verify that interval becomes eligible again after timeline has been updated
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
     status = statusTracker.computeCompactionTaskState(candidateSegments);
-    Assert.assertEquals(CompactionCandidate.TaskState.READY, status);
+    Assert.assertNull(status);
   }
 
   private static CompactionCandidate createCandidate(

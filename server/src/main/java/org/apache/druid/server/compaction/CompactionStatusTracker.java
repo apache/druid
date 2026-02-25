@@ -80,12 +80,12 @@ public class CompactionStatusTracker
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
    */
-  public CompactionCandidate.TaskState computeCompactionTaskState(CompactionCandidate candidate)
+  public TaskState computeCompactionTaskState(CompactionCandidate candidate)
   {
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionCandidate.TaskState.TASK_IN_PROGRESS;
+      return TaskState.RUNNING;
     }
 
     // Skip intervals that have been recently compacted if segment timeline is not updated yet
@@ -93,10 +93,11 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionCandidate.TaskState.RECENTLY_COMPLETED;
+      return TaskState.SUCCESS;
     }
 
-    return CompactionCandidate.TaskState.READY;
+    // if task has never been run or has failed recently, run the compaction candidate.
+    return null;
   }
 
   /**
@@ -121,7 +122,7 @@ public class CompactionStatusTracker
 
   public void onCompactionTaskStateComputed(
       CompactionCandidate candidateSegments,
-      CompactionCandidate.TaskState taskState,
+      TaskState taskState,
       DataSourceCompactionConfig config
   )
   {
