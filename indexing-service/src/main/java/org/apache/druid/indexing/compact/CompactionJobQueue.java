@@ -281,9 +281,7 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is eligible
-
-    // Check if the job is already running, completed or skipped and is still eligible
+    // Check if the job is eligible and is already running, completed or skipped
     final CompactionTaskStatus latestTaskStatus = statusTracker.getLatestTaskStatus(job.getCandidate());
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, latestTaskStatus);
