@@ -413,14 +413,29 @@ function formatDateShort(isoDate: string): string {
   return formatDate(new Date(isoDate), 'MMM d, yyyy');
 }
 
+const UTC_MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
 function formatDateTimeUTC(isoDate: string): string {
   // Handle start of time / very old dates
   if (isoDate.startsWith('-')) {
     return '-INF';
   }
 
-  // Format: "Feb 15, 2026 3:45 PM UTC"
-  return formatDate(new Date(isoDate), "MMM d, yyyy h:mm a 'UTC'");
+  // Format using UTC methods to avoid local timezone shifting.
+  // date-fns format() uses the browser's local timezone, so we extract UTC
+  // components manually to ensure the displayed time is actually UTC.
+  const d = new Date(isoDate);
+  const month = UTC_MONTH_NAMES[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const year = d.getUTCFullYear();
+  const hours = d.getUTCHours();
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${month} ${day}, ${year} ${displayHours}:${minutes} ${ampm} UTC`;
 }
 
 function formatInterval(interval: string): string {
@@ -454,8 +469,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
   const [showRawRules, setShowRawRules] = useState(false);
   const { config } = interval;
 
-  // Count deletion rules from transform spec
-  const deletionRuleCount = countDeletionRules(config.transformSpec);
+  const deletionRuleCount = interval.appliedRules.filter(r => r.type === 'deletion').length;
   const metricsCount = config.metricsSpec?.length || 0;
   const dimensionsCount = config.dimensionsSpec?.dimensions?.length || 0;
   const projectionsCount = config.projections?.length || 0;
@@ -609,25 +623,6 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
   );
 }
 
-function countDeletionRules(transformSpec?: TransformSpec): number {
-  if (!transformSpec || !transformSpec.filter) {
-    return 0;
-  }
-
-  const filter = transformSpec.filter;
-
-  // Check if it's a NotDimFilter with fields
-  if (filter.type === 'not' && filter.field) {
-    // If the field is an 'or' filter, count the number of fields in it
-    if (filter.field.type === 'or' && filter.field.fields) {
-      return filter.field.fields.length;
-    }
-    // Otherwise it's a single deletion rule
-    return 1;
-  }
-
-  return 0;
-}
 
 interface ConfigJsonViewerProps {
   config: CompactionConfig | ReindexingRule[];

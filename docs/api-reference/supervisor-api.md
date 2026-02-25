@@ -1507,7 +1507,7 @@ This endpoint is only available for compaction supervisors that use a cascading 
 
 #### Sample request
 
-The following example shows how to retrieve the reindexing timeline for a compaction supervisor with the name `my_datasource`.
+The following example shows how to retrieve the reindexing timeline for a compaction supervisor for the datasource `my_datasource`. Note that compaction supervisor IDs follow the pattern `autocompact__<datasource>`.
 
 <Tabs>
 
@@ -1515,7 +1515,7 @@ The following example shows how to retrieve the reindexing timeline for a compac
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/autocompact__my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z"
 ```
 
 </TabItem>
@@ -1523,7 +1523,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/my_datasource/rei
 
 
 ```HTTP
-GET /druid/indexer/v1/supervisor/my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z HTTP/1.1
+GET /druid/indexer/v1/supervisor/autocompact__my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
