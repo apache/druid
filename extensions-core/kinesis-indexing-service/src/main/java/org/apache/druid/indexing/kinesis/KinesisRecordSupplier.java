@@ -56,6 +56,7 @@ import software.amazon.awssdk.services.kinesis.model.InvalidArgumentException;
 import software.amazon.awssdk.services.kinesis.model.ListShardsRequest;
 import software.amazon.awssdk.services.kinesis.model.ListShardsResponse;
 import software.amazon.awssdk.services.kinesis.model.ProvisionedThroughputExceededException;
+import software.amazon.awssdk.services.kinesis.model.Record;
 import software.amazon.awssdk.services.kinesis.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.kinesis.model.Shard;
 import software.amazon.awssdk.services.kinesis.model.ShardIteratorType;
@@ -70,6 +71,7 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -248,14 +250,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           currentLagMillis = recordsResult.millisBehindLatest();
 
           // list will come back empty if there are no records
-          for (software.amazon.awssdk.services.kinesis.model.Record kinesisRecord : recordsResult.records()) {
+          for (Record kinesisRecord : recordsResult.records()) {
             final List<KinesisRecordEntity> data = new ArrayList<>();
 
             // Convert SDK v2 Record to KinesisClientRecord for KCL v2 deaggregation
             KinesisClientRecord clientRecord = KinesisClientRecord.builder()
                 .sequenceNumber(kinesisRecord.sequenceNumber())
                 .partitionKey(kinesisRecord.partitionKey())
-                .data(kinesisRecord.data().asByteBuffer())
+                // Take a mutable view over the byte buffer to remain compatible with SchemaRegistryBasedAvroBytesDecoder::parse()
+                .data(ByteBuffer.wrap(kinesisRecord.data().asByteArrayUnsafe()))
                 .approximateArrivalTimestamp(kinesisRecord.approximateArrivalTimestamp())
                 .build();
 
@@ -730,7 +733,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       GetRecordsRequest getRecordsRequest = GetRecordsRequest.builder()
           .shardIterator(shardIterator)
           .build();
-      List<software.amazon.awssdk.services.kinesis.model.Record> records = RetryUtils.retry(
+      List<Record> records = RetryUtils.retry(
           () -> kinesis.getRecords(getRecordsRequest).records(),
           (throwable) -> {
             if (throwable instanceof ProvisionedThroughputExceededException) {
@@ -967,7 +970,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           GET_SEQUENCE_NUMBER_RETRY_COUNT
       );
 
-      List<software.amazon.awssdk.services.kinesis.model.Record> records = recordsResult.records();
+      List<Record> records = recordsResult.records();
 
       if (!records.isEmpty()) {
         return records.get(0).sequenceNumber();

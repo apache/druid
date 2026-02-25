@@ -84,6 +84,7 @@ import java.util.Map;
  *
  * This tests both InputFormat and Parser. Parser is deprecated for Streaming Ingestion,
  * and those tests will be removed in the future.
+ *
  */
 public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTestBase
 {
