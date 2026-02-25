@@ -19,12 +19,19 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
+import org.apache.druid.indexing.kinesis.KinesisRegion;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -32,26 +39,28 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.kinesis.KinesisResource;
 import org.apache.druid.testing.tools.EventSerializer;
 import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public abstract class KafkaTestBase extends EmbeddedClusterTestBase
+public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
 {
-  protected final KafkaResource kafkaServer = new KafkaResource();
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer();
   protected final EmbeddedBroker broker = new EmbeddedBroker();
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+
+  protected abstract StreamIngestResource<?> getStreamIngestResource();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -61,10 +70,9 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useContainerFriendlyHostname()
-        .addExtension(KafkaIndexTaskModule.class)
         .useLatchableEmitter()
         .useDefaultTimeoutForLatchableEmitter(60)
-        .addResource(kafkaServer)
+        .addResource(getStreamIngestResource())
         .addServer(indexer)
         .addServer(coordinator)
         .addServer(overlord)
@@ -73,7 +81,7 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
         .addServer(new EmbeddedRouter());
   }
 
-  protected KafkaSupervisorSpecBuilder createSupervisor()
+  protected KafkaSupervisorSpecBuilder createKafkaSupervisor(KafkaResource kafkaServer)
   {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
@@ -84,6 +92,39 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(2)
         );
+  }
+
+  protected KinesisSupervisorSpec createKinesisSupervisor(KinesisResource kinesis, String dataSource, String topic)
+  {
+    return new KinesisSupervisorSpec(
+        dataSource,
+        null,
+        DataSchema.builder()
+                  .withDataSource(dataSource)
+                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
+                  .withDimensions(DimensionsSpec.EMPTY)
+                  .build(),
+        null,
+        new KinesisSupervisorIOConfig(
+            topic,
+            new JsonInputFormat(null, null, null, null, null),
+            kinesis.getEndpoint(),
+            KinesisRegion.fromString(kinesis.getRegion()),
+            1,
+            1,
+            Period.millis(500),
+            Period.millis(10),
+            Period.millis(10),
+            true,
+            Period.seconds(5),
+            null, null, null, null, null, null, null, null,
+            false
+        ),
+        Map.of(),
+        false,
+        null, null, null, null, null, null, null, null, null, null
+    );
   }
 
   /**
@@ -133,16 +174,11 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
     final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
     List<byte[]> records = streamGenerator.generateEvents(10);
 
-    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
-    for (byte[] record : records) {
-      producerRecords.add(new ProducerRecord<>(topic, record));
-    }
-
     if (useTransactions) {
-      kafkaServer.produceRecordsToTopic(producerRecords);
+      getStreamIngestResource().publishRecordsToTopic(topic, records);
     } else {
-      kafkaServer.produceRecordsWithoutTransaction(producerRecords);
+      getStreamIngestResource().publishRecordsToTopicWithoutTransaction(topic, records);
     }
-    return producerRecords.size();
+    return records.size();
   }
 }

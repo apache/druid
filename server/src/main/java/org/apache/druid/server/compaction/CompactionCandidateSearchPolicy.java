@@ -21,7 +21,6 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 
@@ -68,19 +67,13 @@ public interface CompactionCandidateSearchPolicy
     private final boolean eligible;
     private final String reason;
     @Nullable
-    private final CompactionMode compactionMode;
+    private final CompactionMode mode;
 
-    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode compactionMode)
+    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode mode)
     {
       this.eligible = eligible;
       this.reason = reason;
-      if (eligible && compactionMode == null) {
-        throw DruidException.defensive("Missing compaction mode for eligible compaction candidate");
-      }
-      if (!eligible && compactionMode != null) {
-        throw DruidException.defensive("Compaction mode[%s] for ineligible compaction candidate", compactionMode);
-      }
-      this.compactionMode = compactionMode;
+      this.mode = mode;
     }
 
     public boolean isEligible()
@@ -93,10 +86,14 @@ public interface CompactionCandidateSearchPolicy
       return reason;
     }
 
+    /**
+     * The mode of compaction (full or minor). This is non-null only when the
+     * candidate is considered to be eligible for compaction by the policy.
+     */
     @Nullable
-    public CompactionMode getCompactionMode()
+    public CompactionMode getMode()
     {
-      return compactionMode;
+      return mode;
     }
 
     public static Eligibility fail(String messageFormat, Object... args)
@@ -114,15 +111,13 @@ public interface CompactionCandidateSearchPolicy
         return false;
       }
       Eligibility that = (Eligibility) object;
-      return eligible == that.eligible
-             && Objects.equals(reason, that.reason)
-             && Objects.equals(compactionMode, that.compactionMode);
+      return eligible == that.eligible && Objects.equals(reason, that.reason) && Objects.equals(mode, that.mode);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(eligible, reason, compactionMode);
+      return Objects.hash(eligible, reason, mode);
     }
 
     @Override
@@ -131,7 +126,7 @@ public interface CompactionCandidateSearchPolicy
       return "Eligibility{" +
              "eligible=" + eligible +
              ", reason='" + reason +
-             ", compactionMode=" + compactionMode + '\'' +
+             ", mode='" + mode + '\'' +
              '}';
     }
   }

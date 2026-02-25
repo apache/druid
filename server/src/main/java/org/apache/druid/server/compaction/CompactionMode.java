@@ -21,14 +21,11 @@ package org.apache.druid.server.compaction;
 
 /**
  * Represents the mode of compaction for segment intervals.
- * <p>
- * This enum defines different compaction modes that can be applied to segments.
  */
 public enum CompactionMode
 {
   /**
-   * Indicates that a full compaction should be performed on the segments.
-   * This mode allows creating compaction candidates that will undergo complete compaction.
+   * Indicates that all existing segments of the interval will be picked for compaction.
    */
   FULL_COMPACTION;
 }

@@ -72,14 +72,14 @@ public class MostFragmentedIntervalFirstPolicyTest
         eligibility1.getReason()
     );
     Assertions.assertFalse(eligibility1.isEligible());
-    Assertions.assertNull(eligibility1.getCompactionMode());
+    Assertions.assertNull(eligibility1.getMode());
 
     final CompactionStatus status2 =
         eligibilityBuilder().compacted(DUMMY_COMPACTION_STATS).uncompacted(createStats(10_001, 100L)).build();
     final CompactionCandidateSearchPolicy.Eligibility eligibility2 =
         policy.checkEligibilityForCompaction(new CompactionCandidateAndStatus(PROPOSED_COMPACTION, status2));
     Assertions.assertTrue(eligibility2.isEligible());
-    Assertions.assertEquals(CompactionMode.FULL_COMPACTION, eligibility2.getCompactionMode());
+    Assertions.assertEquals(CompactionMode.FULL_COMPACTION, eligibility2.getMode());
   }
 
   @Test

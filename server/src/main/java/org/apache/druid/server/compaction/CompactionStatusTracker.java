@@ -23,11 +23,11 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,6 +59,7 @@ public class CompactionStatusTracker
     datasourceStatuses.remove(datasource);
   }
 
+  @Nullable
   public CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidates)
   {
     return datasourceStatuses
@@ -80,7 +81,11 @@ public class CompactionStatusTracker
    * Checks if compaction can be started for the given {@link CompactionCandidate}.
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
+   *
+   * @deprecated This method is used only by Coordinator-based CompactSegments
+   * duty and will be removed in the future.
    */
+  @Deprecated
   @Nullable
   public TaskState computeCompactionTaskState(CompactionCandidate candidate)
   {
