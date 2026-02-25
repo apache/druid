@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.Inject;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -62,14 +61,6 @@ public class StorageMonitor extends AbstractMonitor
 
   private final SegmentCacheManager cacheManager;
   private final Map<String, Object> extraDimensions;
-
-  @Inject
-  public StorageMonitor(
-      SegmentCacheManager cacheManager
-  )
-  {
-    this(cacheManager, null);
-  }
 
   public StorageMonitor(
       SegmentCacheManager cacheManager,
