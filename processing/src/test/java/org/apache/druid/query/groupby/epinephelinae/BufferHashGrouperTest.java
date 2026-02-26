@@ -177,27 +177,27 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     );
     grouper.init();
 
-    long initialUsage = grouper.getMergeBufferUsedBytes();
+    long initialUsage = grouper.getMaxMergeBufferUsedBytes();
     Assert.assertEquals(0L, initialUsage);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
 
     grouper.aggregate(new IntKey(1));
-    final long expectedBucketSize = grouper.getMergeBufferUsedBytes();
+    final long expectedBucketSize = grouper.getMaxMergeBufferUsedBytes();
 
     grouper.aggregate(new IntKey(2));
     grouper.aggregate(new IntKey(3));
 
-    Assert.assertEquals(3L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+    Assert.assertEquals(3L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.aggregate(new IntKey(4));
     grouper.aggregate(new IntKey(5));
 
-    Assert.assertEquals(5L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+    Assert.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.reset();
     Assert.assertEquals(0, grouper.getSize());
-    Assert.assertEquals(5L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+    Assert.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.aggregate(new IntKey(6));
     grouper.aggregate(new IntKey(7));
@@ -206,7 +206,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     grouper.aggregate(new IntKey(10));
     grouper.aggregate(new IntKey(11));
 
-    Assert.assertEquals(6L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+    Assert.assertEquals(6L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.close();
   }

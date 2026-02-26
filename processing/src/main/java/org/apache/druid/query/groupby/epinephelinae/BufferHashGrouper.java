@@ -153,7 +153,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
-  public long getMergeBufferUsedBytes()
+  public long getMaxMergeBufferUsedBytes()
   {
     if (!initialized) {
       return 0L;

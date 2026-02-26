@@ -183,8 +183,8 @@ public class GroupByStatsProvider
             maxMergeBufferAcquisitionTimeNs,
             perQueryStats.getMergeBufferAcquisitionTimeNs()
         );
-        totalMergeBufferUsedBytes += perQueryStats.getMergeBufferTotalUsedBytes();
-        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMergeBufferTotalUsedBytes());
+        totalMergeBufferUsedBytes += perQueryStats.getMaxMergeBufferUsedBytes();
+        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMaxMergeBufferUsedBytes());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
@@ -215,7 +215,7 @@ public class GroupByStatsProvider
   public static class PerQueryStats
   {
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
-    private final AtomicLong mergeBufferTotalUsedBytes = new AtomicLong(0);
+    private final AtomicLong maxMergeBufferUsedBytes = new AtomicLong(0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
@@ -224,9 +224,9 @@ public class GroupByStatsProvider
       mergeBufferAcquisitionTimeNs.addAndGet(delay);
     }
 
-    public void mergeBufferTotalUsedBytes(long bytes)
+    public void maxMergeBufferUsedBytes(long bytes)
     {
-      mergeBufferTotalUsedBytes.addAndGet(bytes);
+      maxMergeBufferUsedBytes.addAndGet(bytes);
     }
 
     public void spilledBytes(long bytes)
@@ -244,9 +244,9 @@ public class GroupByStatsProvider
       return mergeBufferAcquisitionTimeNs.get();
     }
 
-    public long getMergeBufferTotalUsedBytes()
+    public long getMaxMergeBufferUsedBytes()
     {
-      return mergeBufferTotalUsedBytes.get();
+      return maxMergeBufferUsedBytes.get();
     }
 
     public long getSpilledBytes()
