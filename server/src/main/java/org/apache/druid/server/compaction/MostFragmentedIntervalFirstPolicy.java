@@ -107,9 +107,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  protected Comparator<CompactionCandidate> getSegmentComparator()
+  protected Comparator<CompactionCandidateAndStatus> getSegmentComparator()
   {
-    return this::compare;
+    return Comparator.comparing(o -> Objects.requireNonNull(o.getStatus()), this::compare);
   }
 
   @Override
@@ -141,15 +141,16 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   @Override
   public String toString()
   {
-    return "MostFragmentedIntervalFirstPolicy{" +
-           "minUncompactedCount=" + minUncompactedCount +
-           ", minUncompactedBytes=" + minUncompactedBytes +
-           ", maxAverageUncompactedBytesPerSegment=" + maxAverageUncompactedBytesPerSegment +
-           ", priorityDataSource='" + getPriorityDatasource() + '\'' +
-           '}';
+    return
+        "MostFragmentedIntervalFirstPolicy{" +
+        "minUncompactedCount=" + minUncompactedCount +
+        ", minUncompactedBytes=" + minUncompactedBytes +
+        ", maxAverageUncompactedBytesPerSegment=" + maxAverageUncompactedBytesPerSegment +
+        ", priorityDataSource='" + getPriorityDatasource() + '\'' +
+        '}';
   }
 
-  private int compare(CompactionCandidate candidateA, CompactionCandidate candidateB)
+  private int compare(CompactionStatus candidateA, CompactionStatus candidateB)
   {
     final double fragmentationDiff
         = computeFragmentationIndex(candidateB) - computeFragmentationIndex(candidateA);
@@ -157,25 +158,23 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  public Eligibility checkEligibilityForCompaction(
-      CompactionCandidate candidate,
-      CompactionTaskStatus latestTaskStatus
-  )
+  public Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidate)
   {
-    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
-    if (uncompacted == null) {
-      return Eligibility.OK;
-    } else if (uncompacted.getNumSegments() < 1) {
+    final CompactionStatistics uncompacted = Objects.requireNonNull(candidate.getStatus().getUncompactedStats());
+
+    if (uncompacted.getNumSegments() < 1) {
       return Eligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
       return Eligibility.fail(
           "Uncompacted segments[%,d] in interval must be at least [%,d]",
-          uncompacted.getNumSegments(), minUncompactedCount
+          uncompacted.getNumSegments(),
+          minUncompactedCount
       );
     } else if (uncompacted.getTotalBytes() < minUncompactedBytes.getBytes()) {
       return Eligibility.fail(
           "Uncompacted bytes[%,d] in interval must be at least [%,d]",
-          uncompacted.getTotalBytes(), minUncompactedBytes.getBytes()
+          uncompacted.getTotalBytes(),
+          minUncompactedBytes.getBytes()
       );
     }
 
@@ -183,11 +182,11 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     if (avgSegmentSize > maxAverageUncompactedBytesPerSegment.getBytes()) {
       return Eligibility.fail(
           "Average size[%,d] of uncompacted segments in interval must be at most [%,d]",
-          avgSegmentSize, maxAverageUncompactedBytesPerSegment.getBytes()
+          avgSegmentSize,
+          maxAverageUncompactedBytesPerSegment.getBytes()
       );
-    } else {
-      return Eligibility.OK;
     }
+    return Eligibility.OK;
   }
 
   /**
@@ -197,9 +196,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
    * A higher fragmentation index causes the candidate to be higher in priority
    * for compaction.
    */
-  private double computeFragmentationIndex(CompactionCandidate candidate)
+  private double computeFragmentationIndex(CompactionStatus eligibility)
   {
-    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
+    final CompactionStatistics uncompacted = eligibility.getUncompactedStats();
     if (uncompacted == null || uncompacted.getNumSegments() < 1 || uncompacted.getTotalBytes() < 1) {
       return 0;
     }

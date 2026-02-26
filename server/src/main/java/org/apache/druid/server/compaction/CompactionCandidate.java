@@ -44,8 +44,6 @@ public class CompactionCandidate
   private final long totalBytes;
   private final int numIntervals;
 
-  private final CompactionStatus currentStatus;
-
   public static CompactionCandidate from(
       List<DataSegment> segments,
       @Nullable Granularity targetSegmentGranularity
@@ -67,8 +65,7 @@ public class CompactionCandidate
         segments,
         umbrellaInterval,
         compactionInterval,
-        segmentIntervals.size(),
-        null
+        segmentIntervals.size()
     );
   }
 
@@ -76,8 +73,7 @@ public class CompactionCandidate
       List<DataSegment> segments,
       Interval umbrellaInterval,
       Interval compactionInterval,
-      int numDistinctSegmentIntervals,
-      @Nullable CompactionStatus currentStatus
+      int numDistinctSegmentIntervals
   )
   {
     this.segments = segments;
@@ -88,7 +84,6 @@ public class CompactionCandidate
 
     this.numIntervals = numDistinctSegmentIntervals;
     this.dataSource = segments.get(0).getDataSource();
-    this.currentStatus = currentStatus;
   }
 
   /**
@@ -137,37 +132,6 @@ public class CompactionCandidate
     return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
-  @Nullable
-  public CompactionStatistics getCompactedStats()
-  {
-    return (currentStatus == null || currentStatus.getCompactedStats() == null)
-           ? null : currentStatus.getCompactedStats();
-  }
-
-  @Nullable
-  public CompactionStatistics getUncompactedStats()
-  {
-    return (currentStatus == null || currentStatus.getUncompactedStats() == null)
-           ? null : currentStatus.getUncompactedStats();
-  }
-
-  /**
-   * Current compaction status of the time chunk corresponding to this candidate.
-   */
-  @Nullable
-  public CompactionStatus getCurrentStatus()
-  {
-    return currentStatus;
-  }
-
-  /**
-   * Creates a copy of this CompactionCandidate object with the given status.
-   */
-  public CompactionCandidate withCurrentStatus(CompactionStatus status)
-  {
-    return new CompactionCandidate(segments, umbrellaInterval, compactionInterval, numIntervals, status);
-  }
-
   @Override
   public String toString()
   {
@@ -175,7 +139,6 @@ public class CompactionCandidate
            "datasource=" + dataSource +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", totalSize=" + totalBytes +
-           ", currentStatus=" + currentStatus +
            '}';
   }
 }

@@ -86,15 +86,13 @@ public class CompactionStatusTracker
    * duty and will be removed in the future.
    */
   @Deprecated
-  public CompactionStatus computeCompactionStatus(
-      CompactionCandidate candidate,
-      CompactionCandidateSearchPolicy searchPolicy
-  )
+  @Nullable
+  public TaskState computeCompactionTaskState(CompactionCandidate candidate)
   {
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionStatus.running("Task for interval is already running");
+      return TaskState.RUNNING;
     }
 
     // Skip intervals that have been recently compacted if segment timeline is not updated yet
@@ -102,27 +100,28 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.skipped(
-          "Segment timeline not updated since last compaction task succeeded"
-      );
+      return TaskState.SUCCESS;
     }
 
-    // Skip intervals that have been filtered out by the policy
-    final CompactionCandidateSearchPolicy.Eligibility eligibility
-        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
-    if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
-    } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
-    }
+    // if task has never been run or has failed recently, run the compaction candidate.
+    return null;
   }
 
   /**
    * Tracks the latest compaction status of the given compaction candidates.
    * Used only by the {@link CompactionRunSimulator}.
    */
-  public void onCompactionStatusComputed(
-      CompactionCandidate candidateSegments,
+  public void onSkippedCandidate(
+      CompactionCandidateAndStatus candidateSegments,
+      @Nullable String policyNote
+  )
+  {
+    // Nothing to do, used by simulator
+  }
+
+  public void onCompactionTaskStateComputed(
+      CompactionCandidateAndStatus candidateSegments,
+      TaskState taskState,
       DataSourceCompactionConfig config
   )
   {
@@ -155,12 +154,12 @@ public class CompactionStatusTracker
 
   public void onTaskSubmitted(
       String taskId,
-      CompactionCandidate candidateSegments
+      CompactionCandidateAndStatus candidateSegments
   )
   {
-    submittedTaskIdToSegments.put(taskId, candidateSegments);
-    getOrComputeDatasourceStatus(candidateSegments.getDataSource())
-        .handleSubmittedTask(candidateSegments);
+    submittedTaskIdToSegments.put(taskId, candidateSegments.getCandidate());
+    getOrComputeDatasourceStatus(candidateSegments.getCandidate().getDataSource())
+        .handleSubmittedTask(candidateSegments.getCandidate());
   }
 
   public void onTaskFinished(String taskId, TaskStatus taskStatus)

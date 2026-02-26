@@ -41,9 +41,10 @@ public class NewestSegmentFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  protected Comparator<CompactionCandidate> getSegmentComparator()
+  protected Comparator<CompactionCandidateAndStatus> getSegmentComparator()
   {
-    return (o1, o2) -> Comparators.intervalsByStartThenEnd()
-                                  .compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval());
+    return (o1, o2) ->
+        Comparators.intervalsByStartThenEnd()
+                   .compare(o2.getCandidate().getUmbrellaInterval(), o1.getCandidate().getUmbrellaInterval());
   }
 }

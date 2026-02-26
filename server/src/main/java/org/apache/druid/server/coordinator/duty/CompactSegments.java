@@ -34,7 +34,9 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,11 +44,11 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -240,28 +242,40 @@ public class CompactSegments implements CoordinatorCustomDuty
     int totalTaskSlotsAssigned = 0;
 
     while (iterator.hasNext() && totalTaskSlotsAssigned < slotManager.getNumAvailableTaskSlots()) {
-      final CompactionCandidate entry = iterator.next();
-      final String dataSourceName = entry.getDataSource();
+      final CompactionCandidateAndStatus candidateAndStatus = iterator.next();
+      final CompactionCandidate candidate = candidateAndStatus.getCandidate();
+      final String dataSourceName = candidate.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionStatus compactionStatus =
-          statusTracker.computeCompactionStatus(entry, policy);
-      final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
+      final TaskState compactionTaskState = statusTracker.computeCompactionTaskState(candidate);
+      statusTracker.onCompactionTaskStateComputed(candidateAndStatus, compactionTaskState, config);
 
-      if (compactionStatus.isComplete()) {
-        snapshotBuilder.addToComplete(candidatesWithStatus);
-        continue;
-      } else if (compactionStatus.isSkipped()) {
-        snapshotBuilder.addToSkipped(candidatesWithStatus);
-        continue;
-      } else {
-        // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-        snapshotBuilder.addToComplete(entry);
+      switch (candidateAndStatus.getStatus().getState()) {
+        case COMPLETE:
+          snapshotBuilder.addToComplete(candidate);
+          continue;
+        case NOT_ELIGIBLE:
+          snapshotBuilder.addToSkipped(candidate);
+          continue;
+        case ELIGIBLE:
+          CompactionCandidateSearchPolicy.Eligibility eligibility = policy.checkEligibilityForCompaction(candidateAndStatus);
+          if (!eligibility.isEligible()) {
+            statusTracker.onSkippedCandidate(candidateAndStatus, eligibility.getReason());
+            snapshotBuilder.addToSkipped(candidate);
+            continue;
+          }
+          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
+          snapshotBuilder.addToComplete(candidate);
+          break;
+        default:
+          throw DruidException.defensive(
+              "unexpected compaction candidate state[%s]",
+              candidateAndStatus.getStatus().getState()
+          );
       }
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
-          entry,
+          candidateAndStatus,
           config,
           defaultEngine,
           null,
@@ -270,13 +284,13 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final String taskId = taskPayload.getId();
       FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
-      statusTracker.onTaskSubmitted(taskId, entry);
+      statusTracker.onTaskSubmitted(taskId, candidateAndStatus);
 
       LOG.debug(
           "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
-          taskId, entry.numSegments(), dataSourceName, entry.getUmbrellaInterval()
+          taskId, candidate.numSegments(), dataSourceName, candidate.getUmbrellaInterval()
       );
-      LOG.debugSegments(entry.getSegments(), "Compacting segments");
+      LOG.debugSegments(candidate.getSegments(), "Compacting segments");
       numSubmittedTasks++;
       totalTaskSlotsAssigned += slotManager.computeSlotsRequiredForTask(taskPayload, config);
     }
@@ -290,14 +304,14 @@ public class CompactSegments implements CoordinatorCustomDuty
    * {@link OverlordClient} to start a compaction task.
    */
   public static ClientCompactionTaskQuery createCompactionTask(
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       DataSourceCompactionConfig config,
       CompactionEngine defaultEngine,
       String indexingStateFingerprint,
       boolean storeCompactionStatePerSegment
   )
   {
-    final List<DataSegment> segmentsToCompact = candidate.getSegments();
+    final List<DataSegment> segmentsToCompact = candidate.getCandidate().getSegments();
 
     // Create granularitySpec to send to compaction task
     Granularity segmentGranularityToUse = null;
@@ -371,15 +385,12 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
-    if (candidate.getCurrentStatus() != null) {
-      autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
-    }
-
+    autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getStatus().getReason());
     autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
     autoCompactionContext.put(INDEXING_STATE_FINGERPRINT_KEY, indexingStateFingerprint);
 
     return compactSegments(
-        candidate,
+        candidate.getCandidate(),
         config.getTaskPriority(),
         ClientCompactionTaskQueryTuningConfig.from(
             config.getTuningConfig(),
@@ -414,12 +425,12 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     // Mark all the segments remaining in the iterator as "awaiting compaction"
     while (iterator.hasNext()) {
-      snapshotBuilder.addToPending(iterator.next());
+      snapshotBuilder.addToPending(iterator.next().getCandidate());
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.onCompactionStatusComputed(entry, datasourceToConfig.get(entry.getDataSource()));
-      snapshotBuilder.addToSkipped(entry);
+      statusTracker.onSkippedCandidate(entry, null);
+      snapshotBuilder.addToSkipped(entry.getCandidate());
     });
 
     // Atomic update of autoCompactionSnapshotPerDataSource with the latest from this coordinator run
@@ -463,14 +474,13 @@ public class CompactSegments implements CoordinatorCustomDuty
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientCompactionIntervalSpec clientCompactionIntervalSpec =
+        new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null);
 
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null),
-            dropExisting
-        ),
+        new ClientCompactionIOConfig(clientCompactionIntervalSpec, dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

@@ -36,7 +36,7 @@ import java.util.Objects;
 public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSearchPolicy
 {
   private final String priorityDatasource;
-  private final Comparator<CompactionCandidate> comparator;
+  private final Comparator<CompactionCandidateAndStatus> comparator;
 
   protected BaseCandidateSearchPolicy(@Nullable String priorityDatasource)
   {
@@ -45,7 +45,7 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
       this.comparator = getSegmentComparator();
     } else {
       this.comparator = Comparators.alwaysFirst(priorityDatasource)
-                                   .onResultOf(CompactionCandidate::getDataSource)
+                                   .onResultOf(CompactionCandidateAndStatus::getDataSource)
                                    .thenComparing(getSegmentComparator());
     }
   }
@@ -62,16 +62,13 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
   }
 
   @Override
-  public final int compareCandidates(CompactionCandidate o1, CompactionCandidate o2)
+  public final int compareCandidates(CompactionCandidateAndStatus o1, CompactionCandidateAndStatus o2)
   {
     return comparator.compare(o1, o2);
   }
 
   @Override
-  public Eligibility checkEligibilityForCompaction(
-      CompactionCandidate candidate,
-      CompactionTaskStatus latestTaskStatus
-  )
+  public Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidate)
   {
     return Eligibility.OK;
   }
@@ -80,7 +77,7 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
    * Compares between two compaction candidates. Used to determine the
    * order in which segments and intervals should be picked for compaction.
    */
-  protected abstract Comparator<CompactionCandidate> getSegmentComparator();
+  protected abstract Comparator<CompactionCandidateAndStatus> getSegmentComparator();
 
   @Override
   public boolean equals(Object o)

@@ -21,24 +21,43 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.TaskState;
 
 import java.util.Map;
 
 public class CompactionSimulateResult
 {
-  private final Map<CompactionStatus.State, Table> compactionStates;
+  private final Map<TaskState, Table> compactionStates;
+  private final Table skippedIntervals;
+  private final Table queuedIntervals;
 
   @JsonCreator
   public CompactionSimulateResult(
-      @JsonProperty("compactionStates") Map<CompactionStatus.State, Table> compactionStates
+      @JsonProperty("compactionStates") Map<TaskState, Table> compactionStates,
+      @JsonProperty("skippedIntervals") Table skippedIntervals,
+      @JsonProperty("queuedIntervals") Table queuedIntervals
   )
   {
     this.compactionStates = compactionStates;
+    this.skippedIntervals = skippedIntervals;
+    this.queuedIntervals = queuedIntervals;
   }
 
   @JsonProperty
-  public Map<CompactionStatus.State, Table> getCompactionStates()
+  public Map<TaskState, Table> getCompactionStates()
   {
     return compactionStates;
+  }
+
+  @JsonProperty
+  public Table getSkippedIntervals()
+  {
+    return skippedIntervals;
+  }
+
+  @JsonProperty
+  public Table getQueuedIntervals()
+  {
+    return queuedIntervals;
   }
 }

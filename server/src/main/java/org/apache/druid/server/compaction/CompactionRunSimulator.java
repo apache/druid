@@ -25,7 +25,10 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -92,47 +95,56 @@ public class CompactionRunSimulator
     // account for the active tasks
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker()
     {
+
       @Override
-      public CompactionStatus computeCompactionStatus(
-          CompactionCandidate candidate,
-          CompactionCandidateSearchPolicy searchPolicy
+      public void onSkippedCandidate(
+          CompactionCandidateAndStatus candidateSegments,
+          @Nullable String policyNote
       )
       {
-        return statusTracker.computeCompactionStatus(candidate, searchPolicy);
+        skippedIntervals.addRow(createRow(
+            candidateSegments.getCandidate(),
+            null,
+            GuavaUtils.firstNonNull(policyNote, candidateSegments.getStatus().getReason())
+        ));
       }
 
       @Override
-      public void onCompactionStatusComputed(
-          CompactionCandidate candidateSegments,
+      public void onCompactionTaskStateComputed(
+          CompactionCandidateAndStatus candidateSegments,
+          TaskState taskState,
           DataSourceCompactionConfig config
       )
       {
-        final CompactionStatus status = candidateSegments.getCurrentStatus();
-        if (status == null) {
-          // do nothing
-        } else if (status.getState() == CompactionStatus.State.COMPLETE) {
-          compactedIntervals.addRow(
-              createRow(candidateSegments, null, null)
-          );
-        } else if (status.getState() == CompactionStatus.State.RUNNING) {
-          runningIntervals.addRow(
-              createRow(candidateSegments, ClientCompactionTaskQueryTuningConfig.from(config), status.getReason())
-          );
-        } else if (status.getState() == CompactionStatus.State.SKIPPED) {
-          skippedIntervals.addRow(
-              createRow(candidateSegments, null, status.getReason())
-          );
+        if (taskState == null) {
+          return;
+        }
+        switch (taskState) {
+          case SUCCESS:
+            compactedIntervals.addRow(createRow(candidateSegments.getCandidate(), null, null));
+            break;
+          case RUNNING:
+            runningIntervals.addRow(createRow(
+                candidateSegments.getCandidate(),
+                ClientCompactionTaskQueryTuningConfig.from(config),
+                candidateSegments.getStatus().getReason()
+            ));
+            break;
+          case FAILED:
+          default:
+            throw DruidException.defensive("unknown compaction task state[%s]", taskState);
         }
       }
 
       @Override
-      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
+      public void onTaskSubmitted(String taskId, CompactionCandidateAndStatus candidateSegments)
       {
         // Add a row for each task in order of submission
-        final CompactionStatus status = candidateSegments.getCurrentStatus();
-        queuedIntervals.addRow(
-            createRow(candidateSegments, null, status == null ? "" : status.getReason())
-        );
+        queuedIntervals.addRow(createRow(
+            candidateSegments.getCandidate(),
+            null,
+            candidateSegments.getStatus().getReason()
+        ));
       }
     };
 
@@ -155,21 +167,19 @@ public class CompactionRunSimulator
         stats
     );
 
-    final Map<CompactionStatus.State, Table> compactionStates = new HashMap<>();
+    final Map<TaskState, Table> compactionStates = new HashMap<>();
     if (!compactedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.COMPLETE, compactedIntervals);
+      compactionStates.put(TaskState.SUCCESS, compactedIntervals);
     }
     if (!runningIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.RUNNING, runningIntervals);
-    }
-    if (!queuedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.PENDING, queuedIntervals);
-    }
-    if (!skippedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.SKIPPED, skippedIntervals);
+      compactionStates.put(TaskState.RUNNING, runningIntervals);
     }
 
-    return new CompactionSimulateResult(compactionStates);
+    return new CompactionSimulateResult(
+        compactionStates,
+        skippedIntervals,
+        queuedIntervals.isEmpty() ? null : queuedIntervals
+    );
   }
 
   private Object[] createRow(

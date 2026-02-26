@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -39,11 +40,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
-import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -161,7 +161,7 @@ public class CompactionJobQueue
       if (supervisor.shouldCreateJobs() && !activeSupervisors.contains(supervisorId)) {
         // Queue fresh jobs
         final List<CompactionJob> jobs = supervisor.createJobs(source, jobParams);
-        jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate()));
+        jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate().getCandidate()));
 
         queue.addAll(jobs);
         activeSupervisors.add(supervisorId);
@@ -242,7 +242,7 @@ public class CompactionJobQueue
       // Add this job back to the queue
       queue.add(job);
     } else {
-      snapshotBuilder.moveFromPendingToCompleted(job.getCandidate());
+      snapshotBuilder.moveFromPendingToCompleted(job.getCandidate().getCandidate());
     }
   }
 
@@ -273,27 +273,32 @@ public class CompactionJobQueue
   )
   {
     // Check if the job is a valid compaction job
-    final CompactionCandidate candidate = job.getCandidate();
+    final CompactionCandidateAndStatus candidate = job.getCandidate();
     final CompactionConfigValidationResult validationResult = validateCompactionJob(job);
     if (!validationResult.isValid()) {
       log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
-      snapshotBuilder.moveFromPendingToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate.getCandidate());
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
-    switch (compactionStatus.getState()) {
-      case RUNNING:
-        return false;
-      case COMPLETE:
-        snapshotBuilder.moveFromPendingToCompleted(candidate);
-        return false;
-      case SKIPPED:
-        snapshotBuilder.moveFromPendingToSkipped(candidate);
-        return false;
-      default:
-        break;
+    CompactionCandidateSearchPolicy.Eligibility eligibility = policy.checkEligibilityForCompaction(candidate);
+    if (!eligibility.isEligible()) {
+      statusTracker.onSkippedCandidate(candidate, eligibility.getReason());
+      return false;
+    }
+    // Check if the job is already running or succeeded
+    final TaskState candidateState = statusTracker.computeCompactionTaskState(job.getCandidate().getCandidate());
+    if (candidateState != null) {
+      switch (candidateState) {
+        case RUNNING:
+          return false;
+        case SUCCESS:
+          snapshotBuilder.moveFromPendingToCompleted(candidate.getCandidate());
+          return false;
+        case FAILED:
+        default:
+          throw DruidException.defensive("unexpected compaction candidate state[%s]", candidateState);
+      }
     }
 
     // Check if enough compaction task slots are available
@@ -307,7 +312,7 @@ public class CompactionJobQueue
     final String taskId = startTaskIfReady(job);
     if (taskId == null) {
       // Mark the job as skipped for now as the intervals might be locked by other tasks
-      snapshotBuilder.moveFromPendingToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate.getCandidate());
       return false;
     } else {
       statusTracker.onTaskSubmitted(taskId, job.getCandidate());
@@ -341,7 +346,7 @@ public class CompactionJobQueue
 
     log.debug(
         "Checking readiness of task[%s] with interval[%s]",
-        task.getId(), job.getCandidate().getCompactionInterval()
+        task.getId(), job.getCandidate().getCandidate().getCompactionInterval()
     );
     try {
       taskLockbox.add(task);

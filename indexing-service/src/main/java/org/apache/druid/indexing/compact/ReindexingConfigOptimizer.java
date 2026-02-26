@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateAndStatus;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 /**
@@ -43,7 +44,7 @@ public interface ReindexingConfigOptimizer
    */
   DataSourceCompactionConfig optimizeConfig(
       DataSourceCompactionConfig config,
-      CompactionCandidate candidate,
+      CompactionCandidateAndStatus candidate,
       CompactionJobParams params
   );
 

@@ -46,19 +46,16 @@ public interface CompactionCandidateSearchPolicy
    * positive value if {@code candidateB} should be picked first or zero if the
    * order does not matter.
    */
-  int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
+  int compareCandidates(CompactionCandidateAndStatus candidateA, CompactionCandidateAndStatus candidateB);
 
   /**
-   * Checks if the given {@link CompactionCandidate} is eligible for compaction
+   * Checks if the given {@link CompactionCandidateAndStatus} is eligible for compaction
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
    *
    * @return {@link Eligibility#OK} only if eligible.
    */
-  Eligibility checkEligibilityForCompaction(
-      CompactionCandidate candidate,
-      CompactionTaskStatus latestTaskStatus
-  );
+  Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidateAndStatus);
 
   /**
    * Describes the eligibility of an interval for compaction.

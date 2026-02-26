@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -80,13 +81,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
+    Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table queuedTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table queuedTable = simulateResult.getQueuedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         queuedTable.getColumnNames()
@@ -106,7 +107,7 @@ public class CompactionRunSimulatorTest
         queuedTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
@@ -153,13 +154,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(TaskState.SUCCESS));
+    Assert.assertNull(compactionStates.get(TaskState.RUNNING));
 
-    final Table pendingTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table pendingTable = simulateResult.getQueuedIntervals();
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingTable.getColumnNames()
@@ -172,13 +173,12 @@ public class CompactionRunSimulatorTest
         pendingTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
     );
-    final String rejectedMessage
-        = "Rejected by search policy: Datasource/Interval is not in the list of 'eligibleCandidates'";
+    final String rejectedMessage = "Datasource/Interval is not in the list of 'eligibleCandidates'";
     Assert.assertEquals(
         List.of(
             List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),

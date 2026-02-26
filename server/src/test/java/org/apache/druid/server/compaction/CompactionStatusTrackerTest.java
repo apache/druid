@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
@@ -29,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class CompactionStatusTrackerTest
@@ -47,35 +49,32 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForSubmittedTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidateAndStatus candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
 
-    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
+    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments.getCandidate());
     Assert.assertEquals(TaskState.RUNNING, status.getState());
   }
 
   @Test
   public void testGetLatestTaskStatusForSuccessfulTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidateAndStatus candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
-    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
+    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments.getCandidate());
     Assert.assertEquals(TaskState.SUCCESS, status.getState());
   }
 
   @Test
   public void testGetLatestTaskStatusForFailedTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidateAndStatus candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
-    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
+    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments.getCandidate());
     Assert.assertEquals(TaskState.FAILED, status.getState());
     Assert.assertEquals(1, status.getNumConsecutiveFailures());
   }
@@ -83,52 +82,60 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForRepeatedlyFailingTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidateAndStatus candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
     statusTracker.onTaskSubmitted("task2", candidateSegments);
-    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
+    CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments.getCandidate());
     Assert.assertEquals(TaskState.RUNNING, status.getState());
     Assert.assertEquals(1, status.getNumConsecutiveFailures());
 
     statusTracker.onTaskFinished("task2", TaskStatus.failure("task2", "second failure"));
 
-    status = statusTracker.getLatestTaskStatus(candidateSegments);
+    status = statusTracker.getLatestTaskStatus(candidateSegments.getCandidate());
     Assert.assertEquals(TaskState.FAILED, status.getState());
     Assert.assertEquals(2, status.getNumConsecutiveFailures());
   }
 
   @Test
-  public void testComputeCompactionStatusForSuccessfulTask()
+  public void testComputeCompactionTaskStateForSuccessfulTask()
   {
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidateAndStatus candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     // Verify that interval is originally eligible for compaction
-    CompactionStatus status
-        = statusTracker.computeCompactionStatus(candidateSegments, policy);
-    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
-    Assert.assertEquals("Not compacted yet", status.getReason());
+    TaskState status = statusTracker.computeCompactionTaskState(candidateSegments.getCandidate());
+    Assert.assertNull(status);
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
-    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
-    Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
-    Assert.assertEquals(
-        "Segment timeline not updated since last compaction task succeeded",
-        status.getReason()
-    );
+    status = statusTracker.computeCompactionTaskState(candidateSegments.getCandidate());
+    Assert.assertEquals(TaskState.SUCCESS, status);
 
     // Verify that interval becomes eligible again after timeline has been updated
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
-    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
-    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
+    status = statusTracker.computeCompactionTaskState(candidateSegments.getCandidate());
+    Assert.assertNull(status);
+  }
+
+  private static CompactionCandidateAndStatus createCandidate(
+      List<DataSegment> segments,
+      @Nullable Granularity targetSegmentGranularity
+  )
+  {
+    CompactionCandidate candidate = CompactionCandidate.from(
+        segments,
+        targetSegmentGranularity
+    );
+    CompactionStatus status = CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "approve without check")
+                                              .compacted(CompactionStatistics.create(1, 1, 1))
+                                              .uncompacted(CompactionStatistics.create(1, 1, 1))
+                                              .build();
+    return new CompactionCandidateAndStatus(candidate, status);
   }
 }

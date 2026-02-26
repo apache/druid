@@ -42,7 +42,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
 {
   private static final Logger log = new Logger(PriorityBasedCompactionSegmentIterator.class);
 
-  private final PriorityQueue<CompactionCandidate> queue;
+  private final PriorityQueue<CompactionCandidateAndStatus> queue;
   private final Map<String, DataSourceCompactibleSegmentIterator> datasourceIterators;
 
   public PriorityBasedCompactionSegmentIterator(
@@ -88,7 +88,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public List<CompactionCandidate> getSkippedSegments()
+  public List<CompactionCandidateAndStatus> getSkippedSegments()
   {
     return datasourceIterators.values().stream().flatMap(
         iterator -> iterator.getSkippedSegments().stream()
@@ -102,18 +102,18 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public CompactionCandidate next()
+  public CompactionCandidateAndStatus next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    final CompactionCandidate entry = queue.poll();
+    final CompactionCandidateAndStatus entry = queue.poll();
     if (entry == null) {
       throw new NoSuchElementException();
     }
 
-    addNextItemForDatasourceToQueue(entry.getDataSource());
+    addNextItemForDatasourceToQueue(entry.getCandidate().getDataSource());
     return entry;
   }
 
@@ -121,7 +121,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   {
     final DataSourceCompactibleSegmentIterator iterator = datasourceIterators.get(dataSourceName);
     if (iterator.hasNext()) {
-      final CompactionCandidate compactionCandidate = iterator.next();
+      final CompactionCandidateAndStatus compactionCandidate = iterator.next();
       if (compactionCandidate != null) {
         queue.add(compactionCandidate);
       }

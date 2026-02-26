@@ -213,6 +213,11 @@ public class CompactionState
     return new Builder(this);
   }
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   public static class Builder
   {
     private PartitionsSpec partitionsSpec;

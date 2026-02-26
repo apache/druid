@@ -50,20 +50,17 @@ public class FixedIntervalOrderPolicy implements CompactionCandidateSearchPolicy
   }
 
   @Override
-  public int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB)
+  public int compareCandidates(CompactionCandidateAndStatus candidateA, CompactionCandidateAndStatus candidateB)
   {
-    return findIndex(candidateA) - findIndex(candidateB);
+    return findIndex(candidateA.getCandidate()) - findIndex(candidateB.getCandidate());
   }
 
   @Override
-  public Eligibility checkEligibilityForCompaction(
-      CompactionCandidate candidate,
-      CompactionTaskStatus latestTaskStatus
-  )
+  public Eligibility checkEligibilityForCompaction(CompactionCandidateAndStatus candidateAndStatus)
   {
-    return findIndex(candidate) < Integer.MAX_VALUE
-        ? Eligibility.OK
-        : Eligibility.fail("Datasource/Interval is not in the list of 'eligibleCandidates'");
+    return findIndex(candidateAndStatus.getCandidate()) < Integer.MAX_VALUE
+           ? Eligibility.OK
+           : Eligibility.fail("Datasource/Interval is not in the list of 'eligibleCandidates'");
   }
 
   private int findIndex(CompactionCandidate candidate)
