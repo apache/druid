@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
@@ -116,6 +117,12 @@ public interface ShardSpec
    */
   @JsonIgnore
   List<String> getDomainDimensions();
+
+  @JsonIgnore
+  default VirtualColumns getDomainVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
+  }
 
   /**
    * if given domain ranges are not possible in this shard, return false; otherwise return true;

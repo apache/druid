@@ -42,11 +42,14 @@ import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ScanQueryKit implements QueryKit<ScanQuery>
 {
@@ -103,6 +106,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final Granularity segmentGranularity =
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final List<KeyColumn> clusterByColumns = new ArrayList<>();
+    final Map<String, VirtualColumn> clusterByVirtualColumnMap = new LinkedHashMap<>();
 
     // Add regular orderBys.
     for (final OrderBy orderBy : queryToRun.getOrderBys()) {
@@ -112,13 +116,23 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
               orderBy.getOrder() == Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
           )
       );
+      VirtualColumn vc = queryToRun.getVirtualColumns().getVirtualColumn(orderBy.getColumnName());
+      if (vc != null) {
+        clusterByVirtualColumnMap.put(orderBy.getColumnName(), vc);
+      }
     }
 
     clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
     signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
 
-    final ClusterBy clusterBy =
-        QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
+    final ClusterBy clusterBy = QueryKitUtils.clusterByWithSegmentGranularity(
+        new ClusterBy(
+            clusterByColumns,
+            clusterByVirtualColumnMap,
+            0
+        ),
+        segmentGranularity
+    );
     final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(clusterBy, false);
 
     final RowSignature signatureToUse = QueryKitUtils.sortableSignature(

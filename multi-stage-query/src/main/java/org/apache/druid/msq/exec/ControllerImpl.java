@@ -174,6 +174,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -1314,8 +1316,14 @@ public class ControllerImpl implements Controller
               segmentNumber == ranges.size() - 1
               ? null
               : makeStringTuple(clusterBy, keyReader, range.getEnd(), shardColumns.size());
-
-          shardSpec = new DimensionRangeShardSpec(shardColumns, start, end, segmentNumber, ranges.size());
+          shardSpec = new DimensionRangeShardSpec(
+              shardColumns,
+              VirtualColumns.create(clusterBy.getVirtualColumnMap().values()),
+              start,
+              end,
+              segmentNumber,
+              ranges.size()
+          );
         }
 
         retVal[partitionNumber] = new SegmentIdWithShardSpec(destination.getDataSource(), interval, version, shardSpec);
@@ -1824,9 +1832,20 @@ public class ControllerImpl implements Controller
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    CompactionTransformSpec transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                            ? null
-                                            : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+
+    // if the clustered by requires virtual columns, preserve them here so that we can rebuild during compaction
+    CompactionTransformSpec transformSpec;
+    if (clusterBy == null || clusterBy.getVirtualColumnMap().isEmpty()) {
+      transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                      ? null
+                      : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+    } else {
+      transformSpec = new CompactionTransformSpec(
+          dataSchema.getTransformSpec().getFilter(),
+          VirtualColumns.create(clusterBy.getVirtualColumnMap().values())
+      );
+    }
+
     List<AggregatorFactory> metricsSpec = buildMSQCompactionMetrics(querySpec, dataSchema);
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
@@ -1959,19 +1978,24 @@ public class ControllerImpl implements Controller
         );
       }
 
-      // DimensionRangeShardSpec only handles columns that appear as-is in the output.
+      // DimensionRangeShardSpec columns may either be explicitly in the table or defined as virtual columns
       if (outputColumns.isEmpty()) {
-        return Pair.of(
-            shardColumns,
-            StringUtils.format(
-                "Using only[%d] CLUSTERED BY columns for 'range' shard specs, since the next column was not mapped to "
-                + "an output column.",
-                shardColumns.size()
-            )
-        );
+        final VirtualColumn vc = clusterBy.getVirtualColumnMap().get(column.columnName());
+        if (vc != null) {
+          shardColumns.add(vc.getOutputName());
+        } else {
+          return Pair.of(
+              shardColumns,
+              StringUtils.format(
+                  "Using only[%d] CLUSTERED BY columns for 'range' shard specs, since the next column was not mapped to "
+                  + "an output column or virtual column.",
+                  shardColumns.size()
+              )
+          );
+        }
+      } else {
+        shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
       }
-
-      shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
     }
 
     return Pair.of(shardColumns, "Using 'range' shard specs with all CLUSTERED BY fields.");
@@ -1997,7 +2021,7 @@ public class ControllerImpl implements Controller
       final int shardFieldCount
   )
   {
-    final String[] array = new String[clusterBy.getColumns().size() - clusterBy.getBucketByCount()];
+    final String[] array = new String[shardFieldCount];
 
     for (int i = 0; i < shardFieldCount; i++) {
       final Object val = keyReader.read(key, clusterBy.getBucketByCount() + i);
