@@ -574,7 +574,7 @@ public class CompactionStatusTest
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(oldFingerprint).build()
     );
-    CompactionStatus status = CompactionStatus.compute(segments, newConfig, fingerprintMapper);
+    CompactionStatus status = CompactionStatus.compute(segments, newConfig, fingerprintMapperr);
     Assert.assertFalse(status.isComplete());
     Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }

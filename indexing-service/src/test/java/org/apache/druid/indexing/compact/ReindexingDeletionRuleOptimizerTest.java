@@ -363,8 +363,7 @@ public class ReindexingDeletionRuleOptimizerTest
     List<DataSegment> segments = Arrays.stream(fingerprints)
                                        .map(fp -> DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(fp).build())
                                        .collect(Collectors.toList());
-    return CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
+    return CompactionCandidate.from(segments, null, CompactionStatus.pending("segments need compaction"));
   }
 
   private CompactionCandidate createCandidateWithNullFingerprints(int count)
@@ -373,8 +372,7 @@ public class ReindexingDeletionRuleOptimizerTest
     for (int i = 0; i < count; i++) {
       segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
     }
-    return CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
+    return CompactionCandidate.from(segments, null, CompactionStatus.pending("segments need compaction"));
   }
 
   private CompactionState createStateWithFilters(DimFilter... filters)
@@ -500,8 +498,11 @@ public class ReindexingDeletionRuleOptimizerTest
     // Candidate with NEVER_COMPACTED status
     List<DataSegment> segments = new ArrayList<>();
     segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
-    CompactionCandidate candidate = CompactionCandidate.from(segments, null)
-        .withCurrentStatus(CompactionStatus.pending(CompactionStatus.NEVER_COMPACTED_REASON));
+    CompactionCandidate candidate = CompactionCandidate.from(
+        segments,
+        null,
+        CompactionStatus.pending(CompactionStatus.NEVER_COMPACTED_REASON)
+    );
 
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
     CompactionJobParams params = createParams();
