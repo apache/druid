@@ -237,7 +237,11 @@ public class MostFragmentedIntervalFirstPolicyTest
         numSegments,
         1L
     );
-    return CompactionCandidate.from(List.of(SEGMENT), null, CompactionStatus.pending(dummyCompactedStats, uncompactedStats, ""));
+    return CompactionCandidate.from(
+        List.of(SEGMENT),
+        null,
+        CompactionStatus.pending(dummyCompactedStats, uncompactedStats, "")
+    );
   }
 
   private void verifyCandidateIsEligible(CompactionCandidate candidate, MostFragmentedIntervalFirstPolicy policy)

@@ -377,9 +377,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
+        final Interval compactionInterval = CompactionCandidate.getCompactionInterval(
+            segments,
+            config.getSegmentGranularity()
+        );
+
         final CompactionStatus reason;
-        if (CompactionCandidate.getCompactionInterval(segments, config.getSegmentGranularity())
-                               .overlaps(latestSkipInterval)) {
+        if (compactionInterval.overlaps(latestSkipInterval)) {
           reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");
