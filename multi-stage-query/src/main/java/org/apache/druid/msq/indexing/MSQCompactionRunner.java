@@ -452,6 +452,7 @@ public class MSQCompactionRunner implements CompactionRunner
       ColumnType colType = schema.getColumnType();
       VirtualColumn vc = inputColToVirtualCol.get(dimension);
       if (vc != null) {
+        dimension = vc.getOutputName();
         if (vc instanceof ExpressionVirtualColumn) {
           colType = ((ExpressionVirtualColumn) vc).getOutputType();
         } else {
