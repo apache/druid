@@ -322,13 +322,35 @@ export class DruidError extends Error {
   }
 }
 
+// Broker service to use for all console queries (for tier isolation)
+let consoleBrokerService: string | undefined;
+
+export function setConsoleBrokerService(brokerService: string | undefined): void {
+  consoleBrokerService = brokerService;
+}
+
+export function getConsoleBrokerService(): string | undefined {
+  return consoleBrokerService;
+}
+
 export async function queryDruidRune(
   runeQuery: Record<string, any>,
   signal?: AbortSignal,
 ): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { signal });
+    // Inject brokerService into context if configured
+    const query = consoleBrokerService
+      ? {
+          ...runeQuery,
+          context: {
+            ...runeQuery.context,
+            brokerService: consoleBrokerService,
+          },
+        }
+      : runeQuery;
+
+    runeResultResp = await Api.instance.post('/druid/v2', query, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -341,7 +363,18 @@ export async function queryDruidSql<T = any>(
 ): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { signal });
+    // Inject brokerService into context if configured
+    const payload = consoleBrokerService
+      ? {
+          ...sqlQueryPayload,
+          context: {
+            ...sqlQueryPayload.context,
+            brokerService: consoleBrokerService,
+          },
+        }
+      : sqlQueryPayload;
+
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', payload, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

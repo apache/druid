@@ -30,7 +30,7 @@ import type { QueryContext } from './druid-models';
 import type { Links } from './links';
 import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
-import { initMouseTooltip, setLocalStorageNamespace } from './utils';
+import { initMouseTooltip, setConsoleBrokerService, setLocalStorageNamespace } from './utils';
 
 import './entry.scss';
 
@@ -70,6 +70,10 @@ interface ConsoleConfig {
 
   // Allow for namespacing the local storage in case multiple clusters share a URL due to proxying
   localStorageNamespace?: string;
+
+  // Broker service name to use for all console SQL queries (for tier isolation)
+  // This injects "brokerService" into the query context for routing via the manual strategy
+  consoleBrokerService?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -99,6 +103,10 @@ if (consoleConfig.linkOverrides) {
 
 if (consoleConfig.localStorageNamespace) {
   setLocalStorageNamespace(consoleConfig.localStorageNamespace);
+}
+
+if (consoleConfig.consoleBrokerService) {
+  setConsoleBrokerService(consoleConfig.consoleBrokerService);
 }
 
 QueryRunner.defaultQueryExecutor = ({ payload, isSql, signal }) => {
