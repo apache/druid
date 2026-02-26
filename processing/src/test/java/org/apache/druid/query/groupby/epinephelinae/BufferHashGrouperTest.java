@@ -157,7 +157,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxMergeBufferUsedBytesWorksNormally()
+  public void testMaxMergeBufferUsedBytes()
   {
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
@@ -191,6 +191,10 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     Assert.assertEquals(3L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.aggregate(new IntKey(4));
+    grouper.aggregate(new IntKey(5));
+
+    // Duplicate adds will not affect merge buffer used.
+    grouper.aggregate(new IntKey(1));
     grouper.aggregate(new IntKey(5));
 
     Assert.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
