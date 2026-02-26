@@ -521,8 +521,8 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     public void reset()
     {
       size = 0;
-      growthCount = 0;
       updateMaxMergeBufferUsedBytes();
+      growthCount = 0;
       // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
         subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);

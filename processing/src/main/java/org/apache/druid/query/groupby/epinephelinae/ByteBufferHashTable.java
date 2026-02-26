@@ -395,6 +395,10 @@ public class ByteBufferHashTable
     return growthCount;
   }
 
+  /**
+   * To maintain an accurate tracking of the maximum bytes used per query, this function is to be called immediately
+   * whenever either of {@link #size} or {@link #bucketSizeWithHash} is changed.
+   */
   protected void updateMaxMergeBufferUsedBytes()
   {
     maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, (long) size * bucketSizeWithHash);
