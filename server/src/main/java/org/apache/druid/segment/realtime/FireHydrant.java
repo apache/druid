@@ -36,12 +36,14 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Represents one chunk of data within a {@link org.apache.druid.segment.realtime.sink.Sink}, wrapping either
- * a mutable {@link IncrementalIndex} (when ingesting data), or an immutable {@link Segment} (persisted to disk).
+ * Represents an intermediate chunk of data within a {@link org.apache.druid.segment.realtime.sink.Sink}. A sink
+ * may contain FireHydrants when the data for a single final segment is too large to fit in memory at once.
+ * A FireHydrant will wrap a mutable {@link IncrementalIndex} that receives incoming rows.
  * <p>
- * This class is needed for memory management. For example, if we have 5 million rows going into one segment, but
- * only 1 million rows fit in memory, the data needs to be persisted in intermediate chunks. Each chunk is represented
- * by a FireHydrant.
+ * When the Sink needs to free memory, the hydrant is persisted to disk and the in-memory index is replaced
+ * with an immutable {@link Segment} backed by a {@link QueryableIndex}. During {@link org.apache.druid.segment.realtime.appenderator.Appenderator#push},
+ * segments from all hydrants of the sink will be retrieved to form a single merged segment that will be
+ * served by Historical services.
  */
 public class FireHydrant
 {
