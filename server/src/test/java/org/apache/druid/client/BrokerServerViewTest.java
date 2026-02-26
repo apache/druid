@@ -703,6 +703,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        null,
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig()
         {

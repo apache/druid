@@ -42,6 +42,8 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import javax.annotation.Nullable;
+import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +63,7 @@ import java.util.stream.Collectors;
 @ManageLifecycle
 public class BrokerServerView implements TimelineServerView
 {
+  public static final String REALTIME_SELECTOR = "realtime";
   private static final Logger log = new Logger(BrokerServerView.class);
 
   private final Object lock = new Object();
@@ -69,7 +72,8 @@ public class BrokerServerView implements TimelineServerView
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
   private final QueryableDruidServer.Maker druidClientFactory;
-  private final TierSelectorStrategy tierSelectorStrategy;
+  private final TierSelectorStrategy historicalTierSelectorStrategy;
+  private final TierSelectorStrategy realtimeTierSelectorStrategy;
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
@@ -81,7 +85,8 @@ public class BrokerServerView implements TimelineServerView
   public BrokerServerView(
       final QueryableDruidServer.Maker directDruidClientFactory,
       final FilteredServerInventoryView baseView,
-      final TierSelectorStrategy tierSelectorStrategy,
+      final TierSelectorStrategy historicalTierSelectorStrategy,
+      @Named(REALTIME_SELECTOR) @Nullable final TierSelectorStrategy realtimeTierSelectorStrategy,
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig
@@ -89,7 +94,11 @@ public class BrokerServerView implements TimelineServerView
   {
     this.druidClientFactory = directDruidClientFactory;
     this.baseView = baseView;
-    this.tierSelectorStrategy = tierSelectorStrategy;
+    this.historicalTierSelectorStrategy = historicalTierSelectorStrategy;
+    // If realtime selector strategy is null, then default to historical. This was the behavior prior to introduction of realtime strategy configuration.
+    this.realtimeTierSelectorStrategy = realtimeTierSelectorStrategy == null ? historicalTierSelectorStrategy : realtimeTierSelectorStrategy;
+    log.info("Using historicalTierSelectorStrategy[%s] and realtimeTierSelectorStrategy[%s]", historicalTierSelectorStrategy, realtimeTierSelectorStrategy);
+
     this.emitter = emitter;
     this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
 
@@ -159,7 +168,8 @@ public class BrokerServerView implements TimelineServerView
 
     baseView.registerServerCallback(
         exec,
-        new ServerCallback() {
+        new ServerCallback()
+        {
           @Override
           public CallbackAction serverAdded(DruidServer server)
           {
@@ -270,7 +280,7 @@ public class BrokerServerView implements TimelineServerView
         log.debug("Adding segment[%s] for server[%s]", segment, server);
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
-          selector = new ServerSelector(segment, tierSelectorStrategy, brokerViewOfCoordinatorConfig);
+          selector = new ServerSelector(segment, historicalTierSelectorStrategy, realtimeTierSelectorStrategy, brokerViewOfCoordinatorConfig);
 
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           if (timeline == null) {

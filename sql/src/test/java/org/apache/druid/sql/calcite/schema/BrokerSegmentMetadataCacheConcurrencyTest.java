@@ -397,6 +397,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        null,
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
         filter

@@ -35,4 +35,12 @@ public class CustomTierSelectorStrategyConfig
   {
     return priorities;
   }
+
+  @Override
+  public String toString()
+  {
+    return "CustomTierSelectorStrategyConfig{" +
+           "priorities=" + priorities +
+           '}';
+  }
 }
