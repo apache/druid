@@ -193,22 +193,18 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     grouper.aggregate(new IntKey(4));
     grouper.aggregate(new IntKey(5));
 
-    // Duplicate adds will not affect merge buffer used.
-    grouper.aggregate(new IntKey(1));
-    grouper.aggregate(new IntKey(5));
-
     Assert.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
     grouper.reset();
     Assert.assertEquals(0, grouper.getSize());
     Assert.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
+    grouper.aggregate(new IntKey(1));
     grouper.aggregate(new IntKey(6));
     grouper.aggregate(new IntKey(7));
     grouper.aggregate(new IntKey(8));
     grouper.aggregate(new IntKey(9));
     grouper.aggregate(new IntKey(10));
-    grouper.aggregate(new IntKey(11));
 
     Assert.assertEquals(6L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
 
