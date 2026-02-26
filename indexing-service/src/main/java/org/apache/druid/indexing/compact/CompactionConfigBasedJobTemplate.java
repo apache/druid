@@ -26,6 +26,7 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -91,12 +92,30 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
+      final CompactionCandidateSearchPolicy.Eligibility eligibility =
+          params.getClusterCompactionConfig().getCompactionPolicy().checkEligibilityForCompaction(candidate, null);
+      if (!eligibility.isEligible()) {
+        continue;
+      }
+      final CompactionCandidate finalCandidate;
+      switch (eligibility.getMode()) {
+        case FULL_COMPACTION:
+          finalCandidate = candidate;
+          break;
+        case INCREMENTAL_COMPACTION:
+          finalCandidate = CompactionCandidate.from(candidate.getUncompactedSegments(), null)
+                                              .withCurrentStatus(candidate.getCurrentStatus());
+          break;
+        default:
+          throw DruidException.defensive("unexpected compaction mode[%s]", eligibility.getMode());
+      }
 
       // Allow template-specific customization of the config per candidate
       DataSourceCompactionConfig finalConfig = configOptimizer.optimizeConfig(config, candidate, params);
 
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
-          candidate,
+          finalCandidate,
+          eligibility.getMode(),
           finalConfig,
           params.getClusterCompactionConfig().getEngine(),
           indexingStateFingerprint,
@@ -105,7 +124,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       jobs.add(
           new CompactionJob(
               taskPayload,
-              candidate,
+              finalCandidate,
               CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
               indexingStateFingerprint,
               compactionState

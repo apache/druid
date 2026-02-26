@@ -56,6 +56,18 @@ public final class LinearShardSpec implements ShardSpec
   }
 
   @Override
+  public ShardSpec withPartitionNum(int partitionNum1)
+  {
+    return new LinearShardSpec(partitionNum1);
+  }
+
+  @Override
+  public ShardSpec withCorePartitions(int partitions1)
+  {
+    return this;
+  }
+
+  @Override
   public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);

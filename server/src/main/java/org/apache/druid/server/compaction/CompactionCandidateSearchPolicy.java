@@ -104,6 +104,11 @@ public interface CompactionCandidateSearchPolicy
       return new Eligibility(false, StringUtils.format(messageFormat, args), null);
     }
 
+    public static Eligibility incremental(String messageFormat, Object... args)
+    {
+      return new Eligibility(true, StringUtils.format(messageFormat, args), CompactionMode.INCREMENTAL_COMPACTION);
+    }
+
     @Override
     public boolean equals(Object object)
     {

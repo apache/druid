@@ -91,8 +91,26 @@ public class CompactionStatusTracker
       CompactionCandidateSearchPolicy searchPolicy
   )
   {
-    // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
+    CompactionStatus status = deriveCompactionStatus(lastTaskStatus);
+    if (status != null) {
+      return status;
+    }
+
+    // Skip intervals that have been filtered out by the policy
+    final CompactionCandidateSearchPolicy.Eligibility eligibility
+        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
+    if (eligibility.isEligible()) {
+      return CompactionStatus.pending("Not compacted yet");
+    } else {
+      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
+    }
+  }
+
+  @Nullable
+  public CompactionStatus deriveCompactionStatus(CompactionTaskStatus lastTaskStatus)
+  {
+    // Skip intervals that already have a running task
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
       return CompactionStatus.running("Task for interval is already running");
     }
@@ -106,15 +124,7 @@ public class CompactionStatusTracker
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
-
-    // Skip intervals that have been filtered out by the policy
-    final CompactionCandidateSearchPolicy.Eligibility eligibility
-        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
-    if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
-    } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
-    }
+    return null;
   }
 
   /**

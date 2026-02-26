@@ -20,12 +20,16 @@
 package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * InputSpec for {@link ClientCompactionIOConfig}.
@@ -38,11 +42,14 @@ public class ClientCompactionIntervalSpec
 
   private final Interval interval;
   @Nullable
+  private final List<SegmentDescriptor> uncompactedSegments;
+  @Nullable
   private final String sha256OfSortedSegmentIds;
 
   @JsonCreator
   public ClientCompactionIntervalSpec(
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("uncompactedSegments") @Nullable List<SegmentDescriptor> uncompactedSegments,
       @JsonProperty("sha256OfSortedSegmentIds") @Nullable String sha256OfSortedSegmentIds
   )
   {
@@ -50,6 +57,22 @@ public class ClientCompactionIntervalSpec
       throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
     }
     this.interval = interval;
+    if (uncompactedSegments == null) {
+      // perform a full compaction
+    } else if (uncompactedSegments.isEmpty()) {
+      throw new IAE("Can not supply empty segments as input, please use either null or non-empty segments.");
+    } else if (interval != null) {
+      List<SegmentDescriptor> segmentsNotInInterval =
+          uncompactedSegments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+      if (!segmentsNotInInterval.isEmpty()) {
+        throw new IAE(
+            "Can not supply segments outside interval[%s], got segments[%s].",
+            interval,
+            segmentsNotInInterval
+        );
+      }
+    }
+    this.uncompactedSegments = uncompactedSegments;
     this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
   }
 
@@ -63,6 +86,14 @@ public class ClientCompactionIntervalSpec
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<SegmentDescriptor> getUncompactedSegments()
+  {
+    return uncompactedSegments;
   }
 
   @Nullable
@@ -83,13 +114,14 @@ public class ClientCompactionIntervalSpec
     }
     ClientCompactionIntervalSpec that = (ClientCompactionIntervalSpec) o;
     return Objects.equals(interval, that.interval) &&
+           Objects.equals(uncompactedSegments, that.uncompactedSegments) &&
            Objects.equals(sha256OfSortedSegmentIds, that.sha256OfSortedSegmentIds);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, sha256OfSortedSegmentIds);
+    return Objects.hash(interval, uncompactedSegments, sha256OfSortedSegmentIds);
   }
 
   @Override
@@ -97,6 +129,7 @@ public class ClientCompactionIntervalSpec
   {
     return "ClientCompactionIntervalSpec{" +
            "interval=" + interval +
+           ", uncompactedSegments=" + uncompactedSegments +
            ", sha256OfSortedSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
            '}';
   }

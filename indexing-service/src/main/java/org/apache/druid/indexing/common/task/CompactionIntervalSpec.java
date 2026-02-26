@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -42,11 +44,29 @@ public class CompactionIntervalSpec implements CompactionInputSpec
 
   private final Interval interval;
   @Nullable
+  private final List<SegmentDescriptor> uncompactedSegments;
+  /**
+   * Optional hash of all segment IDs for validation. When set, this is used in {@link #validateSegments} to verify
+   * that the segments haven't changed since this spec was created.
+   * <p>
+   * Note: This hash is computed and validated against ALL segments overlapping the interval, not just the
+   * uncompactedSegments. This is because compaction operates on all segments within the interval - compacted
+   * segments may need to be rewritten alongside uncompacted ones to maintain proper partitioning and sort order.
+   * Therefore, the validation check must apply to all segments to ensure correctness.
+   */
+  @Nullable
   private final String sha256OfSortedSegmentIds;
+
+  public CompactionIntervalSpec(Interval interval, String sha256OfSortedSegmentIds)
+  {
+    this(interval, null, sha256OfSortedSegmentIds);
+  }
 
   @JsonCreator
   public CompactionIntervalSpec(
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("uncompactedSegments") @Nullable
+      List<SegmentDescriptor> uncompactedSegments,
       @JsonProperty("sha256OfSortedSegmentIds") @Nullable String sha256OfSortedSegmentIds
   )
   {
@@ -54,6 +74,22 @@ public class CompactionIntervalSpec implements CompactionInputSpec
       throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
     }
     this.interval = interval;
+    if (uncompactedSegments == null) {
+      // all segments within interval are included, pass check
+    } else if (uncompactedSegments.isEmpty()) {
+      throw new IAE("Can not supply empty segments as input, please use either null or non-empty segments.");
+    } else if (interval != null) {
+      List<SegmentDescriptor> segmentsNotInInterval =
+          uncompactedSegments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+      if (!segmentsNotInInterval.isEmpty()) {
+        throw new IAE(
+            "Can not supply segments outside interval[%s], got segments[%s].",
+            interval,
+            segmentsNotInInterval
+        );
+      }
+    }
+    this.uncompactedSegments = uncompactedSegments;
     this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
   }
 
@@ -61,6 +97,14 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<SegmentDescriptor> getUncompactedSegments()
+  {
+    return uncompactedSegments;
   }
 
   @Nullable
@@ -105,13 +149,14 @@ public class CompactionIntervalSpec implements CompactionInputSpec
     }
     CompactionIntervalSpec that = (CompactionIntervalSpec) o;
     return Objects.equals(interval, that.interval) &&
+           Objects.equals(uncompactedSegments, that.uncompactedSegments) &&
            Objects.equals(sha256OfSortedSegmentIds, that.sha256OfSortedSegmentIds);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, sha256OfSortedSegmentIds);
+    return Objects.hash(interval, uncompactedSegments, sha256OfSortedSegmentIds);
   }
 
   @Override
@@ -119,7 +164,8 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   {
     return "CompactionIntervalSpec{" +
            "interval=" + interval +
-           ", sha256OfSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
+           ", uncompactedSegments=" + uncompactedSegments +
+           ", sha256OfSortedSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
            '}';
   }
 }

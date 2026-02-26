@@ -151,6 +151,13 @@ public class CompactionCandidate
            ? null : currentStatus.getUncompactedStats();
   }
 
+  @Nullable
+  public List<DataSegment> getUncompactedSegments()
+  {
+    return (currentStatus == null || currentStatus.getUncompactedSegments() == null)
+           ? null : currentStatus.getUncompactedSegments();
+  }
+
   /**
    * Current compaction status of the time chunk corresponding to this candidate.
    */
