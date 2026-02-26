@@ -264,7 +264,7 @@ public class ReindexingTimelineView
       return period;
     }
 
-    @JsonProperty
+    @JsonProperty("isApplied")
     public boolean isApplied()
     {
       return isApplied;
