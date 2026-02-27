@@ -4334,8 +4334,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (unassignedServerPriorities.size() < replicas) {
       // Sanity check: if this triggers, this suggests a bug as the invariant should already be validated in the ctr.
       throw DruidException.defensive(
-          "Found unassignedServerPriorities[%s] of size[%d] < total replicas[%d] for taskGroupId[%d]",
-          unassignedServerPriorities, unassignedServerPriorities.size(), replicas, group.groupId
+          "Found unassignedServerPriorities[%s] of size[%d] < total replicas[%d] for taskGroupId[%d]. Task server priorities[%s] have already been assigned to tasks[%s].",
+          unassignedServerPriorities, unassignedServerPriorities.size(), replicas, group.groupId, assignedPriorities, group.taskIds()
       );
     }
     return unassignedServerPriorities;

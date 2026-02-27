@@ -126,7 +126,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       final int replicaCount = this.serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum();
       if (replicas != null && replicas != replicaCount) {
         throw InvalidInput.exception(
-            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicas[%s].",
+            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicas[%s]."
+            + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
             replicas, replicaCount, serverPriorityToReplicas
         );
       }

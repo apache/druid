@@ -411,7 +411,8 @@ public class SeekableStreamSupervisorIOConfigTest
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
-                "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicas[%s].",
+                "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicas[%s]."
+                + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
                 serverPriorityToReplicas
             )
         )
