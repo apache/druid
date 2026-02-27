@@ -85,7 +85,7 @@ To use these APIs, ensure you have read and write permissions for the CONFIG res
 
 #### Get dynamic configuration
 
-> Prior to Druid v37, this API will return an empty value when the dynamic config has not been updated via the POST method below. This has since changed to always reflect the dynamic config that will be used by the task runner to create K8s jobs.
+> Prior to Druid 37.0.0, this API will return an empty value when the dynamic config has not been updated via the POST method below. This has since changed to always reflect the dynamic config that will be used by the task runner to create K8s jobs.
 
 Retrieve the current execution config used by the Kubernetes task runner.
 Returns a JSON object with the dynamic configuration properties.
