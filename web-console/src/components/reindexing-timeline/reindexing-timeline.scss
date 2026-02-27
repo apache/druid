@@ -186,6 +186,18 @@
     }
 
     .detail-content {
+      .config-summary-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: $gray1;
+        margin-bottom: 8px;
+        border-bottom: 1px dotted $gray1;
+        cursor: help;
+        display: inline-block;
+      }
+
       .config-badges {
         display: flex;
         flex-wrap: wrap;

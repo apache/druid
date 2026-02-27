@@ -276,6 +276,77 @@ describe('ReindexingTimeline', () => {
       // Detail panel should appear
       expect(container.querySelector('.interval-detail-panel')).toBeTruthy();
     });
+
+    describe('interval detail panel UX', () => {
+      function renderWithDetailPanel() {
+        const dataWithDeletion = {
+          ...mockTimelineData,
+          intervals: [
+            {
+              ...mockTimelineData.intervals[0],
+              config: {
+                ...mockTimelineData.intervals[0].config,
+                tuningConfig: {
+                  partitionsSpec: { type: 'dynamic' },
+                },
+              },
+              appliedRules: [
+                ...mockTimelineData.intervals[0].appliedRules,
+                { type: 'deletion', id: 'del-1' },
+              ],
+              ruleCount: 4,
+            },
+            mockTimelineData.intervals[1],
+          ],
+        };
+
+        mockUseQueryManager.mockReturnValue([
+          new QueryState({ data: dataWithDeletion }),
+          {} as any,
+        ]);
+
+        const result = render(<ReindexingTimeline supervisorId="test-supervisor" />);
+
+        // Click first interval to open detail panel
+        const firstSegment = result.container.querySelector('.timeline-segment:not(.skipped)')!;
+        fireEvent.click(firstSegment);
+
+        return result;
+      }
+
+      it('shows "Effective Configuration" label in detail panel', () => {
+        const { container } = renderWithDetailPanel();
+        const label = container.querySelector('.config-summary-label');
+        expect(label).toBeTruthy();
+        expect(label!.textContent).toBe('Effective Configuration');
+      });
+
+      it('does not show standalone "N rules applied" tag in header', () => {
+        const { container } = renderWithDetailPanel();
+        const header = container.querySelector('.detail-header')!;
+        // Header should contain the interval text and close button, but no "rules applied" tag
+        expect(header.textContent).not.toContain('rules applied');
+        expect(header.textContent).not.toContain('rule applied');
+      });
+
+      it('shows rule count in View Raw Rules button', () => {
+        const { getByText } = renderWithDetailPanel();
+        expect(getByText('View 4 Raw Rules')).toBeTruthy();
+      });
+
+      it('shows "deletion clauses" not "deletion rules" in badge', () => {
+        const { container } = renderWithDetailPanel();
+        const badges = container.querySelector('.config-badges')!;
+        expect(badges.textContent).toContain('deletion clause');
+        expect(badges.textContent).not.toContain('deletion rule');
+      });
+
+      it('shows partitioning badge when tuningConfig has partitionsSpec', () => {
+        const { container } = renderWithDetailPanel();
+        const badges = container.querySelector('.config-badges')!;
+        expect(badges.textContent).toContain('Partitioning: dynamic');
+      });
+    });
   });
 
   // ====================================================================

@@ -448,6 +448,15 @@ function handleDownloadJson(data: CompactionConfig | ReindexingRule[], filename:
   downloadFile(jsonValue, 'json', filename);
 }
 
+function getPartitionType(tuningConfig: Record<string, unknown> | undefined): string | undefined {
+  if (!tuningConfig) return undefined;
+  const partitionsSpec = tuningConfig.partitionsSpec;
+  if (partitionsSpec && typeof partitionsSpec === 'object' && partitionsSpec !== null) {
+    return (partitionsSpec as Record<string, unknown>).type as string | undefined;
+  }
+  return undefined;
+}
+
 interface IntervalDetailPanelProps {
   interval: IntervalConfig;
   onClose: () => void;
@@ -469,9 +478,6 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
         <div className="detail-header">
           <div>
             <h3>Interval: {formatInterval(interval.interval)}</h3>
-            <Tag intent={Intent.PRIMARY} large>
-              {interval.ruleCount} rule{interval.ruleCount !== 1 ? 's' : ''} applied
-            </Tag>
           </div>
           <Button
             icon={IconNames.CROSS}
@@ -482,6 +488,12 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
         </div>
 
         <div className="detail-content">
+          <Tooltip
+            content="A high-level summary of the merged rule configuration for this interval — use View Full Configuration for complete details."
+            position="bottom"
+          >
+            <div className="config-summary-label">Effective Configuration</div>
+          </Tooltip>
           <div className="config-badges">
             {config.granularitySpec?.segmentGranularity && (
               <Tag intent={Intent.PRIMARY} large icon={IconNames.CALENDAR}>
@@ -491,6 +503,11 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
             {config.granularitySpec?.queryGranularity && (
               <Tag intent={Intent.PRIMARY} large icon={IconNames.TIME}>
                 Query: {config.granularitySpec.queryGranularity}
+              </Tag>
+            )}
+            {getPartitionType(config.tuningConfig) && (
+              <Tag intent={Intent.PRIMARY} large icon={IconNames.SPLIT_COLUMNS}>
+                Partitioning: {getPartitionType(config.tuningConfig)}
               </Tag>
             )}
             {metricsCount > 0 && (
@@ -510,7 +527,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
             )}
             {deletionRuleCount > 0 && (
               <Tag intent={Intent.WARNING} large icon={IconNames.TRASH}>
-                {deletionRuleCount} deletion rule{deletionRuleCount !== 1 ? 's' : ''}
+                {deletionRuleCount} deletion clause{deletionRuleCount !== 1 ? 's' : ''}
               </Tag>
             )}
           </div>
@@ -524,7 +541,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
             />
             <Button
               icon={IconNames.PROPERTIES}
-              text="View Raw Rules"
+              text={`View ${interval.ruleCount} Raw Rule${interval.ruleCount !== 1 ? 's' : ''}`}
               intent={Intent.PRIMARY}
               onClick={() => setShowRawRules(true)}
             />
