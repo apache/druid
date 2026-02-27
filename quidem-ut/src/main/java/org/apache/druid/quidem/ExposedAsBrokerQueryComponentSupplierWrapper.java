@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import org.apache.druid.cli.BrokerRealtimeTierSelectorModule;
 import org.apache.druid.cli.CliBroker;
 import org.apache.druid.cli.QueryJettyServerInitializer;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -209,6 +210,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new BrokerServiceModule(),
+        new BrokerRealtimeTierSelectorModule(),
         binder -> {
 
           binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);

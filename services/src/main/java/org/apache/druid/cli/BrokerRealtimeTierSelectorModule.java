@@ -31,8 +31,10 @@ import org.apache.druid.client.selector.PreferredTierSelectorStrategy;
 import org.apache.druid.client.selector.PreferredTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -45,6 +47,7 @@ import java.util.Properties;
  * the property is not configured, then {@link RealtimeTierSelectorStrategyProvider#get()} returns
  * null, which then fallsback to the {@code druid.broker.select.tier} in {@link BrokerServerView}.
  */
+@LoadScope(roles = NodeRole.BROKER_JSON_NAME)
 public class BrokerRealtimeTierSelectorModule implements DruidModule
 {
   private static final Logger log = new Logger(BrokerRealtimeTierSelectorModule.class);
