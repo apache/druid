@@ -123,21 +123,21 @@ public class DartControllerModule implements DruidModule
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
     }
-  }
 
-  @Provides
-  @Dart
-  @ManageLifecycle
-  public ControllerThreadPool makeControllerThreadPool(DartControllerConfig dartControllerConfig)
-  {
-    return new ControllerThreadPool(
-        MoreExecutors.listeningDecorator(
-            Execs.multiThreaded(
-                dartControllerConfig.getConcurrentQueries(),
-                "dart-controller-%s"
-            )
-        )
-    );
+    @Provides
+    @Dart
+    @ManageLifecycle
+    public ControllerThreadPool makeControllerThreadPool(DartControllerConfig dartControllerConfig)
+    {
+      return new ControllerThreadPool(
+          MoreExecutors.listeningDecorator(
+              Execs.multiThreaded(
+                  dartControllerConfig.getConcurrentQueries(),
+                  "dart-controller-%s"
+              )
+          )
+      );
+    }
   }
 
   @Override
