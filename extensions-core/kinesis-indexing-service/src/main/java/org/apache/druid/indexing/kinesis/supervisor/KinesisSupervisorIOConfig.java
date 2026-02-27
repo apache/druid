@@ -34,6 +34,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -77,7 +78,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @JsonProperty("deaggregate") @Deprecated boolean deaggregate
+      @JsonProperty("deaggregate") @Deprecated boolean deaggregate,
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     super(
@@ -97,7 +99,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         null,
-        null
+        serverPriorityToReplicas
     );
 
     this.endpoint = endpoint != null
