@@ -164,7 +164,7 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public Map<Integer, Integer> getserverPriorityToReplicas()
+  public Map<Integer, Integer> getServerPriorityToReplicas()
   {
     return serverPriorityToReplicas;
   }

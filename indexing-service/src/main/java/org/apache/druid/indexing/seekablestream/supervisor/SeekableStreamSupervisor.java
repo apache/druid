@@ -4300,12 +4300,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Computes the remaining unassigned server priorities for the given task group.
    *
    * @return the unassigned server priorities, or {@code null} if
-   *         {@link SeekableStreamSupervisorIOConfig#getserverPriorityToReplicas()} is not configured
+   *         {@link SeekableStreamSupervisorIOConfig#getServerPriorityToReplicas()} is not configured
    */
   @Nullable
   public List<Integer> computeUnassignedServerPriorities(final TaskGroup group, final int replicas)
   {
-    final Map<Integer, Integer> serverPriorityToReplicas = ioConfig.getserverPriorityToReplicas();
+    final Map<Integer, Integer> serverPriorityToReplicas = ioConfig.getServerPriorityToReplicas();
     if (serverPriorityToReplicas == null) {
       return null;
     }

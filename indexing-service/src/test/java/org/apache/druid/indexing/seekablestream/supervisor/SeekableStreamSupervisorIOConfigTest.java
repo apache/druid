@@ -41,7 +41,7 @@ import static org.mockito.Mockito.when;
 public class SeekableStreamSupervisorIOConfigTest
 {
 
-  private final Map<Integer, Integer> serverPriorityToReplica = Map.of(
+  private final Map<Integer, Integer> serverPriorityToReplicas = Map.of(
       1, 2,
       2, 3
   );
@@ -90,7 +90,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertNull(config.getStopTaskCount());
     Assert.assertEquals(lagAggregator, config.getLagAggregator());
     Assert.assertEquals(1, config.getMaxAllowedStops());
-    Assert.assertNull(config.getserverPriorityToReplicas());
+    Assert.assertNull(config.getServerPriorityToReplicas());
   }
 
   @Test
@@ -380,8 +380,8 @@ public class SeekableStreamSupervisorIOConfigTest
   @Test
   public void testReplicasIsSetWhenserverPriorityToReplicas()
   {
-    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(null, serverPriorityToReplica);
-    Assert.assertEquals(serverPriorityToReplica, config.getserverPriorityToReplicas());
+    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(null, serverPriorityToReplicas);
+    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
     Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
   }
 
@@ -390,15 +390,15 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(4, null);
     Assert.assertEquals(Integer.valueOf(4), config.getReplicas());
-    Assert.assertNull(config.getserverPriorityToReplicas());
+    Assert.assertNull(config.getServerPriorityToReplicas());
   }
 
   @Test
   public void testMatchingReplicasAndServerPriority()
   {
-    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(5, serverPriorityToReplica);
+    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(5, serverPriorityToReplicas);
     Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
-    Assert.assertEquals(serverPriorityToReplica, config.getserverPriorityToReplicas());
+    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
   }
 
   @Test
@@ -407,12 +407,12 @@ public class SeekableStreamSupervisorIOConfigTest
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> makeSeekableStreamSupervisorIOConfig(3, serverPriorityToReplica)
+            () -> makeSeekableStreamSupervisorIOConfig(3, serverPriorityToReplicas)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
                 "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicas[%s].",
-                serverPriorityToReplica
+                serverPriorityToReplicas
             )
         )
     );
