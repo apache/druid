@@ -1573,7 +1573,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.6.0</version>
                 <configuration>
                     <sourceDirectories>
                         <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
@@ -1582,19 +1582,19 @@
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
                     <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
-                    <encoding>UTF-8</encoding>
+                    <inputEncoding>UTF-8</inputEncoding>
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <excludes>
-                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java
+                        *com/fasterxml/jackson/databind/*
                     </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.21</version>
+                        <version>13.2.0</version>
                     </dependency>
                 </dependencies>
                 <executions>
