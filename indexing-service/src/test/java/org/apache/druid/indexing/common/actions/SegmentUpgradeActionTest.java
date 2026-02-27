@@ -30,16 +30,32 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class SegmentUpgradeActionTest
 {
-  @Rule
-  public TaskActionTestKit actionTestKit = new TaskActionTestKit();
+  private TaskActionTestKit actionTestKit;
+
+  @BeforeEach
+  public void setUp()
+  {
+    actionTestKit = new TaskActionTestKit();
+    actionTestKit.before();
+  }
+
+  @AfterEach
+  public void tearDown()
+  {
+    actionTestKit.after();
+  }
 
   private static final String DATA_SOURCE = "test_dataSource";
   private static final Interval INTERVAL_2026_01 = Intervals.of("2026-01-01/2026-01-02");
@@ -74,9 +90,9 @@ public class SegmentUpgradeActionTest
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2, SEGMENT3));
 
     final Integer insertedCount = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(3, insertedCount.intValue());
+    assertEquals(3, insertedCount.intValue());
     final int deletedCount = actionTestKit.getMetadataStorageCoordinator().deleteUpgradeSegmentsForTask(task.getId());
-    Assert.assertEquals(3, deletedCount);
+    assertEquals(3, deletedCount);
   }
 
   @Test
@@ -89,8 +105,8 @@ public class SegmentUpgradeActionTest
 
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2, SEGMENT3));
 
-    IAE exception = Assert.assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
+    IAE exception = assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
+    assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
   }
 
   @Test
@@ -103,8 +119,8 @@ public class SegmentUpgradeActionTest
 
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2));
 
-    IAE exception = Assert.assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
+    IAE exception = assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
+    assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
   }
 
   @Test
@@ -115,11 +131,11 @@ public class SegmentUpgradeActionTest
 
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of());
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = assertThrows(
         DruidException.class,
         () -> action.perform(task, actionTestKit.getTaskActionToolbox())
     );
-    Assert.assertTrue(exception.getMessage().contains("No segment to commit"));
+    assertTrue(exception.getMessage().contains("No segment to commit"));
   }
 
   @Test
@@ -133,8 +149,8 @@ public class SegmentUpgradeActionTest
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1));
 
     final Integer insertedCount = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(1, insertedCount.intValue());
+    assertEquals(1, insertedCount.intValue());
     final int deletedCount = actionTestKit.getMetadataStorageCoordinator().deleteUpgradeSegmentsForTask(task.getId());
-    Assert.assertEquals(1, deletedCount);
+    assertEquals(1, deletedCount);
   }
 }

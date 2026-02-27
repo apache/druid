@@ -1853,16 +1853,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Creates upgraded versions of segments that were appended while a REPLACE task was in progress.
-   * Upgraded segments get new intervals, versions, and partition numbers to maintain consistency
-   * with the version created by the REPLACE task.
+   * Retrieves segments from the upgrade segments table and creates upgraded versions with new intervals,
+   * versions, and partition numbers. Combines upgraded segments with replace segments and updates shard
+   * specs with correct core partition counts.
    *
-   * @param dataSource             The datasource being modified
-   * @param transaction            The segment metadata transaction
-   * @param replaceSegments        Segments being committed by the REPLACE task
-   * @param locksHeldByReplaceTask Replace locks held by the task
-   * @return Pair of (upgraded segments, all segments to insert with updated shard specs)
-   * @throws DruidException if a replace interval partially overlaps an appended segment
+   * @return pair of (upgraded segments for metadata tracking, segments to insert into segment table)
+   * @throws DruidException if a replace interval partially overlaps a segment being upgraded
    */
   private Pair<Set<DataSegmentPlus>, Set<DataSegment>> createNewSegmentsAfterReplace(
       final String dataSource,

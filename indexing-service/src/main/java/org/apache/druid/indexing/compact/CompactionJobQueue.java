@@ -282,7 +282,7 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
+    // Check if the job is already running or skipped
     final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
     final CompactionStatus compactionStatus = statusTracker.deriveCompactionStatus(lastTaskStatus);
     if (compactionStatus != null) {

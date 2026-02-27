@@ -79,7 +79,7 @@ public interface ShardSpec
   /**
    * Creates a new ShardSpec with the specified partition number.
    */
-  default ShardSpec withPartitionNum(int partitionNum1)
+  default ShardSpec withPartitionNum(int partitionNum)
   {
     throw DruidException.defensive("ShardSpec[%s] does not implement withPartitionNum", this.getClass().toString());
   }

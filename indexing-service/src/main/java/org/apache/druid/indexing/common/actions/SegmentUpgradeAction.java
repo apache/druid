@@ -31,11 +31,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Task action that records segments as being upgraded in the metadata store.
+ * <p>
+ * This action is used during compaction to track which segments are being replaced.
+ * It validates that all segments to be upgraded are covered by
+ * {@link ReplaceTaskLock}s before inserting them into the upgrade segments table.
+ * <p>
+ * The action will fail if any of the upgrade segments do not have a corresponding
+ * replace lock, ensuring that only properly locked segments can be marked for upgrade.
+ *
+ * @return the number of segments successfully inserted into the upgrade segments table
+ */
 public class SegmentUpgradeAction implements TaskAction<Integer>
 {
   private final String dataSource;
   private final List<DataSegment> upgradeSegments;
 
+  /**
+   * @param dataSource the datasource containing the segments to upgrade
+   * @param upgradeSegments the list of segments to be recorded as upgraded
+   */
   @JsonCreator
   public SegmentUpgradeAction(
       @JsonProperty("dataSource") String dataSource,

@@ -101,15 +101,15 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpec withPartitionNum(int partitionNum1)
+  public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new NumberedShardSpec(partitionNum1, partitions);
+    return new NumberedShardSpec(partitionNum, partitions);
   }
 
   @Override
-  public ShardSpec withCorePartitions(int partitions1)
+  public ShardSpec withCorePartitions(int partitions)
   {
-    return new NumberedShardSpec(partitionNum, partitions1);
+    return new NumberedShardSpec(partitionNum, partitions);
   }
 
   @Override

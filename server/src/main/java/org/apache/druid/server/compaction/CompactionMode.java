@@ -28,5 +28,8 @@ public enum CompactionMode
    * Indicates that all existing segments of the interval will be picked for compaction.
    */
   FULL_COMPACTION,
+  /**
+   * Indicates that only uncompacted segments of the interval will be picked for compaction.
+   */
   INCREMENTAL_COMPACTION;
 }

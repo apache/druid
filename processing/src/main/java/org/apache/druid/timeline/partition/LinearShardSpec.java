@@ -56,13 +56,13 @@ public final class LinearShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpec withPartitionNum(int partitionNum1)
+  public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new LinearShardSpec(partitionNum1);
+    return new LinearShardSpec(partitionNum);
   }
 
   @Override
-  public ShardSpec withCorePartitions(int partitions1)
+  public ShardSpec withCorePartitions(int partitions)
   {
     return this;
   }

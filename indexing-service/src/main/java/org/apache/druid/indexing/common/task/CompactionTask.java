@@ -551,10 +551,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * Generate dataschema for segments in each interval.
+   * Creates input data schemas for compaction by grouping segments and generating {@link DataSchema}s.
+   * When segment granularity is not specified, preserves original granularity and creates a schema
+   * for each unified interval. When segment granularity is specified, creates a single schema for all
+   * segments. For incremental compaction, validates that all segments are completely within the target
+   * interval and submits already-compacted segments via {@link SegmentUpgradeAction} for direct upgrade.
    *
-   * @throws IOException if an exception occurs whie retrieving used segments to
-   *                     determine schemas.
+   * @return map from {@link QuerySegmentSpec} to {@link DataSchema} for each group of segments to compact
+   * @throws IOException if an exception occurs while retrieving segments
    */
   @VisibleForTesting
   static Map<QuerySegmentSpec, DataSchema> createInputDataSchemas(
@@ -665,9 +669,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return inputSchemas;
     } else {
       // given segment granularity
-      List<DataSegment> upgradeSegments = StreamSupport.stream(timelineSegments.spliterator(), false)
-                                                       .filter(segmentProvider.segmentsToUpgradePredicate)
-                                                       .collect(Collectors.toList());
+      List<DataSegment> upgradeSegments = Lists.newArrayList(Iterables.filter(
+          timelineSegments,
+          segmentProvider.segmentsToUpgradePredicate
+      ));
       if (!upgradeSegments.isEmpty()) {
         toolbox.getTaskActionClient().submit(new SegmentUpgradeAction(segmentProvider.dataSource, upgradeSegments));
       }

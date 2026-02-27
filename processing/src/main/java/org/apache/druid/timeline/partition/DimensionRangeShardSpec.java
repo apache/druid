@@ -105,15 +105,15 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   }
 
   @Override
-  public ShardSpec withPartitionNum(int partitionNum1)
+  public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum1, numCorePartitions);
+    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, numCorePartitions);
   }
 
   @Override
-  public ShardSpec withCorePartitions(int partitions1)
+  public ShardSpec withCorePartitions(int partitions)
   {
-    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, partitions1);
+    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, partitions);
   }
 
   public boolean isNumCorePartitionsUnknown()
