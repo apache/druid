@@ -32,6 +32,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumns;
@@ -43,6 +44,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DefaultRequestLogEventTest
@@ -133,7 +135,10 @@ public class DefaultRequestLogEventTest
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
     final String service = "druid-service";
     final String host = "127.0.0.1";
-    final String sql = "select * from 1337";
+    final String sql = "select * from foo where x = ?";
+    final List<ClientSqlParameter> parameters = List.of(
+        new ClientSqlParameter("BIGINT", 1234L)
+    );
     final QueryStats queryStats = new QueryStats(
         ImmutableMap.of(
             "sqlQuery/time", 13L,
@@ -146,6 +151,7 @@ public class DefaultRequestLogEventTest
 
     RequestLogLine nativeLine = RequestLogLine.forSql(
         sql,
+        parameters,
         ImmutableMap.of(),
         timestamp,
         host,
@@ -161,6 +167,7 @@ public class DefaultRequestLogEventTest
     expected.put("service", service);
     expected.put("host", host);
     expected.put("sql", sql);
+    expected.put("sqlParameters", parameters);
     expected.put("sqlQueryContext", ImmutableMap.of());
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
@@ -169,7 +176,7 @@ public class DefaultRequestLogEventTest
     Assert.assertEquals(expected, observedEventMap);
     Assert.assertEquals(
         StringUtils.format(
-            "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from 1337\"}",
+            "{\"feed\":\"test\",\"timestamp\":\"2019-12-12T03:01:00.000Z\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from foo where x = ?\",\"sqlParameters\":[{\"type\":\"BIGINT\",\"value\":1234}]}",
             timestamp
         ),
         new DefaultObjectMapper().writeValueAsString(observedEventMap)

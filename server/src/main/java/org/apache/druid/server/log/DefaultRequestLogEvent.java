@@ -29,6 +29,7 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -69,7 +70,8 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
 
     if (getSql() != null) {
       builder.put("sqlQueryContext", getSqlQueryContext())
-             .put("sql", getSql());
+             .put("sql", getSql())
+             .putNonNull("sqlParameters", getSqlParameters());
     }
 
     return builder.build();
@@ -110,6 +112,12 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
   public String getSql()
   {
     return request.getSql();
+  }
+
+  @JsonProperty("sqlParameters")
+  public List<?> getSqlParameters()
+  {
+    return request.getSqlParameters();
   }
 
   @JsonProperty("sqlQueryContext")
