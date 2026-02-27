@@ -22,8 +22,8 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 
@@ -90,7 +90,7 @@ public class SegmentUpgradeAction implements TaskAction<Integer>
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), Set.copyOf(upgradeSegments));
 
     if (segmentToReplaceLock.size() < upgradeSegments.size()) {
-      throw new IAE(
+      throw InvalidInput.exception(
           "Not all segments are hold by a replace lock, only [%d] segments out of total segments[%d] are hold by repalce lock",
           segmentToReplaceLock.size(),
           upgradeSegments.size()

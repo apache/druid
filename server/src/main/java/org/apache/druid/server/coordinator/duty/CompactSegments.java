@@ -265,7 +265,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
           entry,
-          CompactionMode.FULL_COMPACTION,
+          CompactionMode.ALL_SEGMENTS,
           config,
           defaultEngine,
           null,
@@ -472,10 +472,10 @@ public class CompactSegments implements CoordinatorCustomDuty
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
     switch (compactionMode) {
-      case FULL_COMPACTION:
+      case ALL_SEGMENTS:
         clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
         break;
-      case INCREMENTAL_COMPACTION:
+      case UNCOMPACTED_SEGMENTS_ONLY:
         List<SegmentDescriptor> uncompacted = entry.getUncompactedSegments()
                                                    .stream()
                                                    .map(DataSegment::toDescriptor)

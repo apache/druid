@@ -24,7 +24,6 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -105,7 +104,10 @@ public class SegmentUpgradeActionTest
 
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2, SEGMENT3));
 
-    IAE exception = assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox())
+    );
     assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
   }
 
@@ -119,7 +121,10 @@ public class SegmentUpgradeActionTest
 
     final SegmentUpgradeAction action = new SegmentUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2));
 
-    IAE exception = assertThrows(IAE.class, () -> action.perform(task, actionTestKit.getTaskActionToolbox()));
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox())
+    );
     assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
   }
 

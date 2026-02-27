@@ -99,10 +99,10 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       }
       final CompactionCandidate finalCandidate;
       switch (eligibility.getMode()) {
-        case FULL_COMPACTION:
+        case ALL_SEGMENTS:
           finalCandidate = candidate;
           break;
-        case INCREMENTAL_COMPACTION:
+        case UNCOMPACTED_SEGMENTS_ONLY:
           finalCandidate = CompactionCandidate.from(candidate.getUncompactedSegments(), null)
                                               .withCurrentStatus(candidate.getCurrentStatus());
           break;

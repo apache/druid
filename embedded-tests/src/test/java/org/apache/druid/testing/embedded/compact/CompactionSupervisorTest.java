@@ -156,14 +156,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void configureCompaction(CompactionEngine compactionEngine, @Nullable CompactionCandidateSearchPolicy policy)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(
-            1.0,
-            100,
-            policy,
-            true,
-            compactionEngine,
-            true
-        ))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, policy, true, compactionEngine, true))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
@@ -240,7 +233,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   {
     configureCompaction(
         CompactionEngine.MSQ,
-        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 0.8, null)
+        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null)
     );
     KafkaSupervisorSpecBuilder kafkaSupervisorSpecBuilder = MoreResources.Supervisor.KAFKA_JSON
         .get()
@@ -280,7 +273,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .build();
 
     runCompactionWithSpec(dayGranularityConfig);
-    Thread.sleep(2_000L);
     waitForAllCompactionTasksToFinish();
 
     pauseCompaction(dayGranularityConfig);
@@ -300,22 +292,31 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     indexer.latchableEmitter().flush();
     waitUntilPublishedRecordsAreIngested(appendedRowCount);
 
-    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    // 1 compacted segment + 2 appended segment
-    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
-
-    runCompactionWithSpec(dayGranularityConfig);
-    Thread.sleep(2_000L);
-    waitForAllCompactionTasksToFinish();
-
-    // performed incremental compaction
-    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
-
     // Tear down both topics and supervisors
     kafkaServer.deleteTopic(topic1);
     cluster.callApi().postSupervisor(supervisor1.createSuspendedSpec());
     kafkaServer.deleteTopic(topic2);
     cluster.callApi().postSupervisor(supervisor2.createSuspendedSpec());
+    long totalUsed = overlord.latchableEmitter().getMetricValues(
+        "segment/metadataCache/used/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().reduce((first, second) -> second).orElse(0).longValue();
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    // 1 compacted segment + 2 appended segment
+    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
+
+    runCompactionWithSpec(dayGranularityConfig);
+    waitForAllCompactionTasksToFinish();
+
+    // wait for new segments have been updated to the cache
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/metadataCache/used/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasValueMatching(Matchers.greaterThan(totalUsed)));
+
+    // performed incremental compaction: 1 previously compacted segment + 1 incrementally compacted segment
+    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
   }
 
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
@@ -767,11 +768,24 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                       .hasValueMatching(Matchers.equalTo(0L))
     );
 
+    int compacted = overlord.latchableEmitter().getMetricValues(
+        "interval/compacted/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().mapToInt(Number::intValue).sum();
+    System.out.println("compacted " + compacted);
+
+    int skipped = overlord.latchableEmitter().getMetricValues(
+        "interval/skipCompact/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().mapToInt(Number::intValue).sum();
+    System.out.println("skipped " + skipped);
+
     // Wait for all submitted compaction jobs to finish
     int numSubmittedTasks = overlord.latchableEmitter().getMetricValues(
         "compact/task/count",
         Map.of(DruidMetrics.DATASOURCE, dataSource)
     ).stream().mapToInt(Number::intValue).sum();
+    System.out.println("submitted task " + numSubmittedTasks);
 
     final Matcher<Object> taskTypeMatcher = Matchers.anyOf(
         Matchers.equalTo("query_controller"),

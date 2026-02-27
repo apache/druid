@@ -47,7 +47,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   private final int minUncompactedCount;
   private final HumanReadableBytes minUncompactedBytes;
   private final HumanReadableBytes maxAverageUncompactedBytesPerSegment;
-  private final double incrementalCompactionUncompactedRatioThreshold;
+  private final int minUncompactedBytesPercentForFullCompaction;
 
   @JsonCreator
   public MostFragmentedIntervalFirstPolicy(
@@ -55,8 +55,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
       @JsonProperty("minUncompactedBytes") @Nullable HumanReadableBytes minUncompactedBytes,
       @JsonProperty("maxAverageUncompactedBytesPerSegment") @Nullable
       HumanReadableBytes maxAverageUncompactedBytesPerSegment,
-      @JsonProperty("incrementalCompactionUncompactedRatioThreshold") @Nullable
-      Double incrementalCompactionUncompactedRatioThreshold,
+      @JsonProperty("minUncompactedBytesPercentForFullCompaction") @Nullable
+      Integer minUncompactedBytesPercentForFullCompaction,
       @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
   )
   {
@@ -73,19 +73,19 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         maxAverageUncompactedBytesPerSegment
     );
     InvalidInput.conditionalException(
-        incrementalCompactionUncompactedRatioThreshold == null
-        || (incrementalCompactionUncompactedRatioThreshold >= 0.0d
-            && incrementalCompactionUncompactedRatioThreshold < 1.0d),
-        "'incrementalCompactionUncompactedRatioThreshold'[%s] must be between 0.0 and 1.0",
-        incrementalCompactionUncompactedRatioThreshold
+        minUncompactedBytesPercentForFullCompaction == null
+        || (minUncompactedBytesPercentForFullCompaction >= 0
+            && minUncompactedBytesPercentForFullCompaction < 100),
+        "'minUncompactedBytesPercentForFullCompaction'[%s] must be between 0 and 100",
+        minUncompactedBytesPercentForFullCompaction
     );
 
     this.minUncompactedCount = Configs.valueOrDefault(minUncompactedCount, 100);
     this.minUncompactedBytes = Configs.valueOrDefault(minUncompactedBytes, SIZE_10_MB);
     this.maxAverageUncompactedBytesPerSegment
         = Configs.valueOrDefault(maxAverageUncompactedBytesPerSegment, SIZE_2_GB);
-    this.incrementalCompactionUncompactedRatioThreshold =
-        Configs.valueOrDefault(incrementalCompactionUncompactedRatioThreshold, 0.0d);
+    this.minUncompactedBytesPercentForFullCompaction =
+        Configs.valueOrDefault(minUncompactedBytesPercentForFullCompaction, 0);
   }
 
   /**
@@ -119,14 +119,14 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   /**
-   * Threshold ratio of uncompacted bytes to compacted bytes below which
+   * Threshold percentage of uncompacted bytes to total bytes below which
    * incremental compaction is eligible instead of full compaction.
-   * Default value is 0.0.
+   * Default value is 0.
    */
   @JsonProperty
-  public double getIncrementalCompactionUncompactedRatioThreshold()
+  public int minUncompactedBytesPercentForFullCompaction()
   {
-    return incrementalCompactionUncompactedRatioThreshold;
+    return minUncompactedBytesPercentForFullCompaction;
   }
 
   @Override
@@ -148,12 +148,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     return minUncompactedCount == policy.minUncompactedCount
            && Objects.equals(minUncompactedBytes, policy.minUncompactedBytes)
            && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment)
-           // Use Double.compare instead of == to handle NaN correctly and keep equals() consistent with hashCode() (especially for +0.0 vs -0.0).
-           &&
-           Double.compare(
-               incrementalCompactionUncompactedRatioThreshold,
-               policy.incrementalCompactionUncompactedRatioThreshold
-           ) == 0;
+           && minUncompactedBytesPercentForFullCompaction == policy.minUncompactedBytesPercentForFullCompaction;
   }
 
   @Override
@@ -164,7 +159,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         minUncompactedCount,
         minUncompactedBytes,
         maxAverageUncompactedBytesPerSegment,
-        incrementalCompactionUncompactedRatioThreshold
+        minUncompactedBytesPercentForFullCompaction
     );
   }
 
@@ -176,7 +171,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         "minUncompactedCount=" + minUncompactedCount +
         ", minUncompactedBytes=" + minUncompactedBytes +
         ", maxAverageUncompactedBytesPerSegment=" + maxAverageUncompactedBytesPerSegment +
-        ", incrementalCompactionUncompactedRatioThreshold=" + incrementalCompactionUncompactedRatioThreshold +
+        ", minUncompactedBytesPercentForFullCompaction=" + minUncompactedBytesPercentForFullCompaction +
         ", priorityDataSource='" + getPriorityDatasource() + '\'' +
         '}';
   }
@@ -220,12 +215,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     }
 
     final double uncompactedBytesRatio = (double) uncompacted.getTotalBytes() /
-                                         (uncompacted.getTotalBytes() + candidate.getCompactedStats().getTotalBytes());
-    if (uncompactedBytesRatio < incrementalCompactionUncompactedRatioThreshold) {
+                                         (uncompacted.getTotalBytes() + candidate.getCompactedStats().getTotalBytes())
+                                         * 100;
+    if (uncompactedBytesRatio < minUncompactedBytesPercentForFullCompaction) {
       return Eligibility.incremental(
-          "Uncompacted bytes ratio[%.2f] is below threshold[%.2f]",
+          "Uncompacted bytes ratio[%.2f] is below threshold[%d]",
           uncompactedBytesRatio,
-          incrementalCompactionUncompactedRatioThreshold
+          minUncompactedBytesPercentForFullCompaction
       );
     } else {
       return Eligibility.OK;

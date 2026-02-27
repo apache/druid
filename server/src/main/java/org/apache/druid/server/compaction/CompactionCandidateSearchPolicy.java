@@ -65,7 +65,7 @@ public interface CompactionCandidateSearchPolicy
    */
   class Eligibility
   {
-    public static final Eligibility OK = new Eligibility(true, null, CompactionMode.FULL_COMPACTION);
+    public static final Eligibility OK = new Eligibility(true, null, CompactionMode.ALL_SEGMENTS);
 
     private final boolean eligible;
     private final String reason;
@@ -106,7 +106,7 @@ public interface CompactionCandidateSearchPolicy
 
     public static Eligibility incremental(String messageFormat, Object... args)
     {
-      return new Eligibility(true, StringUtils.format(messageFormat, args), CompactionMode.INCREMENTAL_COMPACTION);
+      return new Eligibility(true, StringUtils.format(messageFormat, args), CompactionMode.UNCOMPACTED_SEGMENTS_ONLY);
     }
 
     @Override

@@ -219,7 +219,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(2),
         HumanReadableBytes.valueOf(3),
-        0.5,
+        50,
         "foo"
     );
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
@@ -247,7 +247,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
-        0.5,
+        50,
         null
     );
 
@@ -259,7 +259,7 @@ public class MostFragmentedIntervalFirstPolicyTest
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 
-    Assertions.assertEquals(CompactionMode.INCREMENTAL_COMPACTION, eligibility.getMode());
+    Assertions.assertEquals(CompactionMode.UNCOMPACTED_SEGMENTS_ONLY, eligibility.getMode());
     Assertions.assertTrue(eligibility.isEligible());
   }
 
@@ -271,7 +271,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
-        0.5,
+        50,
         null
     );
 
@@ -286,7 +286,7 @@ public class MostFragmentedIntervalFirstPolicyTest
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 
-    Assertions.assertEquals(CompactionMode.FULL_COMPACTION, eligibility.getMode());
+    Assertions.assertEquals(CompactionMode.ALL_SEGMENTS, eligibility.getMode());
     Assertions.assertTrue(eligibility.isEligible());
   }
 
@@ -302,7 +302,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         null
     );
 
-    // With default threshold 0.0, any positive ratio >= 0.0, so always FULL_COMPACTION_ELIGIBLE
+    // With default threshold 0.0, any positive ratio >= 0.0, so always ALL_SEGMENTS_ELIGIBLE
     final CompactionStatus status =
         CompactionStatus.pending(
             CompactionStatistics.create(1_000L, 10, 1),
@@ -314,7 +314,7 @@ public class MostFragmentedIntervalFirstPolicyTest
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 
-    Assertions.assertEquals(CompactionMode.FULL_COMPACTION, eligibility.getMode());
+    Assertions.assertEquals(CompactionMode.ALL_SEGMENTS, eligibility.getMode());
     Assertions.assertTrue(eligibility.isEligible());
   }
 

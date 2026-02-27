@@ -389,20 +389,7 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Inserts entries into the upgrade_segments table for segments that need to be upgraded
-   * to a new version without recompaction. This is used during incremental compaction when
-   * some segments in the interval don't require compaction but should be upgraded to match
-   * the version of newly compacted segments.
-   * <p>
-   * In incremental compaction scenarios:
-   * <ul>
-   * <li>Some segments may already meet compaction criteria (e.g., already compacted, correct partitioning)
-   * and don't need to be rewritten.</li>
-   * <li>These segments are tracked in the upgrade_segments table via this method, mapped to their
-   * corresponding REPLACE lock.</li>
-   * <li>When the compaction task finishes via {@link #commitReplaceSegments}, these segments are
-   * upgraded directly to the new version to maintain version consistency across the interval.</li>
-   * <li>After the task completes, entries are cleaned up via {@link #deleteUpgradeSegmentsForTask}.</li>
-   * </ul>
+   * to a new version when a REPLACE task finishes using {@link #commitReplaceSegments}.
    *
    * @param segmentToReplaceLock map from segment to its corresponding REPLACE lock, identifying
    *                             which segments should be upgraded when the lock's task completes
