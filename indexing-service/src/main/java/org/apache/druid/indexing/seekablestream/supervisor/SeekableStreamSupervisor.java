@@ -545,13 +545,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * This method determines how to do scale actions based on collected lag points.
    * If scale action is triggered:
    * <ul>
-   * <li>First, call <code>gracefulShutdownInternal()</code> which will change the state of current datasource ingest tasks from reading to publishing.
-   * <li>Secondly, clear all the stateful data structures:
+   * <li>First, call <code>gracefulShutdownInternal()</code> which will change the state
+   * of current datasource ingest tasks from reading to publishing.
+   * <li>Secondly, clear the stateful data structures tied to the active task assignment:
    * <ul>
    *  <li><code>activelyReadingTaskGroups</code>,
    *  <li><code>partitionGroups</code>,
-   *  <li><code>partitionOffsets</code>,
-   *  <li><code>pendingCompletionTaskGroups</code>,
    *  <li><code>partitionIds</code>.
    * </ul>
    * These structures will be rebuiled in the next 'RunNotice'.
@@ -3686,6 +3685,49 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return FutureUtils.transform(FutureUtils.coalesce(futures), xs -> null);
   }
 
+  /**
+   * Remove and eliminate any active task groups that overlap the partition set represented by a timed-out pending group.
+   * Using groupId is unsafe after autoscaler changes taskCount because partition-to-groupId mapping can change.
+   */
+  private void eliminateOverlappingActiveTaskGroups(Set<PartitionIdType> timedOutPartitions, int pendingGroupId)
+  {
+    if (timedOutPartitions.isEmpty() || activelyReadingTaskGroups.isEmpty()) {
+      return;
+    }
+
+    List<TaskGroup> activeGroupsToEliminate = new ArrayList<>();
+    Iterator<Entry<Integer, TaskGroup>> activeTaskGroupsIt = activelyReadingTaskGroups.entrySet().iterator();
+
+    while (activeTaskGroupsIt.hasNext()) {
+      TaskGroup activeGroup = activeTaskGroupsIt.next().getValue();
+      if (activeGroup == null || !hasPartitionOverlap(activeGroup.startingSequences.keySet(), timedOutPartitions)) {
+        continue;
+      }
+
+      activeTaskGroupsIt.remove();
+      activeGroupsToEliminate.add(activeGroup);
+    }
+
+    for (TaskGroup activeGroup : activeGroupsToEliminate) {
+      killTasksInGroup(
+          activeGroup,
+          "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+          pendingGroupId
+      );
+    }
+  }
+
+  private boolean hasPartitionOverlap(Set<PartitionIdType> activeGroupPartitions, Set<PartitionIdType> timedOutPartitions)
+  {
+    for (PartitionIdType partitionId : timedOutPartitions) {
+      if (activeGroupPartitions.contains(partitionId)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private void checkPendingCompletionTasks()
       throws ExecutionException, InterruptedException
   {
@@ -3774,12 +3816,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
-          // kill all the tasks in the currently reading task group and remove the bad task group
-          killTasksInGroup(
-              activelyReadingTaskGroups.remove(groupId),
-              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
-              groupId
-          );
+          // kill all active task groups currently reading any partition from this timed-out pending group
+          eliminateOverlappingActiveTaskGroups(group.startingSequences.keySet(), groupId);
           toRemove.add(group);
         }
       }
