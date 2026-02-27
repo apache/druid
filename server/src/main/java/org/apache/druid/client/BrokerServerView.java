@@ -95,7 +95,7 @@ public class BrokerServerView implements TimelineServerView
     this.druidClientFactory = directDruidClientFactory;
     this.baseView = baseView;
     this.historicalTierSelectorStrategy = historicalTierSelectorStrategy;
-    // If realtime selector strategy is null, then default to historical. This was the behavior prior to introduction of realtime strategy configuration.
+    // If the realtime selector strategy is not configured, then fallback to historical's strategy for backward compatibility.
     this.realtimeTierSelectorStrategy = realtimeTierSelectorStrategy == null ? historicalTierSelectorStrategy : realtimeTierSelectorStrategy;
     log.info("Using historicalTierSelectorStrategy[%s] and realtimeTierSelectorStrategy[%s]", historicalTierSelectorStrategy, realtimeTierSelectorStrategy);
 
