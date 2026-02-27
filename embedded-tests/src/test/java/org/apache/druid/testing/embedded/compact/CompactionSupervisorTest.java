@@ -55,7 +55,6 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -244,14 +243,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
-  @MethodSource("getEngine")
-  @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules(CompactionEngine compactionEngine)
+  @Test
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
   {
-    // Configure cluster with storeCompactionStatePerSegment=false
+    // Configure cluster with MSQ engine and storeCompactionStatePerSegment=false
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(
-            new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)
+            new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ, false)
         )
     );
     Assertions.assertTrue(updateResponse.isSuccess());
@@ -314,23 +312,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null
     );
 
-    InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider.builder()
                                                                             .segmentGranularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
-                                                                            .deletionRules(List.of(deletionRule));
-
-    if (compactionEngine == CompactionEngine.NATIVE) {
-      ruleProvider = ruleProvider.ioConfigRules(
-          List.of(new ReindexingIOConfigRule("dropExisting", null, Period.days(7), new UserCompactionTaskIOConfig(true)))
-      );
-    }
+                                                                            .deletionRules(List.of(deletionRule))
+                                                                            .build();
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
-        ruleProvider.build(),
-        compactionEngine,
+        ruleProvider,
         null,
         null,
         null,
@@ -409,7 +401,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                     .deletionRules(List.of(deletionRule))
                                     .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
-        compactionEngine,
         null,
         null,
         null,
