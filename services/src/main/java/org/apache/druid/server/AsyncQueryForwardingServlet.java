@@ -78,6 +78,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -762,7 +763,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      final boolean success = result.isSucceeded() && result.getResponse().getStatus() == Status.OK.getStatusCode();
+      List<Integer> successStatusCodes = List.of(Status.OK.getStatusCode(), Status.ACCEPTED.getStatusCode());
+      final boolean success = result.isSucceeded() && successStatusCodes.contains(result.getResponse().getStatus());
       final int statusCode = determineStatusCode(success, result.getResponse().getStatus());
       if (success) {
         successfulQueryCount.incrementAndGet();
