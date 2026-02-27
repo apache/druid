@@ -123,17 +123,23 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.idleConfig = idleConfig;
     this.serverPriorityToReplicas = serverPriorityToReplicas;
     if (this.serverPriorityToReplicas != null) {
-      final int replicaCount = this.serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum();
-      if (replicas != null && replicas != replicaCount) {
+      final int serverPriorityReplicas = this.serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum();
+      if (serverPriorityReplicas < 0) {
         throw InvalidInput.exception(
-            "Configured replicas[%d] != sum of replicas[%d] specified in serverPriorityToReplicas[%s]."
+            "Sum of replicas in configured serverPriorityToReplicas[%s] must be >= 0, but found [%d].",
+            serverPriorityToReplicas, serverPriorityReplicas
+        );
+      }
+      if (replicas != null && replicas != serverPriorityReplicas) {
+        throw InvalidInput.exception(
+            "Configured replicas[%d] does not match the sum of replicas[%d] specified in serverPriorityToReplicas[%s]."
             + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
-            replicas, replicaCount, serverPriorityToReplicas
+            replicas, serverPriorityReplicas, serverPriorityToReplicas
         );
       }
 
       // We also explicitly set replicas since the supervisor logic for replicas is already implemented.
-      this.replicas = replicaCount;
+      this.replicas = serverPriorityReplicas;
     } else {
       this.replicas = replicas != null ? replicas : 1;
     }

@@ -402,7 +402,7 @@ public class SeekableStreamSupervisorIOConfigTest
   }
 
   @Test
-  public void testMismatchBetweenReplicasAndServerPriorityThrowsException()
+  public void testMismatchBetweenReplicasAndServerPriorityReplicasThrowsException()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -411,10 +411,24 @@ public class SeekableStreamSupervisorIOConfigTest
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
-                "Configured replicas[3] != sum of replicas[5] specified in serverPriorityToReplicas[%s]."
+                "Configured replicas[3] does not match the sum of replicas[5] specified in serverPriorityToReplicas[%s]."
                 + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
                 serverPriorityToReplicas
             )
+        )
+    );
+  }
+
+  @Test
+  public void testNegativeReplicasThrowsException()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> makeSeekableStreamSupervisorIOConfig(null, Map.of(1, -1))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Sum of replicas in configured serverPriorityToReplicas[{1=-1}] must be >= 0, but found [-1]."
         )
     );
   }
