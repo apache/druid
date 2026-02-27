@@ -93,7 +93,7 @@ public class CompactionStatusTracker
   {
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     CompactionStatus status = deriveCompactionStatus(lastTaskStatus);
-    if (status != null) {
+    if (!CompactionStatus.State.PENDING.equals(status.getState())) {
       return status;
     }
 
@@ -107,7 +107,6 @@ public class CompactionStatusTracker
     }
   }
 
-  @Nullable
   public CompactionStatus deriveCompactionStatus(CompactionTaskStatus lastTaskStatus)
   {
     // Skip intervals that already have a running task
@@ -124,7 +123,7 @@ public class CompactionStatusTracker
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
-    return null;
+    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**

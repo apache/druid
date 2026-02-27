@@ -282,21 +282,21 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running or skipped
+    // Check if the job is already running or skipped or pending
     final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
     final CompactionStatus compactionStatus = statusTracker.deriveCompactionStatus(lastTaskStatus);
-    if (compactionStatus != null) {
-      switch (compactionStatus.getState()) {
-        case RUNNING:
-          return false;
-        case SKIPPED:
-          snapshotBuilder.moveFromPendingToSkipped(candidate);
-          return false;
-        case PENDING:
-        case COMPLETE:
-        default:
-          throw DruidException.defensive("unexpected derived compaction state[%s]", compactionStatus.getState());
-      }
+
+    switch (compactionStatus.getState()) {
+      case RUNNING:
+        return false;
+      case SKIPPED:
+        snapshotBuilder.moveFromPendingToSkipped(candidate);
+        return false;
+      case PENDING:
+        break;
+      case COMPLETE:
+      default:
+        throw DruidException.defensive("unexpected derived compaction state[%s]", compactionStatus.getState());
     }
 
     // Check if enough compaction task slots are available
