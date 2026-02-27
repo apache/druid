@@ -24,49 +24,51 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class KafkaFaultToleranceTest extends KafkaTestBase
+public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
 {
   private SupervisorSpec supervisorSpec = null;
   private String topic = null;
   private int totalRecords = 0;
+
+  private StreamIngestResource<?> streamResource;
 
   @BeforeEach
   public void setupTopicAndSupervisor()
   {
     totalRecords = 0;
     topic = "topic_" + dataSource;
-    kafkaServer.createTopicWithPartitions(topic, 2);
+    streamResource = getStreamIngestResource();
+    streamResource.createTopicWithPartitions(topic, 2);
 
-    supervisorSpec = createSupervisor().withId("supe_" + dataSource).build(dataSource, topic);
+    supervisorSpec = createSupervisorSpec(dataSource, topic);
     cluster.callApi().postSupervisor(supervisorSpec);
   }
-  
+
+  protected abstract SupervisorSpec createSupervisorSpec(String dataSource, String topic);
+
   @AfterEach
   public void verifyAndTearDown()
   {
     waitUntilPublishedRecordsAreIngested(totalRecords);
     verifySupervisorIsRunningHealthy(supervisorSpec.getId());
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
-    kafkaServer.deleteTopic(topic);
+    streamResource.deleteTopic(topic);
     verifyRowCount(totalRecords);
   }
 
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {true, false})
-  public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
+  protected void publishRecords_whileOverlordRestarts(boolean useTransactions) throws Exception
   {
     totalRecords = publish1kRecords(topic, useTransactions);
     waitUntilPublishedRecordsAreIngested(totalRecords);
@@ -78,8 +80,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @Test
-  public void test_supervisorRecovers_afterCoordinatorRestart() throws Exception
+  protected void publishRecords_whileCoordinatorRestarts() throws Exception
   {
     final boolean useTransactions = true;
     totalRecords = publish1kRecords(topic, useTransactions);
@@ -92,8 +93,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @Test
-  public void test_supervisorRecovers_afterHistoricalRestart() throws Exception
+  protected void publishRecords_whileHistoricalRestarts() throws Exception
   {
     final boolean useTransactions = false;
     totalRecords = publish1kRecords(topic, useTransactions);
@@ -106,9 +106,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {true, false})
-  public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
+  protected void publishRecords_andSuspendResumeSupervisor(boolean useTransactions)
   {
     totalRecords = publish1kRecords(topic, useTransactions);
     waitUntilPublishedRecordsAreIngested(totalRecords);
@@ -120,13 +118,11 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest(name = "useTransactions={0}")
-  @ValueSource(booleans = {true, false})
-  public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
+  public void publishRecords_andIncreaseTopicPartitions(boolean useTransactions)
   {
     totalRecords = publish1kRecords(topic, useTransactions);
 
-    kafkaServer.increasePartitionsInTopic(topic, 4);
+    streamResource.increasePartitionsInTopic(topic, 4);
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 

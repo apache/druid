@@ -97,7 +97,7 @@ public class WeightedCostFunctionTest
     // aggregateLag = 100000 * 100 = 10,000,000; lagPerPartition = 100,000
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
     double aggregateLag = 100000.0 * 100;
-    double amplification = 1.0 + 0.2 * Math.log(aggregateLag / 100);
+    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(aggregateLag / 100);
 
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost of current tasks", aggregateLag * amplification / (10 * 1000.0), costCurrent, 0.1);
@@ -307,7 +307,7 @@ public class WeightedCostFunctionTest
 
     double aggregateLag = 150.0 * partitionCount;
     double lagPerPartition = aggregateLag / partitionCount;
-    double amplification = 1.0 + 0.2 * Math.log(lagPerPartition);
+    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
     double expected = aggregateLag * amplification / (proposedTaskCount * 1000.0);
 
     Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);

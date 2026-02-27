@@ -378,7 +378,7 @@ The reason for this is because a Kafka indexing task always appends new segments
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
 
 :::info
- The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+ The segment locking has been deprecated. It could have unknown bugs which potentially lead to incorrect query results.
 :::
 
 To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#context).

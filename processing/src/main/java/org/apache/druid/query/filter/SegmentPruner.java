@@ -17,28 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.query.filter;
 
-import java.nio.ByteBuffer;
+import org.apache.druid.timeline.DataSegment;
 
-/**
- * Writes only to a single shard
- */
-public class KinesisSingleShardEventWriter extends KinesisEventWriter
+import java.util.Collection;
+import java.util.function.Function;
+
+public interface SegmentPruner
 {
-
-  public KinesisSingleShardEventWriter(String endpoint, boolean aggregate) throws Exception
-  {
-    super(endpoint, aggregate);
-  }
-
-  @Override
-  public void write(String streamName, byte[] event)
-  {
-    getKinesisProducer().addUserRecord(
-        streamName,
-        "0",
-        ByteBuffer.wrap(event)
-    );
-  }
+  /**
+   * Filter the given {@link Iterable} of objects containing a {@link DataSegment} (obtained from the converter
+   * function), to reduce the overall working set which need to be processed.
+   */
+  <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter);
 }

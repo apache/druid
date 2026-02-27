@@ -17,17 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.server.compaction;
 
 /**
- * Granularity for {@link TaskLock}.
+ * Represents the mode of compaction for segment intervals.
  */
-public enum LockGranularity
+public enum CompactionMode
 {
-  TIME_CHUNK,
   /**
-   * @deprecated use TIME_CHUNK instead.
+   * Indicates that all existing segments of the interval will be picked for compaction.
    */
-  @Deprecated
-  SEGMENT
+  FULL_COMPACTION;
 }

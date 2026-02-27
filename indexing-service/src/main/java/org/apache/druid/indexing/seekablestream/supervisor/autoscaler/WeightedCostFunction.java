@@ -29,7 +29,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
-  private static final double LAG_AMPLIFICATION_MULTIPLIER = 0.2;
+  /**
+   * Multiplier for a lag amplification factor; it was carefully chosen
+   * during extensive testing as the most balanced multiplier for high-lag recovery.
+   */
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.05;
 
   /**
    * Computes cost for a given task count using compute time metrics.

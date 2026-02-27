@@ -50,6 +50,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -229,6 +230,16 @@ public class StageDefinition
     } else {
       return shuffleSpec.clusterBy().sortable();
     }
+  }
+
+  /**
+   * Get a {@link SegmentPruner} from the {@link StageProcessor} for a given 'input number' from {@link #inputSpecs}.
+   * This can be used to best-effort prune the set of {@link org.apache.druid.timeline.DataSegment} to process in order
+   * to reduce the working set before processing begins
+   */
+  public SegmentPruner getSegmentPruner(int inputNumber)
+  {
+    return processor.getPruner(inputSpecs.get(inputNumber), inputNumber);
   }
 
   /**
