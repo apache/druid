@@ -55,6 +55,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -233,7 +234,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper
+          sortingMapper,
+          CollectionUtils.isNullOrEmpty(serverPrioritiesToAssign) ? null : serverPrioritiesToAssign.get(i)
       ));
     }
     return taskList;

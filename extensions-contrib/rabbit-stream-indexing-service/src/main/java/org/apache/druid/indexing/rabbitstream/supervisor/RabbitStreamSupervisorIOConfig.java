@@ -65,7 +65,8 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     super(
@@ -85,7 +86,7 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         stopTaskCount,
-        null
+        serverPriorityToReplicas
     );
 
     this.consumerProperties = consumerProperties;
