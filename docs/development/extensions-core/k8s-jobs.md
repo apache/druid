@@ -85,7 +85,7 @@ To use these APIs, ensure you have read and write permissions for the CONFIG res
 
 #### Get dynamic configuration
 
-Retrieves the current dynamic execution config for the Kubernetes task runner. 
+Retrieves the current execution config for the Kubernetes task runner. The Overlord will be using the values here to create tasks.
 Returns a JSON object with the dynamic configuration properties.
 
 ##### URL
@@ -97,7 +97,6 @@ Returns a JSON object with the dynamic configuration properties.
 <Tabs>
 
 <TabItem value="1" label="200 SUCCESS">
-
 
 *Successfully retrieved dynamic configuration*
 
