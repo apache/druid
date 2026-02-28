@@ -229,7 +229,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_incrementalCompactionWithMSQ() throws Exception
+  public void test_minorCompactionWithMSQ() throws Exception
   {
     configureCompaction(
         CompactionEngine.MSQ,

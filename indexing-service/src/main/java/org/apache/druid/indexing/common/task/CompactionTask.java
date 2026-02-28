@@ -584,7 +584,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return Collections.emptyMap();
     }
 
-    if (segmentProvider.incrementalCompaction) {
+    if (segmentProvider.minorCompaction) {
       Iterable<DataSegment> segmentsNotCompletelyWithinin =
           Iterables.filter(timelineSegments, s -> !segmentProvider.interval.contains(s.getInterval()));
       if (segmentsNotCompletelyWithinin.iterator().hasNext()) {
@@ -660,7 +660,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             needMultiValuedColumns
         );
         inputSchemas.put(
-            segmentProvider.incrementalCompaction
+            segmentProvider.minorCompaction
             ? new MultipleSpecificSegmentSpec(segmentsToCompact.stream()
                                                                .map(DataSegment::toDescriptor)
                                                                .collect(Collectors.toList()))
@@ -697,7 +697,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           projections,
           needMultiValuedColumns
       );
-      return Map.of(segmentProvider.incrementalCompaction
+      return Map.of(segmentProvider.minorCompaction
                     ? new MultipleSpecificSegmentSpec(StreamSupport.stream(segmentsToCompact.spliterator(), false)
                                                                    .map(DataSegment::toDescriptor)
                                                                    .collect(Collectors.toList()))
@@ -1274,7 +1274,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final CompactionInputSpec inputSpec;
     private final Interval interval;
 
-    private final boolean incrementalCompaction;
+    private final boolean minorCompaction;
     private final Predicate<DataSegment> segmentsToUpgradePredicate;
     private final Predicate<DataSegment> segmentsToCompactPredicate;
 
@@ -1283,15 +1283,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.dataSource = Preconditions.checkNotNull(dataSource);
       this.inputSpec = inputSpec;
       this.interval = inputSpec.findInterval(dataSource);
-      if (inputSpec instanceof CompactionIntervalSpec
-          && ((CompactionIntervalSpec) inputSpec).getUncompactedSegments() != null) {
-        incrementalCompaction = true;
-        Set<SegmentDescriptor> uncompactedSegments = Set.copyOf(((CompactionIntervalSpec) inputSpec).getUncompactedSegments());
+      if (inputSpec instanceof UncompactedInputSpec) {
+        minorCompaction = true;
+        Set<SegmentDescriptor> uncompactedSegments = Set.copyOf(((UncompactedInputSpec) inputSpec).getUncompactedSegments());
         this.segmentsToUpgradePredicate = s -> !uncompactedSegments.contains(s.toDescriptor())
                                                && this.interval.contains(s.getInterval());
         this.segmentsToCompactPredicate = Predicates.not(this.segmentsToUpgradePredicate);
       } else {
-        incrementalCompaction = false;
+        minorCompaction = false;
         this.segmentsToUpgradePredicate = Predicates.alwaysFalse();
         this.segmentsToCompactPredicate = Predicates.alwaysTrue();
       }

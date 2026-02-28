@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.task.CompactionTaskRunBase;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.indexing.common.task.UncompactedInputSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -578,7 +579,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Test
-  public void testIncrementalCompaction() throws Exception
+  public void testMinorCompaction() throws Exception
   {
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
     Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
@@ -602,7 +603,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                                                         .collect(Collectors.toList());
     final CompactionTask compactionTask2 =
         compactionTaskBuilder(segmentGranularity)
-            .inputSpec(new CompactionIntervalSpec(inputInterval, uncompacted, null), true)
+            .inputSpec(new UncompactedInputSpec(inputInterval, uncompacted), true)
             .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair2, TOTAL_TEST_ROWS);
@@ -628,7 +629,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Test
-  public void testIncrementalCompactionRangePartition() throws Exception
+  public void testMinorCompactionRangePartition() throws Exception
   {
     List<String> rows = ImmutableList.of(
         "2014-01-01T00:00:10Z,a,1\n",
@@ -671,7 +672,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                                                         .collect(Collectors.toList());
     final CompactionTask compactionTask2 =
         compactionTaskBuilder(segmentGranularity)
-            .inputSpec(new CompactionIntervalSpec(inputInterval, uncompacted, null), true)
+            .inputSpec(new UncompactedInputSpec(inputInterval, uncompacted), true)
             .tuningConfig(tuningConfig)
             .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
@@ -686,7 +687,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Test
-  public void testIncrementalCompactionOverlappingInterval() throws Exception
+  public void testMinorCompactionOverlappingInterval() throws Exception
   {
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
     Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
@@ -725,7 +726,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
 
     final CompactionTask compactionTask1 =
         compactionTaskBuilder(Granularities.EIGHT_HOUR)
-            .inputSpec(new CompactionIntervalSpec(compactionInterval, uncompactedFromIndexTask, null), true)
+            .inputSpec(new UncompactedInputSpec(compactionInterval, uncompactedFromIndexTask), true)
             .build();
     ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
     Assert.assertEquals(

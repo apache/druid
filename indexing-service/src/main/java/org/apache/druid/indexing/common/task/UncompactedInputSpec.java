@@ -24,37 +24,54 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Specifying an interval to compact. A hash of the segment IDs can be optionally provided for segment validation.
+ * Specifies uncompacted segments to compact within an interval.
+ * Used for minor compaction to compact only uncompacted segments while leaving compacted segments untouched.
  */
-public class CompactionIntervalSpec implements CompactionInputSpec
+public class UncompactedInputSpec implements CompactionInputSpec
 {
-  public static final String TYPE = "interval";
+  public static final String TYPE = "uncompacted";
 
   private final Interval interval;
-  @Nullable
-  private final String sha256OfSortedSegmentIds;
+  private final List<SegmentDescriptor> uncompactedSegments;
 
   @JsonCreator
-  public CompactionIntervalSpec(
+  public UncompactedInputSpec(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("sha256OfSortedSegmentIds") @Nullable String sha256OfSortedSegmentIds
+      @JsonProperty("uncompactedSegments") List<SegmentDescriptor> uncompactedSegments
   )
   {
-    if (interval != null && interval.toDurationMillis() == 0) {
-      throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
+    if (interval == null) {
+      throw new IAE("Uncompacted interval must not be null");
     }
+    if (interval.toDurationMillis() == 0) {
+      throw new IAE("Uncompacted interval[%s] is empty, must specify a nonempty interval", interval);
+    }
+    if (uncompactedSegments == null || uncompactedSegments.isEmpty()) {
+      throw new IAE("Uncompacted segments must not be null or empty");
+    }
+
+    // Validate that all segments are within the interval
+    List<SegmentDescriptor> segmentsNotInInterval =
+        uncompactedSegments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+    if (!segmentsNotInInterval.isEmpty()) {
+      throw new IAE(
+          "All uncompacted segments must be within interval[%s], got segments outside interval: %s",
+          interval,
+          segmentsNotInInterval
+      );
+    }
+
     this.interval = interval;
-    this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
+    this.uncompactedSegments = uncompactedSegments;
   }
 
   @JsonProperty
@@ -63,11 +80,10 @@ public class CompactionIntervalSpec implements CompactionInputSpec
     return interval;
   }
 
-  @Nullable
   @JsonProperty
-  public String getSha256OfSortedSegmentIds()
+  public List<SegmentDescriptor> getUncompactedSegments()
   {
-    return sha256OfSortedSegmentIds;
+    return uncompactedSegments;
   }
 
   @Override
@@ -82,16 +98,7 @@ public class CompactionIntervalSpec implements CompactionInputSpec
     final Interval segmentsInterval = JodaUtils.umbrellaInterval(
         latestSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
-    if (interval.overlaps(segmentsInterval)) {
-      if (sha256OfSortedSegmentIds != null) {
-        final String hashOfThem = SegmentUtils.hashIds(latestSegments);
-        return hashOfThem.equals(sha256OfSortedSegmentIds);
-      } else {
-        return true;
-      }
-    } else {
-      return false;
-    }
+    return interval.overlaps(segmentsInterval);
   }
 
   @Override
@@ -103,23 +110,23 @@ public class CompactionIntervalSpec implements CompactionInputSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionIntervalSpec that = (CompactionIntervalSpec) o;
+    UncompactedInputSpec that = (UncompactedInputSpec) o;
     return Objects.equals(interval, that.interval) &&
-           Objects.equals(sha256OfSortedSegmentIds, that.sha256OfSortedSegmentIds);
+           Objects.equals(uncompactedSegments, that.uncompactedSegments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, sha256OfSortedSegmentIds);
+    return Objects.hash(interval, uncompactedSegments);
   }
 
   @Override
   public String toString()
   {
-    return "CompactionIntervalSpec{" +
+    return "UncompactedInputSpec{" +
            "interval=" + interval +
-           ", sha256OfSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
+           ", uncompactedSegments=" + uncompactedSegments +
            '}';
   }
 }

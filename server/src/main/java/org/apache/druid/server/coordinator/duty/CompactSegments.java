@@ -470,21 +470,17 @@ public class CompactSegments implements CoordinatorCustomDuty
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
-    final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
+    final ClientCompactionIntervalSpec inputSpec;
     switch (compactionMode) {
       case ALL_SEGMENTS:
-        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
+        inputSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
         break;
       case UNCOMPACTED_SEGMENTS_ONLY:
         List<SegmentDescriptor> uncompacted = entry.getUncompactedSegments()
                                                    .stream()
                                                    .map(DataSegment::toDescriptor)
                                                    .toList();
-        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(
-            entry.getCompactionInterval(),
-            uncompacted,
-            null
-        );
+        inputSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), uncompacted, null);
         break;
       default:
         throw DruidException.defensive("unexpected compaction mode[%s]", compactionMode);
@@ -493,7 +489,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(clientCompactionIntervalSpec, dropExisting),
+        new ClientCompactionIOConfig(inputSpec, dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

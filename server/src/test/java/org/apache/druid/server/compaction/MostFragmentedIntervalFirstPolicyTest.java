@@ -240,7 +240,7 @@ public class MostFragmentedIntervalFirstPolicyTest
   }
 
   @Test
-  public void test_compactionMode_returnsIncrementalCompaction_whenRatioBelowThreshold()
+  public void test_compactionMode_returnsMinorCompactionMode_whenPercentageBelowThreshold()
   {
     // Set threshold to 0.5 (50%)
     final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
@@ -264,7 +264,7 @@ public class MostFragmentedIntervalFirstPolicyTest
   }
 
   @Test
-  public void test_compactionMode_returnsFullCompaction_whenRatioAboveThreshold()
+  public void test_compactionMode_returnsFullCompaction_whenPercentageAboveThreshold()
   {
     // Set threshold to 0.5 (50%)
     final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
@@ -293,7 +293,7 @@ public class MostFragmentedIntervalFirstPolicyTest
   @Test
   public void test_compactionMode_returnsFullCompaction_whenThresholdIsDefault()
   {
-    // Default threshold is 0.0
+    // Default threshold is 0
     final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
         1,
         HumanReadableBytes.valueOf(1),
@@ -302,7 +302,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         null
     );
 
-    // With default threshold 0.0, any positive ratio >= 0.0, so always ALL_SEGMENTS_ELIGIBLE
+    // With default threshold 0, any positive percentage >= 0, so always ALL_SEGMENTS_ELIGIBLE
     final CompactionStatus status =
         CompactionStatus.pending(
             CompactionStatistics.create(1_000L, 10, 1),

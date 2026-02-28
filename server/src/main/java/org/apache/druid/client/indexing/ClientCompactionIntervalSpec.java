@@ -34,11 +34,12 @@ import java.util.stream.Collectors;
 /**
  * InputSpec for {@link ClientCompactionIOConfig}.
  * <p>
- * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIntervalSpec.
+ * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIntervalSpec and org.apache.druid.indexing.common.task.UncompactedInputSpec.
  */
 public class ClientCompactionIntervalSpec
 {
-  private static final String TYPE = "interval";
+  private static final String TYPE_ALL_SEGMENTS = "interval";
+  private static final String TYPE_UNCOMPACTED_SEGMENTS_ONLY = "uncompacted";
 
   private final Interval interval;
   @Nullable
@@ -79,7 +80,7 @@ public class ClientCompactionIntervalSpec
   @JsonProperty
   public String getType()
   {
-    return TYPE;
+    return (uncompactedSegments == null) ? TYPE_ALL_SEGMENTS : TYPE_UNCOMPACTED_SEGMENTS_ONLY;
   }
 
   @JsonProperty
