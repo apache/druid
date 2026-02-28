@@ -255,7 +255,7 @@ public class MostFragmentedIntervalFirstPolicyTest
     final CompactionStatistics uncompacted = CompactionStatistics.create(400L, 100, 1L);
     final CompactionStatus status = CompactionStatus.pending(compacted, uncompacted, List.of(SEGMENT), "");
 
-    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null).withCurrentStatus(status);
+    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null, status);
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 
@@ -282,7 +282,7 @@ public class MostFragmentedIntervalFirstPolicyTest
             List.of(),
             ""
         );
-    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null).withCurrentStatus(status);
+    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null, status);
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 
@@ -310,7 +310,7 @@ public class MostFragmentedIntervalFirstPolicyTest
             List.of(),
             ""
         );
-    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null).withCurrentStatus(status);
+    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null, status);
     final CompactionCandidateSearchPolicy.Eligibility eligibility =
         policy.checkEligibilityForCompaction(candidate, null);
 

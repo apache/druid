@@ -103,8 +103,11 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           finalCandidate = candidate;
           break;
         case UNCOMPACTED_SEGMENTS_ONLY:
-          finalCandidate = CompactionCandidate.from(candidate.getUncompactedSegments(), null)
-                                              .withCurrentStatus(candidate.getCurrentStatus());
+          finalCandidate = CompactionCandidate.from(
+              candidate.getUncompactedSegments(),
+              null,
+              candidate.getCurrentStatus()
+          );
           break;
         default:
           throw DruidException.defensive("unexpected compaction mode[%s]", eligibility.getMode());
