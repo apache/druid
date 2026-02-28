@@ -62,6 +62,7 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
@@ -487,7 +488,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null,
-        Granularities.HOUR
+        Granularities.HOUR,
+        overlord.bindings().getInstance(CompactionStatusTracker.class)
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
@@ -566,7 +568,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null,
-        Granularities.DAY
+        Granularities.DAY,
+        overlord.bindings().getInstance(CompactionStatusTracker.class)
     );
 
     runCompactionWithSpec(cascadingTemplate);

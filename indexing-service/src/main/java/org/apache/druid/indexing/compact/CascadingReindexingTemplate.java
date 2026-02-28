@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
@@ -99,6 +101,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final Period skipOffsetFromLatest;
   private final Period skipOffsetFromNow;
   private final Granularity defaultSegmentGranularity;
+  private final CompactionStatusTracker statusTracker;
 
   @JsonCreator
   public CascadingReindexingTemplate(
@@ -110,7 +113,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow,
-      @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity
+      @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity,
+      @JacksonInject CompactionStatusTracker statusTracker
   )
   {
     InvalidInput.conditionalException(dataSource != null, "'dataSource' cannot be null");
@@ -132,6 +136,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     }
     this.skipOffsetFromNow = skipOffsetFromNow;
     this.skipOffsetFromLatest = skipOffsetFromLatest;
+    this.statusTracker = statusTracker;
   }
 
   @Override
@@ -310,7 +315,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       InlineSchemaDataSourceCompactionConfig config
   )
   {
-    return new CompactionConfigBasedJobTemplate(config, null, DELETION_RULE_OPTIMIZER);
+    return new CompactionConfigBasedJobTemplate(config, statusTracker, DELETION_RULE_OPTIMIZER);
   }
 
   /**
