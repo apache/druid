@@ -467,19 +467,24 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null
     );
 
-    InlineReindexingRuleProvider.Builder ruleProvider =
-        InlineReindexingRuleProvider.builder()
-                                    .segmentGranularityRules(List.of(hourRule, dayRule))
-                                    .tuningConfigRules(List.of(tuningConfigRule))
-                                    .deletionRules(List.of(deletionRule));
+    InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
+                                                                                    .segmentGranularityRules(List.of(
+                                                                                        hourRule,
+                                                                                        dayRule
+                                                                                    ))
+                                                                                    .tuningConfigRules(List.of(
+                                                                                        tuningConfigRule))
+                                                                                    .deletionRules(List.of(deletionRule));
 
     if (compactionEngine == CompactionEngine.NATIVE) {
-      ruleProvider = ruleProvider.ioConfigRules(List.of(new ReindexingIOConfigRule(
-          "dropExisting",
-          null,
-          Period.days(7),
-          new UserCompactionTaskIOConfig(true)
-      )));
+      ruleProvider = ruleProvider.ioConfigRules(
+          List.of(new ReindexingIOConfigRule(
+              "dropExisting",
+              null,
+              Period.days(7),
+              new UserCompactionTaskIOConfig(true)
+          ))
+      );
     }
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
@@ -760,24 +765,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                       .hasValueMatching(Matchers.equalTo(0L))
     );
 
-    int compacted = overlord.latchableEmitter().getMetricValues(
-        "interval/compacted/count",
-        Map.of(DruidMetrics.DATASOURCE, dataSource)
-    ).stream().mapToInt(Number::intValue).sum();
-    System.out.println("compacted " + compacted);
-
-    int skipped = overlord.latchableEmitter().getMetricValues(
-        "interval/skipCompact/count",
-        Map.of(DruidMetrics.DATASOURCE, dataSource)
-    ).stream().mapToInt(Number::intValue).sum();
-    System.out.println("skipped " + skipped);
-
     // Wait for all submitted compaction jobs to finish
     int numSubmittedTasks = overlord.latchableEmitter().getMetricValues(
         "compact/task/count",
         Map.of(DruidMetrics.DATASOURCE, dataSource)
     ).stream().mapToInt(Number::intValue).sum();
-    System.out.println("submitted task " + numSubmittedTasks);
 
     final Matcher<Object> taskTypeMatcher = Matchers.anyOf(
         Matchers.equalTo("query_controller"),

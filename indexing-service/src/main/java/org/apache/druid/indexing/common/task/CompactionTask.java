@@ -58,7 +58,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
-import org.apache.druid.indexing.common.actions.SegmentUpgradeAction;
+import org.apache.druid.indexing.common.actions.MarkSegmentToUpgradeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -555,7 +555,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * When segment granularity is not specified, preserves original granularity and creates a schema
    * for each unified interval. When segment granularity is specified, creates a single schema for all
    * segments. For incremental compaction, validates that all segments are completely within the target
-   * interval and submits already-compacted segments via {@link SegmentUpgradeAction} for direct upgrade.
+   * interval and submits already-compacted segments via {@link MarkSegmentToUpgradeAction} for direct upgrade.
    *
    * @return map from {@link QuerySegmentSpec} to {@link DataSchema} for each group of segments to compact
    * @throws IOException if an exception occurs while retrieving segments
@@ -614,7 +614,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         }
       }
       if (!upgradeSegments.isEmpty()) {
-        toolbox.getTaskActionClient().submit(new SegmentUpgradeAction(segmentProvider.dataSource, upgradeSegments));
+        toolbox.getTaskActionClient().submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, upgradeSegments));
       }
 
       // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
@@ -674,7 +674,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           segmentProvider.segmentsToUpgradePredicate
       ));
       if (!upgradeSegments.isEmpty()) {
-        toolbox.getTaskActionClient().submit(new SegmentUpgradeAction(segmentProvider.dataSource, upgradeSegments));
+        toolbox.getTaskActionClient().submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, upgradeSegments));
       }
 
       final Iterable<DataSegment> segmentsToCompact = Iterables.filter(

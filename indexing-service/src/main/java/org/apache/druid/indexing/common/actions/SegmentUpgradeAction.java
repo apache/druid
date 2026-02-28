@@ -43,7 +43,7 @@ import java.util.Set;
  *
  * @return the number of segments successfully inserted into the upgrade segments table
  */
-public class SegmentUpgradeAction implements TaskAction<Integer>
+public class MarkSegmentToUpgradeAction implements TaskAction<Integer>
 {
   private final String dataSource;
   private final List<DataSegment> upgradeSegments;
@@ -53,7 +53,7 @@ public class SegmentUpgradeAction implements TaskAction<Integer>
    * @param upgradeSegments the list of segments to be recorded as upgraded
    */
   @JsonCreator
-  public SegmentUpgradeAction(
+  public MarkSegmentToUpgradeAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("upgradeSegments") List<DataSegment> upgradeSegments
   )
