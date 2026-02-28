@@ -1,0 +1,104 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexing.common.task;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.SegmentDescriptor;
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.List;
+
+public class UncompactedInputSpecTest
+{
+  @Test
+  public void testSerde() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    List<SegmentDescriptor> segments = List.of(
+        new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
+    );
+
+    UncompactedInputSpec spec = new UncompactedInputSpec(interval, segments);
+    String json = mapper.writeValueAsString(spec);
+    UncompactedInputSpec deserialized = mapper.readValue(json, UncompactedInputSpec.class);
+
+    Assert.assertEquals(spec, deserialized);
+    Assert.assertEquals(interval, deserialized.getInterval());
+    Assert.assertEquals(segments, deserialized.getUncompactedSegments());
+  }
+
+  @Test
+  public void testDeserializeFromClientFormat() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    String clientJson = "{"
+                        + "\"type\":\"uncompacted\","
+                        + "\"interval\":\"2015-04-11/2015-04-12\","
+                        + "\"uncompactedSegments\":[{\"itvl\":\"2015-04-11/2015-04-12\",\"ver\":\"v1\",\"part\":0}]"
+                        + "}";
+
+    UncompactedInputSpec deserialized = mapper.readValue(clientJson, UncompactedInputSpec.class);
+
+    Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), deserialized.getInterval());
+    Assert.assertEquals(1, deserialized.getUncompactedSegments().size());
+    Assert.assertEquals(
+        new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0),
+        deserialized.getUncompactedSegments().get(0)
+    );
+  }
+
+  @Test
+  public void testThrowsExceptionWhenInvalidInterval()
+  {
+    List<SegmentDescriptor> segments = List.of(
+        new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
+    );
+
+    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(null, segments));
+
+    Interval emptyInterval = Intervals.of("2015-04-11/2015-04-11");
+    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(emptyInterval, segments));
+  }
+
+  @Test
+  public void testThrowsExceptionWhenInvalidSegments()
+  {
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, null));
+    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, List.of()));
+  }
+
+  @Test
+  public void testThrowsExceptionWhenSegmentsOutsideInterval()
+  {
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    List<SegmentDescriptor> segments = List.of(
+        new SegmentDescriptor(Intervals.of("2015-05-11/2015-05-12"), "v1", 0)
+    );
+
+    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, segments));
+  }
+}
