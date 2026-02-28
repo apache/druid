@@ -55,29 +55,32 @@ public class DefaultRequestLogEventTest
   public void testDefaultRequestLogEventSerde() throws Exception
   {
     RequestLogLine nativeLine = RequestLogLine.forNative(
-            new TimeseriesQuery(
-                    new TableDataSource("dummy"),
-                    new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
-                    true,
-                    VirtualColumns.EMPTY,
-                    null,
-                    Granularities.ALL,
-                    ImmutableList.of(),
-                    ImmutableList.of(),
-                    5,
-                    ImmutableMap.of("key", "value")),
-            DateTimes.of(2019, 12, 12, 3, 1),
-            "127.0.0.1",
-            new QueryStats(ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"))
+        new TimeseriesQuery(
+            new TableDataSource("dummy"),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+            true,
+            VirtualColumns.EMPTY,
+            null,
+            Granularities.ALL,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            5,
+            ImmutableMap.of("key", "value")
+        ),
+        DateTimes.of(2019, 12, 12, 3, 1),
+        "127.0.0.1",
+        new QueryStats(ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"))
     );
 
     DefaultRequestLogEvent defaultRequestLogEvent = new DefaultRequestLogEvent(
-            ImmutableMap.of("service", "druid-service", "host", "127.0.0.1"),
-            "feed",
-            nativeLine);
+        ImmutableMap.of("service", "druid-service", "host", "127.0.0.1"),
+        "feed",
+        nativeLine
+    );
 
     String logEventJson = objectMapper.writeValueAsString(defaultRequestLogEvent);
-    String expected = "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
+    String expected =
+        "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},"
         + "\"descending\":true,\"granularity\":{\"type\":\"all\"},\"limit\":5,"
         + "\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\","
@@ -103,7 +106,8 @@ public class DefaultRequestLogEventTest
         ImmutableList.of(),
         ImmutableList.of(),
         5,
-        ImmutableMap.of("key", "value"));
+        ImmutableMap.of("key", "value")
+    );
     final QueryStats queryStats = new QueryStats(
         ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"));
     RequestLogLine nativeLine = RequestLogLine.forNative(

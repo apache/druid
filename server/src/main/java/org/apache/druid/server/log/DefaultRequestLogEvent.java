@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.log;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
@@ -29,6 +30,7 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -114,7 +116,9 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     return request.getSql();
   }
 
+  @Nullable
   @JsonProperty("sqlParameters")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<?> getSqlParameters()
   {
     return request.getSqlParameters();
