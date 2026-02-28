@@ -310,7 +310,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       InlineSchemaDataSourceCompactionConfig config
   )
   {
-    return new CompactionConfigBasedJobTemplate(config, DELETION_RULE_OPTIMIZER);
+    return new CompactionConfigBasedJobTemplate(config, null, DELETION_RULE_OPTIMIZER);
   }
 
   /**

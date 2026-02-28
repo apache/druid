@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.ResourceAction;
@@ -96,12 +97,12 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   /**
    * @return {@link CompactionJobTemplate} used to create jobs for the supervisor.
    */
-  public CompactionJobTemplate getTemplate()
+  public CompactionJobTemplate getTemplate(CompactionStatusTracker statusTracker)
   {
     if (spec instanceof CascadingReindexingTemplate) {
       return (CascadingReindexingTemplate) spec;
     } else {
-      return new CompactionConfigBasedJobTemplate(spec);
+      return new CompactionConfigBasedJobTemplate(spec, statusTracker);
     }
   }
 

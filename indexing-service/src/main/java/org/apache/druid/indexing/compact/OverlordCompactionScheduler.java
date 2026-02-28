@@ -260,6 +260,12 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   @Override
+  public CompactionStatusTracker getCompactionStatusTracker()
+  {
+    return statusTracker;
+  }
+
+  @Override
   public CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig)
   {
     if (compactionConfig == null) {

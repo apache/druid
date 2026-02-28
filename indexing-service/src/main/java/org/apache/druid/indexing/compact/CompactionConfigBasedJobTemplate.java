@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -49,19 +50,22 @@ import java.util.Objects;
 public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
   private final DataSourceCompactionConfig config;
+  private final CompactionStatusTracker statusTracker;
   private final ReindexingConfigOptimizer configOptimizer;
 
-  public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
+  public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config, CompactionStatusTracker statusTracker)
   {
-    this(config, ReindexingConfigOptimizer.IDENTITY);
+    this(config, statusTracker, ReindexingConfigOptimizer.IDENTITY);
   }
 
   public CompactionConfigBasedJobTemplate(
       DataSourceCompactionConfig config,
+      CompactionStatusTracker statusTracker,
       ReindexingConfigOptimizer configOptimizer
   )
   {
     this.config = config;
+    this.statusTracker = statusTracker;
     this.configOptimizer = configOptimizer;
   }
 
@@ -93,7 +97,9 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
       final CompactionCandidateSearchPolicy.Eligibility eligibility =
-          params.getClusterCompactionConfig().getCompactionPolicy().checkEligibilityForCompaction(candidate, null);
+          params.getClusterCompactionConfig()
+                .getCompactionPolicy()
+                .checkEligibilityForCompaction(candidate, statusTracker.getLatestTaskStatus(candidate));
       if (!eligibility.isEligible()) {
         continue;
       }

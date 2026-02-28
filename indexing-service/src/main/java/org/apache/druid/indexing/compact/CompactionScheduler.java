@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -59,6 +60,11 @@ public interface CompactionScheduler
    * tasks.
    */
   boolean isRunning();
+
+  /**
+   * @return the tracker for monitoring compaction status across datasources.
+   */
+  CompactionStatusTracker getCompactionStatusTracker();
 
   CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig);
 

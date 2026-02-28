@@ -532,7 +532,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
-    Assertions.assertEquals(4, getTotalRowCount());
+    Assertions.assertEquals("4", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     VirtualColumns virtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn(
@@ -579,7 +579,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     // Verify: Should have 2 rows left (valueA appeared in 2 rows, both filtered out)
-    Assertions.assertEquals(2, getTotalRowCount());
+    Assertions.assertEquals("2", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     // Verify the correct rows were filtered
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
@@ -660,14 +660,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         finalSegmentCount,
         "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
     );
-  }
-
-  private int getTotalRowCount()
-  {
-    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
-    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(sql, null, false, false, false, null, null);
-    List<Map<String, Object>> rows = parse(cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(clientSqlQuery)));
-    return ((Number) rows.get(0).get("cnt")).intValue();
   }
 
   private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
