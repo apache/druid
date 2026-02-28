@@ -468,22 +468,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
-                                                                                    .segmentGranularityRules(List.of(
-                                                                                        hourRule,
-                                                                                        dayRule
-                                                                                    ))
-                                                                                    .tuningConfigRules(List.of(
-                                                                                        tuningConfigRule))
-                                                                                    .deletionRules(List.of(deletionRule));
+                                                                            .segmentGranularityRules(List.of(hourRule, dayRule))
+                                                                            .tuningConfigRules(List.of(tuningConfigRule))
+                                                                            .deletionRules(List.of(deletionRule));
 
     if (compactionEngine == CompactionEngine.NATIVE) {
       ruleProvider = ruleProvider.ioConfigRules(
-          List.of(new ReindexingIOConfigRule(
-              "dropExisting",
-              null,
-              Period.days(7),
-              new UserCompactionTaskIOConfig(true)
-          ))
+          List.of(new ReindexingIOConfigRule("dropExisting", null, Period.days(7), new UserCompactionTaskIOConfig(true)))
       );
     }
 
