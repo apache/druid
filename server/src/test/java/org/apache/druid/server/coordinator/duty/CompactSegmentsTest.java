@@ -876,7 +876,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1067,7 +1067,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1163,7 +1163,7 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1405,7 +1405,7 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        CompactionCandidate.from(segments, Granularities.DAY).getCompactionInterval(),
+        CompactionCandidate.getCompactionInterval(segments, Granularities.DAY),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
@@ -1468,7 +1468,7 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        CompactionCandidate.from(segments, Granularities.YEAR).getCompactionInterval(),
+        CompactionCandidate.getCompactionInterval(segments, Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
