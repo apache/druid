@@ -50,18 +50,20 @@ import java.util.Objects;
 /**
  * Druid extension of {@link AggregateCaseToFilterRule}.
  *
- * Five rewrite styles are supported:
+ * Six rewrite styles are supported:
  * <pre>
- * A:  AGG(CASE WHEN x = 'foo' THEN expr END)
- *   => AGG(expr) FILTER (x = 'foo')
- * B:  SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
- *   => COUNT() FILTER (x = 'foo')
- * C:  COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
- *   => COUNT() FILTER (x = 'foo')
- * D:  SUM/SUM0(CASE WHEN x = 'foo' THEN expr ELSE 0 END)
- *   => COALESCE(SUM/SUM0(expr) FILTER (x = 'foo'), CASE WHEN COUNT(*) > 0 THEN 0 END)
- * E:  COUNT(DISTINCT CASE WHEN x = 'foo' THEN y END)
- *   => COUNT(DISTINCT y) FILTER (x = 'foo')
+ * A:   AGG(CASE WHEN x = 'foo' THEN expr END)
+ *    => AGG(expr) FILTER (x = 'foo')
+ * A2:  SUM0(CASE WHEN x = 'foo' THEN expr ELSE 0 END)
+ *    => SUM0(expr) FILTER (x = 'foo')
+ * B:   SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
+ *    => COUNT() FILTER (x = 'foo')
+ * C:   COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
+ *    => COUNT() FILTER (x = 'foo')
+ * D:   SUM(CASE WHEN x = 'foo' THEN expr ELSE 0 END)
+ *    => COALESCE(SUM(expr) FILTER (x = 'foo'), CASE WHEN COUNT(*) > 0 THEN 0 END)
+ * E:   COUNT(DISTINCT CASE WHEN x = 'foo' THEN y END)
+ *    => COUNT(DISTINCT y) FILTER (x = 'foo')
  * </pre>
  *
  * Case D rewrites are wrapped in COALESCE to ensure correct results when the condition does not match.
@@ -370,7 +372,27 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
           ),
           null
       );
-    } else if ((kind == SqlKind.SUM || kind == SqlKind.SUM0)
+    } else if (kind == SqlKind.SUM0
+        && isIntLiteral(arg2, BigDecimal.ZERO)) { // Case A2
+      newProjects.add(arg1);
+      newProjects.add(filter);
+      return new TransformResult(
+          AggregateCall.create(
+              call.getAggregation(),
+              false,
+              false,
+              false,
+              call.rexList,
+              ImmutableList.of(newProjects.size() - 2),
+              newProjects.size() - 1,
+              null,
+              RelCollations.EMPTY,
+              call.getType(),
+              call.getName()
+          ),
+          null
+      );
+    } else if (kind == SqlKind.SUM
         && isIntLiteral(arg2, BigDecimal.ZERO)) { // Case D
       newProjects.add(arg1);
       newProjects.add(filter);
