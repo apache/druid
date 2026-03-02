@@ -422,11 +422,11 @@ public class SeekableStreamSupervisorIOConfigTest
   @Test
   public void testNegativeReplicasThrowsException()
   {
-    final Map <Integer, Integer> invalidServerPriorityToReplicas = Map.of(0, 2, 1, -1);
+    final Map<Integer, Integer> invalidServerPriorityToReplicas = Map.of(0, 2, 1, -1);
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> makeSeekableStreamSupervisorIOConfig(null,invalidServerPriorityToReplicas)
+            () -> makeSeekableStreamSupervisorIOConfig(null, invalidServerPriorityToReplicas)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
