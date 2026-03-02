@@ -35,6 +35,10 @@
   </parent>
 
 
+  <properties>
+    <vertx.version>4.5.24</vertx.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -144,7 +148,12 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <version>4.5.24</version>
+      <version>${vertx.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-uri-template</artifactId>
+      <version>${vertx.version}</version>
     </dependency>
     <dependency>
       <groupId>javax.ws.rs</groupId>
