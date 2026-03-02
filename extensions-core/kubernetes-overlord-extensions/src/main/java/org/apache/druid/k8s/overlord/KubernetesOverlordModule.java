@@ -396,7 +396,7 @@ public class KubernetesOverlordModule implements DruidModule
     @Override
     public DruidKubernetesHttpClientFactory get()
     {
-      return new DruidKubernetesVertxHttpClientFactory(config);
+      return new DruidKubernetesVertxHttpClientFactory(DruidKubernetesVertxHttpClientFactory.createVertxInstance(config), config);
     }
   }
 

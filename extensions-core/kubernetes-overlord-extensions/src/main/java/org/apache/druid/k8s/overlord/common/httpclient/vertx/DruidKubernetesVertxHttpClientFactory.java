@@ -25,32 +25,34 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
 import io.vertx.core.spi.resolver.ResolverProvider;
+import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 
 /**
  * Similar to {@link VertxHttpClientFactory} but allows us to override thread pool configurations.
  */
-public class DruidKubernetesVertxHttpClientFactory implements DruidKubernetesHttpClientFactory
+public class DruidKubernetesVertxHttpClientFactory extends VertxHttpClientFactory implements DruidKubernetesHttpClientFactory
 {
   public static final String TYPE_NAME = "vertx";
-  private final Vertx vertx;
 
-  public DruidKubernetesVertxHttpClientFactory(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
+  private final DruidKubernetesVertxHttpClientConfig httpClientConfig;
+
+  public DruidKubernetesVertxHttpClientFactory(Vertx vertx, DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
-    this.vertx = createVertxInstance(httpClientConfig);
+    super(vertx);
+    this.httpClientConfig = httpClientConfig;
   }
 
   @Override
-  public VertxHttpClientBuilder<DruidKubernetesVertxHttpClientFactory> newBuilder()
+  protected void additionalConfig(WebClientOptions options)
   {
-    return new VertxHttpClientBuilder<>(this, vertx);
   }
 
   /**
    * Adapted from fabric8 kubernetes-client 7.1.0. We bring this here so we can customize thread pool sizes
    * and force usage of daemon threads.
    */
-  private static Vertx createVertxInstance(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
+  public static Vertx createVertxInstance(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
     // fabric8 disables the async DNS resolver while creating Vertx.
     // I'm not sure if we really need to do this, but I'm keeping it to align behavior with upstream.

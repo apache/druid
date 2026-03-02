@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
+import io.vertx.core.Vertx;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -66,8 +67,9 @@ public class KubernetesTaskRunnerFactoryTest
 
     Config config = new ConfigBuilder().build();
 
+    Vertx vertx = DruidKubernetesVertxHttpClientFactory.createVertxInstance(new DruidKubernetesVertxHttpClientConfig());
     druidKubernetesClient =
-        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
+        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(vertx, new DruidKubernetesVertxHttpClientConfig()), config);
     druidKubernetesCachingClient = null;
     taskAdapter = new TestTaskAdapter();
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerEffectiveConfig(kubernetesTaskRunnerStaticConfig, () -> null);
