@@ -86,7 +86,7 @@ public class BrokerServerView implements TimelineServerView
       final QueryableDruidServer.Maker directDruidClientFactory,
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy historicalTierSelectorStrategy,
-      @Named(REALTIME_SELECTOR) @Nullable final TierSelectorStrategy realtimeTierSelectorStrategy,
+      @Named(REALTIME_SELECTOR) final TierSelectorStrategy realtimeTierSelectorStrategy,
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig
@@ -95,8 +95,7 @@ public class BrokerServerView implements TimelineServerView
     this.druidClientFactory = directDruidClientFactory;
     this.baseView = baseView;
     this.historicalTierSelectorStrategy = historicalTierSelectorStrategy;
-    // If the realtime selector strategy is not configured, then fallback to historical's strategy for backward compatibility.
-    this.realtimeTierSelectorStrategy = realtimeTierSelectorStrategy == null ? historicalTierSelectorStrategy : realtimeTierSelectorStrategy;
+    this.realtimeTierSelectorStrategy = realtimeTierSelectorStrategy;
     log.info("Using historicalTierSelectorStrategy[%s] and realtimeTierSelectorStrategy[%s]", historicalTierSelectorStrategy, realtimeTierSelectorStrategy);
 
     this.emitter = emitter;

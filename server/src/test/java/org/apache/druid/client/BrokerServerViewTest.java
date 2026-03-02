@@ -709,7 +709,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     setupViews(
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        null,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new BrokerSegmentWatcherConfig()
         {
           @Override

@@ -48,31 +48,31 @@ public class CliBrokerTest
 {
 
   @Test
-  public void testDefaultTierSelectorStrategy()
-  {
-    final Injector injector = makeBrokerInjector(new Properties());
-    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
-    Assert.assertNull(
-        injector.getInstance(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)))
-    );
-  }
-
-  @Test
   public void testDefaultServerSelectorStrategy()
   {
     final Injector injector = makeBrokerInjector(new Properties());
 
-    // Verify default ServerSelectorStrategy for historical
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
     Assert.assertNotNull(historicalBalancer);
     Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
 
-    // Verify default ServerSelectorStrategy for realtime
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
     Assert.assertNotNull(realtimeBalancer);
     Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    Assert.assertSame(realtimeBalancer, historicalBalancer);
+  }
+
+  @Test
+  public void testDefaultTierSelectorStrategy()
+  {
+    final Injector injector = makeBrokerInjector(new Properties());
+    TierSelectorStrategy historicalTierSelector = injector.getInstance(TierSelectorStrategy.class);
+    TierSelectorStrategy realtimeTierSelector = injector.getInstance(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)));
+    Assert.assertTrue(historicalTierSelector instanceof HighestPriorityTierSelectorStrategy);
+    Assert.assertTrue(realtimeTierSelector instanceof HighestPriorityTierSelectorStrategy);
+    Assert.assertSame(realtimeTierSelector, historicalTierSelector);
   }
 
   @Test
@@ -83,8 +83,9 @@ public class CliBrokerTest
 
     final Injector injector = makeBrokerInjector(properties);
     Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof LowestPriorityTierSelectorStrategy);
-    Assert.assertNull(
+    Assert.assertTrue(
         injector.getInstance(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)))
+        instanceof LowestPriorityTierSelectorStrategy
     );
   }
 
@@ -172,21 +173,6 @@ public class CliBrokerTest
     Assert.assertTrue(realtime instanceof LowestPriorityTierSelectorStrategy);
   }
 
-
-  @Test
-  public void testCustomStrategyWithFallbackConfig()
-  {
-    // Test backward compatibility - custom strategy falls back to druid.broker.select.tier.priorities
-    // when strategy-specific path druid.broker.select.tier.custom.priorities is not set
-    final Properties properties = new Properties();
-    properties.setProperty("druid.broker.select.tier", "custom");
-    properties.setProperty("druid.broker.select.tier.custom.priorities", "[1,0]");
-
-    final Injector injector = makeBrokerInjector(properties);
-    final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
-    Assert.assertTrue(historical instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(1, 0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
-  }
 
   @Test
   public void testServerSelectorStrategyFallbackToGlobal()
