@@ -43,23 +43,56 @@ import java.util.Properties;
 
 /**
  * Guice module that configures the {@link TierSelectorStrategy} for {@link BrokerServerView#REALTIME_SELECTOR} tiers
- * in the Broker. The strategy is determined by {@link BrokerRealtimeTierSelectorModule#PROPERTY}. If
+ * in the Broker. The strategy is determined by {@link BrokerRealtimeSelectorModule#REALTIME_SELECT_TIER_PROPERTY}. If
  * the property is not configured, then {@link RealtimeTierSelectorStrategyProvider#get()} returns
  * null, which then fallsback to the {@code druid.broker.select.tier} in {@link BrokerServerView}.
  */
 @LoadScope(roles = NodeRole.BROKER_JSON_NAME)
-public class BrokerRealtimeTierSelectorModule implements DruidModule
+public class BrokerRealtimeSelectorModule implements DruidModule
 {
-  private static final Logger log = new Logger(BrokerRealtimeTierSelectorModule.class);
+  private static final Logger log = new Logger(BrokerRealtimeSelectorModule.class);
 
-  private static final String PROPERTY = "druid.broker.select.realtime.tier";
+  private static final String REALTIME_BALANCER_PROPERTY = "druid.broker.select.realtime.balancer";
+  private static final String REALTIME_SELECT_TIER_PROPERTY = "druid.broker.select.realtime.tier";
 
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)))
+          .toProvider(RealtimeServerSelectorStrategyProvider.class)
+          .in(LazySingleton.class);
+
     binder.bind(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)))
           .toProvider(RealtimeTierSelectorStrategyProvider.class)
           .in(LazySingleton.class);
+  }
+
+
+  private static class RealtimeServerSelectorStrategyProvider implements Provider<ServerSelectorStrategy>
+  {
+    private Properties properties;
+    private JsonConfigurator configurator;
+
+    @Inject
+    public RealtimeServerSelectorStrategyProvider(Properties properties, JsonConfigurator configurator)
+    {
+      this.properties = properties;
+      this.configurator = configurator;
+    }
+
+    @Override
+    public ServerSelectorStrategy get()
+    {
+      // Try druid.broker.select.realtime.balancer first, fallback to druid.broker.balancer
+      final String realtimeSelector = properties.getProperty(REALTIME_BALANCER_PROPERTY);
+      if (realtimeSelector != null) {
+        log.info("Using realtime ServerSelectorStrategy from [%s]", REALTIME_BALANCER_PROPERTY);
+        return configurator.configurate(properties, REALTIME_BALANCER_PROPERTY, ServerSelectorStrategy.class);
+      } else {
+        log.info("Using realtime ServerSelectorStrategy from fallback [druid.broker.balancer]");
+        return configurator.configurate(properties, "druid.broker.balancer", ServerSelectorStrategy.class);
+      }
+    }
   }
 
   private static class RealtimeTierSelectorStrategyProvider implements Provider<TierSelectorStrategy>
@@ -84,9 +117,9 @@ public class BrokerRealtimeTierSelectorModule implements DruidModule
     @Override
     public TierSelectorStrategy get()
     {
-      final String realtimeTier = properties.getProperty(PROPERTY);
+      final String realtimeTier = properties.getProperty(REALTIME_SELECT_TIER_PROPERTY);
       if (realtimeTier == null) {
-        log.info("[%s] is not configured.", PROPERTY);
+        log.info("[%s] is not configured.", REALTIME_SELECT_TIER_PROPERTY);
         return null;
       }
 
