@@ -42,7 +42,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
-import javax.annotation.Nullable;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.HashMap;
