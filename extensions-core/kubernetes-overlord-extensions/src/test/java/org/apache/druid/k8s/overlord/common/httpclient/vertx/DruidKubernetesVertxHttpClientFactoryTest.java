@@ -21,14 +21,11 @@ package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
-import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -36,22 +33,6 @@ import java.util.Properties;
 public class DruidKubernetesVertxHttpClientFactoryTest
 {
   private static final String PROPERTY_PREFIX = "druid.indexer.runner.k8sAndWorker.http.vertx";
-
-  private Vertx vertx;
-
-  @Before
-  public void setUp()
-  {
-    vertx = DruidKubernetesVertxHttpClientFactory.createVertxInstance(new DruidKubernetesVertxHttpClientConfig());
-  }
-
-  @After
-  public void tearDown()
-  {
-    if (vertx != null) {
-      vertx.close();
-    }
-  }
 
   @Test
   public void testAdditionalConfigAppliesWebClientOptions()
@@ -68,7 +49,7 @@ public class DruidKubernetesVertxHttpClientFactoryTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
 
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(vertx, config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
 
     WebClientOptions options = new WebClientOptions();
     factory.additionalConfig(options);
@@ -82,7 +63,7 @@ public class DruidKubernetesVertxHttpClientFactoryTest
   public void testAdditionalConfigWithEmptyMapDoesNotModifyOptions()
   {
     DruidKubernetesVertxHttpClientConfig config = new DruidKubernetesVertxHttpClientConfig();
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(vertx, config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
 
     WebClientOptions options = new WebClientOptions();
     int defaultMaxPoolSize = options.getMaxPoolSize();
@@ -107,7 +88,7 @@ public class DruidKubernetesVertxHttpClientFactoryTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
 
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(vertx, config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
 
     WebClientOptions options = new WebClientOptions();
     RuntimeException exception = Assert.assertThrows(RuntimeException.class, () -> factory.additionalConfig(options));
