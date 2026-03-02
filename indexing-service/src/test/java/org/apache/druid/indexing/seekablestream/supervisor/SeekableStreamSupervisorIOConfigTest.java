@@ -422,13 +422,17 @@ public class SeekableStreamSupervisorIOConfigTest
   @Test
   public void testNegativeReplicasThrowsException()
   {
+    final Map <Integer, Integer> invalidServerPriorityToReplicas = Map.of(0, 2, 1, -1);
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> makeSeekableStreamSupervisorIOConfig(null, Map.of(1, -1))
+            () -> makeSeekableStreamSupervisorIOConfig(null,invalidServerPriorityToReplicas)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Sum of replicas in configured serverPriorityToReplicas[{1=-1}] must be >= 0, but found [-1]."
+            StringUtils.format(
+                "Found invalid server replica[-1] for priority[1] in serverPriorityToReplicas[%s]. Replicas must be >= 0.",
+                invalidServerPriorityToReplicas
+            )
         )
     );
   }
