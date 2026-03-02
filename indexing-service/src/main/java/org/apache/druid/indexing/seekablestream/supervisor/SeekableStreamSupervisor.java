@@ -204,8 +204,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // task groups have nothing but closed partitions in their assignments.
     final ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName;
 
-    final ConcurrentHashMap<String, Integer> taskIdToServerPriority = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<String, Integer> taskIdToServerPriority = new ConcurrentHashMap<>();
     final DateTime minimumMessageTime;
     final DateTime maximumMessageTime;
     final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
@@ -275,6 +275,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<String> taskIds()
     {
       return tasks.keySet();
+    }
+
+    /**
+     * Removes a task from {@link #tasks} and {@link #taskIdToServerPriority}.
+     */
+    void removeTask(String taskId)
+    {
+      tasks.remove(taskId);
+      taskIdToServerPriority.remove(taskId);
+    }
+
+    /**
+     * Removes a task from {@link #tasks} using the provided iterator and also removes the corresponding entry
+     * in {@link #taskIdToServerPriority}. Useful when removing tasks during iteration.
+     */
+    void removeTask(Iterator<Entry<String, TaskData>> taskDataIterator, String taskId)
+    {
+      taskDataIterator.remove();
+      taskIdToServerPriority.remove(taskId);
     }
 
     void setHandoffEarly()
@@ -2531,8 +2550,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         stateManager.recordThrowableEvent(e);
         log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
         killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
-        taskGroup.tasks.remove(taskId);
-        taskGroup.taskIdToServerPriority.remove(taskId);
+        taskGroup.removeTask(taskId);
       } else if (checkpointResult.valueOrThrow().isEmpty()) {
         log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
       } else {
@@ -2655,8 +2673,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               taskGroup.checkpointSequences,
               latestOffsetsFromDb
           );
-          taskGroup.tasks.remove(sequenceCheckpoint.lhs);
-          taskGroup.taskIdToServerPriority.remove(sequenceCheckpoint.lhs);
+          taskGroup.removeTask(sequenceCheckpoint.lhs);
         }
     );
   }
@@ -3563,8 +3580,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           if (task.status.isRunnable()) {
             if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
               killTask(taskId, "Killing task [%s] which hasn't been assigned to a worker", taskId);
-              i.remove();
-              taskGroup.taskIdToServerPriority.remove(taskId);
+              taskGroup.removeTask(i, taskId);
             }
           }
         }
@@ -3601,13 +3617,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     taskId,
                     pauseException
                 );
-                taskGroup.tasks.remove(taskId);
-                taskGroup.taskIdToServerPriority.remove(taskId);
+                taskGroup.removeTask(taskId);
 
               } else if (input.get(i).valueOrThrow() == null || input.get(i).valueOrThrow().isEmpty()) {
                 killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
-                taskGroup.tasks.remove(taskId);
-                taskGroup.taskIdToServerPriority.remove(taskId);
+                taskGroup.removeTask(taskId);
               } else { // otherwise build a map of the highest sequences seen
                 for (Entry<PartitionIdType, SequenceOffsetType> sequence : input.get(i).valueOrThrow().entrySet()) {
                   if (!endOffsets.containsKey(sequence.getKey())
@@ -3656,8 +3670,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       } else {
                         String taskId = setEndOffsetTaskIds.get(i);
                         killTask(taskId, "Failed to set end offsets, killing task");
-                        taskGroup.tasks.remove(taskId);
-                        taskGroup.taskIdToServerPriority.remove(taskId);
+                        taskGroup.removeTask(taskId);
                       }
                     }
                   }
@@ -3749,8 +3762,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           if (taskData.status.isFailure()) {
             stateManager.recordCompletedTaskState(TaskState.FAILED);
-            iTask.remove(); // remove failed task
-            group.taskIdToServerPriority.remove(taskId);
+            group.removeTask(iTask, taskId); // remove failed task
             if (group.tasks.isEmpty()) {
               // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
               entireTaskGroupFailed = true;
@@ -3846,8 +3858,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (!isTaskCurrent(groupId, taskId, activeTaskMap)) {
           log.info("Stopping task[%s] as it does not match the expected sequence range and ingestion spec.", taskId);
           futures.add(stopTask(taskId, false));
-          iTasks.remove();
-          taskGroup.taskIdToServerPriority.remove(taskId);
+          taskGroup.removeTask(iTasks, taskId);
           continue;
         }
 
@@ -3856,8 +3867,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // remove failed tasks
         if (taskData.status.isFailure()) {
           stateManager.recordCompletedTaskState(TaskState.FAILED);
-          iTasks.remove();
-          taskGroup.taskIdToServerPriority.remove(taskId);
+          taskGroup.removeTask(iTasks, taskId);
           continue;
         }
 
