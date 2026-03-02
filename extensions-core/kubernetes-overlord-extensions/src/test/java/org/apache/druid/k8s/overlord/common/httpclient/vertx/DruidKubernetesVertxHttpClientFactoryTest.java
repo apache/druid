@@ -25,17 +25,17 @@ import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
-public class DruidKubernetesVertxHttpClientFactoryTest
+class DruidKubernetesVertxHttpClientFactoryTest
 {
   private static final String PROPERTY_PREFIX = "druid.indexer.runner.k8sAndWorker.http.vertx";
 
   @Test
-  public void testAdditionalConfigAppliesWebClientOptions()
+  void testAdditionalConfigAppliesWebClientOptions()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<DruidKubernetesVertxHttpClientConfig> provider = JsonConfigProvider.of(
@@ -54,13 +54,13 @@ public class DruidKubernetesVertxHttpClientFactoryTest
     WebClientOptions options = new WebClientOptions();
     factory.additionalConfig(options);
 
-    Assert.assertEquals(10, options.getMaxPoolSize());
-    Assert.assertEquals(5000, options.getConnectTimeout());
-    Assert.assertEquals(120, options.getIdleTimeout());
+    Assertions.assertEquals(10, options.getMaxPoolSize());
+    Assertions.assertEquals(5000, options.getConnectTimeout());
+    Assertions.assertEquals(120, options.getIdleTimeout());
   }
 
   @Test
-  public void testAdditionalConfigWithEmptyMapDoesNotModifyOptions()
+  void testAdditionalConfigWithEmptyMapDoesNotModifyOptions()
   {
     DruidKubernetesVertxHttpClientConfig config = new DruidKubernetesVertxHttpClientConfig();
     DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
@@ -71,12 +71,12 @@ public class DruidKubernetesVertxHttpClientFactoryTest
 
     factory.additionalConfig(options);
 
-    Assert.assertEquals(defaultMaxPoolSize, options.getMaxPoolSize());
-    Assert.assertEquals(defaultConnectTimeout, options.getConnectTimeout());
+    Assertions.assertEquals(defaultMaxPoolSize, options.getMaxPoolSize());
+    Assertions.assertEquals(defaultConnectTimeout, options.getConnectTimeout());
   }
 
   @Test
-  public void testAdditionalConfigWithInvalidPropertyThrowsException()
+  void testAdditionalConfigWithInvalidPropertyThrowsException()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<DruidKubernetesVertxHttpClientConfig> provider = JsonConfigProvider.of(
@@ -91,10 +91,13 @@ public class DruidKubernetesVertxHttpClientFactoryTest
     DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
 
     WebClientOptions options = new WebClientOptions();
-    RuntimeException exception = Assert.assertThrows(RuntimeException.class, () -> factory.additionalConfig(options));
-    Assert.assertTrue(
-        exception.getMessage(),
-        exception.getMessage().contains("Failed to apply webClientOptions")
+    RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> factory.additionalConfig(options)
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("Failed to apply webClientOptions"),
+        exception.getMessage()
     );
   }
 

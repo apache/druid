@@ -24,17 +24,17 @@ import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
-public class DruidKubernetesVertxHttpClientConfigTest
+class DruidKubernetesVertxHttpClientConfigTest
 {
   private static final String PROPERTY_PREFIX = "druid.indexer.runner.k8sAndWorker.http.vertx";
 
   @Test
-  public void testSerdeWebClientOptionsMap()
+  void testSerdeWebClientOptionsMap()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<DruidKubernetesVertxHttpClientConfig> provider = JsonConfigProvider.of(
@@ -47,15 +47,15 @@ public class DruidKubernetesVertxHttpClientConfigTest
     properties.put(PROPERTY_PREFIX + ".webClientOptions.idleTimeout", "120");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
-    Assert.assertNotNull(config.getWebClientOptions());
-    Assert.assertEquals(3, config.getWebClientOptions().size());
-    Assert.assertEquals("10", config.getWebClientOptions().get("maxPoolSize"));
-    Assert.assertEquals("5000", config.getWebClientOptions().get("connectTimeout"));
-    Assert.assertEquals("120", config.getWebClientOptions().get("idleTimeout"));
+    Assertions.assertNotNull(config.getWebClientOptions());
+    Assertions.assertEquals(3, config.getWebClientOptions().size());
+    Assertions.assertEquals("10", config.getWebClientOptions().get("maxPoolSize"));
+    Assertions.assertEquals("5000", config.getWebClientOptions().get("connectTimeout"));
+    Assertions.assertEquals("120", config.getWebClientOptions().get("idleTimeout"));
   }
 
   @Test
-  public void testSerdeEmptyWebClientOptionsMap()
+  void testSerdeEmptyWebClientOptionsMap()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<DruidKubernetesVertxHttpClientConfig> provider = JsonConfigProvider.of(
@@ -65,8 +65,8 @@ public class DruidKubernetesVertxHttpClientConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
-    Assert.assertNotNull(config.getWebClientOptions());
-    Assert.assertEquals(0, config.getWebClientOptions().size());
+    Assertions.assertNotNull(config.getWebClientOptions());
+    Assertions.assertEquals(0, config.getWebClientOptions().size());
   }
 
   private Injector createInjector()
