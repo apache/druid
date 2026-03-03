@@ -20,7 +20,7 @@
 package org.apache.druid.frame.util;
 
 import com.google.common.base.Optional;
-import org.joda.time.DateTime;
+import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,12 +55,12 @@ public class DurableStorageUtilsTest
   {
     Assert.assertTrue(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        unused -> Optional.of(new DateTime()),
+        unused -> Optional.of(DateTimes.nowUtc()),
         10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        unused -> Optional.of(new DateTime().minus(15_000L)),
+        unused -> Optional.of(DateTimes.nowUtc().minus(15_000L)),
         10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
@@ -70,12 +70,12 @@ public class DurableStorageUtilsTest
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         null,
-        unused -> Optional.of(new DateTime()),
+        unused -> Optional.of(DateTimes.nowUtc()),
         10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR,
-        unused -> Optional.of(new DateTime()),
+        unused -> Optional.of(DateTimes.nowUtc()),
         10_000L
     ));
   }

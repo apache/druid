@@ -31,13 +31,13 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.duty.DutySchedule;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,7 +76,7 @@ public class DurableStorageCleanerTest
   public void testRun() throws Exception
   {
     EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(new DateTime(), TaskStatus.success("not-used"), TaskTest.TASK))
+            .andReturn(new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("not-used"), TaskTest.TASK))
             .anyTimes();
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID), STRAY_DIR)
@@ -103,7 +103,7 @@ public class DurableStorageCleanerTest
   public void testRunClearsStaleTask() throws Exception
   {
     EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(new DateTime().minus(10_000L), TaskStatus.success("not-used"), TaskTest.TASK))
+            .andReturn(new TaskInfo(DateTimes.nowUtc().minus(10_000L), TaskStatus.success("not-used"), TaskTest.TASK))
             .anyTimes();
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID))
@@ -130,7 +130,7 @@ public class DurableStorageCleanerTest
   public void testRunExcludesQueryDirectory() throws Exception
   {
     EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(new DateTime(), TaskStatus.success("not-used"), TaskTest.TASK))
+            .andReturn(new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("not-used"), TaskTest.TASK))
             .anyTimes();
     final String resultPath = DurableStorageUtils.QUERY_RESULTS_DIR + "/" + DurableStorageUtils.getControllerDirectory(
         TASK_ID) + "/results.json";
