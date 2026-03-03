@@ -44,9 +44,18 @@ import javax.inject.Named;
 import java.util.Properties;
 
 /**
- * Guice module that configures the {@link TierSelectorStrategy} and {@link ServerSelectorStrategy}
- * for {@link BrokerServerView#REALTIME_SELECTOR} tiers in the Broker.
- * If the realtime tier property is not configured, falls back to the historical TierSelectorStrategy.
+ * Guice module that configures the {@link ServerSelectorStrategy} and {@link TierSelectorStrategy}
+ * for realtime servers in the Broker.
+ * <p>
+ * Configuration properties:
+ * <ul>
+ *   <li>{@value #REALTIME_BALANCER_PROPERTY} - Configures the {@link ServerSelectorStrategy}
+ *       for realtime servers via {@link RealtimeServerSelectorStrategyProvider} if configured.
+ *       Falls back to {@code druid.broker.select.balancer} if not set.</li>
+ *   <li>{@value #REALTIME_SELECT_TIER_PROPERTY} - Configures the {@link TierSelectorStrategy}
+ *       for realtime servers via {@link RealtimeTierSelectorStrategyProvider} if configured.
+ *       Falls back to {@code druid.broker.select} if not set.</li>
+ * </ul>
  */
 @LoadScope(roles = NodeRole.BROKER_JSON_NAME)
 public class BrokerRealtimeSelectorModule implements DruidModule
@@ -85,7 +94,6 @@ public class BrokerRealtimeSelectorModule implements DruidModule
     @Override
     public ServerSelectorStrategy get()
     {
-      // Try druid.broker.select.realtime.balancer first, fallback to druid.broker.balancer
       final String realtimeSelector = properties.getProperty(REALTIME_BALANCER_PROPERTY);
       if (Strings.isNullOrEmpty(realtimeSelector)) {
         log.info("Using realtime ServerSelectorStrategy from fallback [druid.broker.balancer]");
