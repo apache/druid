@@ -125,6 +125,8 @@
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
+        <okhttp.version>5.3.2</okhttp.version>
+        <kubernetes.client.version>25.0.0</kubernetes.client.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.8.4</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
@@ -440,6 +442,31 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-configuration2</artifactId>
                 <version>2.10.1</version>
+            </dependency>
+            <dependency>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>okhttp</artifactId>
+              <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>logging-interceptor</artifactId>
+              <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java-api</artifactId>
+              <version>${kubernetes.client.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java</artifactId>
+              <version>${kubernetes.client.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java-extended</artifactId>
+              <version>${kubernetes.client.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
