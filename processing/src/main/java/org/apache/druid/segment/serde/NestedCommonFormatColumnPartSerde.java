@@ -49,6 +49,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * {@link ColumnPartSerde} shared by all {@link NestedCommonFormatColumn}. The {@link #logicalType} defines the native
@@ -215,6 +216,38 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   public Byte getPathParserVersion()
   {
     return pathParserVersion;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NestedCommonFormatColumnPartSerde that = (NestedCommonFormatColumnPartSerde) o;
+    return hasNulls == that.hasNulls
+           && isVariantType == that.isVariantType
+           && enforceLogicalType == that.enforceLogicalType
+           && pathParserVersion == that.pathParserVersion
+           && Objects.equals(logicalType, that.logicalType)
+           && Objects.equals(byteOrder, that.byteOrder)
+           && Objects.equals(bitmapSerdeFactory, that.bitmapSerdeFactory)
+           && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        logicalType,
+        hasNulls,
+        isVariantType,
+        enforceLogicalType,
+        byteOrder,
+        pathParserVersion,
+        bitmapSerdeFactory,
+        columnFormatSpec
+    );
   }
 
   private class StringColumnDeserializer implements Deserializer
