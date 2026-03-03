@@ -50,7 +50,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
     {
       this.handler = handler;
       addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
-      addProperty("druid.sql.planner.metadataSegmentPollPeriod", "PT0.1s");
+      addProperty("druid.sql.planner.metadataSegmentPollPeriod", "100");
     }
 
     @Override
