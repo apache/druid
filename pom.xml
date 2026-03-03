@@ -671,9 +671,9 @@
                 <version>2.3.3</version>
             </dependency>
             <dependency>
-                <groupId>org.glassfish</groupId>
-                <artifactId>jakarta.el</artifactId>
-                <version>3.0.4</version>
+                <groupId>jakarta.el</groupId>
+                <artifactId>jakarta.el-api</artifactId>
+                <version>6.0.1</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
