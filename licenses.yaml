@@ -3277,6 +3277,28 @@ notices:
 ---
 
 
+name: aws-msk-iam-auth
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+version: 1.1.5
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+
+---
+
+
+name: aws-msk-iam-auth
+license_category: binary
+module: extensions/druid-kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 1.1.5
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+
+---
+
+
 name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
