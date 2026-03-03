@@ -25,6 +25,7 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.CustomTierSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.LowestPriorityTierSelectorStrategy;
@@ -95,7 +96,7 @@ public class CliBrokerTest
     final Properties properties = new Properties();
     properties.setProperty("druid.broker.realtime.select.tier", "custom");
     properties.setProperty("druid.broker.realtime.select.tier.custom.priorities", "[2,1,0]");
-    properties.setProperty("druid.broker.balancer", "random");
+    properties.setProperty("druid.broker.balancer.type", "random");
 
     final Injector injector = makeBrokerInjector(properties);
 
@@ -108,7 +109,6 @@ public class CliBrokerTest
 
     Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
 
-    // Verify both use global balancer when context-specific not set
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
@@ -121,11 +121,11 @@ public class CliBrokerTest
     final Properties properties = new Properties();
     properties.setProperty("druid.broker.select.tier", "custom");
     properties.setProperty("druid.broker.select.tier.custom.priorities", "[0]");
-    properties.setProperty("druid.broker.select.balancer", "random");
+    properties.setProperty("druid.broker.balancer.type", "random");
 
     properties.setProperty("druid.broker.realtime.select.tier", "custom");
     properties.setProperty("druid.broker.realtime.select.tier.custom.priorities", "[2,1]");
-    properties.setProperty("druid.broker.realtime.balancer", "connectionCount");
+    properties.setProperty("druid.broker.realtime.balancer.type", "connectionCount");
 
     final Injector injector = makeBrokerInjector(properties);
     final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
@@ -146,9 +146,8 @@ public class CliBrokerTest
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertNotNull(historicalBalancer);
-    Assert.assertNotNull(realtimeBalancer);
-    Assert.assertNotSame(historicalBalancer, realtimeBalancer);
+    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    Assert.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
   }
 
 
@@ -177,16 +176,13 @@ public class CliBrokerTest
   @Test
   public void testServerSelectorStrategyFallbackToGlobal()
   {
-    // Test that when context-specific balancer is not set, it falls back to global
     final Properties properties = new Properties();
     properties.setProperty("druid.broker.select.tier", "custom");
     properties.setProperty("druid.broker.select.tier.custom.priorities", "[0]");
-    properties.setProperty("druid.broker.balancer", "random");
-    // Not setting druid.broker.select.balancer or druid.broker.select.realtime.balancer
+    properties.setProperty("druid.broker.balancer.type", "random");
 
     final Injector injector = makeBrokerInjector(properties);
 
-    // Both should use the global balancer
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
@@ -195,7 +191,6 @@ public class CliBrokerTest
     Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
     Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
 
-    // Verify tier selector strategy still works correctly
     final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
     Assert.assertTrue(historical instanceof CustomTierSelectorStrategy);
     Assert.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
