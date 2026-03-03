@@ -287,8 +287,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     /**
-     * Removes a task from {@link #tasks} using the provided iterator and also removes the corresponding entry
-     * in {@link #taskIdToServerPriority}. Useful when removing tasks during iteration.
+     * Removes the current task entry from {@link #tasks} using the provided iterator,
+     * and also removes the corresponding entry from {@link #taskIdToServerPriority}.
+     * <p>
+     * Must be called while iterating over {@link #tasks} and relies on
+     * {@link Iterator#remove()} to safely avoid {@link java.util.ConcurrentModificationException}.
      */
     void removeTask(Iterator<Entry<String, TaskData>> taskDataIterator, String taskId)
     {
