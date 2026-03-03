@@ -495,16 +495,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
-            final Pair<Set<DataSegmentPlus>, Set<DataSegment>> newSegments = createNewSegmentsAfterReplace(
+            final Set<DataSegmentPlus> newSegments = createNewSegmentsAfterReplace(
                 dataSource,
                 transaction,
                 replaceSegments,
                 locksHeldByReplaceTask
             );
-            final Set<DataSegment> segmentsToInsert = newSegments.rhs;
             Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata = new HashMap<>();
             final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-            for (DataSegmentPlus dataSegmentPlus : newSegments.lhs) {
+            for (DataSegmentPlus dataSegmentPlus : newSegments) {
               if (dataSegmentPlus.getSchemaFingerprint() != null && dataSegmentPlus.getNumRows() != null) {
                 upgradeSegmentMetadata.put(
                     dataSegmentPlus.getDataSegment().getId(),
@@ -518,6 +517,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 );
               }
             }
+            final Set<DataSegment> segmentsToInsert = newSegments.stream()
+                                                                 .map(DataSegmentPlus::getDataSegment)
+                                                                 .collect(Collectors.toSet());
             return SegmentPublishResult.ok(
                 insertSegments(
                     transaction,
@@ -1860,7 +1862,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * @return pair of (upgraded segments for metadata tracking, segments to insert into segment table)
    * @throws DruidException if a replace interval partially overlaps a segment being upgraded
    */
-  private Pair<Set<DataSegmentPlus>, Set<DataSegment>> createNewSegmentsAfterReplace(
+  private Set<DataSegmentPlus> createNewSegmentsAfterReplace(
       final String dataSource,
       final SegmentMetadataTransaction transaction,
       final Set<DataSegment> replaceSegments,
@@ -1870,7 +1872,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // If a "REPLACE" task has locked an interval, it would commit some segments
     // (or at least tombstones) in that interval (except in LEGACY_REPLACE ingestion mode)
     if (replaceSegments.isEmpty() || locksHeldByReplaceTask.isEmpty()) {
-      return Pair.of(Collections.emptySet(), Collections.emptySet());
+      return Collections.emptySet();
     }
 
     // For each replace interval, find the current partition number
@@ -1893,17 +1895,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                 .map(ReplaceTaskLock::getSupervisorTaskId)
                                                 .findFirst().orElse(null);
     final Map<String, String> upgradeSegmentToLockVersion
-        = getAppendSegmentsCommittedDuringTask(transaction, taskId);
+        = getSegmentsCoveredByTaskLock(transaction, taskId);
 
     final List<DataSegmentPlus> segmentsToUpgrade
         = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
 
     if (segmentsToUpgrade.isEmpty()) {
-      return Pair.of(Collections.emptySet(), replaceSegments);
+      return replaceSegments.stream()
+                            .map(s -> new DataSegmentPlus(s, null, null, null, null, null, null, null))
+                            .collect(Collectors.toSet());
     }
 
     final Set<Interval> replaceIntervals = intervalToCurrentPartitionNum.keySet();
-    final Set<DataSegmentPlus> upgradedSegments = new HashSet<>();
+    final Map<DataSegment, DataSegmentPlus> upgradedSegments = new HashMap<>();
     final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
     for (DataSegmentPlus oldSegmentMetadata : segmentsToUpgrade) {
       // Determine interval of the upgraded segment
@@ -1956,7 +1960,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            ? oldSegmentMetadata.getDataSegment().getId().toString()
                                            : oldSegmentMetadata.getUpgradedFromSegmentId();
 
-      upgradedSegments.add(
+      upgradedSegments.put(
+          dataSegment,
           new DataSegmentPlus(
               dataSegment,
               null,
@@ -1971,8 +1976,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       segmentsToInsert.add(dataSegment);
     }
 
-    // update corePartitions in shard spec
-    return Pair.of(upgradedSegments, segmentsToInsert.stream().map(segment -> {
+    return segmentsToInsert.stream().map(segment -> {
+      // update corePartitions in shard spec
       Integer partitionNum = intervalToCurrentPartitionNum.get(segment.getInterval());
       if (!segment.isTombstone()
           && !numChunkNotSupported.contains(segment.getInterval())
@@ -1982,7 +1987,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       } else {
         return segment;
       }
-    }).collect(Collectors.toSet()));
+    }).map(s -> {
+      // wrap with DataSegmentPlus
+      if (upgradedSegments.containsKey(s)) {
+        DataSegmentPlus upgraded = upgradedSegments.get(s);
+        return new DataSegmentPlus(
+            s,
+            upgraded.getCreatedDate(),
+            upgraded.getUsedStatusLastUpdatedDate(),
+            upgraded.getUsed(),
+            upgraded.getSchemaFingerprint(),
+            upgraded.getNumRows(),
+            upgraded.getUpgradedFromSegmentId(),
+            upgraded.getIndexingStateFingerprint()
+        );
+      } else {
+        return new DataSegmentPlus(s, null, null, null, null, null, null, null);
+      }
+    }).collect(Collectors.toSet());
   }
 
   /**
@@ -2205,13 +2227,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Finds the append segments that were covered by the given task REPLACE locks.
-   * These append segments must now be upgraded to the same version as the segments
+   * Finds segments were covered by the given task REPLACE locks.
+   * These segments must now be upgraded to the same version as the segments
    * being committed by this replace task.
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  private Map<String, String> getAppendSegmentsCommittedDuringTask(
+  private Map<String, String> getSegmentsCoveredByTaskLock(
       SegmentMetadataTransaction transaction,
       String taskId
   )

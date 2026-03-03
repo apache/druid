@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class UncompactedInputSpecTest
+public class MinorCompactionInputSpecTest
 {
   @Test
   public void testSerde() throws Exception
@@ -41,9 +41,9 @@ public class UncompactedInputSpecTest
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
     );
 
-    UncompactedInputSpec spec = new UncompactedInputSpec(interval, segments);
+    MinorCompactionInputSpec spec = new MinorCompactionInputSpec(interval, segments);
     String json = mapper.writeValueAsString(spec);
-    UncompactedInputSpec deserialized = mapper.readValue(json, UncompactedInputSpec.class);
+    MinorCompactionInputSpec deserialized = mapper.readValue(json, MinorCompactionInputSpec.class);
 
     Assert.assertEquals(spec, deserialized);
     Assert.assertEquals(interval, deserialized.getInterval());
@@ -60,7 +60,7 @@ public class UncompactedInputSpecTest
                         + "\"uncompactedSegments\":[{\"itvl\":\"2015-04-11/2015-04-12\",\"ver\":\"v1\",\"part\":0}]"
                         + "}";
 
-    UncompactedInputSpec deserialized = mapper.readValue(clientJson, UncompactedInputSpec.class);
+    MinorCompactionInputSpec deserialized = mapper.readValue(clientJson, MinorCompactionInputSpec.class);
 
     Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), deserialized.getInterval());
     Assert.assertEquals(1, deserialized.getUncompactedSegments().size());
@@ -77,18 +77,18 @@ public class UncompactedInputSpecTest
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
     );
 
-    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(null, segments));
+    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(null, segments));
 
     Interval emptyInterval = Intervals.of("2015-04-11/2015-04-11");
-    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(emptyInterval, segments));
+    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(emptyInterval, segments));
   }
 
   @Test
   public void testThrowsExceptionWhenInvalidSegments()
   {
     Interval interval = Intervals.of("2015-04-11/2015-04-12");
-    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, null));
-    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, List.of()));
+    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, null));
+    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, List.of()));
   }
 
   @Test
@@ -99,6 +99,6 @@ public class UncompactedInputSpecTest
         new SegmentDescriptor(Intervals.of("2015-05-11/2015-05-12"), "v1", 0)
     );
 
-    Assert.assertThrows(IAE.class, () -> new UncompactedInputSpec(interval, segments));
+    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, segments));
   }
 }

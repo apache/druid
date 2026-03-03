@@ -48,9 +48,9 @@ import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTaskRunBase;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.MinorCompactionInputSpec;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
-import org.apache.druid.indexing.common.task.UncompactedInputSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -603,7 +603,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                                                         .collect(Collectors.toList());
     final CompactionTask compactionTask2 =
         compactionTaskBuilder(segmentGranularity)
-            .inputSpec(new UncompactedInputSpec(inputInterval, uncompacted), true)
+            .inputSpec(new MinorCompactionInputSpec(inputInterval, uncompacted), true)
             .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair2, TOTAL_TEST_ROWS);
@@ -672,7 +672,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                                                         .collect(Collectors.toList());
     final CompactionTask compactionTask2 =
         compactionTaskBuilder(segmentGranularity)
-            .inputSpec(new UncompactedInputSpec(inputInterval, uncompacted), true)
+            .inputSpec(new MinorCompactionInputSpec(inputInterval, uncompacted), true)
             .tuningConfig(tuningConfig)
             .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair2 = runTask(compactionTask2);
@@ -726,7 +726,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
 
     final CompactionTask compactionTask1 =
         compactionTaskBuilder(Granularities.EIGHT_HOUR)
-            .inputSpec(new UncompactedInputSpec(compactionInterval, uncompactedFromIndexTask), true)
+            .inputSpec(new MinorCompactionInputSpec(compactionInterval, uncompactedFromIndexTask), true)
             .build();
     ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
     Assert.assertEquals(

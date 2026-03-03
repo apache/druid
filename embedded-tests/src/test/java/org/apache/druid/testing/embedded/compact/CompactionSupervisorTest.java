@@ -229,8 +229,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
   }
 
-  @Test
-  public void test_minorCompactionWithMSQ() throws Exception
+  @MethodSource("getPartitionsSpec")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_minorCompactionWithMSQ(PartitionsSpec partitionsSpec) throws Exception
   {
     configureCompaction(
         CompactionEngine.MSQ,
@@ -255,7 +256,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // Before compaction
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.HOUR));
 
-    PartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(null, 5000, List.of("page"), false);
     // Create a compaction config with DAY granularity
     InlineSchemaDataSourceCompactionConfig dayGranularityConfig =
         InlineSchemaDataSourceCompactionConfig
@@ -279,25 +279,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     pauseCompaction(dayGranularityConfig);
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals("2000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     verifyCompactedSegmentsHaveFingerprints(dayGranularityConfig);
 
-    // Set up another topic and supervisor
-    final String topic2 = IdUtils.getRandomId();
-    kafkaServer.createTopicWithPartitions(topic2, 1);
-    final KafkaSupervisorSpec supervisor2 = kafkaSupervisorSpecBuilder.withId(topic2).build(dataSource, topic2);
-    cluster.callApi().postSupervisor(supervisor2);
-
     // published another 1k
-    final int appendedRowCount = publish1kRecords(topic2, true);
+    final int appendedRowCount = publish1kRecords(topic1, true);
     indexer.latchableEmitter().flush();
     waitUntilPublishedRecordsAreIngested(appendedRowCount);
 
     // Tear down both topics and supervisors
     kafkaServer.deleteTopic(topic1);
     cluster.callApi().postSupervisor(supervisor1.createSuspendedSpec());
-    kafkaServer.deleteTopic(topic2);
-    cluster.callApi().postSupervisor(supervisor2.createSuspendedSpec());
+
     long totalUsed = overlord.latchableEmitter().getMetricValues(
         "segment/metadataCache/used/count",
         Map.of(DruidMetrics.DATASOURCE, dataSource)
@@ -306,6 +300,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     // 1 compacted segment + 2 appended segment
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     runCompactionWithSpec(dayGranularityConfig);
     waitForAllCompactionTasksToFinish();
@@ -318,6 +313,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     // performed incremental compaction: 1 previously compacted segment + 1 incrementally compacted segment
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
@@ -801,6 +797,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .dataSource(dataSource)
         .withId(IdUtils.getRandomId());
     cluster.callApi().runTask(task, overlord);
+  }
+
+  public static List<PartitionsSpec> getPartitionsSpec()
+  {
+    return List.of(
+        new DimensionRangePartitionsSpec(null, 5000, List.of("page"), false),
+        new DynamicPartitionsSpec(null, null)
+    );
   }
 
   public static List<CompactionEngine> getEngine()
