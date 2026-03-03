@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
+import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -108,20 +109,26 @@ public class CoordinatorBrokerConfigsResource
   )
   {
     try {
-      configManager.set(
+      final SetResult setResult = configManager.set(
           BrokerDynamicConfig.CONFIG_KEY,
           newConfig,
           AuthorizationUtils.buildAuditInfo(req)
       );
 
-      // Push config to all brokers synchronously (with short timeout) for immediate effect
-      pushConfigToBrokers(newConfig);
-
-      return Response.ok().build();
+      if (setResult.isOk()) {
+        // Push config to all brokers synchronously (with short timeout) for immediate effect
+        pushConfigToBrokers(newConfig);
+        return Response.ok().build();
+      } else {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(setResult.getException()))
+                       .build();
+      }
     }
-    catch (Exception e) {
-      log.error(e, "Failed to set broker dynamic config");
-      return Response.serverError().entity(e.getMessage()).build();
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ServletResourceUtils.sanitizeException(e))
+                     .build();
     }
   }
 
@@ -149,7 +156,7 @@ public class CoordinatorBrokerConfigsResource
     }
     catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(e.getMessage())
+                     .entity(ServletResourceUtils.sanitizeException(e))
                      .build();
     }
   }

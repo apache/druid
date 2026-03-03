@@ -322,6 +322,10 @@ public class QueryLifecycle
    */
   private void checkQueryBlocklist()
   {
+    if (queryBlocklist == null || queryBlocklist.isEmpty()) {
+      return;
+    }
+
     for (QueryBlocklistRule rule : queryBlocklist) {
       if (rule.matches(this.baseQuery)) {
         throw DruidException.forPersona(DruidException.Persona.USER)
