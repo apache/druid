@@ -128,7 +128,13 @@ public class NestedPathFinder
   }
 
   /**
-   * split a JSONPath path into a series of extractors to find things in stuff
+   * Split a JSONPath expression into a series of {@link NestedPathPart} representing the structure of the path
+   * expression. This allows using with {@link NestedPathFinder#find(Object, List)} in order to extract values from
+   * json objects represented as java {@link Map} and {@link List}.
+   * <p>
+   * If 'allowFixEmptyFieldsBadPaths is true, this method allows fixing up any illegal expressions encountered from a
+   * previously bugged version of {@link #toNormalizedJsonPath(List)}, which incorrectly created path expressions like
+   * '$..a' or '$.[0].a' when encountering empty fields instead of the correct '$[''].a' and '$[''][0].a'.
    */
   private static List<NestedPathPart> parseJsonPathInternal(@Nullable String path, boolean allowFixEmptyFieldsBadPaths)
   {
