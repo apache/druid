@@ -72,7 +72,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("useListShards") boolean useListShards,
-      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
+      @JsonProperty("serverPriority") @Nullable Integer serverPriority
   )
   {
     super(
@@ -83,7 +84,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        serverPriority
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;

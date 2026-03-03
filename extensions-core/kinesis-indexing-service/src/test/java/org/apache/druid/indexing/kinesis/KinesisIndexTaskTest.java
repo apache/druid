@@ -2526,7 +2526,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           ioConfig,
           context,
           false,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          null
       );
     }
 
