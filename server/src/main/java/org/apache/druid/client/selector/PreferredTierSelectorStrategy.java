@@ -124,7 +124,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
   public String toString()
   {
     return "PreferredTierSelectorStrategy{" +
-           ", config=" + config +
+           "config=" + config +
            '}';
   }
 }

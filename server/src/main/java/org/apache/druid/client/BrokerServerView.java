@@ -84,8 +84,8 @@ public class BrokerServerView implements TimelineServerView
   public BrokerServerView(
       final QueryableDruidServer.Maker directDruidClientFactory,
       final FilteredServerInventoryView baseView,
-      final TierSelectorStrategy historicalTierSelectorStrategy,
-      @Named(REALTIME_SELECTOR) final TierSelectorStrategy realtimeTierSelectorStrategy,
+      final TierSelectorStrategy historicalTierSelectorStrategy, // Injected from bindings configured in CliBroker
+      @Named(REALTIME_SELECTOR) final TierSelectorStrategy realtimeTierSelectorStrategy, // Injected from bindings set up in BrokerRealtimeSelectorModule
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig

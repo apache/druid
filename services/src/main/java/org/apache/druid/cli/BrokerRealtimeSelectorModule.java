@@ -45,9 +45,7 @@ import java.util.Properties;
 
 /**
  * Guice module that configures the {@link ServerSelectorStrategy} and {@link TierSelectorStrategy}
- * for realtime servers in the Broker.
- *
- * <p>Configuration properties:</p>
+ * for realtime servers in the Broker. These can be configured on the Broker as follows:
  * <ul>
  *   <li>
  *     If {@value #REALTIME_BALANCER_PROPERTY} is configured, the {@link ServerSelectorStrategy} for realtime servers
