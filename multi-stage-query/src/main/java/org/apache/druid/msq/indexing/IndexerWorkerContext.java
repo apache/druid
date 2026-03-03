@@ -162,7 +162,7 @@ public class IndexerWorkerContext implements WorkerContext
         injector.getInstance(SegmentCacheManagerFactory.class)
                 .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
-    final StorageMonitor storageMonitor = new StorageMonitor(cacheManager, Map.of("taskId", task.getId(), "groupId", task.getGroupId()));
+    final StorageMonitor storageMonitor = new StorageMonitor(cacheManager, task::getMetricBuilder);
     toolbox.addMonitor(storageMonitor);
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
