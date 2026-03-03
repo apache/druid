@@ -860,7 +860,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.5.2
+version: 7.6.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -900,6 +900,7 @@ libraries:
   - io.vertx: vertx-core
   - io.vertx: vertx-web-client
   - io.vertx: vertx-web-common
+  - io.vertx: vertx-uri-template
 ---
 
 name: kubernetes official java client
@@ -1032,7 +1033,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.12.0
+version: 5.3.2
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: logging-interceptor
