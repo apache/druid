@@ -93,8 +93,8 @@ public class CliBrokerTest
   public void testRealtimeCustomStrategy()
   {
     final Properties properties = new Properties();
-    properties.setProperty("druid.broker.select.realtime.tier", "custom");
-    properties.setProperty("druid.broker.select.realtime.tier.custom.priorities", "[2,1,0]");
+    properties.setProperty("druid.broker.realtime.select.tier", "custom");
+    properties.setProperty("druid.broker.realtime.select.tier.custom.priorities", "[2,1,0]");
     properties.setProperty("druid.broker.balancer", "random");
 
     final Injector injector = makeBrokerInjector(properties);
@@ -123,9 +123,9 @@ public class CliBrokerTest
     properties.setProperty("druid.broker.select.tier.custom.priorities", "[0]");
     properties.setProperty("druid.broker.select.balancer", "random");
 
-    properties.setProperty("druid.broker.select.realtime.tier", "custom");
-    properties.setProperty("druid.broker.select.realtime.tier.custom.priorities", "[2,1]");
-    properties.setProperty("druid.broker.select.realtime.balancer", "connectionCount");
+    properties.setProperty("druid.broker.realtime.select.tier", "custom");
+    properties.setProperty("druid.broker.realtime.select.tier.custom.priorities", "[2,1]");
+    properties.setProperty("druid.broker.realtime.balancer", "connectionCount");
 
     final Injector injector = makeBrokerInjector(properties);
     final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
@@ -159,7 +159,7 @@ public class CliBrokerTest
     properties.setProperty("druid.broker.select.tier", "custom");
     properties.setProperty("druid.broker.select.tier.custom.priorities", "[0]");
 
-    properties.setProperty("druid.broker.select.realtime.tier", "lowestPriority");
+    properties.setProperty("druid.broker.realtime.select.tier", "lowestPriority");
 
     final Injector injector = makeBrokerInjector(properties);
 

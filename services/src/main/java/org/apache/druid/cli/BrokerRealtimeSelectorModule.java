@@ -51,10 +51,10 @@ import java.util.Properties;
  * <ul>
  *   <li>{@value #REALTIME_BALANCER_PROPERTY} - Configures the {@link ServerSelectorStrategy}
  *       for realtime servers via {@link RealtimeServerSelectorStrategyProvider} if configured.
- *       Falls back to {@code druid.broker.select.balancer} if not set.</li>
+ *       Defaults to {@code druid.broker.balancer} if not set.</li>
  *   <li>{@value #REALTIME_SELECT_TIER_PROPERTY} - Configures the {@link TierSelectorStrategy}
  *       for realtime servers via {@link RealtimeTierSelectorStrategyProvider} if configured.
- *       Falls back to {@code druid.broker.select} if not set.</li>
+ *       Defaults to {@code druid.broker.select.tier} if not set.</li>
  * </ul>
  */
 @LoadScope(roles = NodeRole.BROKER_JSON_NAME)
@@ -62,8 +62,9 @@ public class BrokerRealtimeSelectorModule implements DruidModule
 {
   private static final Logger log = new Logger(BrokerRealtimeSelectorModule.class);
 
-  private static final String REALTIME_BALANCER_PROPERTY = "druid.broker.select.realtime.balancer";
-  private static final String REALTIME_SELECT_TIER_PROPERTY = "druid.broker.select.realtime.tier";
+  private static final String REALTIME_BALANCER_PROPERTY = "druid.broker.realtime.balancer";
+  private static final String REALTIME_SELECT_PROPERTY = "druid.broker.realtime.select";
+  private static final String REALTIME_SELECT_TIER_PROPERTY = REALTIME_SELECT_PROPERTY + ".tier";
 
   @Override
   public void configure(Binder binder)
@@ -96,7 +97,7 @@ public class BrokerRealtimeSelectorModule implements DruidModule
     {
       final String realtimeSelector = properties.getProperty(REALTIME_BALANCER_PROPERTY);
       if (Strings.isNullOrEmpty(realtimeSelector)) {
-        log.info("Using realtime ServerSelectorStrategy from fallback [druid.broker.balancer]");
+        log.info("[%s] is not configured. Using realtime ServerSelectorStrategy from default [druid.broker.balancer]", REALTIME_BALANCER_PROPERTY);
         return injector.getInstance(ServerSelectorStrategy.class);
       } else {
         log.info("Using realtime ServerSelectorStrategy from [%s]", REALTIME_BALANCER_PROPERTY);
@@ -131,14 +132,14 @@ public class BrokerRealtimeSelectorModule implements DruidModule
     {
       final String realtimeTier = properties.getProperty(REALTIME_SELECT_TIER_PROPERTY);
       if (Strings.isNullOrEmpty(realtimeTier)) {
-        log.info("[%s] is not configured, using default TierSelectorStrategy from druid.broker.select", REALTIME_SELECT_TIER_PROPERTY);
+        log.info("[%s] is not configured, using default TierSelectorStrategy from default [druid.broker.select]", REALTIME_SELECT_TIER_PROPERTY);
         return injector.getInstance(TierSelectorStrategy.class);
       }
 
       if (CustomTierSelectorStrategy.TYPE.equals(realtimeTier)) {
         final CustomTierSelectorStrategyConfig config = configurator.configurate(
             properties,
-            "druid.broker.select.realtime.tier.custom",
+            REALTIME_SELECT_TIER_PROPERTY + "." + realtimeTier,
             CustomTierSelectorStrategyConfig.class
         );
 
@@ -147,7 +148,7 @@ public class BrokerRealtimeSelectorModule implements DruidModule
       } else if (PreferredTierSelectorStrategy.TYPE.equals(realtimeTier)) {
         final PreferredTierSelectorStrategyConfig config = configurator.configurate(
             properties,
-            "druid.broker.select.realtime.tier.preferred",
+            REALTIME_SELECT_TIER_PROPERTY + "." + realtimeTier,
             PreferredTierSelectorStrategyConfig.class
         );
 
@@ -155,11 +156,7 @@ public class BrokerRealtimeSelectorModule implements DruidModule
         return new PreferredTierSelectorStrategy(realtimeServerSelectorStrategy, config);
       } else {
         // For other strategies that don't need config, just fallback to this
-        return configurator.configurate(
-            properties,
-            "druid.broker.select.realtime",
-            TierSelectorStrategy.class
-        );
+        return configurator.configurate(properties, REALTIME_SELECT_PROPERTY, TierSelectorStrategy.class);
       }
     }
   }
