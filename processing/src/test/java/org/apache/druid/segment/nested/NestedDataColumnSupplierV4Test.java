@@ -136,7 +136,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       ColumnHolder holder = theIndex.getColumnHolder(columnName);
       Assert.assertNotNull(holder);
       Assert.assertEquals(ColumnType.NESTED_DATA, holder.getCapabilities().toColumnType());
-      NestedDataColumnV3<?> v3 = closer.register((NestedDataColumnV3<?>) holder.getColumn());
+      NestedDataColumnV3<?, ?> v3 = closer.register((NestedDataColumnV3<?, ?>) holder.getColumn());
       Assert.assertNotNull(v3);
       List<NestedPathPart> path = ImmutableList.of(new NestedPathField("lastName"));
       ColumnHolder nestedColumnHolder = v3.getColumnHolder(path);
@@ -173,7 +173,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       ColumnHolder holder = theIndex.getColumnHolder(columnName);
       Assert.assertNotNull(holder);
       Assert.assertEquals(ColumnType.NESTED_DATA, holder.getCapabilities().toColumnType());
-      NestedDataColumnV4<?> v4 = closer.register((NestedDataColumnV4<?>) holder.getColumn());
+      NestedDataColumnV4<?, ?> v4 = closer.register((NestedDataColumnV4<?, ?>) holder.getColumn());
       Assert.assertNotNull(v4);
       List<NestedPathPart> path = ImmutableList.of(new NestedPathField("lastName"));
       ColumnHolder nestedColumnHolder = v4.getColumnHolder(path);

@@ -38,6 +38,7 @@ import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
+import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.nested.ScalarDoubleColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarLongColumnAndIndexSupplier;
@@ -87,7 +88,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       @JsonProperty("enforceLogicalType") boolean enforceLogicalType,
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
-      @JsonProperty("columnFormatSpec") @Nullable FormatSpec columnFormatSpec
+      @JsonProperty("columnFormatSpec") @Nullable FormatSpec columnFormatSpec,
+      @JsonProperty("pathParserVersion") @Nullable Byte pathParserVersion
   )
   {
     return new NestedCommonFormatColumnPartSerde(
@@ -98,6 +100,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         byteOrder,
         bitmapSerdeFactory,
         columnFormatSpec,
+        pathParserVersion,
         null
     );
   }
@@ -107,13 +110,13 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private final boolean isVariantType;
   private final boolean enforceLogicalType;
   private final ByteOrder byteOrder;
+  private final byte pathParserVersion;
   private final BitmapSerdeFactory bitmapSerdeFactory;
   @Nullable
   private final FormatSpec columnFormatSpec;
 
   @Nullable
   private final Serializer serializer;
-
 
   private NestedCommonFormatColumnPartSerde(
       ColumnType logicalType,
@@ -123,6 +126,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       @Nullable FormatSpec columnFormatSpec,
+      @Nullable Byte pathParserVersion,
       @Nullable Serializer serializer
   )
   {
@@ -131,6 +135,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     this.isVariantType = isVariant;
     this.enforceLogicalType = enforceLogicalType;
     this.byteOrder = byteOrder;
+    this.pathParserVersion = pathParserVersion == null ? 0x00 : pathParserVersion;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.serializer = serializer;
     this.columnFormatSpec = columnFormatSpec;
@@ -344,6 +349,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
           logicalType,
           hasNulls,
+          pathParserVersion,
           buffer,
           builder,
           columnConfig,
@@ -437,6 +443,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           byteOrder,
           bitmapSerdeFactory,
           FormatSpec.forSerde(columnFormatSpec),
+          NestedPathFinder.VERSION,
           serializer
       );
     }

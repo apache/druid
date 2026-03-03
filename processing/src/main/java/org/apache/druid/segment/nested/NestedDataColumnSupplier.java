@@ -19,10 +19,15 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -39,16 +44,19 @@ import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Iterator;
 
 public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static NestedDataColumnSupplier read(
       ColumnType logicalType,
       boolean hasNulls,
+      byte pathParserVersion,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       ColumnConfig columnConfig,
@@ -82,7 +90,11 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
           doubleDictionarySupplier = parent.doubleDictionarySupplier;
           arrayDictionarySupplier = parent.arrayDictionarySupplier;
         } else {
-          fieldsSupplier = StringEncodingStrategies.getStringDictionarySupplier(mapper, bb, byteOrder);
+          if (pathParserVersion == 0x00) {
+            fieldsSupplier = getAndFixFieldsSupplier(bb, byteOrder, mapper);
+          } else {
+            fieldsSupplier = StringEncodingStrategies.getStringDictionarySupplier(mapper, bb, byteOrder);
+          }
           fieldInfo = FieldTypeInfo.read(bb, fieldsSupplier.get().size());
           final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
               mapper,
@@ -182,6 +194,38 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     }
   }
 
+
+  @VisibleForTesting
+  static Supplier<? extends Indexed<ByteBuffer>> getAndFixFieldsSupplier(
+      ByteBuffer bb,
+      ByteOrder byteOrder,
+      SegmentFileMapper mapper
+  )
+  {
+    final Supplier<? extends Indexed<ByteBuffer>> fieldsSupplier;
+    Supplier<? extends Indexed<ByteBuffer>> _fieldsSupplier =
+        StringEncodingStrategies.getStringDictionarySupplier(mapper, bb, byteOrder);
+    // check for existence of bug to detect if we need a fixup adapter or not
+    Indexed<ByteBuffer> fields = _fieldsSupplier.get();
+    Int2ObjectMap<ByteBuffer> fixupMap = new Int2ObjectOpenHashMap<>();
+    for (int i = 0; i < fields.size(); i++) {
+      String path = StringUtils.fromUtf8Nullable(fields.get(i));
+      try {
+        NestedPathFinder.parseJsonPath(path);
+      }
+      catch (DruidException d) {
+        String fixed = NestedPathFinder.toNormalizedJsonPath(NestedPathFinder.parseBadJsonPath(path));
+        fixupMap.put(i, StringUtils.toUtf8ByteBuffer(fixed));
+      }
+    }
+    if (fixupMap.isEmpty()) {
+      fieldsSupplier = _fieldsSupplier;
+    } else {
+      fieldsSupplier = () -> new FieldsFixupIndexed(_fieldsSupplier.get(), fixupMap);
+    }
+    return fieldsSupplier;
+  }
+
   private final String columnName;
   private final Supplier<? extends Indexed<ByteBuffer>> fieldSupplier;
   private final FieldTypeInfo fieldInfo;
@@ -267,5 +311,88 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
       return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(nullValues);
     }
     return null;
+  }
+
+  @VisibleForTesting
+  public static class FieldsFixupIndexed implements Indexed<ByteBuffer>
+  {
+    private final Indexed<ByteBuffer> delegate;
+    private final Int2ObjectMap<ByteBuffer> fixup;
+
+    private FieldsFixupIndexed(Indexed<ByteBuffer> delegate, Int2ObjectMap<ByteBuffer> fixup)
+    {
+      this.delegate = delegate;
+      this.fixup = fixup;
+    }
+
+    @Override
+    public int size()
+    {
+      return delegate.size();
+    }
+
+    @Nullable
+    @Override
+    public ByteBuffer get(int index)
+    {
+      if (fixup.containsKey(index)) {
+        return fixup.get(index).asReadOnlyBuffer();
+      }
+      return delegate.get(index);
+    }
+
+    @Override
+    public int indexOf(@Nullable ByteBuffer value)
+    {
+      for (Int2ObjectMap.Entry<ByteBuffer> entry : fixup.int2ObjectEntrySet()) {
+        if (entry.getValue().equals(value)) {
+          return entry.getIntKey();
+        }
+      }
+      return delegate.indexOf(value);
+    }
+
+    @Nonnull
+    @Override
+    public Iterator<ByteBuffer> iterator()
+    {
+      return new Iterator<>()
+      {
+        int pos = 0;
+        final int size = delegate.size();
+        final Iterator<ByteBuffer> delegateIterator = delegate.iterator();
+
+        @Override
+        public boolean hasNext()
+        {
+          return pos < size;
+        }
+
+        @Override
+        public ByteBuffer next()
+        {
+          if (fixup.containsKey(pos)) {
+            // move delegate iterator forward, but we're going to return our own value
+            delegateIterator.next();
+            // this is sad, but downstream stuff wants ByteBuffer, and is less sad than the original bug
+            return fixup.get(pos++).asReadOnlyBuffer();
+          }
+          pos++;
+          return delegateIterator.next();
+        }
+      };
+    }
+
+    @Override
+    public boolean isSorted()
+    {
+      return delegate.isSorted();
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
   }
 }
