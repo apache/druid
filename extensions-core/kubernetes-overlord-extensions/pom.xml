@@ -141,7 +141,7 @@
     </dependency>
     <dependency>
       <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
+      <artifactId>okhttp-jvm</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -151,6 +151,11 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-uri-template</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-client</artifactId>
       <version>${vertx.version}</version>
     </dependency>
     <dependency>
