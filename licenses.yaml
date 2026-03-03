@@ -498,7 +498,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.19.0
+version: 1.20.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -667,7 +667,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.19.0
+version: 3.20.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -907,7 +907,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 25.0.0
+version: 25.0.0-legacy
 libraries:
   - io.kubernetes: client-java
   - io.kubernetes: client-java-api
@@ -1123,7 +1123,7 @@ name: com.flipkart.zjsonpatch zjsonpatch
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.4.14
+version: 0.4.16
 libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
 
@@ -1142,13 +1142,13 @@ libraries:
 ---
 
 
-name: com.bucket4j bucket4j-core
+name: com.github.vladimir-bukhtoyarov bucket4j-core
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 8.10.1
+version: 7.6.0
 libraries:
-  - com.bucket4j: bucket4j-core
+  - com.github.vladimir-bukhtoyarov: bucket4j-core
 
 ---
 

@@ -63,6 +63,12 @@
           <groupId>com.google.protobuf</groupId>
           <artifactId>protobuf-java</artifactId>
         </exclusion>
+        <!-- Azure AD auth library and its transitive OIDC/JWT stack — only needed for AKS token-based
+             authentication which this extension does not use -->
+        <exclusion>
+          <groupId>com.microsoft.azure</groupId>
+          <artifactId>adal4j</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -81,6 +87,17 @@
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java-api</artifactId>
+      <exclusions>
+        <!-- jakarta.ws.rs-api 4.0 conflicts with the javax.ws.rs 1.x used elsewhere in Druid -->
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
     </dependency>
 
     <!-- Tests -->
