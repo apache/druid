@@ -61,7 +61,7 @@ public class DurableStorageCleaner implements OverlordDuty
       final DurableStorageCleanerConfig config,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       @JacksonInject final Provider<TaskMaster> taskMasterProvider,
-      TaskStorage taskStorage
+      final TaskStorage taskStorage
   )
   {
     this.config = config;
