@@ -312,11 +312,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null
     );
 
-    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider.builder()
-                                                                            .segmentGranularityRules(List.of(hourRule, dayRule))
-                                                                            .tuningConfigRules(List.of(tuningConfigRule))
-                                                                            .deletionRules(List.of(deletionRule))
-                                                                            .build();
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(hourRule, dayRule))
+        .tuningConfigRules(List.of(tuningConfigRule))
+        .deletionRules(List.of(deletionRule))
+        .build();
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
         dataSource,
