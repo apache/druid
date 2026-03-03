@@ -65,7 +65,7 @@ public class StorageMonitor extends AbstractMonitor
   public StorageMonitor(
       SegmentCacheManager cacheManager,
       @Nullable Supplier<ServiceMetricEvent.Builder> builderSupplier
-      )
+  )
   {
     this.cacheManager = cacheManager;
     this.builderSupplier = builderSupplier == null ? ServiceMetricEvent.Builder::new : builderSupplier;
