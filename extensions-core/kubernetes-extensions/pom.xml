@@ -51,10 +51,32 @@
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java</artifactId>
+      <exclusions>
+        <!-- client-java-proto brings in protobuf-java 4.x which Druid does not yet support project-wide.
+             The Kubernetes API supports multiple wire formats (JSON, YAML, Protobuf, etc.) but this extension
+             is not currently using the proto client so exclusion is safe -->
+        <exclusion>
+          <groupId>io.kubernetes</groupId>
+          <artifactId>client-java-proto</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java-extended</artifactId>
+      <exclusions>
+        <!-- client-java-proto brings in protobuf-java 4.x which Druid does not yet support project-wide.
+             The Kubernetes API supports multiple wire formats (JSON, YAML, Protobuf, etc.) but this extension
+             is not currently using the proto client so exclusion is safe -->
+        <exclusion>
+          <groupId>io.kubernetes</groupId>
+          <artifactId>client-java-proto</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.kubernetes</groupId>
@@ -120,7 +142,7 @@
               <artifactId>maven-dependency-plugin</artifactId>
               <configuration>
               <!-- analyze incorrectly flags this dependency as missing when omitted, and unused when declared -->
-                <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:19.0.0</ignoredDependencies>
+                <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:${kubernetes.client.version}</ignoredDependencies>
               </configuration>
           </plugin>
         </plugins>

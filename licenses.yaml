@@ -498,7 +498,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.1
+version: 1.19.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -2562,7 +2562,7 @@ name: Gson
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.12.0
+version: 2.13.2
 libraries:
   - com.google.code.gson: gson
 
