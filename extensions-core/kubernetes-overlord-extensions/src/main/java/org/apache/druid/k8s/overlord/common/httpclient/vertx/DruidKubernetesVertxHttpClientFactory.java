@@ -37,14 +37,18 @@ public class DruidKubernetesVertxHttpClientFactory extends VertxHttpClientFactor
   public static final String TYPE_NAME = "vertx";
 
   private static final Logger LOG = new Logger(DruidKubernetesVertxHttpClientFactory.class);
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final DruidKubernetesVertxHttpClientConfig httpClientConfig;
+  private final ObjectMapper objectMapper;
 
-  public DruidKubernetesVertxHttpClientFactory(DruidKubernetesVertxHttpClientConfig httpClientConfig)
+  public DruidKubernetesVertxHttpClientFactory(
+      DruidKubernetesVertxHttpClientConfig httpClientConfig,
+      ObjectMapper objectMapper
+  )
   {
     super(createVertxInstance(httpClientConfig));
     this.httpClientConfig = httpClientConfig;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -53,7 +57,7 @@ public class DruidKubernetesVertxHttpClientFactory extends VertxHttpClientFactor
     if (!httpClientConfig.getWebClientOptions().isEmpty()) {
       try {
         LOG.info("Applying additional WebClientOptions from configuration: %s", httpClientConfig.getWebClientOptions());
-        OBJECT_MAPPER.updateValue(options, httpClientConfig.getWebClientOptions());
+        objectMapper.updateValue(options, httpClientConfig.getWebClientOptions());
       }
       catch (Exception e) {
         throw new RuntimeException(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -49,7 +50,7 @@ class DruidKubernetesVertxHttpClientFactoryTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
 
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config, new ObjectMapper());
 
     WebClientOptions options = new WebClientOptions();
     factory.additionalConfig(options);
@@ -63,7 +64,7 @@ class DruidKubernetesVertxHttpClientFactoryTest
   void testAdditionalConfigWithEmptyMapDoesNotModifyOptions()
   {
     DruidKubernetesVertxHttpClientConfig config = new DruidKubernetesVertxHttpClientConfig();
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config, new ObjectMapper());
 
     WebClientOptions options = new WebClientOptions();
     int defaultMaxPoolSize = options.getMaxPoolSize();
@@ -88,7 +89,7 @@ class DruidKubernetesVertxHttpClientFactoryTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DruidKubernetesVertxHttpClientConfig config = provider.get();
 
-    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config);
+    DruidKubernetesVertxHttpClientFactory factory = new DruidKubernetesVertxHttpClientFactory(config, new ObjectMapper());
 
     WebClientOptions options = new WebClientOptions();
     RuntimeException exception = Assertions.assertThrows(
