@@ -211,9 +211,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return columnFormatSpec;
   }
 
-  @Nullable
   @JsonProperty("pathParserVersion")
-  public Byte getPathParserVersion()
+  public byte getPathParserVersion()
   {
     return pathParserVersion;
   }
