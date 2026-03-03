@@ -16,23 +16,8 @@
  * limitations under the License.
  */
 
-import type { CoordinatorDynamicConfig } from './coordinator-dynamic-config';
+import type { BrokerDynamicConfig } from './broker-dynamic-config';
 
-export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
-  millisToWaitBeforeDeleting: 900000,
-  maxSegmentsToMove: 100,
-  replicantLifetime: 15,
-  replicationThrottleLimit: 500,
-  balancerComputeThreads: 1,
-  killDataSourceWhitelist: [],
-  killTaskSlotRatio: 0.1,
-  maxKillTaskSlots: 2147483647,
-  killPendingSegmentsSkipList: [],
-  maxSegmentsInNodeLoadingQueue: 500,
-  decommissioningNodes: [],
-  pauseCoordination: false,
-  replicateAfterLoadTimeout: false,
-  useRoundRobinSegmentAssignment: true,
-  smartSegmentLoading: true,
-  debugDimensions: null,
+export const DEFAULT_BROKER_DYNAMIC_CONFIG: BrokerDynamicConfig = {
+  queryBlocklist: [],
 };

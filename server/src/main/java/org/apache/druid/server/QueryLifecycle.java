@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -50,7 +49,6 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -67,6 +65,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -101,7 +100,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
-  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final List<QueryBlocklistRule> queryBlocklist;
   private final long startMs;
   private final long startNs;
 
@@ -124,7 +123,7 @@ public class QueryLifecycle
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
-      @Nullable final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
+      final List<QueryBlocklistRule> queryBlocklist,
       final long startMs,
       final long startNs
   )
@@ -138,7 +137,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
-    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig; // can only be null if not running on the broker
+    this.queryBlocklist = queryBlocklist;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -163,8 +162,6 @@ public class QueryLifecycle
   )
   {
     initialize(query);
-
-    checkQueryBlocklist();
 
     final Sequence<T> results;
 
@@ -325,16 +322,7 @@ public class QueryLifecycle
    */
   private void checkQueryBlocklist()
   {
-    if (brokerViewOfCoordinatorConfig == null) {
-      return; // Not running on broker, skip blocklist check
-    }
-
-    CoordinatorDynamicConfig config = brokerViewOfCoordinatorConfig.getDynamicConfig();
-    if (config == null) {
-      return; // Config not loaded yet, allow query (best effort)
-    }
-
-    for (QueryBlocklistRule rule : config.getQueryBlocklist()) {
+    for (QueryBlocklistRule rule : queryBlocklist) {
       if (rule.matches(this.baseQuery)) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.FORBIDDEN)
@@ -359,6 +347,10 @@ public class QueryLifecycle
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
+      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+      // This ensures the exception is properly handled as an authorization failure
+      checkQueryBlocklist();
+
       transition(State.AUTHORIZING, State.AUTHORIZED);
       this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
                                                               .withPolicies(

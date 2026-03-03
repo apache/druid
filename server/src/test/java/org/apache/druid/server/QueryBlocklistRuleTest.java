@@ -102,6 +102,20 @@ public class QueryBlocklistRuleTest
   }
 
   @Test
+  public void testMatchByQueryType()
+  {
+    Set<String> queryTypes = ImmutableSet.of("timeseries", "groupBy");
+    QueryBlocklistRule rule = new QueryBlocklistRule("block-timeseries-groupby", null, queryTypes, null);
+
+    // Should match when query type is in the list (timeseries)
+    TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
+                                   .dataSource("test")
+                                   .intervals("2020-01-01/2020-01-02")
+                                   .build();
+    Assert.assertTrue(rule.matches(matchingQuery));
+  }
+
+  @Test
   public void testMatchByMultipleCriteria()
   {
     // Rule with multiple criteria - all must match (AND logic)

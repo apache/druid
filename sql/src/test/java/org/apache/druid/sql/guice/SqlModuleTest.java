@@ -220,6 +220,7 @@ public class SqlModuleTest
               binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
               binder.bind(BrokerViewOfCoordinatorConfig.class).toProvider(() -> null);
+              binder.bind(org.apache.druid.client.BrokerViewOfBrokerConfig.class).toProvider(() -> null);
               binder.bind(CentralizedDatasourceSchemaConfig.class)
                     .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
               binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
