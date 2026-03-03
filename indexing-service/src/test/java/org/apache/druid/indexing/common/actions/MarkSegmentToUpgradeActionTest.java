@@ -33,7 +33,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -86,7 +86,7 @@ public class MarkSegmentToUpgradeActionTest
     actionTestKit.getTaskLockbox()
                  .lock(task, new TimeChunkLockRequest(TaskLockType.REPLACE, task, INTERVAL_2026_02, null), 5000);
 
-    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2, SEGMENT3));
+    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, Set.of(SEGMENT1, SEGMENT2, SEGMENT3));
 
     final Integer insertedCount = action.perform(task, actionTestKit.getTaskActionToolbox());
     assertEquals(3, insertedCount.intValue());
@@ -102,7 +102,7 @@ public class MarkSegmentToUpgradeActionTest
     actionTestKit.getTaskLockbox()
                  .lock(task, new TimeChunkLockRequest(TaskLockType.REPLACE, task, INTERVAL_2026_01, null), 5000);
 
-    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2, SEGMENT3));
+    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, Set.of(SEGMENT1, SEGMENT2, SEGMENT3));
 
     DruidException exception = assertThrows(
         DruidException.class,
@@ -119,7 +119,7 @@ public class MarkSegmentToUpgradeActionTest
     actionTestKit.getTaskLockbox()
                  .lock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task, INTERVAL_2026_01, null), 5000);
 
-    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, List.of(SEGMENT1, SEGMENT2));
+    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, Set.of(SEGMENT1, SEGMENT2));
 
     DruidException exception = assertThrows(
         DruidException.class,
@@ -134,7 +134,7 @@ public class MarkSegmentToUpgradeActionTest
     final Task task = NoopTask.forDatasource(DATA_SOURCE);
     actionTestKit.getTaskLockbox().add(task);
 
-    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, List.of());
+    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, Set.of());
 
     DruidException exception = assertThrows(
         DruidException.class,
@@ -151,7 +151,7 @@ public class MarkSegmentToUpgradeActionTest
     actionTestKit.getTaskLockbox()
                  .lock(task, new TimeChunkLockRequest(TaskLockType.REPLACE, task, INTERVAL_2026_01, null), 5000);
 
-    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, List.of(SEGMENT1));
+    final MarkSegmentToUpgradeAction action = new MarkSegmentToUpgradeAction(DATA_SOURCE, Set.of(SEGMENT1));
 
     final Integer insertedCount = action.perform(task, actionTestKit.getTaskActionToolbox());
     assertEquals(1, insertedCount.intValue());

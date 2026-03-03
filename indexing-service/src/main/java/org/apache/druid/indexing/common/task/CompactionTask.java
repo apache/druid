@@ -598,7 +598,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       Map<QuerySegmentSpec, DataSchema> inputSchemas = new HashMap<>();
       // if segment is already compacted in incremental compaction, they need to be upgraded directly, supported in MSQ
-      List<DataSegment> upgradeSegments = new ArrayList<>();
+      Set<DataSegment> upgradeSegments = new HashSet<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -669,7 +669,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return inputSchemas;
     } else {
       // given segment granularity
-      List<DataSegment> upgradeSegments = Lists.newArrayList(Iterables.filter(
+      Set<DataSegment> upgradeSegments = new HashSet<>();
+      Iterables.addAll(upgradeSegments, Iterables.filter(
           timelineSegments,
           segmentProvider.segmentsToUpgradePredicate
       ));

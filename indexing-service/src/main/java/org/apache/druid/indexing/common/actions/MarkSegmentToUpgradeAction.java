@@ -27,7 +27,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,16 +45,16 @@ import java.util.Set;
 public class MarkSegmentToUpgradeAction implements TaskAction<Integer>
 {
   private final String dataSource;
-  private final List<DataSegment> upgradeSegments;
+  private final Set<DataSegment> upgradeSegments;
 
   /**
    * @param dataSource the datasource containing the segments to upgrade
-   * @param upgradeSegments the list of segments to be recorded as upgraded
+   * @param upgradeSegments the set of segments to be recorded as upgraded
    */
   @JsonCreator
   public MarkSegmentToUpgradeAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("upgradeSegments") List<DataSegment> upgradeSegments
+      @JsonProperty("upgradeSegments") Set<DataSegment> upgradeSegments
   )
   {
     this.dataSource = dataSource;
@@ -69,7 +68,7 @@ public class MarkSegmentToUpgradeAction implements TaskAction<Integer>
   }
 
   @JsonProperty
-  public List<DataSegment> getUpgradeSegments()
+  public Set<DataSegment> getUpgradeSegments()
   {
     return upgradeSegments;
   }
@@ -87,7 +86,7 @@ public class MarkSegmentToUpgradeAction implements TaskAction<Integer>
   {
     final String datasource = task.getDataSource();
     final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
-        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), Set.copyOf(upgradeSegments));
+        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), upgradeSegments);
 
     if (segmentToReplaceLock.size() < upgradeSegments.size()) {
       throw InvalidInput.exception(
