@@ -130,7 +130,7 @@ public class NestedPathFinder
   /**
    * split a JSONPath path into a series of extractors to find things in stuff
    */
-  private static List<NestedPathPart> parseJsonPathInternal(@Nullable String path, boolean fixEmptyPathsFromBug)
+  private static List<NestedPathPart> parseJsonPathInternal(@Nullable String path, boolean allowFixEmptyFieldsBadPaths)
   {
     if (path == null || path.isEmpty()) {
       return Collections.emptyList();
@@ -157,7 +157,7 @@ public class NestedPathFinder
         if (dotMark == (i - 1)) {
           // in mode for fixing up empty fields bug which could have added 2 consecutive dots, we allow converting the
           // empty space into ['']
-          if (!fixEmptyPathsFromBug) {
+          if (!allowFixEmptyFieldsBadPaths) {
             badFormatJsonPath(
                 path,
                 "found '.' at invalid position [%s], must not follow '.' or must be contained with '",
@@ -174,7 +174,7 @@ public class NestedPathFinder
         if (dotMark == (i - 1)) {
           // in mode for fixing up empty fields bug which could have added a dot immediately before an array, we allow
           // converting the empty space into ['']
-          if (!fixEmptyPathsFromBug) {
+          if (!allowFixEmptyFieldsBadPaths) {
             badFormatJsonPath(
                 path,
                 "found '[' at invalid position [%s], must not follow '.' or must be contained with '",
