@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 /**
  * Specifies uncompacted segments to compact within an interval.
- * Used for minor compaction to compact only uncompacted segments while leaving compacted segments untouched.
+ * Used for MSQ-based minor compaction to compact only uncompacted segments while upgrading compacted segments (i.e. no change to physical segment files).
  */
 public class MinorCompactionInputSpec implements CompactionInputSpec
 {
