@@ -91,7 +91,7 @@ public class MarkSegmentToUpgradeAction implements TaskAction<Integer>
 
     if (segmentToReplaceLock.size() < upgradeSegments.size()) {
       throw InvalidInput.exception(
-          "Not all segments are hold by a replace lock, only [%d] segments out of total segments[%d] are hold by repalce lock",
+          "Segments to upgrade must be covered by a REPLACE lock. Only [%d] out of [%d] segments are covered.",
           segmentToReplaceLock.size(),
           upgradeSegments.size()
       );
