@@ -68,9 +68,11 @@ class NestedDataColumnSupplierFieldDictionaryFixupTest
 
     // expect to be able to find index of expected correct path instead of bad path
     Assertions.assertEquals(0, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$[''].a")));
+    Assertions.assertEquals(0, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$..a")));
     Assertions.assertEquals(1, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$.a")));
     Assertions.assertEquals(2, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$.b")));
     Assertions.assertEquals(3, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$.b[''][0].a")));
+    Assertions.assertEquals(3, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$.b.[0].a")));
     Assertions.assertEquals(4, fieldsDictionary.indexOf(StringUtils.toUtf8ByteBuffer("$.b[0].a")));
 
     List<String> fromIterator = new ArrayList<>();

@@ -440,8 +440,12 @@ public class NestedPathFinderTest
   @Test
   public void testFixup()
   {
+    // test bug fixes for bug https://github.com/apache/druid/pull/19072
     Throwable t = Assertions.assertThrows(DruidException.class, () -> NestedPathFinder.parseJsonPath("$.[0].a"));
-    Assertions.assertEquals("JSONPath [$.[0].a] is invalid, found '[' at invalid position [2], must not follow '.' or must be contained with '", t.getMessage());
+    Assertions.assertEquals(
+        "JSONPath [$.[0].a] is invalid, found '[' at invalid position [2], must not follow '.' or must be contained with '",
+        t.getMessage()
+    );
     List<NestedPathPart> expectedPathParts = List.of(
         new NestedPathField(""),
         new NestedPathArrayElement(0),
@@ -450,7 +454,10 @@ public class NestedPathFinderTest
     Assertions.assertEquals(expectedPathParts, NestedPathFinder.parseBadJsonPath("$.[0].a"));
 
     t = Assertions.assertThrows(DruidException.class, () -> NestedPathFinder.parseJsonPath("$...a"));
-    Assertions.assertEquals("JSONPath [$...a] is invalid, found '.' at invalid position [2], must not follow '.' or must be contained with '", t.getMessage());
+    Assertions.assertEquals(
+        "JSONPath [$...a] is invalid, found '.' at invalid position [2], must not follow '.' or must be contained with '",
+        t.getMessage()
+    );
     expectedPathParts = List.of(
         new NestedPathField(""),
         new NestedPathField(""),

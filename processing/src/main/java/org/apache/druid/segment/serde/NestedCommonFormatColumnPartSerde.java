@@ -167,13 +167,13 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return new NestedColumnDeserializer();
   }
 
-  @JsonProperty
+  @JsonProperty("logicalType")
   public ColumnType getLogicalType()
   {
     return logicalType;
   }
 
-  @JsonProperty
+  @JsonProperty("hasNulls")
   public boolean isHasNulls()
   {
     return hasNulls;
@@ -191,23 +191,30 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return enforceLogicalType;
   }
 
-  @JsonProperty
+  @JsonProperty("byteOrder")
   public ByteOrder getByteOrder()
   {
     return byteOrder;
   }
 
-  @JsonProperty
+  @JsonProperty("bitmapSerdeFactory")
   public BitmapSerdeFactory getBitmapSerdeFactory()
   {
     return bitmapSerdeFactory;
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("columnFormatSpec")
   public FormatSpec getColumnFormatSpec()
   {
     return columnFormatSpec;
+  }
+
+  @Nullable
+  @JsonProperty("pathParserVersion")
+  public Byte getPathParserVersion()
+  {
+    return pathParserVersion;
   }
 
   private class StringColumnDeserializer implements Deserializer

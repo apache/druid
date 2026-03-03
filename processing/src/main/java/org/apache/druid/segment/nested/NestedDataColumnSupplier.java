@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
+import java.util.List;
 
 public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
@@ -195,6 +196,20 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   }
 
 
+  /**
+   * Detects if field dictionary contains any invalid entries from a bug which previously existed in
+   * {@link NestedPathFinder#toNormalizedJsonPath(List)} to generate invalid path expressions when faced with empty
+   * field names - for example {"":{"a":1}} would incorrectly store the path as $..a instead of $[''].a.
+   * <p>
+   * If this method detects any illegal paths, the field dictionary is wrapped using {@link FieldsFixupIndexed}, which
+   * replaces the invalid values with corrected values, using {@link NestedPathFinder#parseBadJsonPath(String)} and
+   * feeding that back into the now fixed {@link NestedPathFinder#toNormalizedJsonPath(List)}.
+   * <p>
+   * Columns written after the bug was fixed will store {@link NestedCommonFormatColumnPartSerde#pathParserVersion} as
+   * 0x01 or greater, to indicate that we do not need to call this method to check for fixing up paths.
+   * <p>
+   * see https://github.com/apache/druid/pull/19072 for additional details.
+   */
   @VisibleForTesting
   static Supplier<? extends Indexed<ByteBuffer>> getAndFixFieldsSupplier(
       ByteBuffer bb,
@@ -313,6 +328,19 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     return null;
   }
 
+  /**
+   * {@link Indexed} implementation which contains a map of positions to replace with corrected values by
+   * {@link #getAndFixFieldsSupplier(ByteBuffer, ByteOrder, SegmentFileMapper)}.
+   * <p>
+   * This implementation is no longer {@link #isSorted()}, despite the underlying {@link Indexed} being so, as the
+   * replaced values might violate the old sort order, so this cannot provide that guarantee. Despite this,
+   * {@link #indexOf(ByteBuffer)} will still function for finding if items exist in the dictionary, the replaced values
+   * are searched prior to calling {@link #indexOf(ByteBuffer)} on the underlying dictionary, so for the values we are
+   * trying to find will always report their correct positions.
+   * It is important that the fixed dictionary retains its original order because the positions are used as the internal
+   * field file names (instead of the paths themselves) in the segment file. Callers however should not expect
+   * iterating the dictionary to provide values in sorted order.
+   */
   @VisibleForTesting
   public static class FieldsFixupIndexed implements Indexed<ByteBuffer>
   {
@@ -381,12 +409,6 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
           return delegateIterator.next();
         }
       };
-    }
-
-    @Override
-    public boolean isSorted()
-    {
-      return delegate.isSorted();
     }
 
     @Override

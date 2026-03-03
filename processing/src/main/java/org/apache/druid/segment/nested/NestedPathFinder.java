@@ -105,9 +105,32 @@ public class NestedPathFinder
   }
 
   /**
-   * split a JSONPath path into a series of extractors to find things in stuff
+   * Split a JSONPath expression into a series of {@link NestedPathPart} representing the structure of the path
+   * expression. This allows using with {@link NestedPathFinder#find(Object, List)} in order to extract values from
+   * json objects represented as java {@link Map} and {@link List}.
    */
   public static List<NestedPathPart> parseJsonPath(@Nullable String path)
+  {
+    return parseJsonPathInternal(path, false);
+  }
+
+  /**
+   * Split a JSONPath expression into a series of {@link NestedPathPart} representing the structure of the path
+   * expression. This method is a variant of {@link #parseJsonPath(String)} which allows fixing up any illegal
+   * expressions encountered from a previously bugged version of {@link #toNormalizedJsonPath(List)}, which incorrectly
+   * created path expressions like '$..a' or '$.[0].a' when encountering empty fields instead of the correct '$[''].a'
+   * and '$[''][0].a'. This method should only be used for converting field dictionaries stored in columns to fix the
+   * incorrectly stored paths, and never for parsing user input expressions.
+   */
+  public static List<NestedPathPart> parseBadJsonPath(@Nullable String path)
+  {
+    return parseJsonPathInternal(path, true);
+  }
+
+  /**
+   * split a JSONPath path into a series of extractors to find things in stuff
+   */
+  private static List<NestedPathPart> parseJsonPathInternal(@Nullable String path, boolean fixEmptyPathsFromBug)
   {
     if (path == null || path.isEmpty()) {
       return Collections.emptyList();
@@ -131,8 +154,16 @@ public class NestedPathFinder
     for (int i = 1; i < path.length(); i++) {
       final char current = path.charAt(i);
       if (current == '.' && arrayMark < 0 && quoteMark < 0) {
-        if (dotMark == (i - 1) && dotMark != 0) {
-          badFormatJsonPath(path, "found '.' at invalid position [%s], must not follow '.' or must be contained with '", i);
+        if (dotMark == (i - 1)) {
+          // in mode for fixing up empty fields bug which could have added 2 consecutive dots, we allow converting the
+          // empty space into ['']
+          if (!fixEmptyPathsFromBug) {
+            badFormatJsonPath(
+                path,
+                "found '.' at invalid position [%s], must not follow '.' or must be contained with '",
+                i
+            );
+          }
         }
         if (dotMark >= 0) {
           parts.add(new NestedPathField(path.substring(partMark, i)));
@@ -140,8 +171,16 @@ public class NestedPathFinder
         dotMark = i;
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
-        if (dotMark == (i - 1) && dotMark != 0) {
-          badFormatJsonPath(path, "found '[' at invalid position [%s], must not follow '.' or must be contained with '", i);
+        if (dotMark == (i - 1)) {
+          // in mode for fixing up empty fields bug which could have added a dot immediately before an array, we allow
+          // converting the empty space into ['']
+          if (!fixEmptyPathsFromBug) {
+            badFormatJsonPath(
+                path,
+                "found '[' at invalid position [%s], must not follow '.' or must be contained with '",
+                i
+            );
+          }
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(path.substring(partMark, i)));
@@ -159,7 +198,11 @@ public class NestedPathFinder
           partMark = i + 1;
         }
         catch (NumberFormatException ignored) {
-          badFormatJsonPath(path, "array specifier [%s] should be a number, it was not.  Use ' if this value was meant to be a field name", maybeNumber);
+          badFormatJsonPath(
+              path,
+              "array specifier [%s] should be a number, it was not.  Use ' if this value was meant to be a field name",
+              maybeNumber
+          );
         }
       } else if (dotMark == -1 && arrayMark == -1) {
         badFormatJsonPath(path, "path parts must be separated with '.'");
@@ -202,103 +245,6 @@ public class NestedPathFinder
     return parts;
   }
 
-  /**
-   * split a JSONPath path into a series of extractors to find things in stuff. This method is mostly a duplicate of
-   * {@link #parseJsonPath(String)} fixing up any bugs encountered from bad paths like '$..a' or '$.[0].a' from
-   * previously bugged versions of {@link #toNormalizedJsonPath(List)} and should be kept in sync.
-   */
-  public static List<NestedPathPart> parseBadJsonPath(@Nullable String path)
-  {
-    if (path == null || path.isEmpty()) {
-      return Collections.emptyList();
-    }
-    List<NestedPathPart> parts = new ArrayList<>();
-
-    if (!path.startsWith(JSON_PATH_ROOT)) {
-      badFormatJsonPath(path, "it must start with '$'");
-    }
-
-    if (path.length() == 1) {
-      return Collections.emptyList();
-    }
-
-    int partMark = -1;  // position to start the next substring to build the path part
-    int dotMark = -1;   // last position where a '.' character was encountered, indicating the start of a new part
-    int arrayMark = -1; // position of leading '[' indicating start of array (or field name if ' immediately follows)
-    int quoteMark = -1; // position of leading ', indicating a quoted field name
-
-    // start at position 1 since $ is special
-    for (int i = 1; i < path.length(); i++) {
-      final char current = path.charAt(i);
-      if (current == '.' && arrayMark < 0 && quoteMark < 0) {
-        if (dotMark >= 0) {
-          parts.add(new NestedPathField(path.substring(partMark, i)));
-        }
-        dotMark = i;
-        partMark = i + 1;
-      } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
-        if (dotMark == (i - 1) && dotMark != 0) {
-          // normally this would be an exception, but for fixing up bad paths written by a bug, we inject an empty field
-          parts.add(new NestedPathField(""));
-          dotMark = -1;
-        } else if (dotMark >= 0 && i > 1) {
-          parts.add(new NestedPathField(path.substring(partMark, i)));
-          dotMark = -1;
-        }
-        arrayMark = i;
-        partMark = i + 1;
-      } else if (current == ']' && arrayMark >= 0 && quoteMark < 0) {
-        String maybeNumber = path.substring(partMark, i);
-        try {
-          int index = Integer.parseInt(maybeNumber);
-          parts.add(new NestedPathArrayElement(index));
-          dotMark = -1;
-          arrayMark = -1;
-          partMark = i + 1;
-        }
-        catch (NumberFormatException ignored) {
-          badFormatJsonPath(path, "array specifier [%s] should be a number, it was not.  Use ' if this value was meant to be a field name", maybeNumber);
-        }
-      } else if (dotMark == -1 && arrayMark == -1) {
-        badFormatJsonPath(path, "path parts must be separated with '.'");
-      } else if (current == '\'' && quoteMark < 0) {
-        if (arrayMark != i - 1) {
-          badFormatJsonPath(path, "single-quote (') must be immediately after '['");
-        }
-        quoteMark = i;
-        partMark = i + 1;
-      } else if (current == '\'' && quoteMark >= 0 && path.charAt(i - 1) != '\\') {
-        if (path.charAt(i + 1) != ']') {
-          if (arrayMark >= 0) {
-            continue;
-          }
-          badFormatJsonPath(path, "closing single-quote (') must immediately precede ']'");
-        }
-
-        parts.add(new NestedPathField(path.substring(partMark, i)));
-        dotMark = -1;
-        quoteMark = -1;
-        // chomp to next char to eat closing array
-        if (++i == path.length()) {
-          break;
-        }
-        partMark = i + 1;
-        arrayMark = -1;
-      }
-    }
-    // add the last element, this should never be an array because they close themselves
-    if (partMark < path.length()) {
-      if (quoteMark != -1) {
-        badFormatJsonPath(path, "unterminated single-quote (')");
-      }
-      if (arrayMark != -1) {
-        badFormatJsonPath(path, "unterminated '['");
-      }
-      parts.add(new NestedPathField(path.substring(partMark)));
-    }
-
-    return parts;
-  }
 
   /**
    * Given a list of part finders, convert it to a "normalized" 'jq' path format that is consistent with how
