@@ -19,7 +19,8 @@
 
 package org.apache.druid.frame.util;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.base.Optional;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -52,26 +53,30 @@ public class DurableStorageUtilsTest
   @Test
   public void isQueryResultFileActive()
   {
-
     Assert.assertTrue(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        ImmutableSet.of("123")
+        unused -> Optional.of(new DateTime()),
+        10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        ImmutableSet.of("")
+        unused -> Optional.of(new DateTime().minus(15_000L)),
+        10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/",
-        ImmutableSet.of("123")
+        unused -> Optional.absent(),
+        10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         null,
-        ImmutableSet.of("123")
+        unused -> Optional.of(new DateTime()),
+        10_000L
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR,
-        ImmutableSet.of("123")
+        unused -> Optional.of(new DateTime()),
+        10_000L
     ));
   }
 

@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class TaskTest
 {
-  private static final Task TASK = new Task()
+  public static final Task TASK = new Task()
   {
     @Override
     public String getId()

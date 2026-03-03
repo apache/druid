@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.cleaner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Min;
+import java.util.concurrent.TimeUnit;
 
 public class DurableStorageCleanerConfig
 {
@@ -39,6 +40,9 @@ public class DurableStorageCleanerConfig
   @Min(1)
   public long delaySeconds = 86400L;
 
+  @JsonProperty
+  public long durationToRetain = TimeUnit.HOURS.toMillis(6);
+
   public boolean isEnabled()
   {
     return enabled;
@@ -49,12 +53,18 @@ public class DurableStorageCleanerConfig
     return delaySeconds;
   }
 
+  public long getDurationToRetain()
+  {
+    return durationToRetain;
+  }
+
   @Override
   public String toString()
   {
     return "DurableStorageCleanerConfig{" +
            "enabled=" + enabled +
            ", delaySeconds=" + delaySeconds +
+           ", durationToRetain=" + durationToRetain +
            '}';
   }
 }
