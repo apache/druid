@@ -175,6 +175,7 @@ public class QueryDriver
 
     final org.apache.druid.server.QueryResponse queryResponse;
     final String currThreadName = Thread.currentThread().getName();
+    Throwable caught = null;
     try {
       queryLifecycle.initialize(query);
       AuthorizationResult authorizationResult = queryLifecycle.authorize(authResult);
@@ -190,7 +191,6 @@ public class QueryDriver
 
       Thread.currentThread().setName(StringUtils.format("grpc-native[%s]", query.getId()));
       final ByteString results = encodeNativeResults(request, sequence, rowSignature);
-      // TODO: should we call queryLifecycle.emitLogsAndMetrics() here?
       return QueryResponse.newBuilder()
                           .setQueryId(query.getId())
                           .setStatus(QueryStatus.OK)
@@ -200,9 +200,11 @@ public class QueryDriver
                           .build();
     }
     catch (QueryInterruptedException e) {
+      caught = e;
       throw e;
     }
     catch (IOException | RuntimeException e) {
+      caught = e;
       return QueryResponse.newBuilder()
                           .setQueryId(query.getId())
                           .setStatus(QueryStatus.RUNTIME_ERROR)
@@ -210,6 +212,7 @@ public class QueryDriver
                           .build();
     }
     finally {
+      queryLifecycle.emitLogsAndMetrics(caught, null, -1);
       Thread.currentThread().setName(currThreadName);
     }
   }
