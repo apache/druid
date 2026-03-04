@@ -467,7 +467,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public WorkerClient newWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
   }
 
   @Override
