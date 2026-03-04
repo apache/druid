@@ -81,6 +81,11 @@
       <version>${kubernetes.client.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+    </dependency>
+
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>

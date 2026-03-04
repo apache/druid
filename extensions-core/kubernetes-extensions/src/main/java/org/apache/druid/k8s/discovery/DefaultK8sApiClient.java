@@ -168,9 +168,7 @@ public class DefaultK8sApiClient implements K8sApiClient
             if (ex.getCause() instanceof StreamResetException) {
               throw new ChannelResetException(ex.getCause());
             }
-            else {
-              throw ex;
-            }
+            throw ex;
           }
 
           return false;
