@@ -21,7 +21,7 @@ package org.apache.druid.k8s.discovery;
 
 import io.kubernetes.client.util.Watch;
 
-import java.net.SocketTimeoutException;
+import java.io.IOException;
 
 public interface WatchResult extends AutoCloseable
 {
@@ -29,7 +29,7 @@ public interface WatchResult extends AutoCloseable
   String DELETED = "DELETED";
   String BOOKMARK = "BOOKMARK";
 
-  boolean hasNext() throws SocketTimeoutException;
+  boolean hasNext() throws IOException;
 
   Watch.Response<DiscoveryDruidNodeAndResourceVersion> next();
 }

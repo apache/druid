@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.kubernetes.client.util.Watch;
-import okhttp3.internal.http2.StreamResetException;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.BaseNodeRoleWatcher;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -287,7 +286,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
           LOGGER.trace("Watch closed normally for role[%s]", this.nodeRole);
           return;
         }
-        catch (StreamResetException ex) {
+        catch (ChannelResetException ex) {
           LOGGER.debug("Watch stream terminated normally for role[%s], restarting", this.nodeRole);
           return;
         }
