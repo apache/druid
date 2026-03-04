@@ -127,9 +127,9 @@ public class MetadataSegmentView
     log.info("MetadataSegmentView is stopping.");
     if (isCacheEnabled) {
       scheduledExec.shutdown();
-      publishedSegments = null;
-      segmentIdToReplicationFactor.invalidateAll();
-      segmentIdToReplicationFactor.cleanUp();
+//      publishedSegments = null;
+//      segmentIdToReplicationFactor.invalidateAll();
+//      segmentIdToReplicationFactor.cleanUp();
     }
     log.info("MetadataSegmentView is stopped.");
   }
