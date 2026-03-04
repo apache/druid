@@ -329,10 +329,6 @@ export function setConsoleBrokerService(brokerService: string | undefined): void
   consoleBrokerService = brokerService;
 }
 
-export function getConsoleBrokerService(): string | undefined {
-  return consoleBrokerService;
-}
-
 export async function queryDruidRune(
   runeQuery: Record<string, any>,
   signal?: AbortSignal,

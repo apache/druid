@@ -27,10 +27,17 @@ import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import type { QueryContext } from './druid-models';
+import type { WebConsoleConfig } from './druid-models/web-console-config/web-console-config';
 import type { Links } from './links';
 import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
-import { initMouseTooltip, setConsoleBrokerService, setLocalStorageNamespace } from './utils';
+import {
+  initMouseTooltip,
+  localStorageGetJson,
+  LocalStorageKeys,
+  setConsoleBrokerService,
+  setLocalStorageNamespace,
+} from './utils';
 
 import './entry.scss';
 
@@ -105,8 +112,14 @@ if (consoleConfig.localStorageNamespace) {
   setLocalStorageNamespace(consoleConfig.localStorageNamespace);
 }
 
-if (consoleConfig.consoleBrokerService) {
-  setConsoleBrokerService(consoleConfig.consoleBrokerService);
+// Set consoleBrokerService with precedence: WebConsoleConfig (personal) > consoleConfig (org-wide)
+const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+  LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+);
+const consoleBrokerService =
+  webConsoleConfig?.consoleBrokerService || consoleConfig.consoleBrokerService;
+if (consoleBrokerService) {
+  setConsoleBrokerService(consoleBrokerService);
 }
 
 QueryRunner.defaultQueryExecutor = ({ payload, isSql, signal }) => {
