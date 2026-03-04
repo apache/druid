@@ -57,8 +57,8 @@ public class TimestampSpecTest
         "2000-01-01T05:00:01",
         "2000-01-01T05:00:01",
         "2000-01-01T05:00:02",
-        "2000-01-01T05:00:03",
-        };
+        "2000-01-01T05:00:03"
+    };
     TimestampSpec spec = new TimestampSpec("TIMEstamp", dateFormat, null);
 
     DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateHourMinuteSecond());

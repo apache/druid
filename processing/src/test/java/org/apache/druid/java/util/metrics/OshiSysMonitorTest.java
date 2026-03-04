@@ -464,8 +464,8 @@ public class OshiSysMonitorTest
     CentralProcessor processor = Mockito.mock(CentralProcessor.class);
     long[][] procTicks = new long[][]{
         {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L},
-        {2L, 4L, 6L, 8L, 10L, 12L, 14L, 16L},
-        };
+        {2L, 4L, 6L, 8L, 10L, 12L, 14L, 16L}
+    };
     Mockito.when(processor.getProcessorCpuLoadTicks()).thenReturn(procTicks);
     Mockito.when(hal.getProcessor()).thenReturn(processor);
 

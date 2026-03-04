@@ -51,6 +51,14 @@
       <property name="checkFormat" value="$1"/>
     </module>
 
+    <!-- Suppress Indentation for anonymous class opening/closing braces.
+         Anonymous classes passed as arguments sit at +4 from the enclosing call
+         rather than +2, which is correct style but conflicts with lineWrappingIndentation=2. -->
+    <module name="SuppressionXpathSingleFilter">
+      <property name="checks" value="Indentation"/>
+      <property name="query" value="//LITERAL_NEW/OBJBLOCK/LCURLY | //LITERAL_NEW/OBJBLOCK/RCURLY"/>
+    </module>
+
     <module name="RedundantModifier">
       <property name="tokens" value="INTERFACE_DEF,ENUM_DEF,METHOD_DEF"/>
     </module>
@@ -112,12 +120,12 @@
       <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
     </module>
 
-<!--    <module name="Indentation">-->
-<!--      <property name="basicOffset" value="2"/>-->
-<!--      <property name="caseIndent" value="2"/>-->
-<!--      <property name="lineWrappingIndentation" value="2"/>-->
-<!--      <property name="braceAdjustment" value="0"/>-->
-<!--    </module>-->
+    <module name="Indentation">
+      <property name="basicOffset" value="2"/>
+      <property name="caseIndent" value="2"/>
+      <property name="lineWrappingIndentation" value="2"/>
+      <property name="braceAdjustment" value="0"/>
+    </module>
 
     <module name="MethodParamPad">
       <property name="allowLineBreaks" value="true"/>
