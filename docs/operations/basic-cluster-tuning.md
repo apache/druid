@@ -334,6 +334,24 @@ Non-nested GroupBy queries require 1 merge buffer per query, while a nested Grou
 
 The number of merge buffers determines the number of GroupBy queries that can be processed concurrently.
 
+#### Using metrics to tune GroupBy buffer configuration
+
+Druid can emit metrics that help you right-size merge buffers and related GroupBy configuration. These metrics are available when the `GroupByStatsMonitor` module is enabled by adding `org.apache.druid.server.metrics.GroupByStatsMonitor` to `druid.monitoring.monitors`. See the [metrics reference](metrics.md) for full details.
+
+**Sizing `druid.processing.buffer.sizeBytes`:**
+
+- `mergeBuffer/maxBytesUsed`: peak merge buffer bytes used by any single GroupBy query within the emission period. If this value consistently approaches `druid.processing.buffer.sizeBytes`, consider increasing the buffer size.
+- `groupBy/maxSpilledBytes`: peak bytes spilled to disk by any single GroupBy query. Non-zero values indicate that merge buffers are too small to hold intermediate results in memory, causing disk spill. Increasing `druid.processing.buffer.sizeBytes` reduces spilling. You can also adjust `druid.query.groupBy.maxOnDiskStorage` to control how much spilling is allowed before a query fails.
+
+**Sizing `druid.processing.numMergeBuffers`:**
+
+- `mergeBuffer/pendingRequests`: number of queries waiting to acquire merge buffers. Persistently non-zero values indicate merge buffer pool exhaustion; consider increasing `druid.processing.numMergeBuffers`.
+- `mergeBuffer/maxAcquisitionTimeNs`: peak time in nanoseconds that any single GroupBy query waited to acquire merge buffers. High values suggest contention on the merge buffer pool; increasing `druid.processing.numMergeBuffers` can reduce wait times.
+
+**Sizing `druid.query.groupBy.maxMergingDictionarySize`:**
+
+- `groupBy/maxMergeDictionarySize`: peak on-heap merge dictionary size in bytes for any single GroupBy query. If this approaches `druid.query.groupBy.maxMergingDictionarySize`, queries may spill to disk or fail. If this happens, consider increasing the dictionary size limit.
+
 <a name="connection-pool"></a>
 
 ## Connection pool guidelines
