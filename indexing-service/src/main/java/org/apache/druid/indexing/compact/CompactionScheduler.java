@@ -61,11 +61,6 @@ public interface CompactionScheduler
    */
   boolean isRunning();
 
-  /**
-   * @return the tracker for monitoring compaction status across datasources.
-   */
-  CompactionStatusTracker getCompactionStatusTracker();
-
   CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig);
 
   /**

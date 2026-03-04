@@ -113,7 +113,7 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isNumChunkSupported()
+  public boolean canCreateNumberedPartitionChunk()
   {
     return true;
   }

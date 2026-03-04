@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.compact;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
@@ -31,7 +30,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
@@ -65,7 +63,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   public void setUp()
   {
     OBJECT_MAPPER.registerModules(new SupervisorModule().getJacksonModules());
-    OBJECT_MAPPER.setInjectableValues(new InjectableValues.Std().addValue(CompactionStatusTracker.class, null));
   }
 
   @Test
@@ -95,8 +92,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         ImmutableMap.of("context_key", "context_value"),
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(template);
@@ -131,8 +127,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         ImmutableMap.of("key", "value"),
         null,
         null,
-        Granularities.HOUR,
-        null
+        Granularities.HOUR
     );
 
     // Serialize and deserialize as DataSourceCompactionConfig interface
@@ -167,8 +162,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     // Call createCompactionJobs - should return empty list without processing
@@ -195,8 +189,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             Period.days(7),  // skipOffsetFromLatest
             Period.days(3),   // skipOffsetFromNow
-            Granularities.DAY,
-            null
+            Granularities.DAY
         )
     );
 
@@ -221,8 +214,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            Granularities.DAY,
-            null
+            Granularities.DAY
         )
     );
 
@@ -244,8 +236,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            Granularities.DAY,
-            null
+            Granularities.DAY
         )
     );
 
@@ -269,8 +260,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,  // null defaultSegmentGranularity,
-            null
+            null  // null defaultSegmentGranularity
         )
     );
 
@@ -492,8 +482,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -584,8 +573,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -685,8 +673,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     // When no segment granularity rules exist, a synthetic rule is created with the smallest period
@@ -778,8 +765,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.HOUR,
-        null
+        Granularities.HOUR
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -885,8 +871,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.HOUR,
-        null
+        Granularities.HOUR
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -956,8 +941,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     DruidException exception = Assertions.assertThrows(
@@ -1022,8 +1006,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1090,8 +1073,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1162,8 +1144,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1227,8 +1208,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1292,8 +1272,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1378,8 +1357,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     List<IntervalGranularityInfo> expected = List.of(
@@ -1452,8 +1430,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.MONTH,  // MONTH is coarser than HOUR!
-        null
+        Granularities.MONTH  // MONTH is coarser than HOUR!
     );
 
     IllegalArgumentException exception = Assertions.assertThrows(
@@ -1514,8 +1491,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        Granularities.DAY,
-        null
+        Granularities.DAY
     );
 
     IllegalArgumentException exception = Assertions.assertThrows(
@@ -1548,8 +1524,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     )
     {
       super(dataSource, taskPriority, inputSegmentSizeBytes, ruleProvider,
-          engine, taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY, null
-      );
+            engine, taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY);
     }
 
     public List<Interval> getProcessedIntervals()

@@ -170,7 +170,7 @@ public class CompactionCandidate
   @Nullable
   public List<DataSegment> getUncompactedSegments()
   {
-    return currentStatus == null ? null : currentStatus.getUncompactedSegments();
+    return currentStatus.getUncompactedSegments();
   }
 
   /**

@@ -130,6 +130,7 @@ public class CompactionJobQueue
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
+        statusTracker::getLatestTaskStatus,
         snapshotBuilder,
         new DefaultIndexingStateFingerprintMapper(indexingStateCache, objectMapper)
     );

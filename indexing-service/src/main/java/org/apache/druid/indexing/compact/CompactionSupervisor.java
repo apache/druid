@@ -75,8 +75,7 @@ public class CompactionSupervisor implements Supervisor
       CompactionJobParams jobParams
   )
   {
-    return supervisorSpec.getTemplate(scheduler.getCompactionStatusTracker())
-                         .createCompactionJobs(inputSource, jobParams);
+    return supervisorSpec.getTemplate().createCompactionJobs(inputSource, jobParams);
   }
 
   @Override

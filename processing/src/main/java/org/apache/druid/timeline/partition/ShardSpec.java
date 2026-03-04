@@ -61,7 +61,7 @@ public interface ShardSpec
    * Returns whether {@link #createChunk} returns a {@link NumberedPartitionChunk} instance.
    * This is necessary for supporting {@link PartitionHolder#isComplete()} if updating to a new corePartitions spec.
    */
-  default boolean isNumChunkSupported()
+  default boolean canCreateNumberedPartitionChunk()
   {
     return false;
   }

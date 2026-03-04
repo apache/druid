@@ -27,8 +27,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -588,17 +586,19 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       Iterable<DataSegment> segmentsNotCompletelyWithinin =
           Iterables.filter(timelineSegments, s -> !segmentProvider.interval.contains(s.getInterval()));
       if (segmentsNotCompletelyWithinin.iterator().hasNext()) {
-        throw new ISE(
-            "Incremental compaction doesn't allow segments not completely within interval[%s]",
-            segmentProvider.interval
-        );
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Incremental compaction doesn't allow segments not completely within interval[%s]",
+                                segmentProvider.interval
+                            );
       }
     }
 
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       Map<QuerySegmentSpec, DataSchema> inputSchemas = new HashMap<>();
       // if segment is already compacted in incremental compaction, they need to be upgraded directly, supported in MSQ
-      Set<DataSegment> upgradeSegments = new HashSet<>();
+      Set<DataSegment> segmentsToUpgrade = new HashSet<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -606,15 +606,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
 
       for (final DataSegment dataSegment : timelineSegments) {
-        if (segmentProvider.segmentsToUpgradePredicate.test(dataSegment)) {
-          upgradeSegments.add(dataSegment);
+        if (segmentProvider.shouldUpgradeSegment(dataSegment)) {
+          segmentsToUpgrade.add(dataSegment);
         } else {
           intervalToSegments.computeIfAbsent(dataSegment.getInterval(), k -> new ArrayList<>())
                             .add(dataSegment);
         }
       }
-      if (!upgradeSegments.isEmpty()) {
-        toolbox.getTaskActionClient().submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, upgradeSegments));
+      if (!segmentsToUpgrade.isEmpty()) {
+        log.info("Marking [%d]segments to upgrade", segmentsToUpgrade.size());
+        toolbox.getTaskActionClient()
+               .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
       }
 
       // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
@@ -659,28 +661,33 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             projections,
             needMultiValuedColumns
         );
-        inputSchemas.put(
-            segmentProvider.minorCompaction
-            ? new MultipleSpecificSegmentSpec(segmentsToCompact.stream()
-                                                               .map(DataSegment::toDescriptor)
-                                                               .collect(Collectors.toList()))
-            : new MultipleIntervalSegmentSpec(List.of(interval)), dataSchema);
+        final QuerySegmentSpec querySegmentSpec;
+        if (segmentProvider.minorCompaction) {
+          querySegmentSpec = new MultipleSpecificSegmentSpec(segmentsToCompact.stream()
+                                                                              .map(DataSegment::toDescriptor)
+                                                                              .collect(Collectors.toList()));
+        } else {
+          querySegmentSpec = new MultipleIntervalSegmentSpec(List.of(interval));
+        }
+        inputSchemas.put(querySegmentSpec, dataSchema);
       }
       return inputSchemas;
     } else {
       // given segment granularity
-      Set<DataSegment> upgradeSegments = new HashSet<>();
-      Iterables.addAll(upgradeSegments, Iterables.filter(
+      Set<DataSegment> segmentsToUpgrade = new HashSet<>();
+      Iterables.addAll(segmentsToUpgrade, Iterables.filter(
           timelineSegments,
-          segmentProvider.segmentsToUpgradePredicate
+          segmentProvider::shouldUpgradeSegment
       ));
-      if (!upgradeSegments.isEmpty()) {
-        toolbox.getTaskActionClient().submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, upgradeSegments));
+      if (!segmentsToUpgrade.isEmpty()) {
+        log.info("Marking [%d]segments to upgrade", segmentsToUpgrade.size());
+        toolbox.getTaskActionClient()
+               .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
       }
 
       final Iterable<DataSegment> segmentsToCompact = Iterables.filter(
           timelineSegments,
-          segmentProvider.segmentsToCompactPredicate
+          segmentProvider::shouldCompactSegment
       );
       final DataSchema dataSchema = createDataSchema(
           toolbox.getEmitter(),
@@ -698,11 +705,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           projections,
           needMultiValuedColumns
       );
-      return Map.of(segmentProvider.minorCompaction
-                    ? new MultipleSpecificSegmentSpec(StreamSupport.stream(segmentsToCompact.spliterator(), false)
-                                                                   .map(DataSegment::toDescriptor)
-                                                                   .collect(Collectors.toList()))
-                    : new MultipleIntervalSegmentSpec(List.of(segmentProvider.interval)), dataSchema);
+      final QuerySegmentSpec querySegmentSpec;
+      if (segmentProvider.minorCompaction) {
+        querySegmentSpec = new MultipleSpecificSegmentSpec(StreamSupport.stream(segmentsToCompact.spliterator(), false)
+                                                                        .map(DataSegment::toDescriptor)
+                                                                        .collect(Collectors.toList()));
+      } else {
+        querySegmentSpec = new MultipleIntervalSegmentSpec(List.of(segmentProvider.interval));
+      }
+      return Map.of(querySegmentSpec, dataSchema);
     }
   }
 
@@ -1276,8 +1287,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final Interval interval;
 
     private final boolean minorCompaction;
-    private final Predicate<DataSegment> segmentsToUpgradePredicate;
-    private final Predicate<DataSegment> segmentsToCompactPredicate;
+    private final Set<SegmentDescriptor> uncompactedSegments;
 
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
@@ -1286,15 +1296,25 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.interval = inputSpec.findInterval(dataSource);
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
-        Set<SegmentDescriptor> uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
-        this.segmentsToUpgradePredicate = s -> !uncompactedSegments.contains(s.toDescriptor())
-                                               && this.interval.contains(s.getInterval());
-        this.segmentsToCompactPredicate = Predicates.not(this.segmentsToUpgradePredicate);
+        uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
       } else {
         minorCompaction = false;
-        this.segmentsToUpgradePredicate = Predicates.alwaysFalse();
-        this.segmentsToCompactPredicate = Predicates.alwaysTrue();
+        uncompactedSegments = null;
       }
+    }
+
+    private boolean shouldUpgradeSegment(DataSegment s)
+    {
+      if (minorCompaction) {
+        return false;
+      } else {
+        return !uncompactedSegments.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
+      }
+    }
+
+    private boolean shouldCompactSegment(DataSegment s)
+    {
+      return !shouldUpgradeSegment(s);
     }
 
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException

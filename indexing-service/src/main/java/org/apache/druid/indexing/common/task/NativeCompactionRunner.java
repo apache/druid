@@ -99,6 +99,10 @@ public class NativeCompactionRunner implements CompactionRunner
           "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead."
       );
     }
+    if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
+      return CompactionConfigValidationResult.failure(
+          "Minor compaction is not supported by Native  compaction engine. Use MSQ compaction engine instead.");
+    }
     return CompactionConfigValidationResult.success();
   }
 

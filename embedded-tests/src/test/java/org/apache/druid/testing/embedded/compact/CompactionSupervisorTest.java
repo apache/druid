@@ -484,8 +484,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null,
-        Granularities.HOUR,
-        overlord.bindings().getInstance(CompactionStatusTracker.class)
+        Granularities.HOUR
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
@@ -564,8 +563,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null,
-        Granularities.DAY,
-        overlord.bindings().getInstance(CompactionStatusTracker.class)
+        Granularities.DAY
     );
 
     runCompactionWithSpec(cascadingTemplate);

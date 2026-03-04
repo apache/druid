@@ -255,7 +255,7 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   }
 
   @Override
-  public boolean isNumChunkSupported()
+  public boolean canCreateNumberedPartitionChunk()
   {
     return !isNumCorePartitionsUnknown();
   }
