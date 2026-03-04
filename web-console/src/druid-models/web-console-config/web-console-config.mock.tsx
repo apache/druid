@@ -20,5 +20,5 @@ import type { WebConsoleConfig } from './web-console-config';
 
 export const DEFAULT_WEB_CONSOLE_CONFIG: WebConsoleConfig = {
   showLocalTime: false,
-  consoleBrokerService: undefined,
+  consoleSystemQueryBrokerService: undefined,
 };

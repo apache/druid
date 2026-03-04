@@ -20,7 +20,7 @@ import type { Field } from '../../components';
 
 export interface WebConsoleConfig {
   showLocalTime?: boolean;
-  consoleBrokerService?: string;
+  consoleSystemQueryBrokerService?: string;
 }
 
 export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
@@ -36,14 +36,14 @@ export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
     ),
   },
   {
-    name: 'consoleBrokerService',
+    name: 'consoleSystemQueryBrokerService',
     type: 'string',
     placeholder: 'druid/broker',
     info: (
       <>
-        Sets brokerService in the query context for console background queries
+        Sets brokerService in the query context for console system queries
         (e.g.,&quot;druid/broker-all-tiers&quot;). Useful when configuring
-        druid.broker.segment.watchedTiers
+        druid.broker.segment.watchedTiers. Does not affect user-initiated queries.
       </>
     ),
   },

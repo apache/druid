@@ -35,7 +35,7 @@ import {
   initMouseTooltip,
   localStorageGetJson,
   LocalStorageKeys,
-  setConsoleBrokerService,
+  setConsoleSystemQueryBrokerService,
   setLocalStorageNamespace,
 } from './utils';
 
@@ -78,9 +78,9 @@ interface ConsoleConfig {
   // Allow for namespacing the local storage in case multiple clusters share a URL due to proxying
   localStorageNamespace?: string;
 
-  // Broker service name to use for all console SQL queries (for tier isolation)
+  // Broker service name to use for console system queries
   // This injects "brokerService" into the query context for routing via the manual strategy
-  consoleBrokerService?: string;
+  consoleSystemQueryBrokerService?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -112,14 +112,15 @@ if (consoleConfig.localStorageNamespace) {
   setLocalStorageNamespace(consoleConfig.localStorageNamespace);
 }
 
-// Set consoleBrokerService with precedence: WebConsoleConfig (personal) > consoleConfig (org-wide)
+// Set consoleSystemQueryBrokerService with precedence: WebConsoleConfig (personal) > consoleConfig (global)
 const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
   LocalStorageKeys.WEB_CONSOLE_CONFIGS,
 );
-const consoleBrokerService =
-  webConsoleConfig?.consoleBrokerService || consoleConfig.consoleBrokerService;
-if (consoleBrokerService) {
-  setConsoleBrokerService(consoleBrokerService);
+const consoleSystemQueryBrokerService =
+  webConsoleConfig?.consoleSystemQueryBrokerService ||
+  consoleConfig.consoleSystemQueryBrokerService;
+if (consoleSystemQueryBrokerService) {
+  setConsoleSystemQueryBrokerService(consoleSystemQueryBrokerService);
 }
 
 QueryRunner.defaultQueryExecutor = ({ payload, isSql, signal }) => {

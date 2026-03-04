@@ -322,11 +322,11 @@ export class DruidError extends Error {
   }
 }
 
-// Broker service to use for all console queries (for tier isolation)
-let consoleBrokerService: string | undefined;
+// Broker service to use for console system queries
+let consoleSystemQueryBrokerService: string | undefined;
 
-export function setConsoleBrokerService(brokerService: string | undefined): void {
-  consoleBrokerService = brokerService;
+export function setConsoleSystemQueryBrokerService(brokerService: string | undefined): void {
+  consoleSystemQueryBrokerService = brokerService;
 }
 
 export async function queryDruidRune(
@@ -348,13 +348,13 @@ export async function queryDruidSql<T = any>(
 ): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    // Inject brokerService into context if configured
-    const payload = consoleBrokerService
+    // Inject brokerService into context if configured for system queries
+    const payload = consoleSystemQueryBrokerService
       ? {
           ...sqlQueryPayload,
           context: {
             ...sqlQueryPayload.context,
-            brokerService: consoleBrokerService,
+            brokerService: consoleSystemQueryBrokerService,
           },
         }
       : sqlQueryPayload;
