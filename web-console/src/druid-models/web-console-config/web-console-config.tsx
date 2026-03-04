@@ -41,8 +41,9 @@ export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
     placeholder: 'druid/broker',
     info: (
       <>
-        Sets brokerService in the query context for console background queries (e.g., &quot;druid/broker-all-tiers&quot;).
-        Useful when configuring druid.broker.segment.watchedTiers
+        Sets brokerService in the query context for console background queries
+        (e.g.,&quot;druid/broker-all-tiers&quot;). Useful when configuring
+        druid.broker.segment.watchedTiers
       </>
     ),
   },
