@@ -19,6 +19,8 @@
 
 package org.apache.druid.security.pac4j;
 
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -26,6 +28,7 @@ import org.pac4j.core.config.Config;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.exception.http.HttpAction;
+import org.pac4j.core.profile.UserProfile;
 import org.pac4j.jee.context.JEEContext;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
@@ -38,16 +41,21 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Set;
+import java.util.function.Supplier;
 
 public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
+  public static final String ROLE_CLAIM_CONTEXT_KEY = "druidRoles";
 
   private final Config pac4jConfig;
   private final Pac4jSessionStore sessionStore;
   private final String callbackPath;
   private final String name;
   private final String authorizerName;
+  private final Supplier<DefaultSecurityLogic> securityLogicFactory;
+  private final Supplier<DefaultCallbackLogic> callbackLogicFactory;
 
   public Pac4jFilter(
           String name,
@@ -62,6 +70,8 @@ public class Pac4jFilter implements Filter
     this.name = name;
     this.authorizerName = authorizerName;
     this.sessionStore = new Pac4jSessionStore(cookiePassphrase);
+    this.securityLogicFactory = Suppliers.memoize(DefaultSecurityLogic::new);
+    this.callbackLogicFactory = Suppliers.memoize(DefaultCallbackLogic::new);
   }
 
   @Override
@@ -85,7 +95,7 @@ public class Pac4jFilter implements Filter
     JEEContext context = new JEEContext(request, response);
 
     if (request.getRequestURI().equals(callbackPath)) {
-      DefaultCallbackLogic callbackLogic = new DefaultCallbackLogic();
+      DefaultCallbackLogic callbackLogic = callbackLogicFactory.get();
       String originalUrl = (String) request.getSession().getAttribute("pac4j.originalUrl");
       String redirectUrl = originalUrl != null ? originalUrl : "/";
 
@@ -99,7 +109,7 @@ public class Pac4jFilter implements Filter
               null
       );
     } else {
-      DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
+      DefaultSecurityLogic securityLogic = securityLogicFactory.get();
       try {
         securityLogic.perform(
             context,
@@ -109,9 +119,16 @@ public class Pac4jFilter implements Filter
               try {
                 // Extract user ID from pac4j profiles and create AuthenticationResult
                 if (profiles != null && !profiles.isEmpty()) {
-                  String uid = profiles.iterator().next().getId();
+                  UserProfile profile = profiles.iterator().next();
+                  String uid = profile.getId();
                   if (uid != null) {
-                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+                    final Set<String> roles = profile.getRoles();
+                    LOGGER.debug("Collected identity: %s with roles: %s", uid, roles);
+                    final ImmutableMap.Builder<String, Object> authResultContext = ImmutableMap.builder();
+                    if (roles != null && !roles.isEmpty()) {
+                      authResultContext.put(ROLE_CLAIM_CONTEXT_KEY, roles);
+                    }
+                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, authResultContext.build());
                     servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
                     filterChain.doFilter(servletRequest, servletResponse);
                   }
