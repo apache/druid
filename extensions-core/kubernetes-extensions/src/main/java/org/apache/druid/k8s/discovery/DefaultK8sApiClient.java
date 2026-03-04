@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.PatchUtils;
 import io.kubernetes.client.util.Watch;
+import okhttp3.internal.http2.StreamResetException;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
@@ -194,7 +195,7 @@ public class DefaultK8sApiClient implements K8sApiClient
         private Watch.Response<DiscoveryDruidNodeAndResourceVersion> obj;
 
         @Override
-        public boolean hasNext() throws SocketTimeoutException
+        public boolean hasNext() throws IOException
         {
           try {
             while (watch.hasNext()) {
@@ -274,7 +275,11 @@ public class DefaultK8sApiClient implements K8sApiClient
           catch (RuntimeException ex) {
             if (ex.getCause() instanceof SocketTimeoutException) {
               throw (SocketTimeoutException) ex.getCause();
-            } else {
+            }
+            if (ex.getCause() instanceof StreamResetException) {
+              throw new ChannelResetException(ex.getCause());
+            }
+            else {
               throw ex;
             }
           }

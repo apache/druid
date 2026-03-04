@@ -21,7 +21,7 @@ package org.apache.druid.k8s.discovery;
 
 import io.kubernetes.client.util.Watch;
 
-import java.net.SocketTimeoutException;
+import java.io.IOException;
 
 /**
  * Iterator over k8s pod watch events that is aligned with the needs of Druid service discovery rather than
@@ -44,7 +44,7 @@ public interface WatchResult extends AutoCloseable
    */
   String NOT_READY = "NOT_READY";
 
-  boolean hasNext() throws SocketTimeoutException;
+  boolean hasNext() throws IOException;
 
   Watch.Response<DiscoveryDruidNodeAndResourceVersion> next();
 }
