@@ -22,7 +22,7 @@ jobs:
     name: Run Docker tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - name: Set Docker image env var
         run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
       - name: Build the Docker image
