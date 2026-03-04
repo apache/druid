@@ -30,7 +30,6 @@ import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
