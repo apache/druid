@@ -108,7 +108,7 @@ public class MarkSegmentToUpgradeActionTest
         DruidException.class,
         () -> action.perform(task, actionTestKit.getTaskActionToolbox())
     );
-    assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
+    assertTrue(exception.getMessage().contains("Segments to upgrade must be covered by a REPLACE lock"));
   }
 
   @Test
@@ -125,7 +125,7 @@ public class MarkSegmentToUpgradeActionTest
         DruidException.class,
         () -> action.perform(task, actionTestKit.getTaskActionToolbox())
     );
-    assertTrue(exception.getMessage().contains("Not all segments are hold by a replace lock"));
+    assertTrue(exception.getMessage().contains("Segments to upgrade must be covered by a REPLACE lock"));
   }
 
   @Test
