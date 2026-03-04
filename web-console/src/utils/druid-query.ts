@@ -335,18 +335,7 @@ export async function queryDruidRune(
 ): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    // Inject brokerService into context if configured
-    const query = consoleBrokerService
-      ? {
-          ...runeQuery,
-          context: {
-            ...runeQuery.context,
-            brokerService: consoleBrokerService,
-          },
-        }
-      : runeQuery;
-
-    runeResultResp = await Api.instance.post('/druid/v2', query, { signal });
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
