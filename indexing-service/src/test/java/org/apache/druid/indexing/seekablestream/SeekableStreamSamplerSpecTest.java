@@ -345,6 +345,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           LagAggregator.DEFAULT,
           lateMessageRejectionStartDateTime,
           idleConfig,
+          null,
           null
       );
     }

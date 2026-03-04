@@ -155,6 +155,7 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.preferred", PreferredTierSelectorStrategyConfig.class);
+
           JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
@@ -209,7 +210,8 @@ public class CliBroker extends ServerRunnable
         new MSQSqlModule(),
         new SqlTaskModule(),
         new DartControllerModule(),
-        new DartControllerMemoryManagementModule()
+        new DartControllerMemoryManagementModule(),
+        new BrokerRealtimeSelectorModule()
     );
   }
 }

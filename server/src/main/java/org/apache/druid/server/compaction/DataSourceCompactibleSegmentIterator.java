@@ -121,9 +121,11 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           if (!partialEternitySegments.isEmpty()) {
             // Do not use the target segment granularity in the CompactionCandidate
             // as Granularities.getIterable() will cause OOM due to the above issue
-            CompactionCandidate candidatesWithStatus = CompactionCandidate
-                .from(partialEternitySegments, null)
-                .withCurrentStatus(CompactionStatus.skipped("Segments have partial-eternity intervals"));
+            CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
+                partialEternitySegments,
+                null,
+                CompactionStatus.skipped("Segments have partial-eternity intervals")
+            );
             skippedSegments.add(candidatesWithStatus);
             return;
           }
@@ -329,16 +331,19 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
-      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config, fingerprintMapper);
-      final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(segments, config, fingerprintMapper);
+      final CompactionCandidate candidates = CompactionCandidate.from(
+          segments,
+          config.getSegmentGranularity(),
+          compactionStatus
+      );
 
       if (compactionStatus.isComplete()) {
-        compactedSegments.add(candidatesWithStatus);
+        compactedSegments.add(candidates);
       } else if (compactionStatus.isSkipped()) {
-        skippedSegments.add(candidatesWithStatus);
+        skippedSegments.add(candidates);
       } else if (!queuedIntervals.contains(candidates.getUmbrellaInterval())) {
-        queue.add(candidatesWithStatus);
+        queue.add(candidates);
         queuedIntervals.add(candidates.getUmbrellaInterval());
       }
     }
@@ -372,16 +377,23 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
-        final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
+        final Interval compactionInterval = CompactionCandidate.getCompactionInterval(
+            segments,
+            config.getSegmentGranularity()
+        );
 
         final CompactionStatus reason;
-        if (candidates.getCompactionInterval().overlaps(latestSkipInterval)) {
+        if (compactionInterval.overlaps(latestSkipInterval)) {
           reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");
         }
 
-        final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(reason);
+        final CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
+            segments,
+            config.getSegmentGranularity(),
+            reason
+        );
         skippedSegments.add(candidatesWithStatus);
       }
     }
@@ -405,7 +417,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           // findNonOvershadowedObjectsInInterval() may return segments merely intersecting with lookupInterval, while
           // we are interested only in segments fully lying within lookupInterval here.
           .filter(segment -> lookupInterval.contains(segment.getInterval()))
-          .collect(Collectors.toList());
+          .toList();
 
       if (segments.isEmpty()) {
         continue;

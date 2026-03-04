@@ -141,8 +141,6 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      LOGGER.info("Node [%s] of role [%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
-
       addNode(druidNode);
     }
   }
@@ -152,6 +150,7 @@ public class BaseNodeRoleWatcher
   {
     DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
     if (prev == null) {
+      LOGGER.info("Node [%s] of role [%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be counted down.
       if (cacheInitialized.getCount() == 0) {
         List<DiscoveryDruidNode> newNode = ImmutableList.of(druidNode);
@@ -165,7 +164,7 @@ public class BaseNodeRoleWatcher
         }
       }
     } else {
-      LOGGER.error(
+      LOGGER.debug(
           "Node [%s] of role [%s] discovered but existed already [%s].",
           druidNode.getDruidNode().getUriToUse(),
           nodeRole.getJsonName(),

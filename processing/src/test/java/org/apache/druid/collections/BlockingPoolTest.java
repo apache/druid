@@ -62,6 +62,19 @@ public class BlockingPoolTest
     service.shutdownNow();
   }
 
+  @Test(timeout = 60_000L)
+  public void testParallelInit()
+  {
+    DefaultBlockingPool<Integer> parallelPool = new DefaultBlockingPool<>(Suppliers.ofInstance(1), 10, true);
+    Assert.assertEquals(10, parallelPool.getPoolSize());
+    final ReferenceCountingResourceHolder<Integer> holder =
+        Iterables.getOnlyElement(parallelPool.takeBatch(1, 100), null);
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(9, parallelPool.getPoolSize());
+    holder.close();
+    Assert.assertEquals(10, parallelPool.getPoolSize());
+  }
+
   @Test
   public void testTakeFromEmptyPool()
   {
