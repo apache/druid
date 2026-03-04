@@ -19,17 +19,15 @@
 
 package org.apache.druid.frame.util;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Set;
 
 /**
  * Helper class that fetches the directory and file names corresponding to file location
@@ -52,6 +50,23 @@ public class DurableStorageUtils
         QUERY_RESULTS_DIR,
         IdUtils.validateId("controller task ID", controllerTaskId)
     );
+  }
+
+  @Nullable
+  private static String getControllerTaskId(final String path)
+  {
+    Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
+    List<String> elements = ImmutableList.copyOf(elementsIterator);
+    if (elements.size() < 2) {
+      return null;
+    }
+    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
+      return null;
+    }
+    if (!elements.get(1).startsWith("controller_")) {
+      return null;
+    }
+    return elements.get(1).substring(11);
   }
 
 
@@ -231,34 +246,23 @@ public class DurableStorageUtils
   }
 
   /**
-   * Checks if a query result file should be retained based on the task's creation time.
-   * Parses the controller task ID from paths under {@link #QUERY_RESULTS_DIR} and determines
-   * if the file is within the retention period.
+   * Checks if a query result file should be retained by checking if its task ID is recently completed.
+   * Parses the controller task ID from paths under {@link #QUERY_RESULTS_DIR} and checks membership
+   * in the provided set.
    *
-   * @param path               the file path to check
-   * @param taskCreationTimeFn function that maps controller task ID to creation time
-   * @param durationToRetain   retention duration in milliseconds
-   * @return {@code true} if the file is within the retention period; {@code false} otherwise
+   * @param path                      the file path to check
+   * @param recentlyCompletedTaskIds  set of task IDs that completed recently and whose files should be retained
+   * @return {@code true} if the file belongs to a recently completed task; {@code false} otherwise
    */
-  public static boolean isQueryResultFileActive(
-      String path,
-      Function<String, Optional<DateTime>> taskCreationTimeFn,
-      long durationToRetain
-  )
+  public static boolean isQueryResultFileActive(String path, Set<String> recentlyCompletedTaskIds)
   {
     if (path == null) {
       return false;
     }
-    Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
-    List<String> elements = ImmutableList.copyOf(elementsIterator);
-    if (elements.size() < 2) {
+    final String taskId = getControllerTaskId(path);
+    if (taskId == null) {
       return false;
     }
-    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
-      return false;
-    }
-    Optional<DateTime> taskCreatedAt = taskCreationTimeFn.apply(elements.get(1));
-    return taskCreatedAt.isPresent()
-           && (System.currentTimeMillis() - taskCreatedAt.get().getMillis()) < durationToRetain;
+    return recentlyCompletedTaskIds.contains(taskId);
   }
 }

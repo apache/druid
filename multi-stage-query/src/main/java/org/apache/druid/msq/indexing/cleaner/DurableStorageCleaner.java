@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.storage.StorageConnector;
@@ -94,6 +95,11 @@ public class DurableStorageCleaner implements OverlordDuty
                                            .map(TaskRunnerWorkItem::getTaskId)
                                            .map(DurableStorageUtils::getControllerDirectory)
                                            .collect(Collectors.toSet());
+    Set<String> recentlyCompletedTaskIds =
+        taskStorage.getCompletedTasksInfo(DateTimes.nowUtc().minus(config.getDurationToRetain().getMillis()), null)
+                   .stream()
+                   .map(TaskInfo::getId)
+                   .collect(Collectors.toSet());
 
     Set<String> filesToRemove = new HashSet<>();
     while (allFiles.hasNext()) {
@@ -101,16 +107,10 @@ public class DurableStorageCleaner implements OverlordDuty
       String nextDirName = DurableStorageUtils.getNextDirNameWithPrefixFromPath(currentFile);
       if (nextDirName != null && !nextDirName.isEmpty()) {
         if (runningTaskIds.contains(nextDirName)) {
-          // do nothing
-        } else if (
-            DurableStorageUtils.QUERY_RESULTS_DIR.equals(nextDirName)
-            && DurableStorageUtils.isQueryResultFileActive(
-                currentFile,
-                taskId -> Optional.fromNullable(taskStorage.getTaskInfo(taskId)).transform(TaskInfo::getCreatedTime),
-                config.getDurationToRetain()
-            )) {
-          // query results should not be cleaned even if the task is still running or created before retain period
-          // do nothing
+          // do nothing, query results should not be cleaned if the task is still running
+        } else if (DurableStorageUtils.QUERY_RESULTS_DIR.equals(nextDirName)
+                   && DurableStorageUtils.isQueryResultFileActive(currentFile, recentlyCompletedTaskIds)) {
+          // do nothing, query results should not be cleaned if the task is created before retain period
         } else {
           filesToRemove.add(currentFile);
         }

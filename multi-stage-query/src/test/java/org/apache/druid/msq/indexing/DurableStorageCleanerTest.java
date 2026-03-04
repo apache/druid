@@ -25,7 +25,11 @@ import com.google.common.collect.Sets;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.TaskTest;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -34,15 +38,20 @@ import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DurableStorageCleanerTest
@@ -63,7 +72,7 @@ public class DurableStorageCleanerTest
     DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig();
     durableStorageCleanerConfig.delaySeconds = 1L;
     durableStorageCleanerConfig.enabled = true;
-    durableStorageCleanerConfig.durationToRetain = 5_000L;
+    durableStorageCleanerConfig.durationToRetain = new Duration(5_000L);
     durableStorageCleaner = new DurableStorageCleaner(
         durableStorageCleanerConfig,
         s -> STORAGE_CONNECTOR,
@@ -75,8 +84,8 @@ public class DurableStorageCleanerTest
   @Test
   public void testRun() throws Exception
   {
-    EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("not-used"), TaskTest.TASK))
+    EasyMock.expect(TASK_STORAGE.getCompletedTasksInfo(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(List.of())
             .anyTimes();
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID), STRAY_DIR)
@@ -100,10 +109,10 @@ public class DurableStorageCleanerTest
   }
 
   @Test
-  public void testRunClearsStaleTask() throws Exception
+  public void testRunClearsStaleOrNotFoundTask() throws Exception
   {
-    EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(DateTimes.nowUtc().minus(10_000L), TaskStatus.success("not-used"), TaskTest.TASK))
+    EasyMock.expect(TASK_STORAGE.getCompletedTasksInfo(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(List.of())
             .anyTimes();
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID))
@@ -129,8 +138,9 @@ public class DurableStorageCleanerTest
   @Test
   public void testRunExcludesQueryDirectory() throws Exception
   {
-    EasyMock.expect(TASK_STORAGE.getTaskInfo(EasyMock.anyString()))
-            .andReturn(new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("not-used"), TaskTest.TASK))
+    Task completedTask = new TestTask(TASK_ID);
+    EasyMock.expect(TASK_STORAGE.getCompletedTasksInfo(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(List.of(new TaskInfo(DateTimes.of("2020-01-01"), TaskStatus.success("not-used"), completedTask)))
             .anyTimes();
     final String resultPath = DurableStorageUtils.QUERY_RESULTS_DIR + "/" + DurableStorageUtils.getControllerDirectory(
         TASK_ID) + "/results.json";
@@ -172,5 +182,99 @@ public class DurableStorageCleanerTest
     DutySchedule schedule = durableStorageCleaner.getSchedule();
     Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getPeriodMillis());
     Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getInitialDelayMillis());
+  }
+
+  public static class TestTask implements Task
+  {
+    private final String taskId;
+
+    TestTask(String taskId)
+    {
+      this.taskId = taskId;
+    }
+
+    @Override
+    public String getId()
+    {
+      return taskId;
+    }
+
+    @Override
+    public String getGroupId()
+    {
+      return "";
+    }
+
+    @Override
+    public TaskResource getTaskResource()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "";
+    }
+
+    @Override
+    public String getNodeType()
+    {
+      return "";
+    }
+
+    @Override
+    public String getDataSource()
+    {
+      return "";
+    }
+
+    @Override
+    public <T> QueryRunner<T> getQueryRunner(Query<T> query)
+    {
+      return null;
+    }
+
+    @Override
+    public boolean supportsQueries()
+    {
+      return false;
+    }
+
+    @Override
+    public String getClasspathPrefix()
+    {
+      return "";
+    }
+
+    @Override
+    public boolean isReady(TaskActionClient taskActionClient) throws Exception
+    {
+      return false;
+    }
+
+    @Override
+    public boolean canRestore()
+    {
+      return false;
+    }
+
+    @Override
+    public void stopGracefully(TaskConfig taskConfig)
+    {
+
+    }
+
+    @Override
+    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    {
+      return null;
+    }
+
+    @Override
+    public Map<String, Object> getContext()
+    {
+      return Map.of();
+    }
   }
 }
