@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload docker logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: failure-docker-logs
           path: docker-logs.tgz
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload failsafe reports to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: failure-failsafe-logs
           path: failsafe-logs.tgz
