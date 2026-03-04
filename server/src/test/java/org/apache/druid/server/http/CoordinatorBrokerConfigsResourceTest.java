@@ -21,8 +21,11 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -32,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -150,5 +154,50 @@ public class CoordinatorBrokerConfigsResourceTest
     Assert.assertEquals("count parameter is required", response.getEntity());
 
     EasyMock.verify(configManager, auditManager, druidNodeDiscovery);
+  }
+
+  @Test
+  public void testSetBrokerDynamicConfigNoBrokers()
+  {
+    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    AtomicReference<BrokerDynamicConfig> currentConfig = new AtomicReference<>(config);
+    HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
+    DruidNodeDiscovery nodeDiscovery = EasyMock.createNiceMock(DruidNodeDiscovery.class);
+
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.anyObject(String.class),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject(BrokerDynamicConfig.class)
+        )
+    ).andReturn(currentConfig).once();
+
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.anyObject(String.class),
+            EasyMock.anyObject(BrokerDynamicConfig.class),
+            EasyMock.anyObject(AuditInfo.class)
+        )
+    ).andReturn(SetResult.ok()).once();
+
+    EasyMock.expect(druidNodeDiscovery.getForNodeRole(EasyMock.anyObject()))
+            .andReturn(nodeDiscovery).once();
+
+    EasyMock.expect(nodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+
+    EasyMock.replay(configManager, auditManager, druidNodeDiscovery, request, nodeDiscovery);
+
+    CoordinatorBrokerConfigsResource resource = new CoordinatorBrokerConfigsResource(
+        configManager,
+        auditManager,
+        clientFactory,
+        jsonMapper,
+        druidNodeDiscovery
+    );
+
+    Response response = resource.setBrokerDynamicConfig(config, request);
+    Assert.assertEquals(200, response.getStatus());
+
+    EasyMock.verify(configManager, auditManager, druidNodeDiscovery, nodeDiscovery);
   }
 }
