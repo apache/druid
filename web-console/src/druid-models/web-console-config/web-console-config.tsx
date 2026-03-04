@@ -43,8 +43,8 @@ export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
       <>
         Sets brokerService in the query context for console system queries
         (e.g.,&quot;druid/broker-all-tiers&quot;). Useful when configuring
-        druid.broker.segment.watchedTiers if the default Broker server doesn&apos;t have visibility
-        into some Historical tiers. Does not affect user-initiated queries.
+        druid.broker.segment.watchedTiers if the default Broker server does not have visibility into
+        some Historical tiers. Does not affect user-initiated queries.
       </>
     ),
   },
