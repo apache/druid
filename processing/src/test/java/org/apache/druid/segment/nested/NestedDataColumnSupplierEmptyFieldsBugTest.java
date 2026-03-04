@@ -31,10 +31,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -72,9 +71,9 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     try (Closer closer = Closer.create()) {
       QueryableIndex theIndex = closer.register(TestHelper.getTestIndexIO().loadIndex(tempDir));
       ColumnHolder columnHolder = theIndex.getColumnHolder("obj");
-      Assert.assertNotNull(columnHolder);
+      Assertions.assertNotNull(columnHolder);
       NestedDataColumnV5<?, ?> v5 = closer.register((NestedDataColumnV5<?, ?>) columnHolder.getColumn());
-      Assert.assertNotNull(v5);
+      Assertions.assertNotNull(v5);
       NestedFieldVirtualColumn vc1 = new NestedFieldVirtualColumn(
           "obj",
           "$[''].a",
