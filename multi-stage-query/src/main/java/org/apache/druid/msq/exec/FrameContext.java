@@ -49,8 +49,6 @@ public interface FrameContext extends Closeable
 
   SegmentWrangler segmentWrangler();
 
-  GroupingEngine groupingEngine();
-
   RowIngestionMeters rowIngestionMeters();
 
   /**

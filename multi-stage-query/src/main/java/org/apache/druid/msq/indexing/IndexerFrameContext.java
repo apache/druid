@@ -95,12 +95,6 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public GroupingEngine groupingEngine()
-  {
-    return context.injector().getInstance(GroupingEngine.class);
-  }
-
-  @Override
   public RowIngestionMeters rowIngestionMeters()
   {
     return context.toolbox().getRowIngestionMetersFactory().createRowIngestionMeters();
