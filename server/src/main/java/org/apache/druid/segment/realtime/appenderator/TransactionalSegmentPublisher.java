@@ -108,7 +108,7 @@ public abstract class TransactionalSegmentPublisher
   /**
    * Sleeps until the next attempt.
    */
-  private static void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
+  void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
   {
     try {
       RetryUtils.awaitNextRetry(
