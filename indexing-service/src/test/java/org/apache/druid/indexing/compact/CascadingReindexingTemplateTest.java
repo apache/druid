@@ -37,7 +37,6 @@ import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
@@ -45,7 +44,6 @@ import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -1581,20 +1579,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         )
     );
 
-    ReindexingIOConfigRule io7d = new ReindexingIOConfigRule(
-        "io-7d",
-        null,
-        Period.days(7),
-        new UserCompactionTaskIOConfig(true)
-    );
-
     ReindexingRuleProvider provider = InlineReindexingRuleProvider
         .builder()
         .segmentGranularityRules(List.of(segGran7d, segGran30d))
         .dataSchemaRules(List.of(dataSchema15d))
         .deletionRules(List.of(deletion10d, deletion20d))
         .tuningConfigRules(List.of(tuning7d))
-        .ioConfigRules(List.of(io7d))
         .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
@@ -1602,7 +1592,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -1625,7 +1614,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     boolean foundDataSchemaRule = false;
     boolean foundDeletionRule = false;
     boolean foundTuningRule = false;
-    boolean foundIORule = false;
 
     for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
       Assertions.assertNotNull(intervalConfig.getInterval());
@@ -1653,8 +1641,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
           foundDeletionRule = true;
         } else if (rule instanceof ReindexingTuningConfigRule) {
           foundTuningRule = true;
-        } else if (rule instanceof ReindexingIOConfigRule) {
-          foundIORule = true;
         }
       }
     }
@@ -1664,7 +1650,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assertions.assertTrue(foundDataSchemaRule, "Timeline should contain a dataSchema rule");
     Assertions.assertTrue(foundDeletionRule, "Timeline should contain a deletion rule");
     Assertions.assertTrue(foundTuningRule, "Timeline should contain a tuningConfig rule");
-    Assertions.assertTrue(foundIORule, "Timeline should contain an ioConfig rule");
   }
 
   @Test
@@ -1688,7 +1673,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         skipOffset, // skipOffsetFromNow
@@ -1754,7 +1738,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.MONTH // This is coarser than HOUR, will cause validation error
     );
 
@@ -1797,7 +1780,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         mockProvider,
-        null,
         null,
         null,
         null,
