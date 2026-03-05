@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -33,11 +34,14 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -99,12 +103,20 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
-    this.metricBuilder = ServiceMetricEvent.builder()
-                                           .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                           .setDimension(
-                                               DruidMetrics.STREAM,
-                                               this.supervisor.getIoConfig().getStream()
-                                           );
+    this.metricBuilder =
+        ServiceMetricEvent.builder()
+                          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                          .setDimension(
+                              DruidMetrics.DATASOURCE,
+                              CollectionUtils.getOnlyElement(
+                                  spec.getDataSources(),
+                                  xs -> DruidException.defensive("Expected one dataSource, got[%s]")
+                              )
+                          )
+                          .setDimension(
+                              DruidMetrics.STREAM,
+                              this.supervisor.getIoConfig().getStream()
+                          );
   }
 
   @SuppressWarnings("unchecked")

@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -186,7 +188,16 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
-    return new LagBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec, emitter);
+    return new LagBasedAutoScaler(
+        (SeekableStreamSupervisor) supervisor,
+        CollectionUtils.getOnlyElement(
+            spec.getDataSources(),
+            xs -> DruidException.defensive("Expected one dataSource, got[%s]")
+        ),
+        this,
+        spec,
+        emitter
+    );
   }
 
   @JsonProperty
