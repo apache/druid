@@ -282,7 +282,7 @@ public class CompactionJobQueue
     }
 
     // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = getCurrentStatusForJob(job, policy);
+    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
     switch (compactionStatus.getState()) {
       case RUNNING:
         return false;
@@ -376,14 +376,6 @@ public class CompactionJobQueue
       );
       indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetIndexingState());
     }
-  }
-
-  public CompactionStatus getCurrentStatusForJob(CompactionJob job, CompactionCandidateSearchPolicy policy)
-  {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
-    final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
-    statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
-    return compactionStatus;
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

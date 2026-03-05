@@ -322,6 +322,13 @@ export class DruidError extends Error {
   }
 }
 
+// Broker service to use for console system queries
+let consoleSystemQueryBrokerService: string | undefined;
+
+export function setConsoleSystemQueryBrokerService(brokerService: string | undefined): void {
+  consoleSystemQueryBrokerService = brokerService;
+}
+
 export async function queryDruidRune(
   runeQuery: Record<string, any>,
   signal?: AbortSignal,
@@ -341,7 +348,18 @@ export async function queryDruidSql<T = any>(
 ): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { signal });
+    // Inject brokerService into context if configured for system queries
+    const payload = consoleSystemQueryBrokerService
+      ? {
+          ...sqlQueryPayload,
+          context: {
+            ...sqlQueryPayload.context,
+            brokerService: consoleSystemQueryBrokerService,
+          },
+        }
+      : sqlQueryPayload;
+
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', payload, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing.autoscaler;
 
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
@@ -102,14 +101,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     cluster.useLatchableEmitter()
            .useDefaultTimeoutForLatchableEmitter(60)
+           .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
            .addServer(historical)
-           .addExtension(KafkaIndexTaskModule.class)
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.5s")
-           .addResource(kafkaServer)
            .addServer(new EmbeddedRouter());
 
     return cluster;

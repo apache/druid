@@ -79,20 +79,4 @@ public class TestNGGroup
    * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
    */
   public static final String S3_INGESTION = "s3-ingestion";
-
-  /**
-   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
-   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
-   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
-   */
-  public static final String KINESIS_INDEX = "kinesis-index";
-
-  /**
-   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
-   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
-   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
-   */
-  public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 }

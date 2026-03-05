@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * Slice of an {@link InputSpec} assigned to a particular worker.
  *
  * On the controller, these are produced using {@link InputSpecSlicer}. On workers, these are transformed into
- * {@link ReadableSlice} using {@link InputSliceReader}.
+ * {@link PhysicalInputSlice} using {@link InputSliceReader}.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface InputSlice

@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -217,6 +218,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         new GroupByQueryConfig(),
         TestGroupByBuffers.createDefault()
     ).getGroupingEngine();
+    ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(GroupingEngine.class, groupingEngine);
 
     Module modules = Modules.combine(
         new DruidGuiceExtensions(),

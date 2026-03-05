@@ -92,8 +92,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final ReindexingRuleProvider ruleProvider;
   @Nullable
   private final Map<String, Object> taskContext;
-  @Nullable
-  private final CompactionEngine engine;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
   private final Period skipOffsetFromLatest;
@@ -106,7 +104,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider,
-      @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow,
@@ -119,7 +116,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     InvalidInput.conditionalException(ruleProvider != null, "'ruleProvider' cannot be null");
     this.ruleProvider = ruleProvider;
 
-    this.engine = engine;
     this.taskContext = taskContext;
     this.taskPriority = Objects.requireNonNullElse(taskPriority, DEFAULT_COMPACTION_TASK_PRIORITY);
     this.inputSegmentSizeBytes = Objects.requireNonNullElse(inputSegmentSizeBytes, DEFAULT_INPUT_SEGMENT_SIZE_BYTES);
@@ -149,12 +145,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return taskContext;
   }
 
-  @JsonProperty
-  @Nullable
   @Override
   public CompactionEngine getEngine()
   {
-    return engine;
+    return CompactionEngine.MSQ;
   }
 
   @JsonProperty
@@ -487,7 +481,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .forDataSource(dataSource)
         .withTaskPriority(taskPriority)
         .withInputSegmentSizeBytes(inputSegmentSizeBytes)
-        .withEngine(engine)
+        .withEngine(CompactionEngine.MSQ)
         .withTaskContext(taskContext)
         .withSkipOffsetFromLatest(Period.ZERO); // We handle skip offsets at the timeline level, we know we want to cover the entirety of the interval
   }

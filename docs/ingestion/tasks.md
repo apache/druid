@@ -314,6 +314,8 @@ For the Kafka Indexing Service, a GET to the following Overlord API will retriev
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/{supervisorId}/stats
 ```
 
+The response is structured as a nested map: outer keys are **task group IDs**, inner keys are **task IDs**, and each task maps to its row stats payload. See the [Supervisor API](../api-reference/supervisor-api.md) for the full schema and guidance for automation clients.
+
 ### Unparseable events
 
 Lists of recently-encountered unparseable events can be retrieved from a running task with a GET to the following Peon API:
@@ -378,7 +380,7 @@ The reason for this is because a Kafka indexing task always appends new segments
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
 
 :::info
- The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+ The segment locking has been deprecated. It could have unknown bugs which potentially lead to incorrect query results.
 :::
 
 To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#context).

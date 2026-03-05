@@ -58,8 +58,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
@@ -82,6 +84,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
   private final SegmentManager segmentManager;
+  private final StorageMonitor storageMonitor;
   @Nullable
   private final CoordinatorClient coordinatorClient;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
@@ -104,6 +107,7 @@ public class IndexerWorkerContext implements WorkerContext
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
       final SegmentManager segmentManager,
+      final StorageMonitor storageMonitor,
       @Nullable final CoordinatorClient coordinatorClient,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
@@ -117,6 +121,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.controllerLocator = controllerLocator;
     this.indexIO = indexIO;
     this.segmentManager = segmentManager;
+    this.storageMonitor = storageMonitor;
     this.coordinatorClient = coordinatorClient;
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
@@ -152,10 +157,12 @@ public class IndexerWorkerContext implements WorkerContext
   )
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
-    final SegmentManager segmentManager = new SegmentManager(
+    final SegmentCacheManager cacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true)
-    );
+                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true);
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final StorageMonitor storageMonitor = new StorageMonitor(cacheManager, task::getMetricBuilder);
+    toolbox.addMonitor(storageMonitor);
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
@@ -173,6 +180,7 @@ public class IndexerWorkerContext implements WorkerContext
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
         segmentManager,
+        storageMonitor,
         toolbox.getCoordinatorClient(),
         serviceClientFactory,
         memoryIntrospector,
@@ -330,6 +338,7 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public void close()
   {
+    toolbox.removeMonitor(storageMonitor);
     controllerLocator.close();
 
     synchronized (this) {

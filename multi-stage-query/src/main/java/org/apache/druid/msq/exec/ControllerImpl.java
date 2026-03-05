@@ -2930,37 +2930,34 @@ public class ControllerImpl implements Controller
       @Nullable final MSQErrorReport workerErrorReport
   )
   {
-
     if (workerErrorReport == null) {
       return null;
     } else if (workerErrorReport.getFault() instanceof InvalidNullByteFault) {
-      InvalidNullByteFault inbf = (InvalidNullByteFault) workerErrorReport.getFault();
-      return MSQErrorReport.fromException(
-          workerErrorReport.getTaskId(),
-          workerErrorReport.getHost(),
-          workerErrorReport.getStageNumber(),
-          InvalidNullByteException.builder()
-                                  .source(inbf.getSource())
-                                  .rowNumber(inbf.getRowNumber())
-                                  .column(inbf.getColumn())
-                                  .value(inbf.getValue())
-                                  .position(inbf.getPosition())
-                                  .build(),
-          querySpec.getColumnMappings()
+      final InvalidNullByteFault inbf = (InvalidNullByteFault) workerErrorReport.getFault();
+      return workerErrorReport.withFault(
+          MSQErrorReport.getFaultFromException(
+              InvalidNullByteException.builder()
+                                      .source(inbf.getSource())
+                                      .rowNumber(inbf.getRowNumber())
+                                      .column(inbf.getColumn())
+                                      .value(inbf.getValue())
+                                      .position(inbf.getPosition())
+                                      .build(),
+              querySpec.getColumnMappings()
+          )
       );
     } else if (workerErrorReport.getFault() instanceof InvalidFieldFault) {
-      InvalidFieldFault iff = (InvalidFieldFault) workerErrorReport.getFault();
-      return MSQErrorReport.fromException(
-          workerErrorReport.getTaskId(),
-          workerErrorReport.getHost(),
-          workerErrorReport.getStageNumber(),
-          InvalidFieldException.builder()
-                               .source(iff.getSource())
-                               .rowNumber(iff.getRowNumber())
-                               .column(iff.getColumn())
-                               .errorMsg(iff.getErrorMsg())
-                               .build(),
-          querySpec.getColumnMappings()
+      final InvalidFieldFault iff = (InvalidFieldFault) workerErrorReport.getFault();
+      return workerErrorReport.withFault(
+          MSQErrorReport.getFaultFromException(
+              InvalidFieldException.builder()
+                                   .source(iff.getSource())
+                                   .rowNumber(iff.getRowNumber())
+                                   .column(iff.getColumn())
+                                   .errorMsg(iff.getErrorMsg())
+                                   .build(),
+              querySpec.getColumnMappings()
+          )
       );
     } else {
       return workerErrorReport;

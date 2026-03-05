@@ -42,9 +42,6 @@ import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
 import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
@@ -54,6 +51,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.tools.AvroEventSerializer;
 import org.apache.druid.testing.tools.AvroSchemaRegistryEventSerializer;
@@ -65,8 +63,6 @@ import org.apache.druid.testing.tools.ProtobufEventSerializer;
 import org.apache.druid.testing.tools.ProtobufSchemaRegistryEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -77,7 +73,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Embedded test of Kafka indexing for different data formats.
+ * Embedded test to verify streaming ingestion with different input data formats.
  * Formats Included:
  * <ul>
  * <li>Avro (with and without schema registry)</li>
@@ -86,9 +82,10 @@ import java.util.Map;
  * <li>Protobuf (with and without schema registry)</li>
  * </ul>
  *
- * This tests both InputFormat and Parser. Parser is deprecated for Kafka Ingestion, and those tests will be removed in the future.
+ * This tests both InputFormat and Parser. Parser is deprecated for Streaming Ingestion,
+ * and those tests will be removed in the future.
  */
-public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
+public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTestBase
 {
   private static final long CYCLE_PADDING_MS = 100;
   private static final int EVENTS_PER_SECOND = 6;
@@ -102,12 +99,35 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-  private final KafkaResource kafkaServer = new KafkaResource();
-  private final KafkaSchemaRegistryResource schemaRegistry = new KafkaSchemaRegistryResource(kafkaServer);
+
+  private StreamIngestResource<?> streamResource;
+  private SchemaRegistryResource schemaRegistry;
+
+  protected abstract StreamIngestResource<?> getStreamResource();
+
+  protected abstract SupervisorSpec createSupervisor(
+      String dataSource,
+      String topic,
+      InputFormat inputFormat
+  );
+
+  /**
+   * Creates a {@link SupervisorSpec} that uses an {@link InputRowParser} instead
+   * of an {@link InputFormat}. Tests using the parser will be removed in the
+   * future.
+   */
+  protected abstract SupervisorSpec createSupervisorWithParser(
+      String dataSource,
+      String topic,
+      Map<String, Object> parserMap
+  );
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
+    streamResource = getStreamResource();
+    schemaRegistry = new SchemaRegistryResource(streamResource);
+
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper().useContainerFriendlyHostname();
 
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
@@ -115,12 +135,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     overlord.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
-    cluster.addExtension(KafkaIndexTaskModule.class)
-           .addExtension(ProtobufExtensionsModule.class)
+    cluster.addExtension(ProtobufExtensionsModule.class)
            .addExtension(AvroExtensionsModule.class)
            .useLatchableEmitter()
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addResource(kafkaServer)
+           .addResource(streamResource)
            .addResource(schemaRegistry)
            .addServer(coordinator)
            .addServer(overlord)
@@ -133,11 +152,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat_withParser() throws Exception
+  public void test_avroDataFormat_withParser() throws Exception
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
@@ -159,7 +178,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null
     );
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -170,11 +189,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat() throws Exception
+  public void test_avroDataFormat() throws Exception
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
@@ -192,7 +211,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null
     );
     
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
@@ -202,12 +221,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry_withParser()
+  public void test_avroDataFormatWithSchemaRegistry_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
     SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
         schemaRegistry.getConnectURI(),
         null,
@@ -230,7 +249,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null
     );
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -241,12 +260,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry()
+  public void test_avroDataFormatWithSchemaRegistry()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
     SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
         null,
         null,
@@ -257,7 +276,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(null, avroBytesDecoder, null, null);
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
@@ -267,14 +286,14 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat()
+  public void test_csvDataFormat()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new CsvEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     CsvInputFormat inputFormat = new CsvInputFormat(WIKI_DIM_LIST, null, null, false, 0, false);
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -285,11 +304,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat_withParser()
+  public void test_csvDataFormat_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new CsvEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     CSVParseSpec parseSpec = new CSVParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
@@ -301,7 +320,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -312,11 +331,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat_withParser()
+  public void test_jsonDataFormat_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
@@ -327,7 +346,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -338,14 +357,14 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat()
+  public void test_jsonDataFormat()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
 
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -356,11 +375,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormat_withParser()
+  public void test_protobufDataFormat_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
         MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
@@ -376,7 +395,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
 
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -386,12 +405,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_indexKafka_protobufDataFormat()
+  public void test_protobufDataFormat()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufEventSerializer();
 
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
         MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
@@ -400,7 +419,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -411,12 +430,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry_withParser()
+  public void test_protobufDataFormatWithSchemaRegistry_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
     SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
         schemaRegistry.getConnectURI(),
         null,
@@ -435,7 +454,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
 
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -446,12 +465,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry()
+  public void test_protobufDataFormatWithSchemaRegistry()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
     SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
         null,
         null,
@@ -461,7 +480,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         overlord.bindings().jsonMapper()
     );
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
@@ -471,11 +490,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat_withParser()
+  public void test_tsvDataFormat_withParser()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new DelimitedEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     // Build DelimitedParseSpec with proper object construction for TSV
     DelimitedParseSpec parseSpec = new DelimitedParseSpec(
         new TimestampSpec("timestamp", "auto", null),
@@ -489,7 +508,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
+    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -500,11 +519,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat()
+  public void test_tsvDataFormat()
   {
-    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new DelimitedEventSerializer();
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     DelimitedInputFormat inputFormat = new DelimitedInputFormat(
         WIKI_DIM_LIST,
         null,
@@ -514,7 +533,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         0,
         null
     );
-    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -541,7 +560,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(String.valueOf(expectedCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
-  private int generateStreamAndPublishToKafka(String topic, EventSerializer serializer, boolean useSchemaRegistry)
+  private int generateStreamAndPublish(String topic, EventSerializer serializer, boolean useSchemaRegistry)
   {
     final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
         serializer,
@@ -550,66 +569,25 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     List<byte[]> records = streamGenerator.generateEvents(10);
 
-    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
-    for (byte[] record : records) {
-      producerRecords.add(new ProducerRecord<>(topic, record));
-    }
-
     if (useSchemaRegistry) {
-      kafkaServer.produceRecordsToTopic(
-          producerRecords,
+      streamResource.publishRecordsToTopic(
+          topic,
+          records,
           Map.of("schema.registry.url", schemaRegistry.getConnectURI())
       );
     } else {
-      kafkaServer.produceRecordsToTopic(producerRecords);
+      streamResource.publishRecordsToTopic(topic, records);
     }
-    return producerRecords.size();
+    return records.size();
   }
 
-  /**
-   * Creates a KafkaSupervisorSpec with a parser instead of an InputFormat.
-   * <p>
-   *   Parsers are deprecated for kafka indexing, but need to remain tested until they are removed.
-   * </p>
-   */
-  private KafkaSupervisorSpec createKafkaSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
+  private SupervisorSpec createSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
   {
     Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(
         parser,
         new TypeReference<>() {}
     );
-    return MoreResources.Supervisor.KAFKA_JSON
-        .get()
-        .withDataSchema(
-            schema -> schema
-                .withTimestamp(new TimestampSpec("timestamp", null, null))
-                .withParserMap(parserMap)
-        )
-        .withIoConfig(
-            ioConfig -> ioConfig
-                .withInputFormat(null)
-                .withConsumerProperties(kafkaServer.consumerProperties())
-                .withSupervisorRunPeriod(Period.millis(10))
-        )
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
-        .withId(supervisorId)
-        .build(dataSource, topic);
-  }
-
-  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic, InputFormat inputFormat)
-  {
-    return MoreResources.Supervisor.KAFKA_JSON
-        .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
-        .withIoConfig(
-            ioConfig -> ioConfig
-                .withInputFormat(inputFormat)
-                .withConsumerProperties(kafkaServer.consumerProperties())
-                .withSupervisorRunPeriod(Period.millis(10))
-        )
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
-        .withId(supervisorId)
-        .build(dataSource, topic);
+    return createSupervisorWithParser(supervisorId, topic, parserMap);
   }
 
   private Map<String, Object> createWikipediaAvroSchemaMap()
