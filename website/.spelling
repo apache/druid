@@ -759,6 +759,8 @@ granularity_string
 QueryKit
 # MSQ report fields
 taskId
+taskGroupId
+RowStatsPayload
 multiStageQuery.taskId
 multiStageQuery.payload.status
 multiStageQuery.payload.status.status
