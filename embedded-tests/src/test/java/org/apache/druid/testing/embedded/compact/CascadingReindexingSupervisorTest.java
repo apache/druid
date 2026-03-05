@@ -38,27 +38,21 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -72,18 +66,10 @@ import java.util.Map;
  */
 public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestBase
 {
-  @MethodSource("getEngine")
-  @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules(CompactionEngine compactionEngine)
+  @Test
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
   {
-    // Configure cluster with storeCompactionStatePerSegment=false
-    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(
-            new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)
-        )
-    );
-    Assertions.assertTrue(updateResponse.isSuccess());
-
+    configureCompaction(CompactionEngine.MSQ);
 
     DateTime now = DateTimes.nowUtc();
 
@@ -147,18 +133,11 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
                                                                             .deletionRules(List.of(deletionRule));
 
-    if (compactionEngine == CompactionEngine.NATIVE) {
-      ruleProvider = ruleProvider.ioConfigRules(
-          List.of(new ReindexingIOConfigRule("dropExisting", null, Period.days(7), new UserCompactionTaskIOConfig(true)))
-      );
-    }
-
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
         ruleProvider.build(),
-        compactionEngine,
         null,
         null,
         null,
@@ -177,9 +156,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
   @Test
   public void test_cascadingReindexing_withVirtualColumnOnNestedData_filtersCorrectly()
   {
-    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
-    CompactionEngine compactionEngine = CompactionEngine.MSQ;
-    configureCompaction(compactionEngine);
+    configureCompaction(CompactionEngine.MSQ);
 
     String jsonDataWithNestedColumn =
         "{\"timestamp\":\"2025-06-01T00:00:00.000Z\",\"item\":\"shirt\",\"value\":105,"
@@ -237,7 +214,6 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
                                     .deletionRules(List.of(deletionRule))
                                     .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
-        compactionEngine,
         null,
         null,
         null,
@@ -281,7 +257,6 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
                                     .segmentGranularityRules(List.of(segGranRule))
                                     .tuningConfigRules(List.of(tuningRule))
                                     .build(),
-        CompactionEngine.MSQ,
         null,
         null,
         null,

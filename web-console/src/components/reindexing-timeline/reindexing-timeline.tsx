@@ -67,7 +67,6 @@ interface CompactionConfig {
   projections?: Record<string, unknown>[];
   transformSpec?: Record<string, unknown>;
   tuningConfig?: Record<string, unknown>;
-  ioConfig?: Record<string, unknown>;
 }
 
 interface ReindexingRule {
@@ -681,7 +680,6 @@ function getRuleTypeName(rule: ReindexingRule): string {
     dataSchema: 'Data Schema Rules',
     segmentGranularity: 'Segment Granularity Rules',
     tuningConfig: 'Tuning Config Rules',
-    ioConfig: 'IO Config Rules',
   };
 
   return typeMap[rule.type] || 'Other Rules';
