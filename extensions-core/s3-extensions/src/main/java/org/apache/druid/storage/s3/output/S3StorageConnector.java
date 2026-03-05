@@ -19,9 +19,6 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -37,6 +34,9 @@ import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -49,7 +49,7 @@ import java.util.List;
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
  */
-public class S3StorageConnector extends ChunkingStorageConnector<GetObjectRequest>
+public class S3StorageConnector extends ChunkingStorageConnector<GetObjectRequest.Builder>
 {
   private static final Logger log = new Logger(S3StorageConnector.class);
 
@@ -61,7 +61,11 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
-  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, S3UploadManager s3UploadManager)
+  public S3StorageConnector(
+      S3OutputConfig config,
+      ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3,
+      S3UploadManager s3UploadManager
+  )
   {
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
@@ -95,12 +99,12 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   }
 
   @Override
-  public ChunkingStorageConnectorParameters<GetObjectRequest> buildInputParams(String path)
+  public ChunkingStorageConnectorParameters<GetObjectRequest.Builder> buildInputParams(String path)
   {
     long size;
     try {
       size = S3Utils.retryS3Operation(
-          () -> this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength(),
+          () -> this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).contentLength(),
           config.getMaxRetry()
       );
     }
@@ -111,24 +115,31 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   }
 
   @Override
-  public ChunkingStorageConnectorParameters<GetObjectRequest> buildInputParams(String path, long from, long size)
+  public ChunkingStorageConnectorParameters<GetObjectRequest.Builder> buildInputParams(
+      String path,
+      long from,
+      long size
+  )
   {
-    ChunkingStorageConnectorParameters.Builder<GetObjectRequest> builder = new ChunkingStorageConnectorParameters.Builder<>();
+    ChunkingStorageConnectorParameters.Builder<GetObjectRequest.Builder> builder = new ChunkingStorageConnectorParameters.Builder<>();
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(objectPath(path));
     builder.tempDirSupplier(config::getTempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
-    builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
+    builder.objectSupplier((start, end) -> GetObjectRequest.builder()
+                                                           .bucket(config.getBucket())
+                                                           .key(objectPath(path))
+                                                           .range(StringUtils.format("bytes=%d-%d", start, end - 1)));
     builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
-      public InputStream open(GetObjectRequest object)
+      public InputStream open(GetObjectRequest.Builder object)
       {
         try {
           return S3Utils.retryS3Operation(
-              () -> s3Client.getObject(object).getObjectContent(),
+              () -> s3Client.getObject(object),
               config.getMaxRetry()
           );
         }
@@ -138,15 +149,37 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       }
 
       @Override
-      public InputStream open(GetObjectRequest object, long offset)
+      public InputStream open(GetObjectRequest.Builder builder, long offset)
       {
-        if (object.getRange() != null) {
-          long[] oldRange = object.getRange();
-          object.setRange(oldRange[0] + offset, oldRange[1]);
+        // We must build to inspect, as AWS SDK v2 builders don't have getters
+        String currentRange = builder.build().range();
+
+        if (currentRange != null && currentRange.startsWith("bytes=")) {
+          String rangeValues = currentRange.substring(6);
+          int dashIndex = rangeValues.indexOf('-');
+
+          try {
+            long oldStart = Long.parseLong(rangeValues.substring(0, dashIndex));
+            String endPart = rangeValues.substring(dashIndex + 1);
+
+            if (endPart.isEmpty()) {
+              // Was "bytes=X-", keep it open-ended
+              builder.range("bytes=" + (oldStart + offset) + "-");
+            } else {
+              // Was "bytes=X-Y", keep the original end
+              long oldEnd = Long.parseLong(endPart);
+              builder.range("bytes=" + (oldStart + offset) + "-" + oldEnd);
+            }
+          }
+          catch (Exception e) {
+            throw new RE(e, "Invalid range format: [%s]", currentRange);
+          }
         } else {
-          object.setRange(offset);
+          // No range existed, start fresh from offset
+          builder.range("bytes=" + offset + "-");
         }
-        return open(object);
+
+        return open(builder);
       }
     });
     return builder.build();
@@ -165,10 +198,12 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       final String fullPath = objectPath(path);
       log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
 
-      S3Utils.retryS3Operation(() -> {
-        s3Client.deleteObject(config.getBucket(), fullPath);
-        return null;
-      }, config.getMaxRetry());
+      S3Utils.retryS3Operation(
+          () -> {
+            s3Client.deleteObject(config.getBucket(), fullPath);
+            return null;
+          }, config.getMaxRetry()
+      );
     }
     catch (Exception e) {
       log.error("Error occurred while deleting file at path [%s]. Error: [%s]", path, e.getMessage());
@@ -180,29 +215,29 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
     int currentItemSize = 0;
-    List<DeleteObjectsRequest.KeyVersion> versions = new ArrayList<>();
+    List<ObjectIdentifier> identifiers = new ArrayList<>();
 
     for (String path : paths) {
       // appending base path to each path
-      versions.add(new DeleteObjectsRequest.KeyVersion(objectPath(path)));
+      identifiers.add(ObjectIdentifier.builder().key(objectPath(path)).build());
       currentItemSize++;
       if (currentItemSize == MAX_NUMBER_OF_LISTINGS) {
-        deleteKeys(versions);
+        deleteKeys(identifiers);
         // resetting trackers
-        versions.clear();
+        identifiers.clear();
         currentItemSize = 0;
       }
     }
     // deleting remaining elements
     if (currentItemSize != 0) {
-      deleteKeys(versions);
+      deleteKeys(identifiers);
     }
   }
 
-  private void deleteKeys(List<DeleteObjectsRequest.KeyVersion> versions) throws IOException
+  private void deleteKeys(List<ObjectIdentifier> identifiers) throws IOException
   {
     try {
-      S3Utils.deleteBucketKeys(s3Client, config.getBucket(), versions, config.getMaxRetry());
+      S3Utils.deleteBucketKeys(s3Client, config.getBucket(), identifiers, config.getMaxRetry());
     }
     catch (Exception e) {
       log.error("Error occurred while deleting files from S3. Error: [%s]", e.getMessage());
@@ -236,7 +271,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     final String prefixBasePath = objectPath(dirName);
     try {
 
-      Iterator<S3ObjectSummary> files = S3Utils.objectSummaryIterator(
+      Iterator<S3Object> files = S3Utils.objectSummaryIterator(
           s3Client,
           ImmutableList.of(new CloudObjectLocation(
               config.getBucket(),
@@ -246,14 +281,17 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
           config.getMaxRetry()
       );
 
-      return Iterators.transform(files, summary -> {
-        String[] size = summary.getKey().split(prefixBasePath, 2);
-        if (size.length > 1) {
-          return size[1];
-        } else {
-          return "";
-        }
-      });
+      return Iterators.transform(
+          files,
+          summary -> {
+            String[] size = summary.key().split(prefixBasePath, 2);
+            if (size.length > 1) {
+              return size[1];
+            } else {
+              return "";
+            }
+          }
+      );
     }
     catch (Exception e) {
       log.error("Error occoured while listing files at path [%s]. Error: [%s]", dirName, e.getMessage());

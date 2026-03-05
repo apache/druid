@@ -34,8 +34,10 @@ import org.testcontainers.utility.DockerImageName;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -80,6 +82,8 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private EmbeddedDruidCluster cluster;
 
   private File containerDirectory;
+
+  private final List<MountedDir> additionalMounts = new ArrayList<>();
 
   private MountedDir indexerLogsDeepStorageDirectory;
   private MountedDir serviceLogsDirectory;
@@ -138,6 +142,16 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     return this;
   }
 
+  /**
+   * Adds a directory mount that will be bound to the container on startup.
+   * Useful for making host files (e.g. test data) accessible to the container.
+   */
+  public DruidContainerResource addMount(MountedDir mount)
+  {
+    additionalMounts.add(mount);
+    return this;
+  }
+
   @Override
   public void beforeStart(EmbeddedDruidCluster cluster)
   {
@@ -176,6 +190,8 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
                 "DRUID_SET_HOST", "0"
             )
         );
+
+    additionalMounts.forEach(container::withFileSystemBind);
 
     log.info(
         "Starting Druid container[%s] with image[%s], exposed ports[%s] and mounted directory[%s].",

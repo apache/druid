@@ -19,13 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ClientConfigurationFactory;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
@@ -44,7 +37,20 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -122,36 +128,94 @@ public class S3StorageDruidModule implements DruidModule
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
   // However, this builder can then be modified and have configuration(s) inside
-  // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
+  // S3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
   public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(
-      AWSCredentialsProvider provider,
+      AwsCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
       AWSClientConfig clientConfig,
       S3StorageConfig storageConfig
   )
   {
-    final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
-    final Protocol protocol = S3Utils.determineProtocol(clientConfig, endpointConfig);
-    final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
-        .builder()
-        .withCredentials(provider)
-        .withClientConfiguration(S3Utils.setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
-        .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
-        .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
-        .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
+    final boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
+    final URI endpointOverride = buildEndpointOverride(endpointConfig, useHttps);
+    final Region region = StringUtils.isNotEmpty(endpointConfig.getSigningRegion())
+        ? Region.of(endpointConfig.getSigningRegion())
+        : null;
 
-    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      amazonS3ClientBuilder.setEndpointConfiguration(
-          new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
-      );
-    }
+    final Supplier<S3Client> s3ClientSupplier = () -> {
+      // Build HTTP client with proxy configuration
+      ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
+          .socketTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .maxConnections(clientConfig.getMaxConnections());
+
+      ProxyConfiguration proxyConfiguration = S3Utils.buildProxyConfiguration(proxyConfig);
+      if (proxyConfiguration != null) {
+        httpClientBuilder.proxyConfiguration(proxyConfiguration);
+      }
+
+      // Build S3 configuration
+      // Note: forcePathStyle is configured on the S3ClientBuilder, not in S3Configuration
+      S3Configuration s3Configuration = S3Configuration.builder()
+          .chunkedEncodingEnabled(!clientConfig.isDisableChunkedEncoding())
+          .build();
+
+      S3ClientBuilder s3ClientBuilder = S3Client.builder()
+          .credentialsProvider(provider)
+          .httpClientBuilder(httpClientBuilder)
+          .serviceConfiguration(s3Configuration)
+          .forcePathStyle(clientConfig.isEnablePathStyleAccess());
+
+      if (endpointOverride != null) {
+        s3ClientBuilder.endpointOverride(endpointOverride);
+      }
+
+      if (region != null) {
+        s3ClientBuilder.region(region);
+      }
+
+      return s3ClientBuilder.build();
+    };
+
+    // Create async client supplier for S3TransferManager
+    final Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
+      NettyNioAsyncHttpClient.Builder asyncHttpClientBuilder = NettyNioAsyncHttpClient.builder()
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
+          .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .maxConcurrency(clientConfig.getMaxConnections());
+
+      S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder()
+          .credentialsProvider(provider)
+          .httpClientBuilder(asyncHttpClientBuilder)
+          .forcePathStyle(clientConfig.isEnablePathStyleAccess())
+          .multipartEnabled(true);
+
+      if (endpointOverride != null) {
+        s3AsyncClientBuilder.endpointOverride(endpointOverride);
+      }
+
+      if (region != null) {
+        s3AsyncClientBuilder.region(region);
+      }
+
+      return s3AsyncClientBuilder.build();
+    };
 
     return ServerSideEncryptingAmazonS3.builder()
-                                       .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                       .setS3ClientSupplier(s3ClientSupplier)
+                                       .setS3AsyncClientSupplier(s3AsyncClientSupplier)
                                        .setS3StorageConfig(storageConfig);
+  }
 
+  @Nullable
+  private static URI buildEndpointOverride(AWSEndpointConfig endpointConfig, boolean useHttps)
+  {
+    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+      return URI.create(S3Utils.ensureEndpointHasScheme(endpointConfig.getUrl(), useHttps));
+    }
+    return null;
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection

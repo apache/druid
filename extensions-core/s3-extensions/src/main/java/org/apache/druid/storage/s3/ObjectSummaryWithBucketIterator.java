@@ -19,9 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -30,43 +28,28 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Iterator class used by {@link S3Utils#objectSummaryIterator}.
- *
- * As required by the specification of that method, this iterator is computed incrementally in batches of
- * {@code maxListLength}. The first S3 call is made at the same time the iterator is constructed.
+ * Iterator that returns S3 objects along with their bucket names.
+ * This is needed because AWS SDK v2's S3Object doesn't include the bucket name.
  */
-public class ObjectSummaryIterator implements Iterator<S3Object>
+public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3ObjectWithBucket>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
+  private final int maxRetries;
 
   private String currentBucket;
   private String currentPrefix;
   private String continuationToken;
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
-  private S3Object currentObjectSummary;
-  private int maxRetries; // this is made available for testing mostly
+  private S3Utils.S3ObjectWithBucket currentObjectSummary;
+  private AtomicBoolean initialized;
 
-  ObjectSummaryIterator(
-      final ServerSideEncryptingAmazonS3 s3Client,
-      final Iterable<URI> prefixes,
-      final int maxListingLength
-  )
-  {
-    this.s3Client = s3Client;
-    this.prefixesIterator = prefixes.iterator();
-    this.maxListingLength = maxListingLength;
-    maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
-
-    constructorPostProcessing();
-  }
-
-  @VisibleForTesting
-  ObjectSummaryIterator(
+  ObjectSummaryWithBucketIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength,
@@ -77,32 +60,34 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     this.maxRetries = maxRetries;
-
-    constructorPostProcessing();
-  }
-
-  // helper to factor out stuff that happens in constructor after members are set
-  private void constructorPostProcessing()
-  {
-    prepareNextRequest();
-    fetchNextBatch();
-    advanceObjectSummary();
+    this.initialized = new AtomicBoolean(false);
   }
 
   @Override
   public boolean hasNext()
   {
+    initialize();
     return currentObjectSummary != null;
   }
 
-  @Override
-  public S3Object next()
+  private void initialize()
   {
+    if (initialized.compareAndSet(false, true)) {
+      prepareNextRequest();
+      fetchNextBatch();
+      advanceObjectSummary();
+    }
+  }
+
+  @Override
+  public S3Utils.S3ObjectWithBucket next()
+  {
+    initialize();
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
 
-    final S3Object retVal = currentObjectSummary;
+    final S3Utils.S3ObjectWithBucket retVal = currentObjectSummary;
     advanceObjectSummary();
     return retVal;
   }
@@ -148,16 +133,14 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     }
   }
 
-  /**
-   * Advance objectSummaryIterator to the next non-placeholder, updating "currentObjectSummary".
-   */
   private void advanceObjectSummary()
   {
     while (objectSummaryIterator.hasNext() || result.isTruncated() || prefixesIterator.hasNext()) {
       while (objectSummaryIterator.hasNext()) {
-        currentObjectSummary = objectSummaryIterator.next();
+        S3Object s3Object = objectSummaryIterator.next();
         // skips directories and empty objects
-        if (!isDirectoryPlaceholder(currentObjectSummary) && currentObjectSummary.size() > 0) {
+        if (!isDirectoryPlaceholder(s3Object) && s3Object.size() > 0) {
+          currentObjectSummary = new S3Utils.S3ObjectWithBucket(currentBucket, s3Object);
           return;
         }
       }
@@ -190,6 +173,7 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     }
 
     // Recognize s3sync.rb directory placeholders by MD5/ETag value.
+    // See https://github.com/mondain/jets3t/blob/master/jets3t/src/main/java/org/jets3t/service/model/StorageObject.java.
     if ("d66759af42f282e1ba19144df2d405d0".equals(objectSummary.eTag())) {
       return true;
     }
