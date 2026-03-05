@@ -21,10 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -95,6 +92,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
     // create a map of bucket to keys to delete
     Map<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeysToDelete = new HashMap<>();
+    boolean shouldThrowException = false;
+
     for (DataSegment segment : segments) {
       String s3Bucket = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.BUCKET);
       String path = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.KEY);
@@ -104,11 +103,9 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       );
       if (path.endsWith("/")) {
         // segment is not compressed, list objects and add them all to delete list
-        final ListObjectsV2Result list = s3Client.listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(path)
-        );
-        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
-          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(objectSummary.getKey()));
+        boolean hadException = deleteSegmentFilesFromS3(s3Bucket, path);
+        if (hadException) {
+          shouldThrowException = true;
         }
       } else {
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
@@ -116,7 +113,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       }
     }
 
-    boolean shouldThrowException = false;
     for (Map.Entry<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeys : bucketToKeysToDelete.entrySet()) {
       String s3Bucket = bucketToKeys.getKey();
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = bucketToKeys.getValue();
@@ -212,6 +208,24 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     return hadException;
   }
 
+  private boolean deleteSegmentFilesFromS3(String s3Bucket, String s3Path)
+  {
+    try {
+      S3Utils.deleteObjectsInPath(
+          s3ClientSupplier.get(),
+          inputDataConfig.getMaxListingLength(),
+          s3Bucket,
+          s3Path,
+          Predicates.alwaysTrue()
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting segment files from s3. Error: %s", e.getMessage());
+      return true;
+    }
+    return false;
+  }
+
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
@@ -223,12 +237,17 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
       if (s3Path.endsWith("/")) {
         // segment is not compressed, list objects and delete them all
-        final ListObjectsV2Result list = s3Client.listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(s3Path)
-        );
-        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
-          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, objectSummary.getKey());
-          s3Client.deleteObject(s3Bucket, objectSummary.getKey());
+        try {
+          S3Utils.deleteObjectsInPath(
+              s3ClientSupplier.get(),
+              inputDataConfig.getMaxListingLength(),
+              s3Bucket,
+              s3Path,
+              Predicates.alwaysTrue()
+          );
+        }
+        catch (Exception e) {
+          log.error("Error occurred while deleting segment files from s3. Error: %s", e.getMessage());
         }
       } else {
         String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
