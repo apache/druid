@@ -33,8 +33,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -52,13 +50,10 @@ import java.util.stream.Collectors;
  * This class is registered as a managed lifecycle to fetch the coordinator dynamic configuration on startup. Further
  * updates are handled through {@link BrokerDynamicConfigResource}.
  */
-public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
+public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<CoordinatorDynamicConfig> implements HistoricalFilter
 {
-  private static final Logger log = new Logger(BrokerViewOfCoordinatorConfig.class);
   private final CoordinatorClient coordinatorClient;
 
-  @GuardedBy("this")
-  private CoordinatorDynamicConfig config;
   @GuardedBy("this")
   private Set<String> targetCloneServers;
   @GuardedBy("this")
@@ -88,41 +83,29 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     this.coordinatorClient = coordinatorClient;
   }
 
-  /**
-   * Return the latest {@link CoordinatorDynamicConfig}.
-   */
-  public synchronized CoordinatorDynamicConfig getDynamicConfig()
+  @Override
+  protected CoordinatorDynamicConfig fetchConfigFromClient() throws Exception
   {
-    return config;
+    return coordinatorClient.getCoordinatorDynamicConfig().get();
+  }
+
+  @Override
+  protected String getConfigTypeName()
+  {
+    return "coordinator dynamic configuration";
   }
 
   /**
    * Update the config view with a new coordinator dynamic config snapshot. Also updates the source and target clone
    * servers based on the new dynamic configuration.
    */
+  @Override
   public synchronized void setDynamicConfig(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
-    config = updatedConfig;
-    final Map<String, String> cloneServers = config.getCloneServers();
+    super.setDynamicConfig(updatedConfig);
+    final Map<String, String> cloneServers = updatedConfig.getCloneServers();
     this.targetCloneServers = ImmutableSet.copyOf(cloneServers.keySet());
     this.sourceCloneServers = ImmutableSet.copyOf(cloneServers.values());
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-    try {
-      log.info("Fetching coordinator dynamic configuration.");
-
-      CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
-      setDynamicConfig(coordinatorDynamicConfig);
-
-      log.info("Successfully fetched coordinator dynamic config[%s].", coordinatorDynamicConfig);
-    }
-    catch (Exception e) {
-      // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
-      throw new RuntimeException("Failed to initialize coordinator dynamic config", e);
-    }
   }
 
   @Override

@@ -19,56 +19,71 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientImpl;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 
-import java.util.concurrent.atomic.AtomicReference;
+import javax.validation.constraints.NotNull;
 
 /**
  * Broker view of broker dynamic configuration.
  */
-public class BrokerViewOfBrokerConfig
+public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
 {
-  private static final Logger log = new Logger(BrokerViewOfBrokerConfig.class);
-  private final AtomicReference<BrokerDynamicConfig> config;
+  private final CoordinatorClient coordinatorClient;
 
   @Inject
-  public BrokerViewOfBrokerConfig(JacksonConfigManager configManager)
+  public BrokerViewOfBrokerConfig(
+      @Json final ObjectMapper jsonMapper,
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Coordinator final ServiceLocator serviceLocator
+  )
   {
-    this.config = configManager.watch(
-        BrokerDynamicConfig.CONFIG_KEY,
-        BrokerDynamicConfig.class,
-        new BrokerDynamicConfig(null)
-    );
+    this.coordinatorClient =
+        new CoordinatorClientImpl(
+            clientFactory.makeClient(
+                NodeRole.COORDINATOR.getJsonName(),
+                serviceLocator,
+                StandardRetryPolicy.builder().maxAttempts(15).build()
+            ),
+            jsonMapper
+        );
   }
 
   @VisibleForTesting
-  public BrokerViewOfBrokerConfig(BrokerDynamicConfig initialConfig)
+  public BrokerViewOfBrokerConfig(CoordinatorClient coordinatorClient)
   {
-    this.config = new AtomicReference<>(initialConfig);
+    this.coordinatorClient = coordinatorClient;
   }
 
-  public BrokerDynamicConfig getDynamicConfig()
+  @Override
+  protected BrokerDynamicConfig fetchConfigFromClient() throws Exception
   {
-    return config.get();
+    return coordinatorClient.getBrokerDynamicConfig().get();
+  }
+
+  @Override
+  protected String getConfigTypeName()
+  {
+    return "broker dynamic configuration";
   }
 
   /**
    * Update the config view with a new broker dynamic config snapshot.
    */
-  public void setDynamicConfig(BrokerDynamicConfig updatedConfig)
+  @Override
+  public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
   {
-    config.set(updatedConfig);
-    log.info("Broker dynamic config updated to [%s]", updatedConfig);
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-    log.info("Broker dynamic config initialized[%s].", config.get());
+    super.setDynamicConfig(updatedConfig);
   }
 }

@@ -85,6 +85,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorBrokerConfigsResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
@@ -202,6 +203,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(CoordinatorDynamicConfigSyncer.class).in(ManageLifecycle.class);
+            binder.bind(BrokerDynamicConfigSyncer.class).in(ManageLifecycle.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {

@@ -19,41 +19,36 @@
 
 package org.apache.druid.client;
 
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class BrokerViewOfBrokerConfigTest
 {
   private BrokerViewOfBrokerConfig target;
+
+  private CoordinatorClient coordinatorClient;
   private BrokerDynamicConfig config;
+
 
   @Before
   public void setUp() throws Exception
   {
     config = new BrokerDynamicConfig(null);
-    target = new BrokerViewOfBrokerConfig(config);
+    coordinatorClient = Mockito.mock(CoordinatorClient.class);
+    Mockito.when(coordinatorClient.getBrokerDynamicConfig()).thenReturn(Futures.immediateFuture(config));
+    target = new BrokerViewOfBrokerConfig(coordinatorClient);
   }
 
   @Test
-  public void testGetDynamicConfig()
-  {
-    Assert.assertEquals(config, target.getDynamicConfig());
-  }
-
-  @Test
-  public void testSetDynamicConfig()
-  {
-    BrokerDynamicConfig newConfig = new BrokerDynamicConfig(null);
-    target.setDynamicConfig(newConfig);
-    Assert.assertEquals(newConfig, target.getDynamicConfig());
-  }
-
-  @Test
-  public void testStart()
+  public void testFetchesConfigOnStartup()
   {
     target.start();
+    Mockito.verify(coordinatorClient, Mockito.times(1)).getBrokerDynamicConfig();
     Assert.assertEquals(config, target.getDynamicConfig());
   }
 }
