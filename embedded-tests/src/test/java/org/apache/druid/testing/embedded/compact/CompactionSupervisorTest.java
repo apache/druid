@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -64,6 +65,8 @@ import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfi
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -417,6 +420,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
+
+    // vsf storage monitor metrics are only emitted for MSQ ingestion, so picked this compaction test at random to test
+    LatchableEmitter emitter = indexer.latchableEmitter();
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+
     waitForAllCompactionTasksToFinish();
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -426,6 +434,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     // Verify the correct rows were filtered
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
+
+    List<ServiceMetricEvent> events = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_COUNT);
+    long count = 0;
+    for (ServiceMetricEvent event : events) {
+      count += event.getValue().longValue();
+      Assertions.assertNotNull(event.getUserDims().get("taskId"));
+      Assertions.assertNotNull(event.getUserDims().get("groupId"));
+    }
+    Assertions.assertTrue(count > 0);
   }
 
   /**

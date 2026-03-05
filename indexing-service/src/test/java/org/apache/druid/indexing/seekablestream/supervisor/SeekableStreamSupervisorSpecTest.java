@@ -794,6 +794,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         LagAggregator.DEFAULT,
         null,
         null,
+        null,
         null
     )
     {
@@ -851,6 +852,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, null),
+        null,
         null
     )
     {
@@ -1221,7 +1223,8 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         Set.of("dummyTask"),
-        Collections.emptySet()
+        Collections.emptySet(),
+        null
     );
 
     supervisor.start();
@@ -1469,6 +1472,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           LagAggregator.DEFAULT,
           null,
           null,
+          null,
           null
       )
       {
@@ -1488,6 +1492,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
           LagAggregator.DEFAULT,
+          null,
           null,
           null,
           null
