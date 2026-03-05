@@ -34,14 +34,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -110,7 +108,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                               DruidMetrics.DATASOURCE,
                               CollectionUtils.getOnlyElement(
                                   spec.getDataSources(),
-                                  xs -> DruidException.defensive("Expected one dataSource, got[%s]")
+                                  xs -> DruidException.defensive("Expected one dataSource, got[%s]", xs)
                               )
                           )
                           .setDimension(

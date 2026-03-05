@@ -192,7 +192,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
         (SeekableStreamSupervisor) supervisor,
         CollectionUtils.getOnlyElement(
             spec.getDataSources(),
-            xs -> DruidException.defensive("Expected one dataSource, got[%s]")
+            xs -> DruidException.defensive("Expected one dataSource, got[%s]", xs)
         ),
         this,
         spec,
