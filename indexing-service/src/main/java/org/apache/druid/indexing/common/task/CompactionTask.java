@@ -687,7 +687,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
       final Iterable<DataSegment> segmentsToCompact = Iterables.filter(
           timelineSegments,
-          segmentProvider::shouldCompactSegment
+          s -> !segmentProvider.shouldUpgradeSegment(s)
       );
       final DataSchema dataSchema = createDataSchema(
           toolbox.getEmitter(),
@@ -1310,11 +1310,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       } else {
         return false;
       }
-    }
-
-    private boolean shouldCompactSegment(DataSegment s)
-    {
-      return !shouldUpgradeSegment(s);
     }
 
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException

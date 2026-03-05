@@ -56,7 +56,10 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     this(config, ReindexingConfigOptimizer.IDENTITY);
   }
 
-  public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config, ReindexingConfigOptimizer configOptimizer)
+  public CompactionConfigBasedJobTemplate(
+      DataSourceCompactionConfig config,
+      ReindexingConfigOptimizer configOptimizer
+  )
   {
     this.config = config;
     this.configOptimizer = configOptimizer;

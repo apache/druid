@@ -1489,10 +1489,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   /**
    * Creates a new pending segment for the given datasource and interval.
-   *
    * @param partialShardSpec Shard spec info minus segment id stuff
-   * @param existingVersion  Version of segments in interval, used to compute the version of the very first segment in
-   *                         interval
+   * @param existingVersion Version of segments in interval, used to compute the version of the very first segment in
+   *                        interval
    */
   @Nullable
   private SegmentIdWithShardSpec createNewPendingSegment(
@@ -2010,7 +2009,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * <li>The set of segments being committed is non-empty.</li>
    * <li>All segments belong to the same datasource.</li>
    * </ul>
-   *
    * @return Name of the common data source
    */
   private String verifySegmentsToCommit(Collection<DataSegment> segments)
@@ -2300,8 +2298,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * {@link DataSourceMetadata#matches matches} the {@code endMetadata}, this
    * method returns immediately with success.
    *
-   * @param supervisorId  The supervisor ID. Used as the PK for the corresponding metadata entry in the DB.
-   * @param dataSource    The dataSource. Currently used only for logging purposes.
+   * @param supervisorId The supervisor ID. Used as the PK for the corresponding metadata entry in the DB.
+   * @param dataSource The dataSource. Currently used only for logging purposes.
    * @param startMetadata Current entry in the DB must
    *                      {@link DataSourceMetadata#matches match} this value.
    * @param endMetadata   The updated entry will be equal to the current entry
