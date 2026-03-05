@@ -2615,9 +2615,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
                   return sequence.compareTo(latestOffset) == 0;
                 }
-            ) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
-                !pendingCompletionTaskGroups.getOrDefault(groupId, new CopyOnWriteArrayList<>()).isEmpty()
-                && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
+            ) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey()))
+            // OR if there is an older publishing task for the same groupId, use the first sequenceId of this task
+            // since the offsets persisted in metadata store might still be behind the checkpoints of this task
+            || (!pendingCompletionTaskGroups.getOrDefault(groupId, new CopyOnWriteArrayList<>()).isEmpty()
+                && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))
+
+            // OR if there is an older publishing task for another groupId, use the first sequenceId of this task
+            // since the offsets persisted in metadata store might still be behind the checkpoints of this task
+            || (isAnotherTaskGroupPublishingToPartitionsOf(taskGroup)
+                && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))
+        ) {
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
@@ -2626,8 +2634,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskGroup.checkpointSequences.clear();
           taskGroup.checkpointSequences.putAll(latestCheckpoints);
         } else {
-          log.debug(
-              "Adding task[%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
+          log.warn(
+              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with latestoffsets from DB[%s]",
               taskId,
               taskCheckpoints,
               latestOffsetsFromDb
@@ -2641,8 +2649,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                 .equals(taskGroup.checkpointSequences.firstEntry().getValue()))
             || taskCheckpoints.tailMap(taskGroup.checkpointSequences.firstKey()).size()
                != taskGroup.checkpointSequences.size()) {
-          log.debug(
-              "Adding task[%s] to kill list, checkpoints[%s], taskgroup checkpoints [%s]",
+          log.warn(
+              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with taskgroup checkpoints [%s]",
               taskId,
               taskCheckpoints,
               taskGroup.checkpointSequences
@@ -2669,17 +2677,49 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         sequenceCheckpoint -> {
           killTask(
               sequenceCheckpoint.lhs,
-              "Killing task[%s], as its checkpoints[%s] are not consistent with group checkpoints[%s]"
-              + " or latest persisted sequences in metadata store[%s].",
-              sequenceCheckpoint.lhs,
-              sequenceCheckpoint.rhs,
-              taskGroup.checkpointSequences,
-              latestOffsetsFromDb
+              "Killing task as its checkpoints are not consistent with group checkpoints"
+              + " or latest persisted sequences in metadata store."
           );
           taskGroup.removeTask(sequenceCheckpoint.lhs);
         }
     );
   }
+
+  /**
+   * Checks if there is another {@link TaskGroup} publishing to any of the partitions
+   * that are being read by the given {@param taskGroup}. If this method returns
+   * true, it indicates that the current taskGroup would need to wait for the
+   * older taskGroups to finish publishing before it can publish its own offsets.
+   */
+  private boolean isAnotherTaskGroupPublishingToPartitionsOf(TaskGroup taskGroup)
+  {
+    final Set<PartitionIdType> partitionsPendingPublishFromOtherGroups =
+        pendingCompletionTaskGroups
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .filter(group -> !group.equals(taskGroup))
+            .flatMap(group -> group.startingSequences.keySet().stream())
+            .collect(Collectors.toSet());
+
+    if (partitionsPendingPublishFromOtherGroups.isEmpty()) {
+      return false;
+    }
+
+    for (PartitionIdType partitionId : taskGroup.startingSequences.keySet()) {
+      if (partitionsPendingPublishFromOtherGroups.contains(partitionId)) {
+        log.info(
+            "taskGroup[%s] with sequenceName[%s] needs to wait before publishing"
+            + " as another taskGroup is currently publishing to partition[%s].",
+            taskGroup.groupId, taskGroup.baseSequenceName, partitionId
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 
   @VisibleForTesting
   protected void addDiscoveredTaskToPendingCompletionTaskGroups(
