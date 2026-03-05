@@ -1375,7 +1375,6 @@ Map<String taskGroupId, Map<String taskId, RowStatsPayload>>
 - **taskId**: Druid indexing task ID in that group
 - **RowStatsPayload**: Per-task row stats with `movingAverages` and `totals`; see [Row stats](../ingestion/tasks.md#row-stats) for field definitions
 
-Treat task group IDs as authoritative values from Druid. Do not re-derive them client-side from partition data, as assignment logic can vary (e.g., single-topic vs multi-topic Kafka supervisors).
 
 #### URL
 
