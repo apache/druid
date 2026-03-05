@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -687,7 +688,7 @@ public class DeterminePartitionsJob implements Jobby
           numCorePartitions
       );
     } else {
-      return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, numCorePartitions);
+      return new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, partitionNum, numCorePartitions);
     }
   }
 

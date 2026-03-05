@@ -85,9 +85,7 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
     final TopNQuery query = new TopNQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
-            ImmutableList.of(
-                new MapVirtualColumn("keys", "values", "params")
-            )
+            new MapVirtualColumn("keys", "values", "params")
         ),
         new DefaultDimensionSpec("params", "params"), // params is the map type
         new NumericTopNMetricSpec("count"),
@@ -111,9 +109,7 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
     final TopNQuery query = new TopNQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
-            ImmutableList.of(
-                new MapVirtualColumn("keys", "values", "params")
-            )
+            new MapVirtualColumn("keys", "values", "params")
         ),
         new DefaultDimensionSpec("params.key3", "params.key3"), // params.key3 is string
         new NumericTopNMetricSpec("count"),

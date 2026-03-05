@@ -1587,7 +1587,7 @@
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <excludes>
-                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java
+                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java,**/CompactionSupervisorTest.java,**/MultiStageQueryTest.java
                     </excludes>
                 </configuration>
                 <dependencies>

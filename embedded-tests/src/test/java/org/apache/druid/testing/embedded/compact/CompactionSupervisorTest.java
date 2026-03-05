@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -75,6 +76,8 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
@@ -435,6 +438,219 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       Assertions.assertNotNull(event.getUserDims().get("groupId"));
     }
     Assertions.assertTrue(count > 0);
+  }
+
+
+  @Test
+  public void test_compaction_cluster_by_virtualcolumn()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "ll"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "mm"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "nn"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "oo"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "pp"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "qq"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "rr"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .granularitySpec("DAY", null, false);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "json_value(obj, '$.a')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
+  }
+
+  @Test
+  public void test_compaction_cluster_by_virtualcolumn_rollup()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "ll"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "mm"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "nn"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "oo"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "pp"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "qq"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "rr"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .granularitySpec("DAY", "MINUTE", true);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "v0",
+            "json_value(obj, '$.a')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        )
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
   }
 
   /**

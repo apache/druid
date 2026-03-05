@@ -230,7 +230,7 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-string partition dimension[long_dim] of type[long] not supported with 'range' partition spec",
+        "MSQ: Non-string partition dimension[long_dim] of type[LONG] not supported with 'range' partition spec",
         validationResult.getReason()
     );
   }

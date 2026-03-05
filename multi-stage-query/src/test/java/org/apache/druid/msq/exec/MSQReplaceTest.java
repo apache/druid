@@ -328,7 +328,7 @@ public class MSQReplaceTest extends MSQTestBase
                              SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
                          )
                      )
-                     .setExpectedShardSpec(NumberedShardSpec.class)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{946684800000L, "", 1.0f},
@@ -347,7 +347,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
                              context,
-                             Collections.emptyList(),
+                             List.of("v0"),
                              DimensionsSpec.builder()
                                            .setDimensions(
                                                ImmutableList.of(
@@ -363,7 +363,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .verifyResults();
   }
-
+  
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByExpression(String contextName, Map<String, Object> context)

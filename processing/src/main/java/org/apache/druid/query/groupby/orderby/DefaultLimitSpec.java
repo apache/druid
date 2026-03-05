@@ -203,6 +203,10 @@ public class DefaultLimitSpec implements LimitSpec
           sortingNeeded = true;
           break;
         }
+        if (query.getVirtualColumns().getVirtualColumn(columnSpec.getDimension()) != null) {
+          sortingNeeded = true;
+          break;
+        }
 
         final ColumnType columnType = getOrderByType(columnSpec, dimensions);
         final StringComparator naturalComparator;

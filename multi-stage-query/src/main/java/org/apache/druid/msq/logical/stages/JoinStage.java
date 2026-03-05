@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a stage that reads data from input sources.
@@ -75,7 +76,7 @@ public class JoinStage
     @Override
     public ShuffleSpec buildShuffleSpec()
     {
-      final ClusterBy clusterBy = new ClusterBy(keyColumns, 0);
+      final ClusterBy clusterBy = new ClusterBy(keyColumns, Map.of(), 0);
       return new HashShuffleSpec(clusterBy, 1);
     }
 
