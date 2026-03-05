@@ -4247,8 +4247,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         new DefaultLimitSpec(OrderByColumnSpec.ascending("idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.ascending("rows", "idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.descending("idx"), null),
-        new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null),
-        };
+        new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null)
+    };
 
     GroupByQuery baseQuery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
