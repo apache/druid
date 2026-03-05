@@ -24,6 +24,8 @@ mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true -
 
 mvn -B checkstyle:checkstyle --fail-at-end
 
+mvn -B sortpom:verify --fail-at-end -pl '!distribution'
+
 ./.github/scripts/license_checks_script.sh
 
 ./.github/scripts/analyze_dependencies_script.sh

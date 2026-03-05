@@ -17,19 +17,18 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <artifactId>web-console</artifactId>
-  <name>web-console</name>
-  <description>Web console for Druid</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
     <version>37.0.0-SNAPSHOT</version>
   </parent>
+
+  <artifactId>web-console</artifactId>
+  <name>web-console</name>
+  <description>Web console for Druid</description>
 
   <properties>
     <maven.build.cache.input.1>src</maven.build.cache.input.1>
@@ -38,20 +37,20 @@
     <maven.build.cache.input.4>assets</maven.build.cache.input.4>
     <maven.build.cache.input.5>e2e-tests</maven.build.cache.input.5>
     <maven.build.cache.input.6>typings</maven.build.cache.input.6>
-    <resources.directory>${project.build.directory}/resources</resources.directory>
-    <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
+    <!-- this property is overidden in Travis CI to skip the javascript-related work -->
     <node.version>v20.9.0</node.version>
     <npm.version>10.9.0</npm.version>
+    <resources.directory>${project.build.directory}/resources</resources.directory>
+    <web.console.skip>false</web.console.skip>
   </properties>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>org.apache.maven.extensions</groupId>
-        <artifactId>maven-build-cache-extension</artifactId>
-        <version>1.2.0</version>
-      </extension>
-    </extensions>
+
+    <resources>
+      <resource>
+        <directory>${resources.directory}</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>com.github.eirslett</groupId>
@@ -120,6 +119,14 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <configuration>
+          <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
+          <skip>${web.console.skip}</skip>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <configuration>
@@ -128,31 +135,33 @@
         <executions>
           <execution>
             <id>clean-console</id>
-            <phase>clean</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <phase>clean</phase>
             <configuration>
               <executable>script/clean</executable>
             </configuration>
           </execution>
           <execution>
             <id>build-console</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
-              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
+              <environmentVariables>
+                <PATH>${project.build.directory}/node:${env.PATH}</PATH>
+              </environmentVariables>
               <executable>script/build</executable>
             </configuration>
           </execution>
           <execution>
             <id>package-console</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
               <executable>script/cp-to</executable>
               <arguments>
@@ -162,20 +171,13 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <configuration>
-          <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
-          <skip>${web.console.skip}</skip>
-        </configuration>
-      </plugin>
     </plugins>
-
-    <resources>
-      <resource>
-        <directory>${resources.directory}</directory>
-      </resource>
-    </resources>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.extensions</groupId>
+        <artifactId>maven-build-cache-extension</artifactId>
+        <version>1.2.0</version>
+      </extension>
+    </extensions>
   </build>
 </project>

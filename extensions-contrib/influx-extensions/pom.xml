@@ -17,14 +17,8 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <groupId>org.apache.druid.extensions.contrib</groupId>
-  <artifactId>druid-influx-extensions</artifactId>
-  <name>druid-influx-extensions</name>
-  <description>druid-influx-extensions</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -33,19 +27,14 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-  </properties>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
+  <artifactId>druid-influx-extensions</artifactId>
+  <name>druid-influx-extensions</name>
+  <description>druid-influx-extensions</description>
 
-  <repositories>
-  </repositories>
+  <properties></properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-processing</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4-runtime</artifactId>
@@ -53,6 +42,16 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -66,13 +65,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-processing</artifactId>
+      <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -98,6 +93,8 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <repositories></repositories>
 
   <build>
     <plugins>

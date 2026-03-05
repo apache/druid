@@ -17,14 +17,8 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <groupId>org.apache.druid.extensions</groupId>
-  <artifactId>druid-testcontainers</artifactId>
-  <name>druid-testcontainers</name>
-  <description>Testcontainers for running Apache Druid services in tests</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -32,6 +26,11 @@
     <version>37.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
+
+  <groupId>org.apache.druid.extensions</groupId>
+  <artifactId>druid-testcontainers</artifactId>
+  <name>druid-testcontainers</name>
+  <description>Testcontainers for running Apache Druid services in tests</description>
 
   <!-- This module should have minimal dependencies so that it can be used independently
    by libraries and codebases outside Druid to run Testcontainers -->
