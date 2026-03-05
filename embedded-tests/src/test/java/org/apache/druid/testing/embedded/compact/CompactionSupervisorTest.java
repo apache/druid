@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -75,6 +76,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
@@ -551,6 +553,56 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         finalSegmentCount,
         "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
     );
+  }
+
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_compaction_legacy_string_discovery_sparse_column(
+      CompactionEngine compactionEngine
+  )
+  {
+    // test for a bug encountered where ordering contained columns not in dimensions list
+    configureCompaction(compactionEngine);
+    String jsonallnull =
+        """
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "a"}
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "b"}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonallnull)
+        .isoTimestampColumn("timestamp")
+        .dataSchema(builder -> builder.withDimensions(DimensionsSpec.builder().build()))
+        .segmentGranularity("DAY");
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+
+    // switch to year granularity to trigger compaction
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+            )
+            .withTuningConfig(createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null)))
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
   }
 
   private int getTotalRowCount()
