@@ -425,6 +425,51 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testComputeTaskCountForRolloverReturnsScaleDownValue()
+  {
+    // Tests the happy path: computeTaskCountForRollover returns optimal count for scale-down
+    // This is the key difference from computeTaskCountForScaleAction which blocks scale-down
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskCount()).thenReturn(10);
+
+    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
+                                                             .taskCountMax(100)
+                                                             .taskCountMin(1)
+                                                             .enableTaskAutoScaler(true)
+                                                             .lagWeight(0.6)
+                                                             .idleWeight(0.4)
+                                                             .scaleDownDuringTaskRolloverOnly(true)
+                                                             .build();
+
+    CostBasedAutoScaler scaler = Mockito.spy(new CostBasedAutoScaler(supervisor, cfg, spec, emitter));
+
+    // Mock computeOptimalTaskCount to return a scale-down value (5 < current 10)
+    Mockito.doReturn(5).when(scaler).computeOptimalTaskCount(Mockito.any());
+
+    // Set lastKnownMetrics by calling with non-null metrics
+    // CostMetrics metrics = new CostMetrics(100.0, 10, 100, 0.8, 3600, 1000.0);
+    // scaler.setLastKnownMetrics(metrics);
+
+    int result = scaler.computeTaskCountForRollover();
+
+    // Unlike computeTaskCountForScaleAction which returns -1 for scale-down,
+    // computeTaskCountForRollover should return the optimal count (5)
+    Assert.assertEquals(
+        "computeTaskCountForRollover should return optimal count for scale-down during rollover",
+        5,
+        result
+    );
+  }
+
+  @Test
   public void testComputeTaskCountForRolloverAndConfigProperties()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
