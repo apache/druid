@@ -147,27 +147,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingIOConfigRule> getIOConfigRules()
-  {
-    return providers.stream()
-                    .map(ReindexingRuleProvider::getIOConfigRules)
-                    .filter(rules -> !rules.isEmpty())
-                    .findFirst()
-                    .orElse(Collections.emptyList());
-  }
-
-  @Override
-  @Nullable
-  public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
-  {
-    return providers.stream()
-                    .map(p -> p.getIOConfigRule(interval, referenceTime))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-  }
-
-  @Override
   @Nullable
   public ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime)
   {
