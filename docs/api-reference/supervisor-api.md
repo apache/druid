@@ -1363,6 +1363,20 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters. See [Row stats](../ingestion/tasks.md#row-stats) for more information.
 
+#### Response schema
+
+The response is structured as:
+
+```text
+Map<String taskGroupId, Map<String taskId, RowStatsPayload>>
+```
+
+- **taskGroupId**: String key representing the supervisor task group
+- **taskId**: Druid indexing task ID in that group
+- **RowStatsPayload**: Per-task row stats with `movingAverages` and `totals`; see [Row stats](../ingestion/tasks.md#row-stats) for field definitions
+
+Treat task group IDs as authoritative values from Druid. Do not re-derive them client-side from partition data, as assignment logic can vary (e.g., single-topic vs multi-topic Kafka supervisors).
+
 #### URL
 
 `GET` `/druid/indexer/v1/supervisor/{supervisorId}/stats`
@@ -1414,6 +1428,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
+In the example below, the outer key (`"0"`) is a **task group ID**; the inner key (e.g., `index_kafka_custom_data_881d621078f6b7c_ccplchbi`) is a **task ID**.
+
 <details>
   <summary>View the response</summary>
 
@@ -1460,6 +1476,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
     }
   ```
 </details>
+
+**For automation clients:** If you need to map task IDs to group IDs (for handoff, draining, or observability), use the `/stats` response keys directly instead of re-deriving group IDs from partition data. This avoids coupling to internal supervisor assignment logic.
 
 ## Audit history
 

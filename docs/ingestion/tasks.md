@@ -314,6 +314,8 @@ For the Kafka Indexing Service, a GET to the following Overlord API will retriev
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/{supervisorId}/stats
 ```
 
+The response is structured as a nested map: outer keys are **task group IDs**, inner keys are **task IDs**, and each task maps to its row stats payload. See the [Supervisor API](../api-reference/supervisor-api.md) for the full schema and guidance for automation clients.
+
 ### Unparseable events
 
 Lists of recently-encountered unparseable events can be retrieved from a running task with a GET to the following Peon API:
