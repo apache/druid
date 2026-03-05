@@ -145,16 +145,14 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  @Parameters(
-      {
-          "NONE1",
-          "A",
-          "Random mode",
-          "all",
-          "only required",
-          "none"
-      }
-  )
+  @Parameters({
+      "NONE1",
+      "A",
+      "Random mode",
+      "all",
+      "only required",
+      "none"
+  })
   public void testCreateLookupLoadingSpecFromInvalidModeInContext(String mode)
   {
     final DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
@@ -164,12 +162,10 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  @Parameters(
-      {
-          "foo bar",
-          "foo]"
-      }
-  )
+  @Parameters({
+      "foo bar",
+      "foo]"
+  })
   public void testCreateLookupLoadingSpecFromInvalidLookupsInContext(Object lookupsToLoad)
   {
     final DruidException exception = Assert.assertThrows(DruidException.class, () ->

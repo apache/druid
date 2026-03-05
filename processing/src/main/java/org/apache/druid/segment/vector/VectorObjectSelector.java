@@ -31,7 +31,7 @@ import org.apache.druid.segment.data.IndexedInts;
  *
  * Typically created by {@link VectorColumnSelectorFactory#makeObjectSelector(String)}.
  *
- * @see ColumnValueSelector, the non-vectorized version.
+ * @see ColumnValueSelector the non-vectorized version.
  */
 public interface VectorObjectSelector extends VectorSizeInspector
 {

@@ -136,7 +136,7 @@ public class TableBuilder
     return property(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, segmentGranularity);
   }
 
-  public TableBuilder clusterColumns(ClusterKeySpec...clusterKeys)
+  public TableBuilder clusterColumns(ClusterKeySpec... clusterKeys)
   {
     return property(DatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
   }
@@ -151,7 +151,7 @@ public class TableBuilder
     return property(DatasourceDefn.SEALED_PROPERTY, sealed);
   }
 
-  public TableBuilder hiddenColumns(String...hiddenColumns)
+  public TableBuilder hiddenColumns(String... hiddenColumns)
   {
     return hiddenColumns(Arrays.asList(hiddenColumns));
   }
