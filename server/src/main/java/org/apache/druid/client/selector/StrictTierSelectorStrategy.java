@@ -27,7 +27,6 @@ import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.timeline.DataSegment;
@@ -45,8 +44,8 @@ import java.util.Set;
  * <p>
  * Unlike other strategies like {@link CustomTierSelectorStrategy} that falls back to servers with different priorities,
  * this strategy strictly filters the available servers to the configured priorities.
- * If no servers match, an empty list is returned, which may result in queries returning partial or no data.
- * <p>
+ * If no servers match the configured priorities, an empty server list is returned, which may cause queries to
+ * return partial or no data.
  * <p>
  * Example configuration:
  * <li> <code> druid.broker.select.tier=strict </code> </li>
@@ -65,9 +64,9 @@ public class StrictTierSelectorStrategy extends AbstractTierSelectorStrategy
   public static final String TYPE = "strict";
 
   private final StrictTierSelectorStrategyConfig config;
+  private final ServiceEmitter emitter;
   private final Map<Integer, Integer> configuredPriorities;
   private final Comparator<Integer> comparator;
-  private final ServiceEmitter emitter;
 
   @JsonCreator
   public StrictTierSelectorStrategy(
@@ -105,21 +104,20 @@ public class StrictTierSelectorStrategy extends AbstractTierSelectorStrategy
 
   @Override
   public <T> List<QueryableDruidServer> pick(
-      @Nullable Query<T> query,
-      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
-      DataSegment segment,
-      int numServersToPick
+      @Nullable final Query<T> query,
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      final DataSegment segment,
+      final int numServersToPick
   )
   {
-    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredPrioritizedServers = new Int2ObjectRBTreeMap<>(getComparator());
+    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> candidatePrioritizedServers = new Int2ObjectRBTreeMap<>(getComparator());
 
-    // Iterate through entries in tree order to preserve priority ordering
     for (Int2ObjectMap.Entry<Set<QueryableDruidServer>> entry : prioritizedServers.int2ObjectEntrySet()) {
       final int priority = entry.getIntKey();
       final Set<QueryableDruidServer> servers = entry.getValue();
 
       if (configuredPriorities.containsKey(priority)) {
-        filteredPrioritizedServers.put(priority, servers);
+        candidatePrioritizedServers.put(priority, servers);
       } else {
         log.debug(
             "Server priority[%d] not in the configured list of priorities[%s] so ignore servers[%s] for query[%s]",
@@ -128,32 +126,32 @@ public class StrictTierSelectorStrategy extends AbstractTierSelectorStrategy
       }
     }
 
-    if (filteredPrioritizedServers.isEmpty()) {
+    if (candidatePrioritizedServers.isEmpty()) {
       if (query == null || query instanceof SegmentMetadataQuery) {
+        // Debug logging to reduce logging spam as these are typically system-generated segment metadata queries
         log.debug(
             "No server found for query[%s] from server priorities[%s]. Configured priorities[%s].",
             query, prioritizedServers.keySet(), config.getPriorities()
         );
       } else {
-        // maybe having one of alert or metric should be enough
-        log.makeAlert(
-            "No servers found in available servers with priorities[%s] for query[%s] and may return no/partial data. Configured priorities[%s].",
-            prioritizedServers.keySet(), query, config.getPriorities()
-        ).emit();
-
+        log.warn(
+            "No servers found for query[%s] matching configured priorities[%s]. Available priorities[%s].",
+            query, config.getPriorities(), prioritizedServers.keySet()
+        );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setMetric("tierSelector/noServer", 1)
-                              .setDimension(DruidMetrics.DATASOURCE, String.valueOf(query.getDataSource()))
+                              .setDimension("dataSource", String.valueOf(query.getDataSource()))
+                              .setDimension("tierSelectorType", TYPE)
                               .setDimension("queryType", query.getType())
                               .setDimension("queryPriority", String.valueOf(query.context().getPriority()))
-                              .setDimension("serverPriorities", prioritizedServers.keySet().toString())
+                              .setDimensionIfNotNull("queryId", query.getId())
         );
       }
       return List.of();
     }
 
-    final List<QueryableDruidServer> selectedServers = super.pick(query, filteredPrioritizedServers, segment, numServersToPick);
+    final List<QueryableDruidServer> selectedServers = super.pick(query, candidatePrioritizedServers, segment, numServersToPick);
     log.debug("Selected servers[%s] for query[%s] from given servers[%s] and numServersToPick[%s]", selectedServers, query, prioritizedServers, numServersToPick);
     return selectedServers;
   }

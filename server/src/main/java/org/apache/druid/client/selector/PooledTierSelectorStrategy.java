@@ -25,9 +25,13 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,7 +44,8 @@ import java.util.Set;
  * Unlike other {@link TierSelectorStrategy} like {@link CustomTierSelectorStrategy}
  * which has a preference for priority order, this strategy treats all configured priorities equally
  * by combining their servers into a single selection pool and delegates to {@link ServerSelectorStrategy} to do
- * the server selection.
+ * the server selection. If no servers match the configured priorities in the pool, an empty server list is returned,
+ * which may cause queries to return partial or no data.
  * <p>
  * Example configuration:
  * <li> <code> druid.broker.select.tier=pooled </code> </li>
@@ -57,36 +62,39 @@ public class PooledTierSelectorStrategy extends AbstractTierSelectorStrategy
 
   private final ServerSelectorStrategy serverSelectorStrategy;
   private final PooledTierSelectorStrategyConfig config;
+  private final ServiceEmitter emitter;
   private final Set<Integer> configuredPriorities;
 
   @JsonCreator
   public PooledTierSelectorStrategy(
-      @JacksonInject ServerSelectorStrategy serverSelectorStrategy,
-      @JacksonInject PooledTierSelectorStrategyConfig config
+      @JacksonInject final ServerSelectorStrategy serverSelectorStrategy,
+      @JacksonInject final PooledTierSelectorStrategyConfig config,
+      @JacksonInject final ServiceEmitter emitter
   )
   {
     super(serverSelectorStrategy);
     this.serverSelectorStrategy = serverSelectorStrategy;
     this.config = config;
+    this.emitter = emitter;
     this.configuredPriorities = config.getPriorities();
   }
 
   @Override
   public <T> List<QueryableDruidServer> pick(
-      Query<T> query,
-      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
-      DataSegment segment,
-      int numServersToPick
+      @Nullable final Query<T> query,
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      final DataSegment segment,
+      final int numServersToPick
   )
   {
-    final Set<QueryableDruidServer> serverPool = new LinkedHashSet<>();
+    final Set<QueryableDruidServer> candidateServerPool = new LinkedHashSet<>();
 
     for (Int2ObjectMap.Entry<Set<QueryableDruidServer>> entry : prioritizedServers.int2ObjectEntrySet()) {
       final int priority = entry.getIntKey();
       final Set<QueryableDruidServer> servers = entry.getValue();
 
       if (configuredPriorities.contains(priority)) {
-        serverPool.addAll(servers);
+        candidateServerPool.addAll(servers);
       } else {
         log.debug(
             "Server priority[%d] not in the configured list of priorities[%s] so ignore servers[%s] for query[%s]",
@@ -95,17 +103,33 @@ public class PooledTierSelectorStrategy extends AbstractTierSelectorStrategy
       }
     }
 
-    if (serverPool.isEmpty()) {
-      log.makeAlert(
-          "No servers found in available servers with priorities[%s] for query[%s] and may return no/partial data. Configured priorities[%s].",
-          prioritizedServers.keySet(), query, config.getPriorities()
-      ).emit();
-
+    if (candidateServerPool.isEmpty()) {
+      if (query == null || query instanceof SegmentMetadataQuery) {
+        // Debug logging to reduce logging spam as these are typically system-generated segment metadata queries
+        log.debug(
+            "No server found for query[%s] from server priorities[%s]. Configured priorities[%s].",
+            query, prioritizedServers.keySet(), config.getPriorities()
+        );
+      } else {
+        log.warn(
+            "No servers found for query[%s] matching configured priorities[%s]. Available priorities[%s].",
+            query, config.getPriorities(), prioritizedServers.keySet()
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                              .setMetric("tierSelector/noServer", 1)
+                              .setDimension("dataSource", String.valueOf(query.getDataSource()))
+                              .setDimension("tierSelectorType", TYPE)
+                              .setDimension("queryType", query.getType())
+                              .setDimension("queryPriority", String.valueOf(query.context().getPriority()))
+                              .setDimensionIfNotNull("queryId", query.getId())
+        );
+      }
       return List.of();
     }
 
-    final List<QueryableDruidServer> selectedServers = serverSelectorStrategy.pick(query, serverPool, segment, numServersToPick);
-    log.debug("Selected servers[%s] for query[%s] from given servers[%s] and serverPool[%s]", selectedServers, query, prioritizedServers, serverPool);
+    final List<QueryableDruidServer> selectedServers = serverSelectorStrategy.pick(query, candidateServerPool, segment, numServersToPick);
+    log.debug("Selected servers[%s] for query[%s] from given servers[%s] and candidateServerPool[%s]", selectedServers, query, prioritizedServers, candidateServerPool);
     return selectedServers;
   }
 

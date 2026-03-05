@@ -59,6 +59,13 @@ public class TierSelectorStrategyTest
 
   private StubServiceEmitter serviceEmitter;
 
+  private static final Query SAMPLE_GROUPBY_QUERY = GroupByQuery.builder()
+                                                                .setDataSource("foo3")
+                                                                .setInterval(new MultipleIntervalSegmentSpec(List.of(Intervals.of("2000/3000"))))
+                                                                .setGranularity(Granularities.ALL)
+                                                                .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
+                                                                .build();
+
   @Before
   public void testSetup()
   {
@@ -658,12 +665,7 @@ public class TierSelectorStrategyTest
 
     // Should return null when no matching priorities
     Assert.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertNull(serverSelector.pick(GroupByQuery.builder()
-                                                      .setDataSource("foo3")
-                                                      .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
-                                                      .build(), CloneQueryMode.EXCLUDECLONES));
+    Assert.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
 
     serviceEmitter.verifyEmitted("tierSelector/noServer", 1);
 
@@ -707,7 +709,8 @@ public class TierSelectorStrategyTest
 
     TierSelectorStrategy strategy = new PooledTierSelectorStrategy(
         new RandomServerSelectorStrategy(),
-        new PooledTierSelectorStrategyConfig(Set.of(2, 0, -1))
+        new PooledTierSelectorStrategyConfig(Set.of(2, 0, -1)),
+        serviceEmitter
     );
 
     final ServerSelector serverSelector = new ServerSelector(
@@ -819,7 +822,8 @@ public class TierSelectorStrategyTest
 
     TierSelectorStrategy strategy = new PooledTierSelectorStrategy(
         new ConnectionCountServerSelectorStrategy(),
-        new PooledTierSelectorStrategyConfig(Set.of(0, 1, 2))
+        new PooledTierSelectorStrategyConfig(Set.of(0, 1, 2)),
+        serviceEmitter
     );
 
     ServerSelector selector = new ServerSelector(
@@ -902,7 +906,8 @@ public class TierSelectorStrategyTest
 
     TierSelectorStrategy strategy = new PooledTierSelectorStrategy(
         new ConnectionCountServerSelectorStrategy(),
-        new PooledTierSelectorStrategyConfig(Set.of(5, 6))
+        new PooledTierSelectorStrategyConfig(Set.of(5, 6)),
+        serviceEmitter
     );
 
     final ServerSelector serverSelector = new ServerSelector(
@@ -928,7 +933,8 @@ public class TierSelectorStrategyTest
 
     // Should return null since there are no matching priorities
     Assert.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertNull(serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+    Assert.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
+
     Assert.assertEquals(List.of(), serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
     Assert.assertEquals(List.of(), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
@@ -940,7 +946,8 @@ public class TierSelectorStrategyTest
         DruidException.class,
         () -> new PooledTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
-            new PooledTierSelectorStrategyConfig(Set.of())
+            new PooledTierSelectorStrategyConfig(Set.of()),
+            serviceEmitter
         )
     );
     Assert.assertEquals(

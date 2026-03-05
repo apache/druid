@@ -175,7 +175,7 @@ public class BrokerRealtimeSelectorModule implements DruidModule
         );
 
         log.info("Creating PooledTierSelectorStrategy for realtime servers with config[%s]", config);
-        return new PooledTierSelectorStrategy(realtimeServerSelectorStrategy, config);
+        return new PooledTierSelectorStrategy(realtimeServerSelectorStrategy, config, injector.getInstance(ServiceEmitter.class));
       } else {
         return configurator.configurate(properties, "druid.broker.realtime.select", TierSelectorStrategy.class);
       }
