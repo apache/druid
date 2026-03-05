@@ -62,7 +62,6 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
-import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
@@ -311,7 +310,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasValueMatching(Matchers.greaterThan(totalUsed)));
 
-    // performed incremental compaction: 1 previously compacted segment + 1 incrementally compacted segment
+    // performed minor compaction: 1 previously compacted segment + 1 incrementally compacted segment
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }

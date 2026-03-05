@@ -141,7 +141,7 @@ public class ClientCompactionIntervalSpecTest
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
     );
 
-    // Test with uncompactedSegments (incremental compaction)
+    // Test with uncompactedSegments (minor compaction)
     ClientCompactionIntervalSpec withSegments = new ClientCompactionIntervalSpec(interval, segments, "sha256hash");
     String json1 = mapper.writeValueAsString(withSegments);
     ClientCompactionIntervalSpec deserialized1 = mapper.readValue(json1, ClientCompactionIntervalSpec.class);

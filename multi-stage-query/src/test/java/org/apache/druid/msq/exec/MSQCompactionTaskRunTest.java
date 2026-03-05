@@ -582,7 +582,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   public void testMinorCompaction() throws Exception
   {
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
-    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+    Assume.assumeTrue("Minor compaction depends on concurrent lock", useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
     final CompactionTask compactionTask1 =
@@ -643,7 +643,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         "2014-01-01T02:00:30Z,c,3\n"
     );
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
-    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+    Assume.assumeTrue("Minor compaction depends on concurrent lock", useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(
         runTask(buildIndexTask(DEFAULT_PARSE_SPEC, rows, inputInterval, false)),
         9
@@ -690,7 +690,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   public void testMinorCompactionOverlappingInterval() throws Exception
   {
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
-    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+    Assume.assumeTrue("Minor compaction depends on concurrent lock", useConcurrentLocks);
 
     List<String> rows = new ArrayList<>();
     rows.add("2014-01-01T00:00:10Z,a1,11\n");
@@ -730,7 +730,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
             .build();
     ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
     Assert.assertEquals(
-        "Incremental compaction doesn't allow segments not completely within interval[2014-01-01T00:00:00.000Z/2014-01-01T08:00:00.000Z]",
+        "Minor compaction doesn't allow segments not completely within interval[2014-01-01T00:00:00.000Z/2014-01-01T08:00:00.000Z]",
         e.getMessage()
     );
   }

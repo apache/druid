@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.server.compaction.CompactionSimulateResult;
-import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;

@@ -552,7 +552,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * Creates input data schemas for compaction by grouping segments and generating {@link DataSchema}s.
    * When segment granularity is not specified, preserves original granularity and creates a schema
    * for each unified interval. When segment granularity is specified, creates a single schema for all
-   * segments. For incremental compaction, validates that all segments are completely within the target
+   * segments. For minor compaction, validates that all segments are completely within the target
    * interval and submits already-compacted segments via {@link MarkSegmentToUpgradeAction} for direct upgrade.
    *
    * @return map from {@link QuerySegmentSpec} to {@link DataSchema} for each group of segments to compact
@@ -589,7 +589,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
                             .build(
-                                "Incremental compaction doesn't allow segments not completely within interval[%s]",
+                                "Minor compaction doesn't allow segments not completely within interval[%s]",
                                 segmentProvider.interval
                             );
       }
@@ -597,7 +597,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       Map<QuerySegmentSpec, DataSchema> inputSchemas = new HashMap<>();
-      // if segment is already compacted in incremental compaction, they need to be upgraded directly, supported in MSQ
+      // if segment is already compacted in minor compaction, they need to be upgraded directly, supported in MSQ
       Set<DataSegment> segmentsToUpgrade = new HashSet<>();
 
       // original granularity

@@ -120,7 +120,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
 
   /**
    * Threshold percentage of uncompacted bytes to total bytes below which
-   * incremental compaction is eligible instead of full compaction.
+   * minor compaction is eligible instead of full compaction.
    * Default value is 0.
    */
   @JsonProperty
