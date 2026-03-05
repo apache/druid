@@ -45,6 +45,7 @@ import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDeco
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -552,7 +553,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
     // Wait for the schema cache to refresh for the datasource under test
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
