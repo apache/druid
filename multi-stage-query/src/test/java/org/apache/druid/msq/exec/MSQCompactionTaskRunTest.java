@@ -31,6 +31,7 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -728,7 +729,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         compactionTaskBuilder(Granularities.EIGHT_HOUR)
             .inputSpec(new MinorCompactionInputSpec(compactionInterval, uncompactedFromIndexTask), true)
             .build();
-    ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
+    DruidException e = Assert.assertThrows(DruidException.class, () -> runTask(compactionTask1));
     Assert.assertEquals(
         "Minor compaction doesn't allow segments not completely within interval[2014-01-01T00:00:00.000Z/2014-01-01T08:00:00.000Z]",
         e.getMessage()

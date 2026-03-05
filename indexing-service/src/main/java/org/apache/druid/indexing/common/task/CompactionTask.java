@@ -1306,9 +1306,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private boolean shouldUpgradeSegment(DataSegment s)
     {
       if (minorCompaction) {
-        return false;
-      } else {
         return !uncompactedSegments.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
+      } else {
+        return false;
       }
     }
 
