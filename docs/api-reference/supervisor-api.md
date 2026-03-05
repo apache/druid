@@ -1365,16 +1365,59 @@ Returns a snapshot of the current ingestion row counters for each task being man
 
 #### Response schema
 
-The response is structured as:
+The response is a nested map of task group IDs to task IDs to row stats:
 
-```text
-Map<String taskGroupId, Map<String taskId, RowStatsPayload>>
+```json
+{
+  "<taskGroupId>": {
+    "<taskId>": {
+      "movingAverages": { ... },
+      "totals": { ... }
+    }
+  }
+}
 ```
 
-- **taskGroupId**: String key representing the supervisor task group
-- **taskId**: Druid indexing task ID in that group
-- **RowStatsPayload**: Per-task row stats with `movingAverages` and `totals`; see [Row stats](../ingestion/tasks.md#row-stats) for field definitions
+- **taskGroupId** (string): Supervisor task group identifier
+- **taskId** (string): Druid indexing task identifier within that group
+- **movingAverages** / **totals**: Per-task row stats; see [Row stats](../ingestion/tasks.md#row-stats) for field definitions
 
+For example, a supervisor with two task groups:
+
+```json
+{
+  "0": {
+    "index_kafka_my_datasource_abc123": {
+      "movingAverages": {
+        "buildSegments": {
+          "5m": { "processed": 10.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "15m": { "processed": 5.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "1m": { "processed": 12.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 }
+        }
+      },
+      "totals": {
+        "buildSegments": { "processed": 2000, "processedWithError": 0, "thrownAway": 0, "unparseable": 0 }
+      }
+    }
+  },
+  "1": {
+    "index_kafka_my_datasource_def456": {
+      "movingAverages": {
+        "buildSegments": {
+          "5m": { "processed": 8.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "15m": { "processed": 4.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "1m": { "processed": 9.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 }
+        }
+      },
+      "totals": {
+        "buildSegments": { "processed": 1500, "processedWithError": 0, "thrownAway": 0, "unparseable": 0 }
+      }
+    }
+  }
+}
+```
+
+In this example, `"0"` and `"1"` are task group IDs, and `index_kafka_my_datasource_abc123` and `index_kafka_my_datasource_def456` are task IDs.
 
 #### URL
 
