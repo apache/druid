@@ -350,7 +350,7 @@ Druid can emit metrics that help you right-size merge buffers and related GroupB
 
 ##### Sizing `druid.query.groupBy.maxMergingDictionarySize`
 
-- `groupBy/maxMergeDictionarySize`: peak on-heap merge dictionary size in bytes for any single GroupBy query. If this approaches `druid.query.groupBy.maxMergingDictionarySize`, queries may spill to disk or fail. If this happens, consider increasing the dictionary size limit.
+- `groupBy/maxMergeDictionarySize`: peak on-heap merge dictionary size in bytes for any single GroupBy query. If this approaches `druid.query.groupBy.maxMergingDictionarySize`, queries may spill to disk if `druid.query.groupBy.maxOnDiskStorage` is configured or fail. If this happens, consider increasing the dictionary size limit.
 
 <a name="connection-pool"></a>
 
