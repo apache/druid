@@ -865,8 +865,8 @@ public class CompactSegmentsTest
                                               .withTuningConfig(getTuningConfig(3))
                                               .withEngine(engine)
                                               .withGranularitySpec(
-                                      new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                  )
+                                                  new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                                              )
                                               .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
@@ -901,10 +901,10 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withDimensionsSpec(
-                                            new UserCompactionTaskDimensionsConfig(
-                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
-                                            )
-                                        )
+                                                  new UserCompactionTaskDimensionsConfig(
+                                                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -968,10 +968,10 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withDimensionsSpec(
-                                            new UserCompactionTaskDimensionsConfig(
-                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
-                                            )
-                                        )
+                                                  new UserCompactionTaskDimensionsConfig(
+                                                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                                  )
+                                              )
                                               .withProjections(projections)
                                               .withEngine(engine)
                                               .build()
@@ -1056,8 +1056,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      true
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1147,8 +1151,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1289,11 +1297,11 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withTransformSpec(
-                                            new CompactionTransformSpec(
-                                                new SelectorDimFilter("dim1", "foo", null),
-                                                null
-                                            )
-                                        )
+                                                  new CompactionTransformSpec(
+                                                      new SelectorDimFilter("dim1", "foo", null),
+                                                      null
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );
@@ -1459,8 +1467,12 @@ public class CompactSegmentsTest
                                               .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
                                               .withTuningConfig(getTuningConfig(3))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.YEAR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withEngine(engine)
                                               .build()
     );

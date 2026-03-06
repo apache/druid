@@ -1020,11 +1020,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimName) && !includeTimeAsDimension) {
                        return null;
                      } else {
-                       return Preconditions.checkNotNull(
-                           dimensionSchemaMap.get(dimName),
-                           "Cannot find dimension[%s] from dimensionSchemaMap",
-                           dimName
-                       );
+                       return dimensionSchemaMap.get(dimName);
                      }
                    })
                    .filter(Objects::nonNull)

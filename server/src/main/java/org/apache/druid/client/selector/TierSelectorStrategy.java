@@ -35,10 +35,10 @@ import java.util.Set;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = HighestPriorityTierSelectorStrategy.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "highestPriority", value = HighestPriorityTierSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "lowestPriority", value = LowestPriorityTierSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "custom", value = CustomTierSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "preferred", value = PreferredTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = HighestPriorityTierSelectorStrategy.TYPE, value = HighestPriorityTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = LowestPriorityTierSelectorStrategy.TYPE, value = LowestPriorityTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = CustomTierSelectorStrategy.TYPE, value = CustomTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = PreferredTierSelectorStrategy.TYPE, value = PreferredTierSelectorStrategy.class),
 })
 public interface TierSelectorStrategy
 {

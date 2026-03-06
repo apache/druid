@@ -1625,8 +1625,8 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
         true,
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("A", "A"),
-            new LongSumAggregatorFactory("C", "C"),
-            },
+            new LongSumAggregatorFactory("C", "C")
+        },
         tmpDirMerged,
         null,
         indexSpec,

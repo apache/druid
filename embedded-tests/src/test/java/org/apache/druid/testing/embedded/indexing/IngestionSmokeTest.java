@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -401,6 +402,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
+    );
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasService("druid/broker")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 

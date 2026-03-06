@@ -66,8 +66,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         WindowFrame.rows(0, 0),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
-            new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            }
+            new DoubleMaxAggregatorFactory("maxFromInt", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -92,8 +92,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         WindowFrame.rows(-1, 2),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
-            new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            }
+            new DoubleMaxAggregatorFactory("maxFromInt", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -118,8 +118,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         WindowFrame.rows(0, 2),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
-            new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            }
+            new DoubleMaxAggregatorFactory("maxFromInt", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -144,8 +144,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         WindowFrame.rows(-2, 0),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
-            new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            }
+            new DoubleMaxAggregatorFactory("maxFromInt", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -171,8 +171,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -199,8 +199,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -227,8 +227,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -255,8 +255,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -283,8 +283,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -311,8 +311,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()
@@ -339,8 +339,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
-            new LongMinAggregatorFactory("longMin", "intCol"),
-            }
+            new LongMinAggregatorFactory("longMin", "intCol")
+        }
     );
 
     new RowsAndColumnsHelper()

@@ -28,6 +28,8 @@ import java.util.Comparator;
  */
 public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  public static final String TYPE = "lowestPriority";
+
   @JsonCreator
   public LowestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
@@ -38,5 +40,11 @@ public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStra
   public Comparator<Integer> getComparator()
   {
     return Comparator.naturalOrder();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LowestPriorityTierSelectorStrategy{}";
   }
 }

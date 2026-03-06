@@ -104,7 +104,8 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
             true,
             Period.seconds(5),
             null, null, null, null, null, null, null, null,
-            false
+            false,
+            null
         ),
         Map.of(),
         false,

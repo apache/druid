@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -65,7 +66,6 @@ import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -75,6 +75,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -88,6 +90,7 @@ import org.apache.druid.testing.tools.EventSerializer;
 import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -393,14 +396,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
-  @MethodSource("getEngine")
-  @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules(CompactionEngine compactionEngine)
+  @Test
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
   {
-    // Configure cluster with storeCompactionStatePerSegment=false
+    // Configure cluster with MSQ engine and storeCompactionStatePerSegment=false
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(
-            new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)
+            new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ, false)
         )
     );
     Assertions.assertTrue(updateResponse.isSuccess());
@@ -463,23 +465,18 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null
     );
 
-    InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
-                                                                            .segmentGranularityRules(List.of(hourRule, dayRule))
-                                                                            .tuningConfigRules(List.of(tuningConfigRule))
-                                                                            .deletionRules(List.of(deletionRule));
-
-    if (compactionEngine == CompactionEngine.NATIVE) {
-      ruleProvider = ruleProvider.ioConfigRules(
-          List.of(new ReindexingIOConfigRule("dropExisting", null, Period.days(7), new UserCompactionTaskIOConfig(true)))
-      );
-    }
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(hourRule, dayRule))
+        .tuningConfigRules(List.of(tuningConfigRule))
+        .deletionRules(List.of(deletionRule))
+        .build();
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
-        ruleProvider.build(),
-        compactionEngine,
+        ruleProvider,
         null,
         null,
         null,
@@ -558,7 +555,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                     .deletionRules(List.of(deletionRule))
                                     .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
-        compactionEngine,
         null,
         null,
         null,
@@ -566,6 +562,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
+
+    // vsf storage monitor metrics are only emitted for MSQ ingestion, so picked this compaction test at random to test
+    LatchableEmitter emitter = indexer.latchableEmitter();
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+
     waitForAllCompactionTasksToFinish();
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -575,6 +576,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     // Verify the correct rows were filtered
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
+
+    List<ServiceMetricEvent> events = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_COUNT);
+    long count = 0;
+    for (ServiceMetricEvent event : events) {
+      count += event.getValue().longValue();
+      Assertions.assertNotNull(event.getUserDims().get("taskId"));
+      Assertions.assertNotNull(event.getUserDims().get("groupId"));
+    }
+    Assertions.assertTrue(count > 0);
   }
 
   /**
@@ -652,6 +662,68 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         finalSegmentCount,
         "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
     );
+  }
+
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_compaction_legacy_string_discovery_sparse_column(
+      CompactionEngine compactionEngine
+  )
+  {
+    // test for a bug encountered where ordering contained columns not in dimensions list
+    configureCompaction(compactionEngine, null);
+    String jsonallnull =
+        """
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "a"}
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "b"}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonallnull)
+        .isoTimestampColumn("timestamp")
+        .dataSchema(builder -> builder.withDimensions(DimensionsSpec.builder().build()))
+        .segmentGranularity("DAY");
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+
+    // switch to year granularity to trigger compaction
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+            )
+            .withTuningConfig(createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null)))
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+  }
+
+  private int getTotalRowCount()
+  {
+    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
+    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
+    List<Map<String, Object>> rows = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        result.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    return ((Number) rows.get(0).get("cnt")).intValue();
   }
 
   private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
