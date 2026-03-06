@@ -30,7 +30,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -39,7 +38,6 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -149,7 +147,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   // Locking policy: structural writes (add/remove/update entries) and READ ALL operations (iteration, size())
   // require workerStateLock. Point reads (.get(), .containsKey() on a known key) are safe without it,
   // as ConcurrentHashMap guarantees atomic reads without external synchronization.
-  @GuardedBy("workerStateLock")
   private final ConcurrentHashMap<String, WorkerHolder> workers = new ConcurrentHashMap<>();
 
   // Executor for syncing state of each worker.
@@ -257,24 +254,32 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     }
   }
 
-  /**
-   * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource}
-   */
-  @GuardedBy("workerStateLock")
-  Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  private ImmutableMap<String, WorkerHolder> getImmutableWorkersCopy()
   {
-    return Maps.transformEntries(
-        Maps.filterEntries(
-            workers,
-            input -> input.getValue().getState() == WorkerHolder.State.READY &&
-                     input.getValue().isInitialized() &&
-                     input.getValue().isEnabled()
-        ),
-        (String key, WorkerHolder value) -> value.toImmutable()
-    );
+    ImmutableMap<String, WorkerHolder> workersCopy;
+    synchronized (workerStateLock) {
+      workersCopy = ImmutableMap.copyOf(workers);
+    }
+    return workersCopy;
   }
 
-  @GuardedBy("workerStateLock")
+  ImmutableMap<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  {
+    synchronized (workerStateLock) {
+      return ImmutableMap.copyOf(
+          Maps.transformEntries(
+              Maps.filterEntries(
+                  workers,
+                  input -> input.getValue().getState() == WorkerHolder.State.READY &&
+                           input.getValue().isInitialized() &&
+                           input.getValue().isEnabled()
+              ),
+              (String key, WorkerHolder value) -> value.toImmutable()
+          )
+      );
+    }
+  }
+
   private ImmutableWorkerInfo findWorkerToRunTask(Task task)
   {
     WorkerBehaviorConfig workerConfig = workerConfigRef.get();
@@ -287,7 +292,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     return strategy.findWorkerForTask(
         config,
-        ImmutableMap.copyOf(getWorkersEligibleToRunTasks()),
+        getWorkersEligibleToRunTasks(),
         task
     );
   }
@@ -307,10 +312,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     log.info("Assigning task[%s] to worker[%s]", taskId, workerHost);
 
     final HttpRemoteTaskRunnerWorkItem workItem = tasks.get(taskId);
-    final WorkerHolder workerHolder;
-    synchronized (workerStateLock) {
-      workerHolder = workers.get(workerHost);
-    }
+    // Point read on ConcurrentHashMap: safe without workerStateLock
+    final WorkerHolder workerHolder = workers.get(workerHost);
 
     Preconditions.checkState(workItem != null, "No task item found for task[%s]", taskId);
 
@@ -609,6 +612,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     final WorkerHolder workerEntry;
     synchronized (workerStateLock) {
       workerEntry = workers.remove(worker.getHost());
+      if (workerEntry != null && workerEntry.getState() == WorkerHolder.State.BLACKLISTED) {
+        blackListedWorkersCount.decrementAndGet();
+      }
     }
 
     // Perform the cleanup operations outside the lock to avoid excessive locking/deadlock
@@ -732,12 +738,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   @VisibleForTesting
   void syncMonitoring()
   {
-    // Ensure that the collection is not being modified during iteration. Iterate over a copy
-    final Set<Map.Entry<String, WorkerHolder>> workerEntrySet;
-    synchronized (workerStateLock) {
-      workerEntrySet = ImmutableSet.copyOf(workers.entrySet());
-    }
-    for (Map.Entry<String, WorkerHolder> e : workerEntrySet) {
+    final ImmutableMap<String, WorkerHolder> workersCopy = getImmutableWorkersCopy();
+    for (Map.Entry<String, WorkerHolder> e : workersCopy.entrySet()) {
       WorkerHolder workerHolder = e.getValue();
       if (workerHolder.getUnderlyingSyncer().needsReset()) {
         synchronized (workerStateLock) {
@@ -763,17 +765,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   {
     Preconditions.checkArgument(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    synchronized (workerStateLock) {
-      Map<String, Object> result = Maps.newHashMapWithExpectedSize(workers.size());
-      for (Map.Entry<String, WorkerHolder> e : ImmutableSet.copyOf(workers.entrySet())) {
-        WorkerHolder serverHolder = e.getValue();
-        result.put(
-            e.getKey(),
-            serverHolder.getUnderlyingSyncer().getDebugInfo()
-        );
-      }
-      return result;
+    final ImmutableMap<String, WorkerHolder> workersCopy = getImmutableWorkersCopy();
+    Map<String, Object> result = Maps.newHashMapWithExpectedSize(workersCopy.size());
+    for (Map.Entry<String, WorkerHolder> e : workersCopy.entrySet()) {
+      result.put(
+          e.getKey(),
+          e.getValue().getUnderlyingSyncer().getDebugInfo()
+      );
     }
+    return result;
   }
 
   private void checkAndRemoveWorkersFromBlackList()
@@ -805,12 +805,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     }
   }
 
-  @GuardedBy("workerStateLock")
   private boolean shouldRemoveNodeFromBlackList(WorkerHolder workerHolder)
   {
     if (blackListedWorkersCount.get() > workers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0)) {
       log.info(
-          "Removing [%s] from blacklist because percentage of blacklisted workers exceeds [%d]",
+          "Removing worker[%s] from blacklist because percentage of blacklisted workers exceeds [%d]",
           workerHolder.getWorker(),
           config.getMaxPercentageBlacklistWorkers()
       );
@@ -828,15 +827,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     long remainingMillis = blacklistedUntil.getMillis() - System.currentTimeMillis();
     if (remainingMillis <= 0) {
-      log.info("Removing [%s] from blacklist because backoff time elapsed", workerHolder.getWorker());
+      log.info("Removing worker[%s] from blacklist because backoff time elapsed", workerHolder.getWorker());
       return true;
     }
 
-    log.info("[%s] still blacklisted for [%,ds]", workerHolder.getWorker(), remainingMillis / 1000);
+    log.info("Worker[%s] still blacklisted for [%,ds]", workerHolder.getWorker(), remainingMillis / 1000);
     return false;
   }
 
-  @GuardedBy("workerStateLock")
   private void blacklistWorkerIfNeeded(TaskStatus taskStatus, WorkerHolder workerHolder)
   {
     if (taskStatus.isSuccess()) {
@@ -876,22 +874,19 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   @Override
   public Collection<ImmutableWorkerInfo> getWorkers()
   {
-    synchronized (workerStateLock) {
-      return workers.values().stream().map(WorkerHolder::toImmutable).collect(Collectors.toList());
-    }
+    return getImmutableWorkersCopy().values().stream()
+                                   .map(WorkerHolder::toImmutable)
+                                   .collect(Collectors.toList());
   }
 
   @Override
   public Collection<Worker> getLazyWorkers()
   {
-    // Want this synchronized with lazy-worker routine
-    synchronized (workerStateLock) {
-      return workers.values()
-                    .stream()
-                    .filter(w -> w.getState() == WorkerHolder.State.LAZY)
-                    .map(WorkerHolder::getWorker)
-                    .collect(Collectors.toList());
-    }
+    return getImmutableWorkersCopy().values()
+                                   .stream()
+                                   .filter(w -> w.getState() == WorkerHolder.State.LAZY)
+                                   .map(WorkerHolder::getWorker)
+                                   .collect(Collectors.toList());
   }
 
   @Override
@@ -900,7 +895,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     // Search for new workers to mark lazy.
     // Status lock is used to prevent any tasks being assigned to workers while we mark them lazy
     synchronized (workerStateLock) {
-      AtomicInteger numMarkedLazy = new AtomicInteger(getLazyWorkers().size());
+      long lazyCount = workers.values().stream()
+                              .filter(w -> w.getState() == WorkerHolder.State.LAZY)
+                              .count();
+      AtomicInteger numMarkedLazy = new AtomicInteger((int) lazyCount);
       AtomicBoolean reachedMax = new AtomicBoolean(false);
 
       for (String workerHostKey : workers.keySet()) {
@@ -928,11 +926,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       }
 
       log.info("Marked [%d] workers as lazy", numMarkedLazy.get());
-      return getLazyWorkers();
+      return workers.values()
+                    .stream()
+                    .filter(w -> w.getState() == WorkerHolder.State.LAZY)
+                    .map(WorkerHolder::getWorker)
+                    .collect(Collectors.toList());
     }
   }
 
-  @GuardedBy("workerStateLock")
   private boolean isWorkerOkForMarkingLazy(WorkerHolder workerHolder)
   {
     // Check that worker is not already lazy, and does not have any in-flight tasks being assigned to it.
@@ -983,9 +984,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       worker = taskRunnerWorkItem.getWorker();
     }
 
-    // Point read: ConcurrentHashMap.containsKey() is safe without workerStateLock.
-    //noinspection FieldAccessNotGuarded
-    if (worker == null || !workers.containsKey(worker.getHost())) {
+    // Point read on ConcurrentHashMap: safe without workerStateLock
+    boolean workerOnline = worker != null && workers.containsKey(worker.getHost());
+    if (!workerOnline) {
       // Worker is not running this task, it might be available in deep storage
       return Optional.absent();
     } else {
@@ -1023,9 +1024,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       worker = taskRunnerWorkItem.getWorker();
     }
 
-    // Point read: ConcurrentHashMap.containsKey() is safe without workerStateLock.
-    //noinspection FieldAccessNotGuarded
-    if (worker == null || !workers.containsKey(worker.getHost())) {
+    // Point read on ConcurrentHashMap: safe without workerStateLock
+    boolean workerOnline = worker != null && workers.containsKey(worker.getHost());
+    if (!workerOnline) {
       // Worker is not running this task, it might be available in deep storage
       return Optional.absent();
     } else {
@@ -1071,7 +1072,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   {
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
-        throw new ISE("Listener [%s] already registered", listener.getListenerId());
+        throw new ISE("Listener[%s] already registered", listener.getListenerId());
       }
     }
 
@@ -1090,7 +1091,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       });
     }
 
-    log.info("Registered listener [%s]", listener.getListenerId());
+    log.info("Registered listener[%s]", listener.getListenerId());
     listeners.add(listenerPair);
   }
 
@@ -1100,7 +1101,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs.getListenerId().equals(listenerId)) {
         listeners.remove(pair);
-        log.info("Unregistered listener [%s]", listenerId);
+        log.info("Unregistered listener[%s]", listenerId);
         return;
       }
     }
@@ -1200,12 +1201,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           }
 
           // Mark this worker as unassignable while task is being assigned
+          final ImmutableWorkerInfo finalWorkerToAssign = workerToAssign;
           workers.compute(
               workerToAssign.getWorker().getHost(), (key, entry) -> {
                 Preconditions.checkState(
                     entry != null,
                     "Expected selected worker[%s] to be available",
-                    entry.getWorker().getHost()
+                    finalWorkerToAssign.getWorker().getHost()
                 );
                 Preconditions.checkState(
                     entry.getState() == WorkerHolder.State.READY,
@@ -1313,8 +1315,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         (key, entry) -> {
           if (entry != null) {
             if (entry.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-              // Point read: ConcurrentHashMap.get() is safe without workerStateLock.
-              //noinspection FieldAccessNotGuarded
               workerHolderRunningTaskRef.set(workers.get(entry.getWorker().getHost()));
             } else if (entry.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
               wasComplete.set(true);
@@ -1445,24 +1445,20 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
   {
-    synchronized (workerStateLock) {
-      return workers.values()
-                    .stream()
-                    .filter(w -> w.getState() == WorkerHolder.State.BLACKLISTED)
-                    .map(WorkerHolder::toImmutable)
-                    .collect(Collectors.toList());
-    }
+    return getImmutableWorkersCopy().values()
+                                   .stream()
+                                   .filter(w -> w.getState() == WorkerHolder.State.BLACKLISTED)
+                                   .map(WorkerHolder::toImmutable)
+                                   .collect(Collectors.toList());
   }
 
   public Collection<ImmutableWorkerInfo> getPendingAssignWorkers()
   {
-    synchronized (workerStateLock) {
-      return workers.values()
-                    .stream()
-                    .filter(w -> w.getState() == WorkerHolder.State.PENDING_ASSIGN)
-                    .map(WorkerHolder::toImmutable)
-                    .collect(Collectors.toList());
-    }
+    return getImmutableWorkersCopy().values()
+                                   .stream()
+                                   .filter(w -> w.getState() == WorkerHolder.State.PENDING_ASSIGN)
+                                   .map(WorkerHolder::toImmutable)
+                                   .collect(Collectors.toList());
   }
 
   @Override
@@ -1566,7 +1562,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                     if (worker.getHost().equals(taskEntry.getWorker().getHost())) {
                       if (!announcement.getTaskLocation().equals(taskEntry.getLocation())) {
                         log.info(
-                            "Task[%s] location changed on worker[%s]. new location[%s]",
+                            "Task[%s] location changed on worker[%s]. New location[%s]",
                             taskId,
                             worker.getHost(),
                             announcement.getTaskLocation()
@@ -1707,17 +1703,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   public Map<String, Long> getIdleTaskSlotCount()
   {
     Map<String, Long> totalIdlePeons = new HashMap<>();
-    synchronized (workerStateLock) {
-      for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
-        String workerCategory = worker.getWorker().getCategory();
-        int workerAvailableCapacity = worker.getAvailableCapacity();
-        totalIdlePeons.compute(
-            workerCategory,
-            (category, availableCapacity) -> availableCapacity == null
-                                             ? workerAvailableCapacity
-                                             : availableCapacity + workerAvailableCapacity
-        );
-      }
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
+      String workerCategory = worker.getWorker().getCategory();
+      int workerAvailableCapacity = worker.getAvailableCapacity();
+      totalIdlePeons.compute(
+          workerCategory,
+          (category, availableCapacity) -> availableCapacity == null
+                                           ? workerAvailableCapacity
+                                           : availableCapacity + workerAvailableCapacity
+      );
     }
 
     return totalIdlePeons;
