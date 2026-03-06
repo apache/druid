@@ -4807,7 +4807,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT)
               .virtualColumns(
-                  expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                  expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+                  expressionVirtualColumn("v1", "1", ColumnType.LONG)
               )
               .aggregators(
                   aggregators(
@@ -4835,7 +4836,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           not(equality("dim1", "1", ColumnType.STRING))
                       ),
                       new FilteredAggregatorFactory(
-                          new CountAggregatorFactory("a5"),
+                          new LongSumAggregatorFactory("a5", "v1"),
                           not(equality("dim1", "1", ColumnType.STRING))
                       ),
                       new FilteredAggregatorFactory(
@@ -4873,8 +4874,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               equality("dim2", "a", ColumnType.STRING),
                               equality("dim1", "b", ColumnType.STRING)
                           )
-                      )
+                      ),
+                      new CountAggregatorFactory("a12")
                   )
+              )
+              .postAggregators(
+                  expressionPostAgg("p0", "nvl(\"a5\",case_searched((\"a12\" > 0),0,null))", ColumnType.LONG),
+                  expressionPostAgg("p1", "nvl(\"a8\",case_searched((\"a12\" > 0),0,null))", ColumnType.LONG)
               );
     testQuery(
         "SELECT "
@@ -4912,16 +4918,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "1", ColumnType.LONG)
+                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
                         .setAggregatorSpecs(aggregators(
                             new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0"),
+                                new LongSumAggregatorFactory("a0", "v0"),
                                 not(equality("dim1", "1", ColumnType.STRING))
                             ),
-                            new LongSumAggregatorFactory("a1", "cnt")
+                            new LongSumAggregatorFactory("a1", "cnt"),
+                            new CountAggregatorFactory("a2")
                         ))
                         .setPostAggregatorSpecs(
-                            expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.LONG)
+                            expressionPostAgg(
+                                "p0",
+                                "(nvl(\"a0\",case_searched((\"a2\" > 0),0,null)) + \"a1\")",
+                                ColumnType.LONG
+                            )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4959,11 +4973,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new LongSumAggregatorFactory("a0", "v0"),
                                 not(equality("dim1", "1", ColumnType.STRING))
                             ),
-                            new LongSumAggregatorFactory("a1", "cnt")
+                            new LongSumAggregatorFactory("a1", "cnt"),
+                            new CountAggregatorFactory("a2")
                         )
                     )
                     .setPostAggregatorSpecs(
-                        expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.LONG)
+                        expressionPostAgg("p0", "(nvl(\"a0\",case_searched((\"a2\" > 0),0,null)) + \"a1\")", ColumnType.LONG)
                     )
                     .setContext(QUERY_CONTEXT_DEFAULT)
                     .build()
@@ -9202,6 +9217,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     "v0",
                                                     "((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000))",
                                                     ColumnType.LONG
+                                                ),
+                                                expressionVirtualColumn(
+                                                    "v1",
+                                                    "1",
+                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
@@ -9213,7 +9233,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setAggregatorSpecs(
                                                 aggregators(
                                                     new FilteredAggregatorFactory(
-                                                        new CountAggregatorFactory("a0"),
+                                                        new LongSumAggregatorFactory("a0", "v1"),
                                                         range(
                                                             "__time",
                                                             ColumnType.LONG,
@@ -9223,8 +9243,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                             true
                                                         )
                                                     ),
+                                                    new CountAggregatorFactory("a1"),
                                                     new GroupingAggregatorFactory(
-                                                        "a1",
+                                                        "a2",
                                                         ImmutableList.of("v0", "dim1")
                                                     )
                                                 )
@@ -9245,22 +9266,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             aggregators(
                                 new FilteredAggregatorFactory(
                                     new LongMinAggregatorFactory("_a0", "a0"),
-                                    equality("a1", 3L, ColumnType.LONG)
+                                    equality("a2", 3L, ColumnType.LONG)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a1"),
                                     and(
                                         notNull("d1"),
-                                        equality("a1", 0L, ColumnType.LONG),
+                                        equality("a2", 0L, ColumnType.LONG),
                                         expressionFilter("\"d0\"")
                                     )
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongMinAggregatorFactory("_a2", "a1"),
+                                    equality("a2", 3L, ColumnType.LONG)
                                 )
                             )
                         )
                         .setPostAggregatorSpecs(
                             expressionPostAgg(
                                 "p0",
-                                "(CAST(\"_a0\", 'DOUBLE') / \"_a1\")",
+                                "(CAST(nvl(\"_a0\",case_searched((\"_a2\" > 0),0,null)), 'DOUBLE') / \"_a1\")",
                                 ColumnType.DOUBLE
                             )
                         )

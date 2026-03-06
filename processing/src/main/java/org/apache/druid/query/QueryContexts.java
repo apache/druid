@@ -97,23 +97,6 @@ public class QueryContexts
   // behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
   // out of memory
   public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
-  /**
-   * Context parameter to enable/disable the extended filtered sum rewrite logic.
-   *
-   * Controls the rewrite of:
-   * <pre>
-   *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
-   * to
-   *    SUM(COL1) FILTER (COND)
-   * </pre>
-   * managed by {@link DruidAggregateCaseToFilterRule}. Defaults to true for performance,
-   * but may produce incorrect results when the condition never matches (expected 0).
-   * This is for testing and can be removed once a correct and high-performance rewrite
-   * is implemented.
-   */
-  public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
-
-
   // projection context keys
   public static final String NO_PROJECTIONS = "noProjections";
   public static final String FORCE_PROJECTION = "forceProjections";
@@ -175,7 +158,6 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
-  public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
 
