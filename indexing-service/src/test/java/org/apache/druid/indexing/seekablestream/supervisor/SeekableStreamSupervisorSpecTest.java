@@ -91,6 +91,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
 
     EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
+    EasyMock.expect(spec.getDataSources()).andReturn(ImmutableList.of(DATASOURCE)).anyTimes();
   }
 
   @Test
@@ -418,7 +419,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(10),
             LagBasedAutoScalerConfig.class
@@ -481,7 +481,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -536,7 +535,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -582,7 +580,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(2);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(3),
             LagBasedAutoScalerConfig.class
@@ -630,7 +627,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleInProperties(),
             LagBasedAutoScalerConfig.class
@@ -688,7 +684,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             modifiedScaleInProps,
             LagBasedAutoScalerConfig.class
@@ -751,7 +746,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleInProperties(),
             LagBasedAutoScalerConfig.class
@@ -1207,7 +1201,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -1273,7 +1266,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -1327,7 +1319,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
