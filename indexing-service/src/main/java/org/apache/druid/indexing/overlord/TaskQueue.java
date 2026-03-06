@@ -731,6 +731,12 @@ public class TaskQueue
 
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
+    //
+    // Clear the thread interrupt flag before the write so it can complete even during overlord shutdown.
+    // Without this, an interrupted thread would fail the write immediately (0 retries), leaving the task
+    // as active in the metadata store and causing it to appear stuck in WAITING indefinitely. The flag is
+    // restored in the finally block so the calling executor's shutdown handling is not affected.
+    final boolean wasInterrupted = Thread.interrupted();
     try {
       // The code block is only called when a task completes,
       // and we need to check to make sure the metadata store has the correct status stored.
@@ -748,6 +754,11 @@ public class TaskQueue
          .addData("task", task.getId())
          .addData("statusCode", taskStatus.getStatusCode())
          .emit();
+    }
+    finally {
+      if (wasInterrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
 
     shutdownTaskOnRunner(task.getId(), reasonFormat, args);

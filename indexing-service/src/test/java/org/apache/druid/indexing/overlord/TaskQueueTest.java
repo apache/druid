@@ -193,7 +193,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testManageQueuedTasksDoesNothingWhenInactive() throws Exception
+  public void testManageQueuedTasksDoesNothingWhenInactive()
   {
     // Add a task to the queue while active
     final TestTask task = new TestTask("t1", Intervals.of("2021-01/P1M"));
@@ -638,6 +638,47 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertFalse(taskInQueueAsString.contains(password));
 
     Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
+  }
+
+  @Test
+  public void testShutdownPersistsStatus_andRestoresInterruptFlag_whenThreadIsInterrupted()
+  {
+    // Regression test: notifyStatus() must persist terminal status to the metadata store even when the calling
+    // thread is interrupted (e.g., executor threads interrupted during overlord shutdown), and must restore
+    // the interrupt flag afterward so the calling executor's shutdown handling is not broken.
+    final HeapMemoryTaskStorage storage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    final TaskQueue queue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        storage,
+        new SimpleTaskRunner(serviceEmitter),
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    queue.setActive(true);
+
+    final String reason = "Killing task for graceful shutdown";
+    final TestTask task = new TestTask("interrupt-test-task", Intervals.of("2021-01-01/P1D"));
+    queue.add(task);
+
+    Thread.currentThread().interrupt();
+    queue.shutdown(task.getId(), reason);
+
+    Assert.assertTrue(
+        "Thread interrupt flag must be restored after notifyStatus()",
+        Thread.currentThread().isInterrupted()
+    );
+    // Clear the interrupt so the test framework is not affected.
+    Thread.interrupted();
+
+    final Optional<TaskStatus> status = storage.getStatus(task.getId());
+    Assert.assertTrue(status.isPresent());
+    Assert.assertEquals(TaskState.FAILED, status.get().getStatusCode());
+    Assert.assertEquals(reason, status.get().getErrorMsg());
   }
 
   @Test
