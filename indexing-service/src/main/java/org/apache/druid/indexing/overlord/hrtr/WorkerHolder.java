@@ -65,7 +65,7 @@ public class WorkerHolder
   public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
 
   private final Worker worker;
-  private Worker disabledWorker;
+  private volatile Worker disabledWorker;
 
   protected final AtomicBoolean disabled;
   private final AtomicBoolean syncedAtleastOnce = new AtomicBoolean(false);
@@ -89,9 +89,16 @@ public class WorkerHolder
 
   public enum State
   {
+    /** Worker is online and ready to accept new tasks. */
     READY,
+
+    /** A task has been submitted to this worker, but the task hasn't been acknowledged by the worker yet. */
     PENDING_ASSIGN,
+
+    /** Worker has exceeded the failure threshold and will not receive new tasks until the backoff period elapses. */
     BLACKLISTED,
+
+    /** Worker has no running tasks and has been marked as reapable by the auto-scaler. */
     LAZY
   }
 
