@@ -19,7 +19,11 @@
 
 package druid
 
-import "github.com/datainfrahq/druid-operator/apis/druid/v1alpha1"
+import (
+	"sort"
+
+	"github.com/datainfrahq/druid-operator/apis/druid/v1alpha1"
+)
 
 var (
 	druidServicesOrder = []string{historical, overlord, middleManager, indexer, broker, coordinator, router}
@@ -47,7 +51,9 @@ func getNodeSpecsByOrder(m *v1alpha1.Druid) []*ServiceGroup {
 	allScaledServiceSpecs := make([]*ServiceGroup, 0, len(m.Spec.Nodes))
 
 	for _, t := range druidServicesOrder {
-		allScaledServiceSpecs = append(allScaledServiceSpecs, scaledServiceSpecsByNodeType[t]...)
+		specs := scaledServiceSpecsByNodeType[t]
+		sort.Slice(specs, func(i, j int) bool { return specs[i].key < specs[j].key })
+		allScaledServiceSpecs = append(allScaledServiceSpecs, specs...)
 	}
 
 	return allScaledServiceSpecs
