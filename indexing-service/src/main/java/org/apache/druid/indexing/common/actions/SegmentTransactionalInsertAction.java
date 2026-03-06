@@ -259,7 +259,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-    return retVal;
+
+    if (shouldNotRetryFailure(retVal, task, toolbox)) {
+      return SegmentPublishResult.fail(retVal.getErrorMsg());
+    } else {
+      return retVal;
+    }
   }
 
   private void checkWithSegmentLock()
@@ -321,6 +326,19 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }));
     return segmentsMap;
+  }
+
+  /**
+   * A failed publish action should be retried only if there is another task
+   * waiting to publish offsets for an overlapping set of partitions.
+   */
+  private boolean shouldNotRetryFailure(SegmentPublishResult result, Task task, TaskActionToolbox toolbox)
+  {
+    if (result.isSuccess() || !result.isRetryable() || startMetadata != null) {
+      return false;
+    }
+
+    return toolbox.getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(supervisorId, task.getId(), startMetadata);
   }
 
   @Override

@@ -219,11 +219,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+
     if (shouldNotRetryFailure(retVal, task, toolbox)) {
       return SegmentPublishResult.fail(retVal.getErrorMsg());
+    } else {
+      return retVal;
     }
-
-    return retVal;
   }
 
   /**
