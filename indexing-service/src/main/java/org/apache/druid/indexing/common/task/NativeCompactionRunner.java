@@ -37,9 +37,11 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -86,7 +88,7 @@ public class NativeCompactionRunner implements CompactionRunner
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemaMap
+      Map<QuerySegmentSpec, DataSchema> inputSchemas
   )
   {
     // Virtual columns in filter rules are not supported by native compaction
@@ -96,6 +98,10 @@ public class NativeCompactionRunner implements CompactionRunner
       return CompactionConfigValidationResult.failure(
           "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead."
       );
+    }
+    if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
+      return CompactionConfigValidationResult.failure(
+          "Minor compaction is not supported by Native  compaction engine. Use MSQ compaction engine instead.");
     }
     return CompactionConfigValidationResult.success();
   }
@@ -107,7 +113,7 @@ public class NativeCompactionRunner implements CompactionRunner
    */
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSpecs(
-      Map<Interval, DataSchema> intervalDataSchemaMap,
+      Map<QuerySegmentSpec, DataSchema> inputSchemas,
       final TaskToolbox toolbox,
       final CompactionIOConfig ioConfig,
       final PartitionConfigurationManager partitionConfigurationManager,
@@ -117,18 +123,18 @@ public class NativeCompactionRunner implements CompactionRunner
   {
     final CompactionTask.CompactionTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
 
-    return intervalDataSchemaMap.entrySet().stream().map((dataSchema) -> new ParallelIndexIngestionSpec(
-                                        dataSchema.getValue(),
-                                        createIoConfig(
-                                            toolbox,
-                                            dataSchema.getValue(),
-                                            dataSchema.getKey(),
-                                            coordinatorClient,
-                                            segmentCacheManagerFactory,
-                                            ioConfig
-                                        ),
-                                        compactionTuningConfig
-                                    )
+    return inputSchemas.entrySet().stream().map((dataSchema) -> new ParallelIndexIngestionSpec(
+                                                    dataSchema.getValue(),
+                                                    createIoConfig(
+                                                        toolbox,
+                                                        dataSchema.getValue(),
+                                                        JodaUtils.umbrellaInterval(dataSchema.getKey().getIntervals()),
+                                                        coordinatorClient,
+                                                        segmentCacheManagerFactory,
+                                                        ioConfig
+                                                    ),
+                                                    compactionTuningConfig
+                                                )
 
     ).collect(Collectors.toList());
   }
@@ -187,7 +193,7 @@ public class NativeCompactionRunner implements CompactionRunner
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemaMap,
+      Map<QuerySegmentSpec, DataSchema> intervalDataSchemaMap,
       TaskToolbox taskToolbox
   ) throws Exception
   {
@@ -329,8 +335,8 @@ public class NativeCompactionRunner implements CompactionRunner
     CompactionTask.CompactionTuningConfig computeTuningConfig()
     {
       CompactionTask.CompactionTuningConfig newTuningConfig = tuningConfig == null
-                                               ? CompactionTask.CompactionTuningConfig.defaultConfig()
-                                               : tuningConfig;
+                                                              ? CompactionTask.CompactionTuningConfig.defaultConfig()
+                                                              : tuningConfig;
       PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
