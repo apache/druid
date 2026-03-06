@@ -342,7 +342,7 @@ Druid can emit metrics that help you right-size merge buffers and related GroupB
 
 - `mergeBuffer/maxBytesUsed`: peak merge buffer bytes used by any single GroupBy query within the emission period. If this value consistently approaches `druid.processing.buffer.sizeBytes`, consider increasing the buffer size.
 - `groupBy/maxSpilledBytes`: peak bytes spilled to disk by any single GroupBy query. Non-zero values indicate that merge buffers are too small to hold intermediate results in memory, causing disk spill. Increasing `druid.processing.buffer.sizeBytes` reduces spilling. You can also adjust `druid.query.groupBy.maxOnDiskStorage` to control how much spilling is allowed before a query fails.
-- `groupBy/spilledQueries`: how often GroupBy queries are spilling to disk. Non-zero values may indicate that your buffer size is too small and should be increased to avoid performance issues caused by excessive spilling.
+- `groupBy/spilledQueries`: number of GroupBy queries spilled to disk within the emission period. Non-zero values may indicate that your buffer size is too small and should be increased to avoid performance issues caused by excessive spilling.
 
 ##### Sizing `druid.processing.numMergeBuffers`
 
