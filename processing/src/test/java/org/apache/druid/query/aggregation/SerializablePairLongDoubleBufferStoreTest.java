@@ -49,16 +49,16 @@ public class SerializablePairLongDoubleBufferStoreTest
   private final SerializablePairLongDouble[] integerRangeArr = new SerializablePairLongDouble[]{
       new SerializablePairLongDouble((long) MIN_INTEGER, 10D),
       new SerializablePairLongDouble(101L, 20D),
-      new SerializablePairLongDouble(102L, 30D),
-      };
+      new SerializablePairLongDouble(102L, 30D)
+  };
 
   private final SerializablePairLongDouble[] longRangeArr = new SerializablePairLongDouble[]{
       new SerializablePairLongDouble((long) MIN_LONG, 10D),
       new SerializablePairLongDouble(101L, 20D),
       new SerializablePairLongDouble(102L, 30D),
       new SerializablePairLongDouble((long) Integer.MAX_VALUE, 40D),
-      new SerializablePairLongDouble(Long.MAX_VALUE, 50D),
-      };
+      new SerializablePairLongDouble(Long.MAX_VALUE, 50D)
+  };
 
   private final SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
   private SerializablePairLongDoubleBufferStore bufferStore;

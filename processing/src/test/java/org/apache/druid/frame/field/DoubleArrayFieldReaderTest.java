@@ -94,8 +94,8 @@ public class DoubleArrayFieldReaderTest extends InitializedNullHandlingTest
       null,
       1111.0,
       23.0,
-      null,
-      };
+      null
+  };
 
   private static final Object[] DOUBLES_ARRAY_2 = new Object[]{
       null,

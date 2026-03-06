@@ -38,8 +38,19 @@ import static org.easymock.EasyMock.expect;
 public class ApproximateHistogramVectorAggregatorTest
 {
   private static final float[] FLOATS = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45, 33};   // Last value is never included
-  private static final boolean[] NULL_VECTOR =
-      {false, false, false, false, false, false, false, false, false, false, true};
+  private static final boolean[] NULL_VECTOR = {
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+  };
   private VectorColumnSelectorFactory vectorColumnSelectorFactory;
 
   @Before

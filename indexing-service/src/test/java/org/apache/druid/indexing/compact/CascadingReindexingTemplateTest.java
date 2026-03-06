@@ -88,7 +88,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                 )
             ))
             .build(),
-        CompactionEngine.NATIVE,
         ImmutableMap.of("context_key", "context_value"),
         null,
         null,
@@ -123,7 +122,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                 )
             ))
             .build(),
-        CompactionEngine.MSQ,
         ImmutableMap.of("key", "value"),
         null,
         null,
@@ -161,7 +159,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -185,7 +182,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             mockProvider,
-            null,
             null,
             Period.days(7),  // skipOffsetFromLatest
             Period.days(3),   // skipOffsetFromNow
@@ -213,7 +209,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,
             Granularities.DAY
         )
     );
@@ -232,7 +227,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,  // null ruleProvider
-            null,
             null,
             null,
             null,
@@ -259,7 +253,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,
             null  // null defaultSegmentGranularity
         )
     );
@@ -278,7 +271,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, null, null
+        "testDS", null, null, mockProvider, null, null, null
     );
 
     template.createCompactionJobs(mockSource, mockParams);
@@ -304,7 +297,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, Period.days(100), null
+        "testDS", null, null, mockProvider, null, Period.days(100), null
     );
 
     List<CompactionJob> jobs = template.createCompactionJobs(mockSource, mockParams);
@@ -325,7 +318,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, Period.days(5), null
+        "testDS", null, null, mockProvider, null, Period.days(5), null
     );
 
     template.createCompactionJobs(mockSource, mockParams);
@@ -348,7 +341,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, Period.days(15), null
+        "testDS", null, null, mockProvider, null, Period.days(15), null
     );
 
     template.createCompactionJobs(mockSource, mockParams);
@@ -371,7 +364,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, null, Period.days(100)
+        "testDS", null, null, mockProvider, null, null, Period.days(100)
     );
 
     List<CompactionJob> jobs = template.createCompactionJobs(mockSource, mockParams);
@@ -392,7 +385,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, null, Period.days(20)
+        "testDS", null, null, mockProvider, null, null, Period.days(20)
     );
 
     template.createCompactionJobs(mockSource, mockParams);
@@ -415,7 +408,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, null, Period.days(20)
+        "testDS", null, null, mockProvider, null, null, Period.days(20)
     );
 
     template.createCompactionJobs(mockSource, mockParams);
@@ -478,7 +471,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -569,7 +561,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -672,7 +663,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -761,7 +751,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -870,7 +859,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.HOUR
     );
 
@@ -940,7 +928,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -1002,7 +989,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -1069,7 +1055,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -1143,7 +1128,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -1207,7 +1191,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -1268,7 +1251,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         provider,
-        null,
         null,
         null,
         null,
@@ -1356,7 +1338,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -1429,7 +1410,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.MONTH  // MONTH is coarser than HOUR!
     );
 
@@ -1490,7 +1470,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         Granularities.DAY
     );
 
@@ -1517,14 +1496,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Integer taskPriority,
         Long inputSegmentSizeBytes,
         ReindexingRuleProvider ruleProvider,
-        CompactionEngine engine,
         Map<String, Object> taskContext,
         Period skipOffsetFromLatest,
         Period skipOffsetFromNow
     )
     {
       super(dataSource, taskPriority, inputSegmentSizeBytes, ruleProvider,
-            engine, taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY);
+            taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY);
     }
 
     public List<Interval> getProcessedIntervals()
@@ -1597,7 +1575,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     // Return a fresh stream on each call to avoid "stream has already been operated upon or closed" errors
     EasyMock.expect(mockProvider.streamAllRules()).andAnswer(() -> segmentGranularityRules.stream().map(r -> (ReindexingRule) r)).anyTimes();
     EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(segmentGranularityRules.get(0)).anyTimes();
-    EasyMock.expect(mockProvider.getIOConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getTuningConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDataSchemaRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDeletionRules(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Collections.emptyList()).anyTimes();

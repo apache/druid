@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -64,15 +65,18 @@ public interface CompactionCandidateSearchPolicy
    */
   class Eligibility
   {
-    public static final Eligibility OK = new Eligibility(true, null);
+    public static final Eligibility OK = new Eligibility(true, null, CompactionMode.FULL_COMPACTION);
 
     private final boolean eligible;
     private final String reason;
+    @Nullable
+    private final CompactionMode mode;
 
-    private Eligibility(boolean eligible, String reason)
+    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode mode)
     {
       this.eligible = eligible;
       this.reason = reason;
+      this.mode = mode;
     }
 
     public boolean isEligible()
@@ -85,9 +89,19 @@ public interface CompactionCandidateSearchPolicy
       return reason;
     }
 
+    /**
+     * The mode of compaction (full or minor). This is non-null only when the
+     * candidate is considered to be eligible for compaction by the policy.
+     */
+    @Nullable
+    public CompactionMode getMode()
+    {
+      return mode;
+    }
+
     public static Eligibility fail(String messageFormat, Object... args)
     {
-      return new Eligibility(false, StringUtils.format(messageFormat, args));
+      return new Eligibility(false, StringUtils.format(messageFormat, args), null);
     }
 
     @Override
@@ -100,13 +114,13 @@ public interface CompactionCandidateSearchPolicy
         return false;
       }
       Eligibility that = (Eligibility) object;
-      return eligible == that.eligible && Objects.equals(reason, that.reason);
+      return eligible == that.eligible && Objects.equals(reason, that.reason) && Objects.equals(mode, that.mode);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(eligible, reason);
+      return Objects.hash(eligible, reason, mode);
     }
 
     @Override
@@ -114,7 +128,8 @@ public interface CompactionCandidateSearchPolicy
     {
       return "Eligibility{" +
              "eligible=" + eligible +
-             ", reason='" + reason + '\'' +
+             ", reason='" + reason +
+             ", mode='" + mode + '\'' +
              '}';
     }
   }

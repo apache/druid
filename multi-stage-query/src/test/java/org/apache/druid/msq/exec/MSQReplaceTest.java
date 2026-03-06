@@ -111,7 +111,7 @@ public class MSQReplaceTest extends MSQTestBase
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
         {SUPERUSER, SUPERUSER_MSQ_CONTEXT},
         {WITH_REPLACE_LOCK_AND_COMPACTION_STATE, QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE}
-        };
+    };
     return Arrays.asList(data);
   }
 

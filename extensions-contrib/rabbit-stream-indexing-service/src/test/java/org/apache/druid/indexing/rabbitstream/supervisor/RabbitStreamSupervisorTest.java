@@ -211,7 +211,8 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod, // latemessagerejection
         earlyMessageRejectionPeriod, // early message rejection
         null, // latemessagerejectionstartdatetime
-        1
+        1,
+        null
     );
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
@@ -276,7 +277,8 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null, // latemessagerejection
         null, // early message rejection
         null, // latemessagerejectionstartdatetime
-        1
+        1,
+        null
     );
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
@@ -418,7 +420,8 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
             null, // latemessagerejection
             null, // early message rejection
             null, // latemessagerejectionstartdatetime
-            1
+            1,
+            null
         )
     );
 

@@ -52,28 +52,26 @@ public class WhiteListBasedConverterTest
   private final String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
 
   @Test
-  @Parameters(
-      {
-          "query/time, true",
-          "query/node/ttfb, true",
-          "query/segmentAndCache/time, true",
-          "query/time/balaba, true",
-          "query/tim, false",
-          "segment/added/bytes, false",
-          "segment/count, true",
-          "segment/size, true",
-          "segment/cost/raw, false",
-          "coordinator/TIER_1 /cost/raw, false",
-          "segment/Kost/raw, false",
-          ", false",
-          "word, false",
-          "coordinator, false",
-          "server/, false",
-          "ingest/persists/time, true",
-          "jvm/mem/init, true",
-          "jvm/gc/count, true"
-      }
-  )
+  @Parameters({
+      "query/time, true",
+      "query/node/ttfb, true",
+      "query/segmentAndCache/time, true",
+      "query/time/balaba, true",
+      "query/tim, false",
+      "segment/added/bytes, false",
+      "segment/count, true",
+      "segment/size, true",
+      "segment/cost/raw, false",
+      "coordinator/TIER_1 /cost/raw, false",
+      "segment/Kost/raw, false",
+      ", false",
+      "word, false",
+      "coordinator, false",
+      "server/, false",
+      "ingest/persists/time, true",
+      "jvm/mem/init, true",
+      "jvm/gc/count, true"
+  })
   public void testDefaultIsInWhiteList(String key, boolean expectedValue)
   {
     ServiceMetricEvent event = ServiceMetricEvent
