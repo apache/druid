@@ -226,8 +226,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = new CostResult();
 
     log.info(
-        "Current metrics: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+        "Current metrics: avgPartitionLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
         metrics.getAggregateLag(),
+        metrics.getAvgProcessingRate(),
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
         config.getIdleWeight()
@@ -452,7 +453,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    return count > 0 ? sum / count : -1;
+    if (count > 0) {
+      return sum / count;
+    } else {
+      return -1;
+    }
+    // return count > 0 ? sum / count : -1;
   }
 
   @Nullable

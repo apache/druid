@@ -38,6 +38,9 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
+import org.apache.druid.testing.cluster.overlord.HttpLagAggregator;
+import org.apache.druid.testing.cluster.overlord.SupervisorLagTracker;
+import org.apache.druid.testing.cluster.overlord.SupervisorTestLagTrackerResource;
 import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.cluster.task.FaultyRemoteTaskActionClientFactory;
@@ -107,6 +110,8 @@ public class ClusterTestingModule implements DruidModule
       binder.bind(GlobalTaskLockbox.class)
             .to(FaultyTaskLockbox.class)
             .in(LazySingleton.class);
+      binder.bind(SupervisorLagTracker.class).in(LazySingleton.class);
+      Jerseys.addResource(binder, SupervisorTestLagTrackerResource.class);
     } else if (roles.contains(NodeRole.INDEXER)) {
       JsonConfigProvider.bind(
           binder,
@@ -128,6 +133,7 @@ public class ClusterTestingModule implements DruidModule
     return List.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(new NamedType(FaultyLagAggregator.class, "faulty"))
+            .registerSubtypes(new NamedType(HttpLagAggregator.class, "http"))
     );
   }
 

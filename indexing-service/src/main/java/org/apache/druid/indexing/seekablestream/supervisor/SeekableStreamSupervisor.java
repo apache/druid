@@ -157,6 +157,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
   public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
+  public static final String AUTOSCALER_UPDATED_TASK_METRIC = "task/autoScaler/updatedCount";
   public static final String AUTOSCALER_SCALING_TIME_METRIC = "task/autoScaler/scaleActionTime";
 
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
@@ -609,18 +610,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
       clearPartitionAssignmentsForScaling();
-      emitter.emit(ServiceMetricEvent.builder()
-                                     .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                     .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                                     .setDimensionIfNotNull(
-                                         DruidMetrics.TAGS,
-                                         spec.getContextValue(DruidMetrics.TAGS)
-                                     )
-                                     .setMetric(
-                                         AUTOSCALER_SCALING_TIME_METRIC,
-                                         scaleActionStopwatch.millisElapsed()
-                                     ));
+
+
+      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent
+          .builder()
+          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+          .setDimension(DruidMetrics.DATASOURCE, dataSource)
+          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+          .setDimensionIfNotNull(
+              DruidMetrics.TAGS,
+              spec.getContextValue(DruidMetrics.TAGS)
+          );
+
+      emitter.emit(metricBuilder.setMetric(AUTOSCALER_SCALING_TIME_METRIC, scaleActionStopwatch.millisElapsed()));
+      emitter.emit(metricBuilder.setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) desiredActiveTaskCount));
       log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
       return true;
     }
@@ -2623,7 +2626,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
             // OR if there is an older publishing task for another groupId, use the first sequenceId of this task
             // since the offsets persisted in metadata store might still be behind the checkpoints of this task
-            || (isAnotherTaskGroupPublishingToPartitionsOf(taskGroup)
+            || (isAnotherTaskGroupPublishingToPartitions(taskId, Set.copyOf(taskGroup.startingSequences.keySet()))
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))
         ) {
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
@@ -2635,7 +2638,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskGroup.checkpointSequences.putAll(latestCheckpoints);
         } else {
           log.warn(
-              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with latestoffsets from DB[%s]",
+              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with checkpoints[%s] in metadata store",
               taskId,
               taskCheckpoints,
               latestOffsetsFromDb
@@ -2650,7 +2653,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             || taskCheckpoints.tailMap(taskGroup.checkpointSequences.firstKey()).size()
                != taskGroup.checkpointSequences.size()) {
           log.warn(
-              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with taskgroup checkpoints [%s]",
+              "Adding task[%s] to kill list as its checkpoints[%s] are not consistent with taskGroup checkpoints[%s]",
               taskId,
               taskCheckpoints,
               taskGroup.checkpointSequences
@@ -2686,32 +2689,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Checks if there is another {@link TaskGroup} publishing to any of the partitions
-   * that are being read by the given {@param taskGroup}. If this method returns
-   * true, it indicates that the current taskGroup would need to wait for the
-   * older taskGroups to finish publishing before it can publish its own offsets.
+   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * publishing to any of the given partitions. If this method returns true, it
+   * indicates that the current task would need to wait for the other tasks to
+   * finish publishing before it can publish its own offsets.
    */
-  private boolean isAnotherTaskGroupPublishingToPartitionsOf(TaskGroup taskGroup)
+  public boolean isAnotherTaskGroupPublishingToPartitions(String taskId, Set<Object> partitions)
   {
-    final Set<PartitionIdType> partitionsPendingPublishFromOtherGroups =
-        pendingCompletionTaskGroups
-            .values()
-            .stream()
-            .flatMap(Collection::stream)
-            .filter(group -> !group.equals(taskGroup))
-            .flatMap(group -> group.startingSequences.keySet().stream())
-            .collect(Collectors.toSet());
+    // Identify all the partitions that are being published by other taskGroups
+    final Map<PartitionIdType, Set<TaskGroup>> partitionIdToPublishingGroups = new HashMap<>();
+    pendingCompletionTaskGroups.values().stream().flatMap(Collection::stream).forEach(group -> {
+      // Do not consider this taskId or its replicas
+      if (group.taskIds().contains(taskId)) {
+        return;
+      }
+      for (PartitionIdType partitionId : group.startingSequences.keySet()) {
+        partitionIdToPublishingGroups.computeIfAbsent(partitionId, p -> new HashSet<>()).add(group);
+      }
+    });
 
-    if (partitionsPendingPublishFromOtherGroups.isEmpty()) {
+    if (partitionIdToPublishingGroups.isEmpty()) {
       return false;
     }
 
-    for (PartitionIdType partitionId : taskGroup.startingSequences.keySet()) {
-      if (partitionsPendingPublishFromOtherGroups.contains(partitionId)) {
+    // Check if any of the partitions of this taskId are being published by other taskGroups
+    for (Object partition : partitions) {
+      @SuppressWarnings("unchecked")
+      final PartitionIdType partitionId = (PartitionIdType) partition;
+      if (partitionIdToPublishingGroups.containsKey(partitionId)) {
         log.info(
-            "taskGroup[%s] with sequenceName[%s] needs to wait before publishing"
-            + " as another taskGroup is currently publishing to partition[%s].",
-            taskGroup.groupId, taskGroup.baseSequenceName, partitionId
+            "Task[%s] needs to wait before publishing as other taskGroups[%s] are currently publishing to partition[%s].",
+            taskId,
+            partitionIdToPublishingGroups.get(partitionId),
+            partitionId
         );
         return true;
       }
@@ -4965,7 +4975,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   protected LagStats aggregatePartitionLags(Map<PartitionIdType, Long> partitionLags)
   {
-    return spec.getIoConfig().getLagAggregator().aggregate(partitionLags);
+    return spec.getIoConfig().getLagAggregator().aggregate(spec.getId(), partitionLags);
   }
 
   /**
