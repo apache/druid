@@ -30,7 +30,6 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
@@ -134,14 +133,6 @@ class ReindexingConfigBuilder
     if (tuningRule != null) {
       builder.withTuningConfig(tuningRule.getTuningConfig());
       appliedRules.add(tuningRule);
-      count++;
-    }
-
-    // Apply IO config rule
-    ReindexingIOConfigRule ioConfigRule = provider.getIOConfigRule(interval, referenceTime);
-    if (ioConfigRule != null) {
-      builder.withIoConfig(ioConfigRule.getIoConfig());
-      appliedRules.add(ioConfigRule);
       count++;
     }
 

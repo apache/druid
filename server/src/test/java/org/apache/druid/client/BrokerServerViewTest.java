@@ -555,7 +555,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public void testDifferentTierStrategiesForHistoricalAndRealtimeServers() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
-    segmentAddedLatch = new CountDownLatch(6);
+    segmentAddedLatch = new CountDownLatch(7);
     segmentRemovedLatch = new CountDownLatch(0);
 
     // Setup a Broker with LowestPriority strategy for historicals and HighestPriority for realtime

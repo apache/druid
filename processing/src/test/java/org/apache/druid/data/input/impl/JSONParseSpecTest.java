@@ -178,18 +178,18 @@ public class JSONParseSpecTest
   public void testEquals()
   {
     EqualsVerifier.forClass(JSONParseSpec.class)
-              .usingGetClass()
-              .withPrefabValues(
-                DimensionsSpec.class,
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")))
-              )
-              .withPrefabValues(
-              ObjectMapper.class,
-              new ObjectMapper(),
-              new ObjectMapper()
-              )
-              .withIgnoredFields("objectMapper")
-              .verify();
+                  .usingGetClass()
+                  .withPrefabValues(
+                      DimensionsSpec.class,
+                      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+                      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")))
+                  )
+                  .withPrefabValues(
+                      ObjectMapper.class,
+                      new ObjectMapper(),
+                      new ObjectMapper()
+                  )
+                  .withIgnoredFields("objectMapper")
+                  .verify();
   }
 }

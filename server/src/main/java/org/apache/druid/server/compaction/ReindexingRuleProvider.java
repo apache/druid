@@ -108,26 +108,6 @@ public interface ReindexingRuleProvider
   List<ReindexingDataSchemaRule> getDataSchemaRules();
 
   /**
-   * Returns the matched reindexing IO config rule that applies to the given interval.
-   * <p>
-   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
-   * implementation and should be clearly documented.
-   * </p>
-   *
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingIOConfigRule} that applies to the given interval.
-   */
-  @Nullable
-  ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime);
-
-  /**
-    * Returns ALL reindexing IO config rules.
-   */
-  List<ReindexingIOConfigRule> getIOConfigRules();
-
-  /**
    * Returns the matched reindexing segment granularity rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
@@ -178,7 +158,6 @@ public interface ReindexingRuleProvider
   default Stream<ReindexingRule> streamAllRules()
   {
     return Stream.of(
-        getIOConfigRules().stream(),
         getTuningConfigRules().stream(),
         getDeletionRules().stream(),
         getSegmentGranularityRules().stream(),

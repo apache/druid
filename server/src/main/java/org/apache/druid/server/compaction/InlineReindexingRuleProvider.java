@@ -89,7 +89,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public static final String TYPE = "inline";
 
   private final List<ReindexingDeletionRule> deletionRules;
-  private final List<ReindexingIOConfigRule> ioConfigRules;
   private final List<ReindexingSegmentGranularityRule> segmentGranularityRules;
   private final List<ReindexingTuningConfigRule> tuningConfigRules;
   private final List<ReindexingDataSchemaRule> dataSchemaRules;
@@ -98,14 +97,12 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   @JsonCreator
   public InlineReindexingRuleProvider(
       @JsonProperty("deletionRules") @Nullable List<ReindexingDeletionRule> deletionRules,
-      @JsonProperty("ioConfigRules") @Nullable List<ReindexingIOConfigRule> ioConfigRules,
       @JsonProperty("segmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> segmentGranularityRules,
       @JsonProperty("tuningConfigRules") @Nullable List<ReindexingTuningConfigRule> tuningConfigRules,
       @JsonProperty("dataSchemaRules") @Nullable List<ReindexingDataSchemaRule> dataSchemaRules
   )
   {
     this.deletionRules = Configs.valueOrDefault(deletionRules, Collections.emptyList());
-    this.ioConfigRules = Configs.valueOrDefault(ioConfigRules, Collections.emptyList());
     this.segmentGranularityRules = Configs.valueOrDefault(segmentGranularityRules, Collections.emptyList());
     this.tuningConfigRules = Configs.valueOrDefault(tuningConfigRules, Collections.emptyList());
     this.dataSchemaRules = Configs.valueOrDefault(dataSchemaRules, Collections.emptyList());
@@ -145,13 +142,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("ioConfigRules")
-  public List<ReindexingIOConfigRule> getIOConfigRules()
-  {
-    return ioConfigRules;
-  }
-
-  @Override
   @JsonProperty("segmentGranularityRules")
   public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
   {
@@ -169,13 +159,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public List<ReindexingDeletionRule> getDeletionRules(Interval interval, DateTime referenceTime)
   {
     return getApplicableRules(deletionRules, interval, referenceTime);
-  }
-
-  @Override
-  @Nullable
-  public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
-  {
-    return getApplicableRule(ioConfigRules, interval, referenceTime);
   }
 
   @Override
@@ -252,7 +235,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     }
     InlineReindexingRuleProvider that = (InlineReindexingRuleProvider) o;
     return Objects.equals(deletionRules, that.deletionRules)
-           && Objects.equals(ioConfigRules, that.ioConfigRules)
            && Objects.equals(segmentGranularityRules, that.segmentGranularityRules)
            && Objects.equals(tuningConfigRules, that.tuningConfigRules)
            && Objects.equals(dataSchemaRules, that.dataSchemaRules);
@@ -263,7 +245,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   {
     return Objects.hash(
         deletionRules,
-        ioConfigRules,
         segmentGranularityRules,
         tuningConfigRules,
         dataSchemaRules
@@ -275,7 +256,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   {
     return "InlineReindexingRuleProvider{"
            + "deletionRules=" + deletionRules
-           + ", ioConfigRules=" + ioConfigRules
            + ", segmentGranularityRules=" + segmentGranularityRules
            + ", tuningConfigRules=" + tuningConfigRules
            + ", dataSchemaRules=" + dataSchemaRules
@@ -285,7 +265,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public static class Builder
   {
     private List<ReindexingDeletionRule> deletionRules;
-    private List<ReindexingIOConfigRule> ioConfigRules;
     private List<ReindexingSegmentGranularityRule> segmentGranularityRules;
     private List<ReindexingTuningConfigRule> tuningConfigRules;
     private List<ReindexingDataSchemaRule> dataSchemaRules;
@@ -299,12 +278,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     public Builder dataSchemaRules(List<ReindexingDataSchemaRule> dataSchemaRules)
     {
       this.dataSchemaRules = dataSchemaRules;
-      return this;
-    }
-
-    public Builder ioConfigRules(List<ReindexingIOConfigRule> ioConfigRules)
-    {
-      this.ioConfigRules = ioConfigRules;
       return this;
     }
 
@@ -324,7 +297,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     {
       return new InlineReindexingRuleProvider(
           deletionRules,
-          ioConfigRules,
           segmentGranularityRules,
           tuningConfigRules,
           dataSchemaRules
