@@ -93,9 +93,9 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Set<SegmentHolder> getSegmentsInQueue()
+  public Set<SegmentHolder> getSegmentsInQueue(Set<DataSegment> segmentsLoadedOnServer)
   {
-    return Collections.emptySet();
+    return Set.of();
   }
 
   @Override
