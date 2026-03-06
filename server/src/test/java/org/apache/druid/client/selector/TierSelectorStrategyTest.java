@@ -37,6 +37,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -639,17 +640,7 @@ public class TierSelectorStrategyTest
     );
 
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.dummy("foo")).shardSpec(NoneShardSpec.instance()).build(),
         new StrictTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
             new StrictTierSelectorStrategyConfig(List.of(5, 6)),
@@ -714,17 +705,7 @@ public class TierSelectorStrategyTest
     );
 
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.dummy("foo")).shardSpec(NoneShardSpec.instance()).build(),
         strategy,
         HistoricalFilter.IDENTITY_FILTER
     );
@@ -827,17 +808,7 @@ public class TierSelectorStrategyTest
     );
 
     ServerSelector selector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.dummy("foo")).shardSpec(NoneShardSpec.instance()).build(),
         strategy,
         HistoricalFilter.IDENTITY_FILTER
     );
@@ -911,17 +882,7 @@ public class TierSelectorStrategyTest
     );
 
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.dummy("foo")).shardSpec(NoneShardSpec.instance()).build(),
         strategy,
         HistoricalFilter.IDENTITY_FILTER
     );
