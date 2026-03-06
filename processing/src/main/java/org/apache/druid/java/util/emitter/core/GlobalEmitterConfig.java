@@ -21,38 +21,23 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotNull;
+import java.util.Optional;
 
-/**
- */
-public class LoggingEmitterConfig extends GlobalEmitterConfig
+public class GlobalEmitterConfig
 {
-  @NotNull
   @JsonProperty
-  private String loggerClass = LoggingEmitter.class.getName();
+  boolean filterMetrics;
 
-  @NotNull
   @JsonProperty
-  private String logLevel = "info";
+  String metricAllowlistPath;
 
-  public String getLoggerClass()
+  public boolean isFilterMetrics()
   {
-    return loggerClass;
+    return filterMetrics;
   }
 
-  public String getLogLevel()
+  public Optional<String> getMetricAllowlistPath()
   {
-    return logLevel;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LoggingEmitterConfig{" +
-           "loggerClass='" + loggerClass + '\'' +
-           ", logLevel='" + logLevel + '\'' +
-           ", filterMetrics=" + filterMetrics +
-           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
-           '}';
+    return Optional.ofNullable(metricAllowlistPath);
   }
 }

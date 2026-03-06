@@ -19,40 +19,9 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class LoggingEmitterConfig extends GlobalEmitterConfig
+public interface MetricFilteringEmitter
 {
-  @NotNull
-  @JsonProperty
-  private String loggerClass = LoggingEmitter.class.getName();
+  boolean shouldFilterOutMetric(String metricName);
 
-  @NotNull
-  @JsonProperty
-  private String logLevel = "info";
-
-  public String getLoggerClass()
-  {
-    return loggerClass;
-  }
-
-  public String getLogLevel()
-  {
-    return logLevel;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LoggingEmitterConfig{" +
-           "loggerClass='" + loggerClass + '\'' +
-           ", logLevel='" + logLevel + '\'' +
-           ", filterMetrics=" + filterMetrics +
-           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
-           '}';
-  }
+  MetricAllowlistParser getMetricAllowlistParser();
 }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.core.GlobalEmitterConfig;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -35,7 +36,7 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public class PrometheusEmitterConfig
+public class PrometheusEmitterConfig extends GlobalEmitterConfig
 {
 
   static final Pattern PATTERN = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");

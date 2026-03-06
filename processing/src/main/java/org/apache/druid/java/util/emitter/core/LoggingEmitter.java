@@ -22,13 +22,10 @@ package org.apache.druid.java.util.emitter.core;
 /**
  */
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -36,19 +33,15 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.slf4j.MarkerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
-public class LoggingEmitter implements Emitter
+public class LoggingEmitter implements Emitter, MetricFilteringEmitter
 {
-  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = "defaultLoggingMetrics.json";
+  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH;
 
   private final Logger log;
   private final Level level;
@@ -65,13 +58,13 @@ public class LoggingEmitter implements Emitter
         Level.toLevel(config.getLogLevel()),
         jsonMapper,
         config.isFilterMetrics(),
-        config.isFilterMetrics() ? loadMetricAllowlist(jsonMapper, config.getMetricAllowlistPath()) : ImmutableSet.of()
+        config.getMetricAllowlistPath().orElse(DEFAULT_METRIC_ALLOWLIST_PATH)
     );
   }
 
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper)
   {
-    this(log, level, jsonMapper, false, ImmutableSet.of());
+    this(log, level, jsonMapper, false, "");
   }
 
   public LoggingEmitter(
@@ -87,7 +80,13 @@ public class LoggingEmitter implements Emitter
         level,
         jsonMapper,
         shouldFilterMetrics,
-        shouldFilterMetrics ? loadMetricAllowlist(jsonMapper, allowedMetricsPath) : ImmutableSet.of()
+        shouldFilterMetrics
+        ? MetricAllowlistLoader.loadAllowlist(
+            jsonMapper,
+            Strings.isNullOrEmpty(allowedMetricsPath) ? DEFAULT_METRIC_ALLOWLIST_PATH : allowedMetricsPath,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+        : ImmutableSet.of()
     );
   }
 
@@ -97,7 +96,7 @@ public class LoggingEmitter implements Emitter
     this.level = level;
     this.jsonMapper = jsonMapper;
     this.filterMetrics = filterMetrics;
-    this.metricAllowlist = metricAllowlist;
+    this.metricAllowlist = Set.copyOf(metricAllowlist);
   }
 
   @Override
@@ -141,7 +140,7 @@ public class LoggingEmitter implements Emitter
         throw new RejectedExecutionException("Service not started.");
       }
     }
-    if (shouldFilterOutMetric(event)) {
+    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
       return;
     }
     try {
@@ -223,53 +222,16 @@ public class LoggingEmitter implements Emitter
            '}';
   }
 
-  private boolean shouldFilterOutMetric(Event event)
+  @Override
+  public boolean shouldFilterOutMetric(String metricName)
   {
-    if (!filterMetrics || !(event instanceof ServiceMetricEvent)) {
-      return false;
-    }
-    final ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-    return !metricAllowlist.contains(metricEvent.getMetric());
+    return filterMetrics && !metricAllowlist.contains(metricName);
   }
 
-  private static Set<String> loadMetricAllowlist(ObjectMapper mapper, String metricAllowlistPath)
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
   {
-    final String source = Strings.isNullOrEmpty(metricAllowlistPath) ? DEFAULT_METRIC_ALLOWLIST_PATH : metricAllowlistPath;
-    try (final InputStream is = openAllowlistFile(metricAllowlistPath)) {
-      final JsonNode metricConfig = mapper.readTree(is);
-      if (!metricConfig.isObject()) {
-        throw new ISE("Metric allowlist file [%s] must be a JSON object of metric names", source);
-      }
-      final ImmutableSet.Builder<String> metricNames = ImmutableSet.builder();
-      metricConfig.fieldNames().forEachRemaining(metricNames::add);
-      return metricNames.build();
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to parse metric allowlist file [%s]", source);
-    }
-  }
-
-  private static InputStream openAllowlistFile(String metricAllowlistPath)
-  {
-    if (Strings.isNullOrEmpty(metricAllowlistPath)) {
-      return openDefaultAllowlistFile();
-    }
-    try {
-      return new FileInputStream(metricAllowlistPath);
-    }
-    catch (FileNotFoundException e) {
-      throw new IAE(e, "Metric allowlist file [%s] not found", metricAllowlistPath);
-
-    }
-  }
-
-  private static InputStream openDefaultAllowlistFile()
-  {
-    final InputStream is = LoggingEmitter.class.getClassLoader().getResourceAsStream(DEFAULT_METRIC_ALLOWLIST_PATH);
-    if (is == null) {
-      throw new ISE("Metric allowlist file [%s] not found on classpath", DEFAULT_METRIC_ALLOWLIST_PATH);
-    }
-    return is;
+    return MetricAllowlistParsers::parseMetricNameObject;
   }
 
   @VisibleForTesting

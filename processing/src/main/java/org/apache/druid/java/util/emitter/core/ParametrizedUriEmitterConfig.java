@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 
-public class ParametrizedUriEmitterConfig
+public class ParametrizedUriEmitterConfig extends GlobalEmitterConfig
 {
   private static final BaseHttpEmittingConfig DEFAULT_HTTP_EMITTING_CONFIG = new BaseHttpEmittingConfig();
 
@@ -50,6 +50,8 @@ public class ParametrizedUriEmitterConfig
     return "ParametrizedUriEmitterConfig{" +
            "recipientBaseUrlPattern='" + recipientBaseUrlPattern + '\'' +
            ", httpEmittingConfig=" + httpEmittingConfig +
+           ", filterMetrics=" + filterMetrics +
+           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
            '}';
   }
 }

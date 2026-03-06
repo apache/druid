@@ -32,7 +32,7 @@ import java.util.Map;
 public class LoggingEmitterAllowlistConfigTest
 {
   @Test
-  public void testFallsBackToDefaultAllowlistWhenCustomPathIsMissing()
+  public void testUsesDefaultAllowlistWhenCustomPathIsNotProvided()
   {
     final Map<String, Object> configMap = new HashMap<>();
     configMap.put("filterMetrics", true);

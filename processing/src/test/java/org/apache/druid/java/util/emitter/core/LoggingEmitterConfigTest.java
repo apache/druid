@@ -39,7 +39,7 @@ public class LoggingEmitterConfigTest
     Assert.assertEquals("getLoggerClass", LoggingEmitter.class.getName(), config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "info", config.getLogLevel());
     Assert.assertFalse("isFilterMetrics", config.isFilterMetrics());
-    Assert.assertNull("getMetricAllowlistPath", config.getMetricAllowlistPath());
+    Assert.assertFalse("getMetricAllowlistPath", config.getMetricAllowlistPath().isPresent());
   }
 
   @Test
@@ -55,7 +55,7 @@ public class LoggingEmitterConfigTest
     Assert.assertEquals("getLoggerClass", LoggingEmitter.class.getName(), config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "debug", config.getLogLevel());
     Assert.assertFalse("isFilterMetrics", config.isFilterMetrics());
-    Assert.assertNull("getMetricAllowlistPath", config.getMetricAllowlistPath());
+    Assert.assertFalse("getMetricAllowlistPath", config.getMetricAllowlistPath().isPresent());
   }
 
   @Test
@@ -76,7 +76,7 @@ public class LoggingEmitterConfigTest
     Assert.assertEquals("getLoggerClass", "Foo", config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "INFO", config.getLogLevel());
     Assert.assertTrue("isFilterMetrics", config.isFilterMetrics());
-    Assert.assertEquals("getMetricAllowlistPath", "/tmp/logging-metrics.json", config.getMetricAllowlistPath());
+    Assert.assertEquals("getMetricAllowlistPath", "/tmp/logging-metrics.json", config.getMetricAllowlistPath().orElse(null));
   }
 
   @Test
@@ -97,6 +97,6 @@ public class LoggingEmitterConfigTest
     Assert.assertEquals("getLoggerClass", "Foo", config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "INFO", config.getLogLevel());
     Assert.assertTrue("isFilterMetrics", config.isFilterMetrics());
-    Assert.assertEquals("getMetricAllowlistPath", "/tmp/logging-metrics.json", config.getMetricAllowlistPath());
+    Assert.assertEquals("getMetricAllowlistPath", "/tmp/logging-metrics.json", config.getMetricAllowlistPath().orElse(null));
   }
 }
