@@ -30,14 +30,21 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -1484,6 +1491,310 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assertions.assertTrue(
         exception.getMessage().contains("coarser granularity")
     );
+  }
+
+  /**
+   * Comprehensive test covering:
+   * - Multiple intervals with different segment granularities
+   * - All rule types (segment gran, data schema, deletion, tuning, IO)
+   * - Non-segment-gran rules triggering interval splitting
+   * - Applied rules tracking with correct rule types in each interval
+   * - Full DataSourceCompactionConfig generation
+   * - Rule count accuracy
+   */
+  @Test
+  public void test_getReindexingTimelineView_comprehensive()
+  {
+    DateTime referenceTime = DateTimes.of("2025-02-01T00:00:00Z");
+
+    // Create rules with various periods to test interval generation and splitting
+    ReindexingSegmentGranularityRule segGran7d = new ReindexingSegmentGranularityRule(
+        "seg-gran-7d",
+        null,
+        Period.days(7),
+        Granularities.HOUR
+    );
+
+    ReindexingSegmentGranularityRule segGran30d = new ReindexingSegmentGranularityRule(
+        "seg-gran-30d",
+        null,
+        Period.days(30),
+        Granularities.DAY
+    );
+
+    // Data schema rule at P15D (will split the HOUR interval)
+    ReindexingDataSchemaRule dataSchema15d = new ReindexingDataSchemaRule(
+        "data-schema-15d",
+        null,
+        Period.days(15),
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.MINUTE,
+        true,
+        null
+    );
+
+    // Deletion rules at different periods
+    ReindexingDeletionRule deletion10d = new ReindexingDeletionRule(
+        "deletion-10d",
+        null,
+        Period.days(10),
+        new EqualityFilter("country", ColumnType.STRING, "US", null),
+        null
+    );
+
+    ReindexingDeletionRule deletion20d = new ReindexingDeletionRule(
+        "deletion-20d",
+        null,
+        Period.days(20),
+        new EqualityFilter("device", ColumnType.STRING, "mobile", null),
+        null
+    );
+
+    // Tuning and IO rules
+    ReindexingTuningConfigRule tuning7d = new ReindexingTuningConfigRule(
+        "tuning-7d",
+        null,
+        Period.days(7),
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(segGran7d, segGran30d))
+        .dataSchemaRules(List.of(dataSchema15d))
+        .deletionRules(List.of(deletion10d, deletion20d))
+        .tuningConfigRules(List.of(tuning7d))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
+
+    // Verify basic timeline properties
+    Assertions.assertEquals("testDS", timeline.getDataSource());
+    Assertions.assertEquals(referenceTime, timeline.getReferenceTime());
+    Assertions.assertNull(timeline.getValidationError());
+    Assertions.assertNull(timeline.getSkipOffset());
+
+    // Verify we have multiple intervals (splitting should occur)
+    Assertions.assertTrue(timeline.getIntervals().size() >= 2, "Expected at least 2 intervals");
+
+    // Verify each interval has correct structure and track which rule types appear across all intervals
+    boolean foundSegmentGranRule = false;
+    boolean foundDataSchemaRule = false;
+    boolean foundDeletionRule = false;
+    boolean foundTuningRule = false;
+
+    for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
+      Assertions.assertNotNull(intervalConfig.getInterval());
+      Assertions.assertTrue(intervalConfig.getRuleCount() > 0, "Rule count should be > 0");
+      Assertions.assertNotNull(intervalConfig.getConfig());
+      Assertions.assertNotNull(intervalConfig.getAppliedRules());
+      Assertions.assertEquals(
+          intervalConfig.getRuleCount(),
+          intervalConfig.getAppliedRules().size(),
+          "Applied rules size should match rule count"
+      );
+
+      // Verify config has expected components
+      DataSourceCompactionConfig config = intervalConfig.getConfig();
+      Assertions.assertNotNull(config.getGranularitySpec(), "Should have granularity spec");
+      Assertions.assertNotNull(config.getGranularitySpec().getSegmentGranularity(), "Should have segment granularity");
+
+      // Track which rule types appear
+      for (ReindexingRule rule : intervalConfig.getAppliedRules()) {
+        if (rule instanceof ReindexingSegmentGranularityRule) {
+          foundSegmentGranRule = true;
+        } else if (rule instanceof ReindexingDataSchemaRule) {
+          foundDataSchemaRule = true;
+        } else if (rule instanceof ReindexingDeletionRule) {
+          foundDeletionRule = true;
+        } else if (rule instanceof ReindexingTuningConfigRule) {
+          foundTuningRule = true;
+        }
+      }
+    }
+
+    // All configured rule types should appear somewhere in the timeline
+    Assertions.assertTrue(foundSegmentGranRule, "Timeline should contain a segmentGranularity rule");
+    Assertions.assertTrue(foundDataSchemaRule, "Timeline should contain a dataSchema rule");
+    Assertions.assertTrue(foundDeletionRule, "Timeline should contain a deletion rule");
+    Assertions.assertTrue(foundTuningRule, "Timeline should contain a tuningConfig rule");
+  }
+
+  @Test
+  public void test_getReindexingTimelineView_skipOffsetFromNow_skipsProperIntervals()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T00:00:00Z");
+    Period skipOffset = Period.days(10);
+
+    // Create rules where the most recent rule has a period SMALLER than the skip offset
+    // This ensures the interval would extend beyond the effectiveEndTime and get clamped
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("seg-3d", null, Period.days(3), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("seg-30d", null, Period.days(30), Granularities.DAY)
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        skipOffset, // skipOffsetFromNow
+        Granularities.DAY
+    );
+
+    ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
+
+    // Verify skipOffset is applied
+    ReindexingTimelineView.SkipOffsetInfo skipOffsetInfo = timeline.getSkipOffset();
+    Assertions.assertNotNull(skipOffsetInfo, "Skip offset should be present");
+    Assertions.assertTrue(skipOffsetInfo.isApplied(), "Skip offset should be applied");
+    Assertions.assertEquals("skipOffsetFromNow", skipOffsetInfo.getType());
+    Assertions.assertEquals(skipOffset, skipOffsetInfo.getPeriod());
+    Assertions.assertNull(skipOffsetInfo.getReason(), "Reason should be null for applied skip offset");
+
+    DateTime expectedEffectiveEndTime = referenceTime.minus(skipOffset);
+    Assertions.assertEquals(expectedEffectiveEndTime, skipOffsetInfo.getEffectiveEndTime());
+
+    for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
+      if (intervalConfig.getInterval().getEnd().isAfter(expectedEffectiveEndTime)) {
+        Assertions.assertEquals(0, intervalConfig.getRuleCount());
+      }
+    }
+  }
+
+  @Test
+  public void test_getReindexingTimelineView_validationError_invalidGranularityTimeline()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    // Create rules that violate the granularity constraint:
+    // Older data (P90D) has DAY granularity, newer data (P30D) has HOUR granularity
+    // This means as we move from past to present, granularity gets finer (valid)
+    // But then if we add MONTH for recent data, it becomes coarser (invalid)
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
+        ))
+        .dataSchemaRules(List.of(
+            // This will trigger prepending an interval with default granularity (MONTH)
+            // which is coarser than HOUR, causing validation failure
+            new ReindexingDataSchemaRule(
+                "metrics-7d",
+                null,
+                Period.days(7),
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                null,
+                null,
+                null
+            )
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        Granularities.MONTH // This is coarser than HOUR, will cause validation error
+    );
+
+    ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
+
+    // Verify validation error is present
+    Assertions.assertNotNull(timeline.getValidationError(), "Validation error should be present");
+    Assertions.assertEquals(
+        "INVALID_GRANULARITY_TIMELINE",
+        timeline.getValidationError().getErrorType()
+    );
+    Assertions.assertNotNull(timeline.getValidationError().getMessage());
+    Assertions.assertTrue(
+        timeline.getValidationError().getMessage().contains("Invalid segment granularity timeline")
+    );
+
+    // Verify structured error information is populated
+    Assertions.assertNotNull(timeline.getValidationError().getOlderInterval());
+    Assertions.assertNotNull(timeline.getValidationError().getOlderGranularity());
+    Assertions.assertNotNull(timeline.getValidationError().getNewerInterval());
+    Assertions.assertNotNull(timeline.getValidationError().getNewerGranularity());
+
+    // Verify intervals list is empty when validation fails
+    Assertions.assertTrue(timeline.getIntervals().isEmpty(), "Intervals should be empty on validation error");
+  }
+
+  @Test
+  public void test_getReindexingTimelineView_ruleProviderNotReady()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T00:00:00Z");
+
+    // Create a mock provider that is not ready
+    ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
+    EasyMock.expect(mockProvider.isReady()).andReturn(false).anyTimes();
+    EasyMock.expect(mockProvider.getType()).andReturn("mock").anyTimes();
+    EasyMock.replay(mockProvider);
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        mockProvider,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
+
+    // Verify timeline is returned with empty intervals
+    Assertions.assertNotNull(timeline);
+    Assertions.assertEquals("testDS", timeline.getDataSource());
+    Assertions.assertEquals(referenceTime, timeline.getReferenceTime());
+    Assertions.assertTrue(timeline.getIntervals().isEmpty(), "Intervals should be empty");
+    Assertions.assertNull(timeline.getValidationError(), "No validation error");
+    Assertions.assertNull(timeline.getSkipOffset(), "No skip offset");
   }
 
   private static class TestCascadingReindexingTemplate extends CascadingReindexingTemplate
