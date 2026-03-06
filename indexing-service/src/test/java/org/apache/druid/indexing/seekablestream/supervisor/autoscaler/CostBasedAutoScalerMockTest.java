@@ -58,6 +58,7 @@ public class CostBasedAutoScalerMockTest
     mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSpec.getId()).thenReturn(SUPERVISOR_ID);
+    when(mockSpec.getDataSources()).thenReturn(java.util.List.of("test-datasource"));
     when(mockSpec.isSuspended()).thenReturn(false);
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn(STREAM_NAME);
