@@ -32,12 +32,16 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
@@ -81,12 +85,14 @@ public class MetadataSegmentView
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
+  private final ServiceEmitter emitter;
 
   @Inject
   public MetadataSegmentView(
       final CoordinatorClient coordinatorClient,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final BrokerSegmentMetadataCacheConfig config
+      final BrokerSegmentMetadataCacheConfig config,
+      final ServiceEmitter emitter
   )
   {
     Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
@@ -95,6 +101,7 @@ public class MetadataSegmentView
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+    this.emitter = emitter;
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
                                                     .expireAfterAccess(10, TimeUnit.MINUTES)
                                                     .build();
@@ -136,6 +143,7 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("Polling segments from coordinator");
+    final Stopwatch syncTime = Stopwatch.createStarted();
     final CloseableIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
         coordinatorClient,
         segmentWatcherConfig.getWatchedDataSources()
@@ -162,6 +170,9 @@ public class MetadataSegmentView
     }
     publishedSegments = builder.build();
     cachePopulated.countDown();
+    emitter.emit(
+        ServiceMetricEvent.builder().setMetric(Metric.SYNC_DURATION_MILLIS, syncTime.millisElapsed())
+    );
   }
 
   Iterator<SegmentStatusInCluster> getSegments()

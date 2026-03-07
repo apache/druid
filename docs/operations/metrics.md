@@ -69,6 +69,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
+|`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
