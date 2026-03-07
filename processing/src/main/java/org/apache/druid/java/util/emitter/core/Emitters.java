@@ -140,6 +140,13 @@ public class Emitters
     loggingMap.put(
         "logLevel", props.getProperty("org.apache.druid.java.util.emitter.logging.level", "debug")
     );
+    loggingMap.put(
+        "filterMetrics",
+        Boolean.parseBoolean(props.getProperty("org.apache.druid.java.util.emitter.logging.filterMetrics", "false"))
+    );
+    loggingMap.put(
+        "metricAllowlistPath", props.getProperty("org.apache.druid.java.util.emitter.logging.metricAllowlistPath")
+    );
     return loggingMap;
   }
 

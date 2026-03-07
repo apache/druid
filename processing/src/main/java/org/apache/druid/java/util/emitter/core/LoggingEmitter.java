@@ -23,35 +23,80 @@ package org.apache.druid.java.util.emitter.core;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.slf4j.MarkerFactory;
 
+import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
-public class LoggingEmitter implements Emitter
+public class LoggingEmitter implements Emitter, MetricFilteringEmitter
 {
+  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH;
+
   private final Logger log;
   private final Level level;
   private final ObjectMapper jsonMapper;
+  private final boolean filterMetrics;
+  private final Set<String> metricAllowlist;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public LoggingEmitter(LoggingEmitterConfig config, ObjectMapper jsonMapper)
   {
-    this(new Logger(config.getLoggerClass()), Level.toLevel(config.getLogLevel()), jsonMapper);
+    this(
+        new Logger(config.getLoggerClass()),
+        Level.toLevel(config.getLogLevel()),
+        jsonMapper,
+        config.isFilterMetrics(),
+        config.getMetricAllowlistPath().orElse(DEFAULT_METRIC_ALLOWLIST_PATH)
+    );
   }
 
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper)
   {
+    this(log, level, jsonMapper, false, "");
+  }
+
+  public LoggingEmitter(
+      Logger log,
+      Level level,
+      ObjectMapper jsonMapper,
+      boolean shouldFilterMetrics,
+      String allowedMetricsPath
+  )
+  {
+    this(
+        log,
+        level,
+        jsonMapper,
+        shouldFilterMetrics,
+        shouldFilterMetrics
+        ? MetricAllowlistLoader.loadAllowlist(
+            jsonMapper,
+            Strings.isNullOrEmpty(allowedMetricsPath) ? DEFAULT_METRIC_ALLOWLIST_PATH : allowedMetricsPath,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+        : ImmutableSet.of()
+    );
+  }
+
+  public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean filterMetrics, Set<String> metricAllowlist)
+  {
     this.log = log;
     this.level = level;
     this.jsonMapper = jsonMapper;
+    this.filterMetrics = filterMetrics;
+    this.metricAllowlist = Set.copyOf(metricAllowlist);
   }
 
   @Override
@@ -94,6 +139,9 @@ public class LoggingEmitter implements Emitter
       if (!started.get()) {
         throw new RejectedExecutionException("Service not started.");
       }
+    }
+    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
+      return;
     }
     try {
       switch (level) {
@@ -170,7 +218,26 @@ public class LoggingEmitter implements Emitter
     return "LoggingEmitter{" +
            "log=" + log +
            ", level=" + level +
+           ", filterMetrics=" + filterMetrics +
            '}';
+  }
+
+  @Override
+  public boolean shouldFilterOutMetric(String metricName)
+  {
+    return filterMetrics && !metricAllowlist.contains(metricName);
+  }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
+  }
+
+  @VisibleForTesting
+  Set<String> getMetricAllowlist()
+  {
+    return metricAllowlist;
   }
 
   public enum Level

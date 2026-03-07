@@ -52,6 +52,8 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
     this.batchQueueSizeLimit = base.batchQueueSizeLimit;
     this.httpTimeoutAllowanceFactor = base.httpTimeoutAllowanceFactor;
     this.minHttpTimeoutMillis = base.minHttpTimeoutMillis;
+    this.filterMetrics = base.filterMetrics;
+    this.metricAllowlistPath = base.metricAllowlistPath;
   }
 
   public String getRecipientBaseUrl()

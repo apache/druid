@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.RequestBuilder;
@@ -46,6 +47,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -59,7 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.zip.GZIPOutputStream;
 
-public class HttpPostEmitter implements Flushable, Closeable, Emitter
+public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFilteringEmitter
 {
   private static final int MAX_EVENT_SIZE = 1023 * 1024; // Set max size slightly less than 1M to allow for metadata
 
@@ -100,6 +102,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private final AsyncHttpClient client;
   private final ObjectMapper jsonMapper;
   private final String url;
+  private final boolean filterMetrics;
+  private final Set<String> metricAllowlist;
 
   private final ConcurrentLinkedQueue<byte[]> buffersToReuse = new ConcurrentLinkedQueue<>();
   /**
@@ -169,6 +173,14 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     this.largeEventThreshold = (bufferSize - batchOverhead - batchingStrategy.separatorLength()) / 2;
     this.client = client;
     this.jsonMapper = jsonMapper;
+    this.filterMetrics = config.isFilterMetrics();
+    this.metricAllowlist = this.filterMetrics
+                           ? MetricAllowlistLoader.loadAllowlist(
+                               this.jsonMapper,
+                               config.getMetricAllowlistPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
+                               getMetricAllowlistParser()
+                           )
+                           : Set.of();
     try {
       this.url = new URL(config.getRecipientBaseUrl()).toString();
     }
@@ -223,6 +235,9 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   @Override
   public void emit(Event event)
   {
+    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
+      return;
+    }
     emitAndReturnBatch(event);
   }
 
@@ -277,6 +292,18 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public boolean shouldFilterOutMetric(String metricName)
+  {
+    return filterMetrics && !metricAllowlist.contains(metricName);
+  }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
   }
 
   private void writeLargeEvent(byte[] eventBytes)
