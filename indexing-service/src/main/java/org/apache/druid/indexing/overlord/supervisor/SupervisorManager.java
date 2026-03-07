@@ -442,7 +442,7 @@ public class SupervisorManager
   {
     try {
       InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
-      if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?,?>)) {
+      if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
         throw InvalidInput.exception("Start metadata[%s] is not streaming metadata", supervisorId);
       }
 
