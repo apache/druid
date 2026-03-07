@@ -48,7 +48,6 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -144,10 +143,7 @@ public class MetadataSegmentView
   {
     log.info("Polling segments from coordinator");
     final Stopwatch syncTime = Stopwatch.createStarted();
-    final CloseableIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
-        coordinatorClient,
-        segmentWatcherConfig.getWatchedDataSources()
-    );
+    final CloseableIterator<SegmentStatusInCluster> metadataSegments = fetchSegmentMetadataFromCoordinator();
 
     final ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
@@ -175,29 +171,31 @@ public class MetadataSegmentView
     );
   }
 
+  /**
+   * Returns segment metadata either from the in-memory cache (enabled using
+   * {@link BrokerSegmentMetadataCacheConfig#isMetadataSegmentCacheEnable()})
+   * OR by querying the Coordinator on the fly.
+   */
   Iterator<SegmentStatusInCluster> getSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
       return publishedSegments.iterator();
     } else {
-      return getMetadataSegments(
-          coordinatorClient,
-          segmentWatcherConfig.getWatchedDataSources()
-      );
+      return fetchSegmentMetadataFromCoordinator();
     }
   }
 
   // Note that coordinator must be up to get segments
-  private CloseableIterator<SegmentStatusInCluster> getMetadataSegments(
-      CoordinatorClient coordinatorClient,
-      Set<String> watchedDataSources
-  )
+  private CloseableIterator<SegmentStatusInCluster> fetchSegmentMetadataFromCoordinator()
   {
     // includeRealtimeSegments flag would additionally request realtime segments
     // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
     return FutureUtils.getUnchecked(
-        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(watchedDataSources, true),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(
+            segmentWatcherConfig.getWatchedDataSources(),
+            true
+        ),
         true
     );
   }
