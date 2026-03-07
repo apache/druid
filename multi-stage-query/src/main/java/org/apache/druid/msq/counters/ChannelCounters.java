@@ -123,11 +123,11 @@ public class ChannelCounters implements QueryCounter
     add(partitionNumber, rac.numRows(), numBytes, 1, 0);
   }
 
-  public ChannelCounters setTotalFiles(final long nFiles)
+  public ChannelCounters addTotalFiles(final long nFiles)
   {
     synchronized (this) {
       ensureCapacityForPartition(NO_PARTITION);
-      totalFiles.set(NO_PARTITION, nFiles);
+      totalFiles.set(NO_PARTITION, totalFiles.getLong(NO_PARTITION) + nFiles);
       return this;
     }
   }
