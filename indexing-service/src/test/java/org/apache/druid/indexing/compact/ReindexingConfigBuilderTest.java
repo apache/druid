@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -30,21 +31,25 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
-import org.apache.druid.server.compaction.IntervalGranularityInfo;
+import org.apache.druid.server.compaction.IntervalPartitioningInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIndexSpecRule;
+import org.apache.druid.server.compaction.ReindexingPartitioningRule;
+import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ReindexingConfigBuilderTest
 {
@@ -75,15 +80,24 @@ public class ReindexingConfigBuilderTest
                                               .forDataSource("test_datasource");
 
     // Create synthetic timeline with default granularity (no source rule since it's default)
-    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
-        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, null)
+    ImmutableList<IntervalPartitioningInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalPartitioningInfo(
+            TEST_INTERVAL,
+            ReindexingPartitioningRule.syntheticRule(
+                Granularities.DAY,
+                new DynamicPartitionsSpec(5000000, null),
+                null
+            ),
+            true
+        )
     );
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         TEST_INTERVAL,
         REFERENCE_TIME,
-        syntheticTimeline
+        syntheticTimeline,
+        null
     );
 
     int count = configBuilder.applyTo(builder);
@@ -127,24 +141,27 @@ public class ReindexingConfigBuilderTest
         InlineSchemaDataSourceCompactionConfig.builder()
             .forDataSource("test_datasource");
 
-    // Create the segment granularity rule used in the provider
-    ReindexingSegmentGranularityRule segmentGranularityRule = new ReindexingSegmentGranularityRule(
+    // Create the partitioning rule used in the provider
+    ReindexingPartitioningRule partitioningRule = new ReindexingPartitioningRule(
         "gran-30d",
         null,
         Period.days(30),
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null
     );
 
     // Create synthetic timeline with granularity from the rule
-    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
-        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, segmentGranularityRule)
+    ImmutableList<IntervalPartitioningInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalPartitioningInfo(TEST_INTERVAL, partitioningRule)
     );
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         TEST_INTERVAL,
         REFERENCE_TIME,
-        syntheticTimeline
+        syntheticTimeline,
+        null
     );
 
     int count = configBuilder.applyTo(builder);
@@ -194,12 +211,20 @@ public class ReindexingConfigBuilderTest
     Assertions.assertNotNull(buildResult.getAppliedRules());
     Assertions.assertEquals(5, buildResult.getAppliedRules().size());
 
-    // Verify rule types in order: tuning, dataSchema, 2 deletion rules, segment granularity
-    Assertions.assertTrue(buildResult.getAppliedRules().get(0) instanceof ReindexingTuningConfigRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(1) instanceof ReindexingDataSchemaRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(2) instanceof ReindexingDeletionRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(3) instanceof ReindexingDeletionRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(4) instanceof ReindexingSegmentGranularityRule);
+    // Verify rule types (order-independent)
+    Assertions.assertEquals(1, buildResult.getAppliedRules().stream().filter(r -> r instanceof ReindexingPartitioningRule).count());
+    Assertions.assertEquals(1, buildResult.getAppliedRules().stream().filter(r -> r instanceof ReindexingIndexSpecRule).count());
+    Assertions.assertEquals(1, buildResult.getAppliedRules().stream().filter(r -> r instanceof ReindexingDataSchemaRule).count());
+    Assertions.assertEquals(2, buildResult.getAppliedRules().stream().filter(r -> r instanceof ReindexingDeletionRule).count());
+
+    // Verify rule IDs (order-independent)
+    Set<String> appliedRuleIds = buildResult.getAppliedRules().stream()
+        .map(ReindexingRule::getId)
+        .collect(Collectors.toSet());
+    Assertions.assertEquals(
+        Set.of("gran-30d", "indexSpec-30d", "schema-60d", "filter-30d", "filter-60d"),
+        appliedRuleIds
+    );
 
     // Verify the config produced by applyToWithDetails() matches the original
     InlineSchemaDataSourceCompactionConfig configFromDetails = builderForDetails.build();
@@ -216,15 +241,24 @@ public class ReindexingConfigBuilderTest
             .forDataSource("test_datasource");
 
     // Create synthetic timeline with default granularity (no source rule)
-    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
-        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, null)
+    ImmutableList<IntervalPartitioningInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalPartitioningInfo(
+            TEST_INTERVAL,
+            ReindexingPartitioningRule.syntheticRule(
+                Granularities.DAY,
+                new DynamicPartitionsSpec(5000000, null),
+                null
+            ),
+            true
+        )
     );
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         TEST_INTERVAL,
         REFERENCE_TIME,
-        syntheticTimeline
+        syntheticTimeline,
+        null
     );
 
     int count = configBuilder.applyTo(builder);
@@ -233,7 +267,7 @@ public class ReindexingConfigBuilderTest
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
-    Assertions.assertNull(config.getTuningConfig());
+    Assertions.assertNotNull(config.getTuningConfig());
     Assertions.assertNull(config.getMetricsSpec());
     Assertions.assertNull(config.getDimensionsSpec());
     Assertions.assertNull(config.getIoConfig());
@@ -243,20 +277,20 @@ public class ReindexingConfigBuilderTest
 
   private ReindexingRuleProvider createFullyPopulatedProvider()
   {
-    ReindexingSegmentGranularityRule segmentGranularityRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule partitioningRule = new ReindexingPartitioningRule(
         "gran-30d",
         null,
         Period.days(30),
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null
     );
 
-    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
-        "tuning-30d",
+    ReindexingIndexSpecRule indexSpecRule = new ReindexingIndexSpecRule(
+        "indexSpec-30d",
         null,
         Period.days(30),
-        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null,
-                                                null, null, null, null, null, null,
-                                                null, null, null, null, null, null, null)
+        IndexSpec.getDefault()
     );
 
     ReindexingDeletionRule filterRule1 = new ReindexingDeletionRule(
@@ -306,8 +340,8 @@ public class ReindexingConfigBuilderTest
     );
 
     return InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
-        .tuningConfigRules(ImmutableList.of(tuningConfigRule))
+        .partitioningRules(ImmutableList.of(partitioningRule))
+        .indexSpecRules(ImmutableList.of(indexSpecRule))
         .deletionRules(ImmutableList.of(filterRule1, filterRule2))
         .dataSchemaRules(ImmutableList.of(dataSchemaRule1, dataSchemaRule2))
         .build();
