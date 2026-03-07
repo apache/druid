@@ -189,7 +189,6 @@
         <module>processing</module>
         <module>server</module>
         <module>indexing-service</module>
-        <module>indexing-hadoop</module>
         <module>multi-stage-query</module>
         <module>services</module>
         <module>sql</module>
@@ -248,8 +247,6 @@
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
-        <module>extensions-contrib/materialized-view-maintenance</module>
-        <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
@@ -1401,12 +1398,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
-            <version>${hadoop.compile.version}</version>
-            <scope>provided</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-common</artifactId>
             <version>${hadoop.compile.version}</version>
             <scope>provided</scope>
           </dependency>

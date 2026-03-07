@@ -239,8 +239,6 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     s3AssumeRoleExternalId = props.get("s3_assume_role_external_id");
     s3AssumeRoleWithoutExternalId = props.get("s3_assume_role_without_external_id");
 
-    hadoopGcsCredentialsPath = props.get("hadoopGcsCredentialsPath");
-    azureKey = props.get("azureKey");
     streamEndpoint = props.get("stream_endpoint");
 
     LOG.info("router: [%s], [%s]", routerUrl, routerTLSUrl);

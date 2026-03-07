@@ -46,7 +46,7 @@ environment variable to localhost on your system, as follows:
 export DOCKER_IP=127.0.0.1
 ```
 
-Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override the default host. This host is used to download archives such as hadoop and kafka during building docker images:
+Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override the default host. This host is used to download archives such as kafka during building docker images:
 
 ```bash
 export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
@@ -125,11 +125,8 @@ Maven to only look locally for snapshot jars.
    ```bash
    mvn clean install \
      -Pintegration-tests,skip-static-checks,skip-tests \
-     -Ddocker.run.skip=true \
-     -Ddocker.build.hadoop=true
+     -Ddocker.run.skip=true
    ```
-
-   > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
 
 2. Choose a docker compose file to start containers.
 
@@ -143,11 +140,6 @@ Maven to only look locally for snapshot jars.
    - To start Druid cluster with override configs
      ```bash
      OVERRIDE_ENV=<PATH_TO_ENV> docker compose -f docker-compose.yml up
-     ```
-
-   - To start tests against Hadoop
-     ```bash
-     docker compose -f docker-compose.druid-hadoop.yml up
      ```
 
    - To start tests againt security group
@@ -216,14 +208,6 @@ The values shown above are for the default docker compose cluster. For other clu
   docker compose -f docker-compose.yml -f docker-compose.security.yml up
   ```
 
-- docker-compose.druid-hadoop.yml
-
-  For starting Apache Hadoop 3.3.6 cluster with the same setup as the Druid tutorial.
-
-  ```bash
-  docker compose -f docker-compose.druid-hadoop.yml up
-  ```
-
 ## Tips & tricks for debugging and developing integration tests
 
 ### Useful mvn command flags
@@ -231,9 +215,7 @@ The values shown above are for the default docker compose cluster. For other clu
 | Flag | Description |
 |:---|---|
 | -Ddocker.build.skip=true   | Skip building the containers. <br/><br/>If you do not apply any change to Druid then you skip rebuilding the containers. This can save ~4 minutes. You need to build druid containers only once, after you can skip docker build step.  |
-| -Ddocker.run.skip=true     | Skip starting docker containers.<br/><br/> This can save ~3 minutes by skipping building and bringing up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc).<br/> Please make sure that you actually do have these containers already running if using this flag.<br/><br/> Additionally, please make sure that the running containers are in the same state that the setup script (run_cluster.sh) would have brought it up in. |
-| -Ddocker.build.hadoop=true | Build the hadoop image when either running integration tests or when building the integration test docker images without running the tests. |
-| -Dstart.hadoop.docker=true | Start hadoop container when you need to run IT tests that utilize local hadoop docker. |
+| -Ddocker.run.skip=true     | Skip starting docker containers.<br/><br/> This can save ~3 minutes by skipping building and bringing up the docker containers (Druid, Kafka, MYSQL, zookeeper, etc).<br/> Please make sure that you actually do have these containers already running if using this flag.<br/><br/> Additionally, please make sure that the running containers are in the same state that the setup script (run_cluster.sh) would have brought it up in. |
 
 ### Debugging Druid while running tests
 
@@ -367,62 +349,6 @@ mvn verify -P integration-tests -Dgroups=gcs-deep-storage -Doverride.config.path
            -Ddruid.test.config.cloudPath=test-data-folder/
 ```
 
-
-Running a Test That Uses Hadoop
--------------------
-
-The integration test that indexes from hadoop is not run as part
-of the integration test run discussed above.  This is because druid
-test clusters might not, in general, have access to hadoop.
-This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage.
-To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command.
-   If you have not already built the hadoop image, you will also need to add -Ddocker.build.hadoop=true to the mvn command.
-2) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
-
-Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with
-Druid Docker test clusters by passing -Dstart.hadoop.docker=true to start Hadoop container.
-You will also have to provide -Doverride.config.path=<PATH_TO_FILE> with your Druid's Hadoop configs set.
-See integration-tests/docker/environment-configs/override-examples/hdfs directory for example.
-Note that if the integration test you are running also uses other cloud extension (S3, Azure, GCS), additional
-credentials/configs may need to be set in the same file as your Druid's Hadoop configs set.
-
-If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, please follow the below steps:
-- Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
-  located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
-- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
-  at /batch_index/hadoop_tsv/
-If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
-
-When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.
-
-Option 1: Run the test using mvn (using the bundled Docker-based Hadoop cluster and building docker images at runtime):
-```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.hadoop=true \
-           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
-```
-
-Option 2: Run the test using mvn (using the bundled Docker-based hadoop cluster and not building images at runtime):
-```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.skip=true \
-           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
-```
-
-Option 3: Run the test using mvn (using the bundled Docker-based hadoop cluster and when you have already started all containers)
-```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Ddocker.run.skip=true -Ddocker.build.skip=true \
-           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
-```
-
-Option 4: Run the test using mvn (using config file for existing Hadoop cluster):
-```bash
-mvn verify -P int-tests-config-file -Dit.test=ITHadoopIndexTest -Dextra.datasource.name.suffix=''
-```
-
-In some test environments, the machine where the tests need to be executed
-cannot access the outside internet, so mvn cannot be run.  In that case,
-do the following instead of running the tests using mvn:
-
 ### Compile druid and the integration tests
 
 On a machine that can do mvn builds:
@@ -451,7 +377,7 @@ export CLASSPATH=$TDIR/dependency/*:$TDIR/druid-integration-tests-$VER.jar:$TDIR
 ```bash
 java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile \
      -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG \
-     -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.hadoop.ITHadoopIndexTest
+     -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.indexer.ITS3AssumeRoleIndexTest
 ```
 
 Writing a New Test

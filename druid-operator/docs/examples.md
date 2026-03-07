@@ -220,36 +220,6 @@ spec:
 ...
 ```
 
-## Install hadoop-dependencies With Init Container
-```yaml
-spec:
-  volumeMounts:
-    - mountPath: /opt/druid/hadoop-dependencies
-      name: hadoop-dependencies
-  volumes:
-    - emptyDir:
-        sizeLimit: 500Mi
-      name: hadoop-dependencies
-  additionalContainer:
-    - command:
-        - java
-        - -cp
-        - lib/*
-        - -Ddruid.extensions.hadoopDependenciesDir=/hadoop-dependencies
-        - org.apache.druid.cli.Main
-        - tools
-        - pull-deps
-        - -h
-        - org.apache.hadoop:hadoop-client:3.3.0
-        - --no-default-hadoop
-      containerName: hadoop-dependencies
-      image: apache/druid:25.0.0
-      runAsInit: true
-      volumeMounts:
-        - mountPath: /hadoop-dependencies
-          name: hadoop-dependencies
-```
-
 ## Secure Metadata Storage password
 
 ```yaml

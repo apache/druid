@@ -487,18 +487,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     return new DataSegmentPusher()
     {
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath)

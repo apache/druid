@@ -43,45 +43,16 @@ If you plan to read LZO-compressed Thrift files, you will need to download versi
 | thriftJar   | String      | path of thrift jar, if not provided, it will try to find the thrift class in classpath. Thrift jar in batch ingestion should be uploaded to HDFS first and configure `jobProperties` with `"tmpjars":"/path/to/your/thrift.jar"` | no       |
 | thriftClass | String      | classname of thrift                      | yes      |
 
-- Batch Ingestion example - `inputFormat` and `tmpjars` should be set.
-
-This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inputSpec in ioConfig could be one of `"org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat"` and `com.twitter.elephantbird.mapreduce.input.LzoThriftBlockInputFormat`. Be careful, when `LzoThriftBlockInputFormat` is used, thrift class must be provided twice.
 
 ```json
 {
-  "type": "index_hadoop",
-  "spec": {
-    "dataSchema": {
-      "dataSource": "book",
-      "parser": {
-        "type": "thrift",
-        "jarPath": "book.jar",
-        "thriftClass": "org.apache.druid.data.input.thrift.Book",
-        "protocol": "compact",
-        "parseSpec": {
-          "format": "json",
-          ...
-        }
-      },
-      "metricsSpec": [],
-      "granularitySpec": {}
-    },
-    "ioConfig": {
-      "type": "hadoop",
-      "inputSpec": {
-        "type": "static",
-        "inputFormat": "org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat",
-        // "inputFormat": "com.twitter.elephantbird.mapreduce.input.LzoThriftBlockInputFormat",
-        "paths": "/user/to/some/book.seq"
-      }
-    },
-    "tuningConfig": {
-      "type": "hadoop",
-      "jobProperties": {
-        "tmpjars":"/user/h_user_profile/du00/druid/test/book.jar",
-        // "elephantbird.class.for.MultiInputFormat" : "${YOUR_THRIFT_CLASS_NAME}"
-      }
-    }
+  "type": "thrift",
+  "jarPath": "book.jar",
+  "thriftClass": "org.apache.druid.data.input.thrift.Book",
+  "protocol": "compact",
+  "parseSpec": {
+    "format": "json",
+    ...
   }
 }
 ```
