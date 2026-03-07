@@ -453,12 +453,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    if (count > 0) {
-      return sum / count;
-    } else {
-      return -1;
-    }
-    // return count > 0 ? sum / count : -1;
+    return count > 0 ? sum / count : -1;
   }
 
   @Nullable
