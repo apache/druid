@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -176,30 +175,6 @@ public class ComposingReindexingRuleProviderTest
         createSegmentGranularityRule("rule1", Period.days(7)),
         createSegmentGranularityRule("rule2", Period.days(30)),
         ReindexingSegmentGranularityRule::getId
-    );
-  }
-
-  @Test
-  public void test_getIOConfigRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
-        ComposingReindexingRuleProvider::getIOConfigRules,
-        createIOConfigRule("rule1", Period.days(7)),
-        createIOConfigRule("rule2", Period.days(30)),
-        ReindexingIOConfigRule::getId
-    );
-  }
-
-  @Test
-  public void test_getIOConfigRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
-        (provider, it) -> provider.getIOConfigRule(it.interval, it.time),
-        createIOConfigRule("rule1", Period.days(7)),
-        createIOConfigRule("rule2", Period.days(30)),
-        ReindexingIOConfigRule::getId
     );
   }
 
@@ -425,7 +400,7 @@ public class ComposingReindexingRuleProviderTest
    */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new InlineReindexingRuleProvider(null, null, null, null, null)
+    return new InlineReindexingRuleProvider(null, null, null, null)
     {
       @Override
       public boolean isReady()
@@ -453,16 +428,6 @@ public class ComposingReindexingRuleProviderTest
         "Test granularity rule",
         period,
         Granularities.DAY
-    );
-  }
-
-  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
-  {
-    return new ReindexingIOConfigRule(
-        id,
-        "Test IO config rule",
-        period,
-        new UserCompactionTaskIOConfig(null)
     );
   }
 

@@ -154,8 +154,12 @@ public class KillCompactionConfigTest
                                               .withInputSegmentSizeBytes(500L)
                                               .withSkipOffsetFromLatest(new Period(3600))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.HOUR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withTaskContext(ImmutableMap.of("key", "val"))
                                               .build();
 
@@ -165,8 +169,12 @@ public class KillCompactionConfigTest
                                                 .withInputSegmentSizeBytes(500L)
                                                 .withSkipOffsetFromLatest(new Period(3600))
                                                 .withGranularitySpec(
-                                              new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-                                          )
+                                                    new UserCompactionTaskGranularityConfig(
+                                                        Granularities.HOUR,
+                                                        null,
+                                                        null
+                                                    )
+                                                )
                                                 .withTaskContext(ImmutableMap.of("key", "val"))
                                                 .build();
     DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
@@ -245,8 +253,12 @@ public class KillCompactionConfigTest
                                               .withInputSegmentSizeBytes(500L)
                                               .withSkipOffsetFromLatest(new Period(3600))
                                               .withGranularitySpec(
-                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-                                        )
+                                                  new UserCompactionTaskGranularityConfig(
+                                                      Granularities.HOUR,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .withTaskContext(ImmutableMap.of("key", "val"))
                                               .build();
 

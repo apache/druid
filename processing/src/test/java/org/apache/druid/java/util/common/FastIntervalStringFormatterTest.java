@@ -50,8 +50,8 @@ public class FastIntervalStringFormatterTest
         Intervals.of("2013-02-17T15:22:08.427Z/2073-08-31T16:56:23.603Z"),
         Intervals.of("2073-02-10T23:47:58.800Z/2099-03-11T19:08:38.458Z"),
         Intervals.of("2035-08-09T12:33:43.951Z/2076-12-08T23:59:50.690Z"),
-        Intervals.of("2030-01-22T18:39:08.566Z/2092-02-15T02:40:52.702Z"),
-        };
+        Intervals.of("2030-01-22T18:39:08.566Z/2092-02-15T02:40:52.702Z")
+    };
 
     for (Interval interval : validIntervals) {
       Assert.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));
@@ -95,8 +95,8 @@ public class FastIntervalStringFormatterTest
         Intervals.of("1954-11-07T14:38:33.857Z/1972-09-27T04:52:42.821Z"),
         Intervals.of("1977-08-10T18:45:18.676Z/1983-05-13T07:00:59.266Z"),
         Intervals.of("2429-02-19T08:27:26.173Z/2568-02-16T06:53:16.887Z"),
-        Intervals.of("2447-07-10T12:48:18.234Z/2489-08-24T01:22:00.056Z"),
-        };
+        Intervals.of("2447-07-10T12:48:18.234Z/2489-08-24T01:22:00.056Z")
+    };
 
     for (Interval interval : fallbackIntervals) {
       Assert.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));

@@ -310,8 +310,11 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`supervisorId`, `dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
-|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
+|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagCost`|Lag cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleCost`|Idle cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 

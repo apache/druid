@@ -327,8 +327,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            new RunLengthEntry(true, KeyOrder.ASCENDING, 1),
-            }
+            new RunLengthEntry(true, KeyOrder.ASCENDING, 1)
+        }
     );
 
     // index = 15; KeyColumns = COMPLEX DESC, COMPLEX DESC, STRING ASC
@@ -344,7 +344,7 @@ public class RowKeyComparisonRunLengthsTest
     expectedResultsBuilder.add(
         new RunLengthEntry[]{
             new RunLengthEntry(true, KeyOrder.ASCENDING, 2),
-            new RunLengthEntry(true, KeyOrder.DESCENDING, 1),
+            new RunLengthEntry(true, KeyOrder.DESCENDING, 1)
         }
     );
 
@@ -429,8 +429,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
-            new RunLengthEntry(true, KeyOrder.DESCENDING, 1),
-            }
+            new RunLengthEntry(true, KeyOrder.DESCENDING, 1)
+        }
     );
 
     // index = 27; KeyColumns = COMPLEX DESC, COMPLEX ASC, STRING DESC
@@ -465,8 +465,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            new RunLengthEntry(true, KeyOrder.DESCENDING, 1),
-            }
+            new RunLengthEntry(true, KeyOrder.DESCENDING, 1)
+        }
     );
 
     // index = 31; KeyColumns = COMPLEX DESC, COMPLEX DESC, STRING DESC
@@ -571,8 +571,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
-            new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
-            }
+            new RunLengthEntry(false, KeyOrder.ASCENDING, 1)
+        }
     );
 
     // index = 43; KeyColumns = COMPLEX DESC, COMPLEX ASC, COMPLEX ASC
@@ -607,8 +607,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
-            }
+            new RunLengthEntry(false, KeyOrder.ASCENDING, 1)
+        }
     );
 
     // index = 47; KeyColumns = COMPLEX DESC, COMPLEX DESC, COMPLEX ASC
@@ -714,8 +714,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
-            new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            }
+            new RunLengthEntry(false, KeyOrder.DESCENDING, 1)
+        }
     );
 
     // index = 59; KeyColumns = COMPLEX DESC, COMPLEX ASC, COMPLEX DESC
@@ -750,8 +750,8 @@ public class RowKeyComparisonRunLengthsTest
         new RunLengthEntry[]{
             new RunLengthEntry(false, KeyOrder.ASCENDING, 1),
             new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            new RunLengthEntry(false, KeyOrder.DESCENDING, 1),
-            }
+            new RunLengthEntry(false, KeyOrder.DESCENDING, 1)
+        }
     );
 
     // index = 63; KeyColumns = COMPLEX DESC, COMPLEX DESC, COMPLEX DESC

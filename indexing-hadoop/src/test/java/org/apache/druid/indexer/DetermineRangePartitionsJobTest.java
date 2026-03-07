@@ -81,8 +81,8 @@ public class DetermineRangePartitionsJobTest
                         {null, {"d.example.com"}},
                         {{"d.example.com"}, {"g.example.com"}},
                         {{"g.example.com"}, {"j.example.com"}},
-                        {{"j.example.com"}, null},
-                        }
+                        {{"j.example.com"}, null}
+                    }
                 },
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",

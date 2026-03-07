@@ -33,11 +33,11 @@ public class ScheduledExecutorsTest
     Duration delay = new Duration(1000);
     ScheduledExecutorService exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
     ScheduledExecutors.scheduleWithFixedDelay(
-            exec,
-            initialDelay,
-            delay,
+        exec,
+        initialDelay,
+        delay,
         () -> {
-            System.out.println("TEST!");
+          System.out.println("TEST!");
         }
     );
     Thread.sleep(5 * 1000);

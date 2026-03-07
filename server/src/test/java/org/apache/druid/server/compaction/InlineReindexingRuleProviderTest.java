@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -62,14 +61,11 @@ public class InlineReindexingRuleProviderTest
         null,
         null,
         null,
-        null,
         null
     );
 
     Assertions.assertNotNull(provider.getDeletionRules());
     Assertions.assertTrue(provider.getDeletionRules().isEmpty());
-    Assertions.assertNotNull(provider.getIOConfigRules());
-    Assertions.assertTrue(provider.getIOConfigRules().isEmpty());
     Assertions.assertNotNull(provider.getSegmentGranularityRules());
     Assertions.assertTrue(provider.getSegmentGranularityRules().isEmpty());
     Assertions.assertNotNull(provider.getTuningConfigRules());
@@ -105,14 +101,6 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_allNonAdditiveRules_validateNonAdditivity()
   {
-    // Test IOConfig rules
-    testNonAdditivity(
-        "ioConfig",
-        this::createIOConfigRule,
-        InlineReindexingRuleProvider.Builder::ioConfigRules,
-        InlineReindexingRuleProvider::getIOConfigRule
-    );
-
     // Test segment granularity rules
     testNonAdditivity(
         "segmentGranularity",
@@ -141,14 +129,12 @@ public class InlineReindexingRuleProviderTest
   public void test_allRuleTypesWireCorrectly_withInterval()
   {
     ReindexingDeletionRule filterRule = createFilterRule("filter", Period.days(30));
-    ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
     ReindexingSegmentGranularityRule segmentGranularityRule = createSegmentGranularityRule("segmentGranularity", Period.days(30));
     ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
     ReindexingDataSchemaRule dataSchemaRule = createDataSchemaRule("dataSchema", Period.days(30));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .deletionRules(ImmutableList.of(filterRule))
-        .ioConfigRules(ImmutableList.of(ioConfigRule))
         .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
         .dataSchemaRules(ImmutableList.of(dataSchemaRule))
@@ -156,8 +142,6 @@ public class InlineReindexingRuleProviderTest
 
     Assertions.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
     Assertions.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
-
-    Assertions.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assertions.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
@@ -228,11 +212,6 @@ public class InlineReindexingRuleProviderTest
   private ReindexingDeletionRule createFilterRule(String id, Period period)
   {
     return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
-  }
-
-  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
-  {
-    return new ReindexingIOConfigRule(id, null, period, new UserCompactionTaskIOConfig(null));
   }
 
   private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)

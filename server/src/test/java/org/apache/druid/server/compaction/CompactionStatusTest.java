@@ -154,28 +154,28 @@ public class CompactionStatusTest
                                               .forDataSource("datasource")
                                               .withMaxRowsPerSegment(100)
                                               .withTuningConfig(
-                                            new UserCompactionTaskQueryTuningConfig(
-                                                null,
-                                                null,
-                                                null,
-                                                1000L,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null
-                                            )
-                                        )
+                                                  new UserCompactionTaskQueryTuningConfig(
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1000L,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .build();
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),

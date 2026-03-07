@@ -455,15 +455,15 @@ public class BloomKFilterTest
         "bloo",
         "bloom fil",
         "bloom filter",
-        "cuckoo filter",
-        };
+        "cuckoo filter"
+    };
 
     String[] inputs2 = {
         "2_bloo",
         "2_bloom fil",
         "2_bloom filter",
-        "2_cuckoo filter",
-        };
+        "2_cuckoo filter"
+    };
 
     for (String val : inputs1) {
       bf1.addString(val);
