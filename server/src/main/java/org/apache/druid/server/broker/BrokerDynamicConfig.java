@@ -22,10 +22,10 @@ package org.apache.druid.server.broker;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.server.QueryBlocklistRule;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -51,7 +51,7 @@ public class BrokerDynamicConfig
       @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
   )
   {
-    this.queryBlocklist = Builder.valueOrDefault(queryBlocklist, Collections.emptyList());
+    this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Collections.emptyList());
   }
 
   @JsonProperty
@@ -127,13 +127,8 @@ public class BrokerDynamicConfig
     public BrokerDynamicConfig build(@Nullable BrokerDynamicConfig defaults)
     {
       return new BrokerDynamicConfig(
-        valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null)
+        Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null)
       );
-    }
-
-    private static <T> T valueOrDefault(@Nullable T value, @NotNull T defaultValue)
-    {
-      return value == null ? defaultValue : value;
     }
   }
 }

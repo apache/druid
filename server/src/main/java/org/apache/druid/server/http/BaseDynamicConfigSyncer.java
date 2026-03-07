@@ -58,9 +58,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * - {@link #pushConfigToBroker(BrokerClient, Object)} to push config via the appropriate BrokerClient method
  * - {@link #getConfigTypeName()} for logging
  *
- * @param <T> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
+ * @param <DynamicConfig> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
  */
-public abstract class BaseDynamicConfigSyncer<T>
+public abstract class BaseDynamicConfigSyncer<DynamicConfig>
 {
   private static final Logger log = new Logger(BaseDynamicConfigSyncer.class);
 
@@ -73,7 +73,7 @@ public abstract class BaseDynamicConfigSyncer<T>
 
   @GuardedBy("this")
   private final Set<BrokerSyncStatus> inSyncBrokers;
-  private final AtomicReference<T> lastKnownConfig = new AtomicReference<>();
+  private final AtomicReference<DynamicConfig> lastKnownConfig = new AtomicReference<>();
 
   protected BaseDynamicConfigSyncer(
       final ServiceClientFactory clientFactory,
@@ -94,13 +94,13 @@ public abstract class BaseDynamicConfigSyncer<T>
   /**
    * Get the current configuration to broadcast to brokers.
    */
-  protected abstract T getCurrentConfig();
+  protected abstract DynamicConfig getCurrentConfig();
 
   /**
    * Push the config to a broker using the appropriate BrokerClient method.
    * @return true if the push was successful
    */
-  protected abstract boolean pushConfigToBroker(BrokerClient brokerClient, T config) throws Exception;
+  protected abstract boolean pushConfigToBroker(BrokerClient brokerClient, DynamicConfig config) throws Exception;
 
   /**
    * Get the name of this config type for logging (e.g., "coordinator dynamic configuration", "broker dynamic configuration").
@@ -129,7 +129,7 @@ public abstract class BaseDynamicConfigSyncer<T>
     }
     emitStat(
         Stats.Configuration.TOTAL_SYNC_TIME,
-        RowKey.empty(),
+        RowKey.with(Dimension.CONFIG_TYPE, getConfigTypeName()).build(),
         stopwatch.millisElapsed()
     );
   }
@@ -147,7 +147,7 @@ public abstract class BaseDynamicConfigSyncer<T>
    */
   public void onLeaderStart()
   {
-    log.info("Starting %s syncing to brokers on leader node.", getConfigTypeName());
+    log.info("Starting [%s] config sync to brokers on leader node.", getConfigTypeName());
     syncFuture = exec.scheduleAtFixedRate(
         this::broadcastConfigToBrokers,
         30L,
@@ -161,7 +161,7 @@ public abstract class BaseDynamicConfigSyncer<T>
    */
   public void onLeaderStop()
   {
-    log.info("Not leader, stopping %s syncing to brokers.", getConfigTypeName());
+    log.info("Not leader, stopping [%s] config sync to brokers.", getConfigTypeName());
     if (syncFuture != null) {
       syncFuture.cancel(true);
     }
@@ -190,7 +190,7 @@ public abstract class BaseDynamicConfigSyncer<T>
     );
 
     try {
-      T currentConfig = getCurrentConfig();
+      DynamicConfig currentConfig = getCurrentConfig();
       boolean success = pushConfigToBroker(brokerClient, currentConfig);
       if (success) {
         markBrokerAsSynced(currentConfig, brokerLocation);
@@ -198,16 +198,18 @@ public abstract class BaseDynamicConfigSyncer<T>
     }
     catch (Exception e) {
       // Catch and ignore the exception, wait for the next sync.
-      log.error(e, "Exception while syncing %s to broker[%s]", getConfigTypeName(), brokerLocation);
+      log.error(e, "Exception while syncing [%s] config to broker[%s]", getConfigTypeName(), brokerLocation);
       emitStat(
           Stats.Configuration.BROKER_SYNC_ERROR,
-          RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
+          RowKey.with(Dimension.CONFIG_TYPE, getConfigTypeName())
+                .with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
           1
       );
     }
     emitStat(
         Stats.Configuration.BROKER_SYNC_TIME,
-        RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
+        RowKey.with(Dimension.CONFIG_TYPE, getConfigTypeName())
+              .with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
         stopwatch.millisElapsed()
     );
   }
@@ -227,7 +229,7 @@ public abstract class BaseDynamicConfigSyncer<T>
    */
   private synchronized void invalidateInSyncBrokersIfNeeded()
   {
-    final T currentConfig = getCurrentConfig();
+    final DynamicConfig currentConfig = getCurrentConfig();
     if (!currentConfig.equals(lastKnownConfig.get())) {
       // Config has changed, clear the inSync list.
       inSyncBrokers.clear();
@@ -238,7 +240,7 @@ public abstract class BaseDynamicConfigSyncer<T>
   /**
    * Adds a broker to the set of inSyncBrokers if the dynamic config has not changed.
    */
-  private synchronized void markBrokerAsSynced(T config, ServiceLocation broker)
+  private synchronized void markBrokerAsSynced(DynamicConfig config, ServiceLocation broker)
   {
     if (config.equals(lastKnownConfig.get())) {
       inSyncBrokers.add(new BrokerSyncStatus(broker, System.currentTimeMillis()));

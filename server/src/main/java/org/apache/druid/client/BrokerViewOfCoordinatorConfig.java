@@ -92,7 +92,7 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
   @Override
   protected String getConfigTypeName()
   {
-    return "coordinator dynamic configuration";
+    return "coordinator";
   }
 
   /**

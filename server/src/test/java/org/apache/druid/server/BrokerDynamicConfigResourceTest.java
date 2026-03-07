@@ -72,7 +72,7 @@ public class BrokerDynamicConfigResourceTest
   }
 
   @Test
-  public void testGetDynamicConfig()
+  public void testGetCoordinatorDynamicConfig()
   {
     CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build();
     Mockito.when(brokerViewOfCoordinatorConfig.getDynamicConfig()).thenReturn(config);
@@ -85,7 +85,7 @@ public class BrokerDynamicConfigResourceTest
   }
 
   @Test
-  public void testSetDynamicConfig()
+  public void testSetCoordinatorDynamicConfig()
   {
     CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build();
 

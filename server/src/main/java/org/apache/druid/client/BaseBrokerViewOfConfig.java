@@ -31,14 +31,14 @@ import javax.validation.constraints.NotNull;
  * {@link #fetchConfigFromClient()} to fetch configuration from their specific client</li>
  * {@link #getConfigTypeName()} for logging purposes</li>
  *
- * @param <T> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
+ * @param <DynamicConfig> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
  */
-public abstract class BaseBrokerViewOfConfig<T>
+public abstract class BaseBrokerViewOfConfig<DynamicConfig>
 {
   private static final Logger log = new Logger(BaseBrokerViewOfConfig.class);
 
   @GuardedBy("this")
-  private T config;
+  private DynamicConfig config;
 
   /**
    * Fetch the configuration from the Coordinator via the HTTP client.
@@ -47,7 +47,7 @@ public abstract class BaseBrokerViewOfConfig<T>
    * @return the configuration fetched from the Coordinator
    * @throws Exception if the fetch fails
    */
-  protected abstract T fetchConfigFromClient() throws Exception;
+  protected abstract DynamicConfig fetchConfigFromClient() throws Exception;
 
   /**
    * E.g., "coordinator dynamic configuration", "broker dynamic configuration"
@@ -57,7 +57,7 @@ public abstract class BaseBrokerViewOfConfig<T>
   /**
    * Return the current dynamic configuration.
    */
-  public synchronized T getDynamicConfig()
+  public synchronized DynamicConfig getDynamicConfig()
   {
     return config;
   }
@@ -68,7 +68,7 @@ public abstract class BaseBrokerViewOfConfig<T>
    *
    * @param updatedConfig the new configuration snapshot
    */
-  public synchronized void setDynamicConfig(@NotNull T updatedConfig)
+  public synchronized void setDynamicConfig(@NotNull DynamicConfig updatedConfig)
   {
     config = updatedConfig;
     log.info("Updated %s to [%s]", getConfigTypeName(), updatedConfig);
@@ -85,7 +85,7 @@ public abstract class BaseBrokerViewOfConfig<T>
     try {
       log.info("Fetching %s from Coordinator.", getConfigTypeName());
 
-      T fetchedConfig = fetchConfigFromClient();
+      DynamicConfig fetchedConfig = fetchConfigFromClient();
       setDynamicConfig(fetchedConfig);
 
       log.info("Successfully fetched %s: [%s]", getConfigTypeName(), fetchedConfig);

@@ -1864,86 +1864,8 @@ queries in order to avoid running as a default priority of 0.
 
 #### Dynamic configuration
 
-Broker dynamic configuration is managed through the Coordinator but consumed by Brokers. You can update this configuration at runtime via the Coordinator API at `/druid/coordinator/v1/broker/config`.
-
-The following table shows the dynamic configuration properties for the Broker.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
-
-##### Query blocklist rules
-
-Query blocklist rules allow you to block specific queries based on datasource, query type, and/or query context parameters. This feature is useful for preventing expensive or problematic queries from impacting cluster performance.
-
-Each rule in the `queryBlocklist` array is a JSON object with the following properties:
-
-|Property|Description|Required|Default|
-|--------|-----------|--------|-------|
-|`ruleName`|Unique name identifying this blocklist rule. Used in error messages when queries are blocked.|Yes|N/A|
-|`dataSources`|List of datasource names to match. A query matches if it references any datasource in this list.|No|Matches all datasources|
-|`queryTypes`|List of query types to match (e.g., `scan`, `timeseries`, `groupBy`, `topN`). A query matches if its type is in this list.|No|Matches all query types|
-|`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
-
-- A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
-- If any criterion is omitted, empty or null, it matches everything (e.g., omitting `queryTypes` or setting it to null matches all query types)
-- For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
-- At least one criterion must be specified per rule to prevent accidentally blocking all queries
-- A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
-
-> **Note:** Query blocking is best-effort. Queries may not be blocked in certain cases, such as when a Broker has recently started and hasn't received the config yet, or if the Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every 1 minute) and also receive push updates from the Coordinator for immediate propagation.
-
-
-**Example configuration:**
-
-To update the broker dynamic configuration, POST to the Coordinator:
-
-```bash
-curl -X POST http://coordinator:8081/druid/coordinator/v1/broker/config \
-  -H "Content-Type: application/json" \
-  -d '{
-  "queryBlocklist": [
-    {
-      "ruleName": "block-expensive-scans",
-      "dataSources": ["large_table", "huge_dataset"],
-      "queryTypes": ["scan"]
-    },
-    {
-      "ruleName": "block-debug-queries",
-      "queryTypes": null,
-      "contextMatches": {
-        "debug": "true"
-      }
-    },
-    {
-      "ruleName": "block-specific-user-scans",
-      "dataSources": ["sensitive_data"],
-      "queryTypes": ["scan"],
-      "contextMatches": {
-        "userId": "blocked_user"
-      }
-    }
-  ]
-}'
-```
-
-In this example:
-- The first rule blocks all `scan` queries against `large_table` or `huge_dataset` datasources
-- The second rule blocks any query with context parameter `debug=true` regardless of datasource (omitted) or query type (explicitly `null`)
-- The third rule blocks only `scan` queries against `sensitive_data` datasource when submitted by `blocked_user`
-
-**Error response:**
-
-When a query is blocked, the Broker returns an HTTP 403 error with a message indicating the query ID and the rule that blocked it:
-
-```json
-{
-  "error": "Forbidden",
-  "errorMessage": "Query[abc-123-def] blocked by rule[block-expensive-scans]",
-  "persona": "USER",
-  "category": "FORBIDDEN"
-}
-```
+The Broker has dynamic configurations to tune certain behavior dynamically, without requiring a service restart.
+You can configure these parameters using the [web console](../operations/web-console.md) (recommended) or through the [Broker dynamic configuration API](../api-reference/dynamic-configuration-api.md#broker-dynamic-configuration).
 
 #### SQL
 

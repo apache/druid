@@ -78,6 +78,6 @@ public class BrokerDynamicConfigSyncer extends BaseDynamicConfigSyncer<BrokerDyn
   @Override
   protected String getConfigTypeName()
   {
-    return "broker dynamic configuration";
+    return "broker";
   }
 }

@@ -72,6 +72,6 @@ public class CoordinatorDynamicConfigSyncer extends BaseDynamicConfigSyncer<Coor
   @Override
   protected String getConfigTypeName()
   {
-    return "coordinator dynamic configuration";
+    return "coordinator";
   }
 }
