@@ -72,7 +72,7 @@ public class HttpRemoteTaskRunnerResource
       return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
     }
 
-    return Response.ok().entity(httpRemoteTaskRunner.getPendingTasksList()).build();
+    return Response.ok().entity(httpRemoteTaskRunner.getPendingTasks()).build();
   }
 
   @GET
@@ -98,7 +98,7 @@ public class HttpRemoteTaskRunnerResource
       return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
     }
 
-    return Response.ok().entity(httpRemoteTaskRunner.getBlacklistedWorkers()).build();
+    return Response.ok().entity(httpRemoteTaskRunner.getBlackListedWorkers()).build();
   }
 
   @GET
@@ -124,7 +124,7 @@ public class HttpRemoteTaskRunnerResource
       return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
     }
 
-    return Response.ok().entity(httpRemoteTaskRunner.getWorkersWithUnacknowledgedTasks()).build();
+    return Response.ok().entity(httpRemoteTaskRunner.getPendingAssignWorkers()).build();
   }
 
   @GET
