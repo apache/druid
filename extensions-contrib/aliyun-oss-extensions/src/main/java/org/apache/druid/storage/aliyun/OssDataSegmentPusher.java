@@ -21,10 +21,8 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -34,7 +32,6 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 public class OssDataSegmentPusher implements DataSegmentPusher
@@ -52,25 +49,6 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   {
     this.client = client;
     this.config = config;
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    return StringUtils.format("%s/%s", config.getBucket(), config.getPrefix());
-  }
-
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
-  @Override
-  public List<String> getAllowedPropertyPrefixesForHadoop()
-  {
-    return ImmutableList.of("druid.oss");
   }
 
   @Override

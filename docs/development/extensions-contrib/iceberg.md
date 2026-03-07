@@ -131,9 +131,7 @@ Druid version:
 java \
   -cp "lib/*" \
   -Ddruid.extensions.directory="extensions" \
-  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
   org.apache.druid.cli.Main tools pull-deps \
-  --no-default-hadoop \
   -c "org.apache.druid.extensions.contrib:druid-iceberg-extensions:<VERSION>"
 ```
 

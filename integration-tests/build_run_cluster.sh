@@ -19,7 +19,6 @@ set -e
 echo $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH
 
 export DIR=$(cd $(dirname $0) && pwd)
-export HADOOP_DOCKER_DIR=$DIR/../examples/quickstart/tutorial/hadoop/docker
 
 export DOCKERDIR=$DIR/docker
 export SHARED_DIR=${HOME}/shared
@@ -35,8 +34,4 @@ fi
 if !($DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER); then
   bash ./stop_cluster.sh
   bash ./script/docker_run_cluster.sh
-fi
-
-if ($DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER); then
-  bash ./script/copy_hadoop_resources.sh
 fi

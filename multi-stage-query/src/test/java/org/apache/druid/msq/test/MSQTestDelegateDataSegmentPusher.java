@@ -46,18 +46,6 @@ public class MSQTestDelegateDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return delegate.getPathForHadoop(dataSource);
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    return delegate.getPathForHadoop();
-  }
-
-  @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
     final DataSegment dataSegment = delegate.push(file, segment, useUniquePath);

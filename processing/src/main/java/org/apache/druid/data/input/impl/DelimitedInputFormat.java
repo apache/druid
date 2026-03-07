@@ -113,8 +113,6 @@ public class DelimitedInputFormat extends FlatTextInputFormat
   /**
    * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
    * This is to avoid the error of the missing method signature when using an old Guava library.
-   * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
-   * the Hadoop cluster. See https://github.com/apache/druid/issues/6801.
    */
   public static List<String> splitToList(Splitter splitter, String input)
   {

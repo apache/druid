@@ -232,8 +232,8 @@ public interface Task
    * - When the task is executed by an indexer, {@link org.apache.druid.indexing.overlord.ThreadingTaskRunner#shutdown}
    *   calls this method directly.
    *
-   * If the task has some resources to clean up on abnormal exit, e.g., sub tasks of parallel indexing task
-   * or Hadoop jobs spawned by Hadoop indexing tasks, those resource cleanups should be done in this method.
+   * If the task has some resources to clean up on abnormal exit, e.g., sub tasks of parallel indexing task,
+   * those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
    */
