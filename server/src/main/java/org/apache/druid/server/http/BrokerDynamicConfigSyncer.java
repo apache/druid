@@ -22,26 +22,28 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Updates all brokers with the latest coordinator dynamic config.
+ * Syncs broker dynamic configuration to all brokers.
  */
-public class CoordinatorDynamicConfigSyncer extends BaseDynamicConfigSyncer<CoordinatorDynamicConfig>
+public class BrokerDynamicConfigSyncer extends BaseDynamicConfigSyncer<BrokerDynamicConfig>
 {
-  private final CoordinatorConfigManager configManager;
+  private final AtomicReference<BrokerDynamicConfig> currentConfig;
 
   @Inject
-  public CoordinatorDynamicConfigSyncer(
+  public BrokerDynamicConfigSyncer(
       @EscalatedGlobal final ServiceClientFactory clientFactory,
-      final CoordinatorConfigManager configManager,
+      final JacksonConfigManager configManager,
       @Json final ObjectMapper jsonMapper,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ServiceEmitter emitter
@@ -52,26 +54,30 @@ public class CoordinatorDynamicConfigSyncer extends BaseDynamicConfigSyncer<Coor
         jsonMapper,
         druidNodeDiscoveryProvider,
         emitter,
-        Execs.scheduledSingleThreaded("CoordinatorDynamicConfigSyncer-%d")
+        Execs.scheduledSingleThreaded("BrokerDynamicConfigSyncer-%d")
     );
-    this.configManager = configManager;
+    this.currentConfig = configManager.watch(
+        BrokerDynamicConfig.CONFIG_KEY,
+        BrokerDynamicConfig.class,
+        new BrokerDynamicConfig(null)
+    );
   }
 
   @Override
-  protected CoordinatorDynamicConfig getCurrentConfig()
+  protected BrokerDynamicConfig getCurrentConfig()
   {
-    return configManager.getCurrentDynamicConfig();
+    return currentConfig.get();
   }
 
   @Override
-  protected boolean pushConfigToBroker(BrokerClient brokerClient, CoordinatorDynamicConfig config) throws Exception
+  protected boolean pushConfigToBroker(BrokerClient brokerClient, BrokerDynamicConfig config) throws Exception
   {
-    return brokerClient.updateCoordinatorDynamicConfig(config).get();
+    return brokerClient.updateBrokerDynamicConfig(config).get();
   }
 
   @Override
   protected String getConfigTypeName()
   {
-    return "coordinator";
+    return "broker";
   }
 }
