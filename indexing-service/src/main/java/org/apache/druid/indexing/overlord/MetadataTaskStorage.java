@@ -160,6 +160,12 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskInfo> getCompletedTasksInfo(DateTime start, @Nullable Integer n)
+  {
+    return handler.getTaskInfos(Map.of(TaskLookupType.COMPLETE, new TaskLookup.CompleteTaskLookup(n, start)), null);
+  }
+
+  @Override
   public List<Task> getActiveTasks()
   {
     // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module

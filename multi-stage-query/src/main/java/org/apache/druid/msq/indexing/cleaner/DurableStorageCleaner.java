@@ -24,11 +24,14 @@ import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.storage.StorageConnector;
@@ -52,17 +55,20 @@ public class DurableStorageCleaner implements OverlordDuty
   private final DurableStorageCleanerConfig config;
   private final StorageConnector storageConnector;
   private final Provider<TaskMaster> taskMasterProvider;
+  private final TaskStorage taskStorage;
 
   @Inject
   public DurableStorageCleaner(
       final DurableStorageCleanerConfig config,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
-      @JacksonInject final Provider<TaskMaster> taskMasterProvider
+      @JacksonInject final Provider<TaskMaster> taskMasterProvider,
+      final TaskStorage taskStorage
   )
   {
     this.config = config;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.taskMasterProvider = taskMasterProvider;
+    this.taskStorage = taskStorage;
   }
 
   @Override
@@ -89,11 +95,11 @@ public class DurableStorageCleaner implements OverlordDuty
                                            .map(TaskRunnerWorkItem::getTaskId)
                                            .map(DurableStorageUtils::getControllerDirectory)
                                            .collect(Collectors.toSet());
-    Set<String> knownTaskIds = taskRunner.getKnownTasks()
-                                         .stream()
-                                         .map(TaskRunnerWorkItem::getTaskId)
-                                         .map(DurableStorageUtils::getControllerDirectory)
-                                         .collect(Collectors.toSet());
+    Set<String> recentlyCompletedTaskIds =
+        taskStorage.getCompletedTasksInfo(DateTimes.nowUtc().minus(config.getDurationToRetain().getMillis()), null)
+                   .stream()
+                   .map(TaskInfo::getId)
+                   .collect(Collectors.toSet());
 
     Set<String> filesToRemove = new HashSet<>();
     while (allFiles.hasNext()) {
@@ -101,11 +107,10 @@ public class DurableStorageCleaner implements OverlordDuty
       String nextDirName = DurableStorageUtils.getNextDirNameWithPrefixFromPath(currentFile);
       if (nextDirName != null && !nextDirName.isEmpty()) {
         if (runningTaskIds.contains(nextDirName)) {
-          // do nothing
+          // do nothing, query results should not be cleaned if the task is still running
         } else if (DurableStorageUtils.QUERY_RESULTS_DIR.equals(nextDirName)
-                   && DurableStorageUtils.isQueryResultFileActive(currentFile, knownTaskIds)) {
-          // query results should not be cleaned even if the task has finished running
-          // do nothing
+                   && DurableStorageUtils.isQueryResultFileActive(currentFile, recentlyCompletedTaskIds)) {
+          // do nothing, query results should not be cleaned if the task is created before retain period
         } else {
           filesToRemove.add(currentFile);
         }

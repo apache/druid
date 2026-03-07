@@ -52,6 +52,23 @@ public class DurableStorageUtils
     );
   }
 
+  @Nullable
+  private static String getControllerTaskId(final String path)
+  {
+    Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
+    List<String> elements = ImmutableList.copyOf(elementsIterator);
+    if (elements.size() < 2) {
+      return null;
+    }
+    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
+      return null;
+    }
+    if (!elements.get(1).startsWith("controller_")) {
+      return null;
+    }
+    return elements.get(1).substring(11);
+  }
+
 
   public static String getWorkerOutputSuccessFilePath(
       final String controllerTaskId,
@@ -149,6 +166,7 @@ public class DurableStorageUtils
         taskId
     );
   }
+
   /**
    * Fetches the file location where a particular worker writes the data corresponding to a particular stage
    * and partition
@@ -228,33 +246,23 @@ public class DurableStorageUtils
   }
 
   /**
-   * Tries to parse out the controller taskID from the query results path, and checks if the taskID is present in the
-   * set of known tasks.
-   * Returns true if the set contains the taskId.
-   * Returns false if taskId could not be parsed or if the set does not contain the taskId.
-   * <br></br>
-   * For eg:
-   * <br/>
-   * <ul>
-   *   <li>for path <b>controller_query_id/task/123</b> the function will return <b>false</b></li>
-   *   <li>for path <b>query-result/controller_query_id/results.json</b>, the function will return <b>true</b></li> if the controller_query_id is in known tasks
-   *   <li>for path <b>query-result/controller_query_id/results.json</b>, the function will return <b>false</b></li> if the controller_query_id is not in known tasks
-   *   <li>for path <b>null</b>, the function will return <b>false</b></li>
-   * </ul>
+   * Checks if a query result file should be retained by checking if its task ID is recently completed.
+   * Parses the controller task ID from paths under {@link #QUERY_RESULTS_DIR} and checks membership
+   * in the provided set.
+   *
+   * @param path                      the file path to check
+   * @param recentlyCompletedTaskIds  set of task IDs that completed recently and whose files should be retained
+   * @return {@code true} if the file belongs to a recently completed task; {@code false} otherwise
    */
-  public static boolean isQueryResultFileActive(String path, Set<String> knownTasks)
+  public static boolean isQueryResultFileActive(String path, Set<String> recentlyCompletedTaskIds)
   {
     if (path == null) {
       return false;
     }
-    Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
-    List<String> elements = ImmutableList.copyOf(elementsIterator);
-    if (elements.size() < 2) {
+    final String taskId = getControllerTaskId(path);
+    if (taskId == null) {
       return false;
     }
-    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
-      return false;
-    }
-    return knownTasks.contains(elements.get(1));
+    return recentlyCompletedTaskIds.contains(taskId);
   }
 }
