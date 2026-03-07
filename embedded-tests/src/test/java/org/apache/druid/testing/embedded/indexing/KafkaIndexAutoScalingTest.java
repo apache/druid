@@ -41,6 +41,7 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -149,13 +150,21 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
+
+    final Map<String, String> taskIdToError = new HashMap<>();
     for (TaskStatusPlus task : tasks) {
-      Assertions.assertEquals(
-          TaskState.SUCCESS,
-          task.getStatusCode(),
-          StringUtils.format("Task[%s] failed with error[%s]", task.getId(), task.getErrorMsg())
-      );
+      if (task.getStatusCode() == TaskState.FAILED) {
+        taskIdToError.put(task.getId(), task.getErrorMsg());
+      }
     }
+
+    Assertions.assertTrue(
+        taskIdToError.isEmpty(),
+        StringUtils.format(
+            "[%d / %d] tasks have failed with errors: %s",
+            taskIdToError.size(), tasks.size(), taskIdToError
+        )
+    );
   }
 
   private int getCurrentTaskCount(String supervisorId)
