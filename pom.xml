@@ -1045,7 +1045,7 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <version>3.0.2</version>
+                <version>3.0.3</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
