@@ -142,8 +142,8 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
           "1",
           cluster.runSql("SELECT COUNT(*) FROM sys.tasks WHERE datasource='%s'", dataSource)
       );
-      waitForSegmentCacheToBeSynced(coordinatorPair.leader);
-      waitForSegmentCacheToBeSynced(broker);
+      waitForNextSegmentCacheSync(coordinatorPair.leader);
+      waitForNextSegmentCacheSync(broker);
       Assertions.assertEquals(
           "10",
           cluster.runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'", dataSource)
@@ -286,7 +286,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     );
   }
 
-  private void waitForSegmentCacheToBeSynced(EmbeddedDruidServer<?> server)
+  private void waitForNextSegmentCacheSync(EmbeddedDruidServer<?> server)
   {
     server.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
