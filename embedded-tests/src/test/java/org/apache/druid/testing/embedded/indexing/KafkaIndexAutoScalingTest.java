@@ -46,6 +46,10 @@ import java.util.Map;
 
 /**
  * Work in progress.
+ *
+ * Pending items:
+ * - ensure that auto-scaler is stable and doesn't scale up or down too rapidly
+ * - ensure that there are no task failures
  */
 public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
 {
@@ -144,7 +148,14 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
     Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
-    Assertions.assertTrue(tasks.stream().allMatch(task -> TaskState.SUCCESS == task.getStatusCode()));
+    Assertions.assertFalse(tasks.isEmpty());
+    for (TaskStatusPlus task : tasks) {
+      Assertions.assertEquals(
+          TaskState.SUCCESS,
+          task.getStatusCode(),
+          StringUtils.format("Task[%s] failed with error[%s]", task.getId(), task.getErrorMsg())
+      );
+    }
   }
 
   private int getCurrentTaskCount(String supervisorId)
