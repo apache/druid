@@ -236,8 +236,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = new CostResult();
 
     log.info(
-        "Current metrics: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+        "Current metrics: avgPartitionLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
         metrics.getAggregateLag(),
+        metrics.getAvgProcessingRate(),
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
         config.getIdleWeight()

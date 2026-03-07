@@ -19,51 +19,39 @@
 
 package org.apache.druid.testing.cluster.overlord;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
 
 /**
- * Implementation of {@link LagAggregator} that supports the following:
- * <ul>
- * <li>Specify a {@code multiplier} to amplify the lag observed by the Overlord
- * for a given supervisor.</li>
- * </ul>
+ * {@link LagAggregator} that returns lag values tracked by the Overlord in-memory.
+ * The lag values are maintained in {@link SupervisorLagTracker} and may be updated
+ * by calling test-only Overlord APIs.
  */
-public class FaultyLagAggregator implements LagAggregator
+public class HttpLagAggregator implements LagAggregator
 {
-  private static final Logger log = new Logger(FaultyLagAggregator.class);
-
-  private final int lagMultiplier;
+  private final SupervisorLagTracker lagTracker;
   private final LagAggregator delegate = LagAggregator.DEFAULT;
 
   @JsonCreator
-  public FaultyLagAggregator(
-      @JsonProperty("lagMultiplier") int lagMultiplier
+  public HttpLagAggregator(
+      @JacksonInject SupervisorLagTracker lagTracker
   )
   {
-    this.lagMultiplier = lagMultiplier;
-    log.info("Multiplying lags by factor[%d].", lagMultiplier);
-  }
-
-  @JsonProperty
-  public int getLagMultiplier()
-  {
-    return lagMultiplier;
+    this.lagTracker = lagTracker;
   }
 
   @Override
   public <PartitionIdType> LagStats aggregate(String supervisorId, Map<PartitionIdType, Long> partitionLags)
   {
-    LagStats originalAggregate = delegate.aggregate(supervisorId, partitionLags);
-    return new LagStats(
-        originalAggregate.getMaxLag() * getLagMultiplier(),
-        originalAggregate.getTotalLag() * getLagMultiplier(),
-        originalAggregate.getAvgLag() * getLagMultiplier()
-    );
+    final LagStats tracked = lagTracker.getLag(supervisorId);
+    if (tracked == null) {
+      return delegate.aggregate(supervisorId, partitionLags);
+    } else {
+      return tracked;
+    }
   }
 }

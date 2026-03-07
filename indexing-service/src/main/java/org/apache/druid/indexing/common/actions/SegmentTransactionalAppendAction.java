@@ -219,7 +219,30 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-    return retVal;
+
+    if (shouldFailImmediately(retVal, task, toolbox)) {
+      return SegmentPublishResult.fail(retVal.getErrorMsg());
+    } else {
+      return retVal;
+    }
+  }
+
+  /**
+   * Checks if the current publish action should be failed without allowing any
+   * more retries. A failed publish action should be retried only if there is
+   * another task waiting to publish offsets for an overlapping set of partitions.
+   */
+  private boolean shouldFailImmediately(SegmentPublishResult result, Task task, TaskActionToolbox toolbox)
+  {
+    if (result.isSuccess() || !result.isRetryable() || startMetadata == null) {
+      return false;
+    }
+
+    return toolbox.getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(
+        supervisorId,
+        task.getId(),
+        startMetadata
+    );
   }
 
   @Override
