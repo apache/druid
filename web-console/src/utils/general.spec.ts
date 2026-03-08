@@ -106,6 +106,8 @@ describe('general', () => {
       expect(formatNumber(5)).toEqual('5');
       expect(formatNumber(5.1)).toEqual('5.1');
       expect(formatNumber(1 / 3)).toEqual('0.333');
+      expect(formatNumber(10000.3)).toEqual('10,000.3');
+      expect(formatNumber(BigInt('9223372036854776123'))).toEqual('9,223,372,036,854,776,123');
     });
   });
 

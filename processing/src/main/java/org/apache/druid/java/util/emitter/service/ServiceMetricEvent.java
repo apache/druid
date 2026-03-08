@@ -116,9 +116,9 @@ public class ServiceMetricEvent implements Event
         .builder()
         .put(FEED, getFeed())
         .put(TIMESTAMP, createdTime.toString())
-        .putAll(serviceDims)
         .put(METRIC, metric)
         .put(VALUE, value)
+        .putAll(serviceDims)
         .putAll(userDims)
         .build();
   }

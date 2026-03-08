@@ -230,16 +230,21 @@ public class WorkerImpl implements Worker
       cpuTimeNs += tracker.totalCpu();
     }
 
-    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
-    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
-
     final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
-    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
-                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
-                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
-                 .setDimension(DruidMetrics.SUCCESS, success)
-                 .setMetric("query/time", time);
 
+    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
+    if (datasources != null) {
+      metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
+    }
+
+    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
+    if (intervals != null) {
+      metricBuilder.setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
+      metricBuilder.setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals));
+    }
+
+    metricBuilder.setDimension(DruidMetrics.SUCCESS, success);
+    metricBuilder.setMetric("query/time", time);
     context.emitMetric(metricBuilder);
 
     metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));

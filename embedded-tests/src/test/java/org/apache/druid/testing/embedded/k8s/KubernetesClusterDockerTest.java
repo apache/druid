@@ -61,8 +61,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
         .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
-            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"postgresql-metadata-storage\"]"
         );
   }
 

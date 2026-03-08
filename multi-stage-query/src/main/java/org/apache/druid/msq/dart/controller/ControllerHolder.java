@@ -20,19 +20,30 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.CaptureReportQueryListener;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.QueryListener;
+import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
+import org.apache.druid.msq.indexing.report.MSQStatusReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.joda.time.DateTime;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -40,45 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ControllerHolder
 {
-  public enum State
-  {
-    /**
-     * Query has been accepted, but not yet {@link Controller#run(QueryListener)}.
-     */
-    ACCEPTED(StandardQueryState.ACCEPTED),
-
-    /**
-     * Query has had {@link Controller#run(QueryListener)} called.
-     */
-    RUNNING(StandardQueryState.RUNNING),
-
-    /**
-     * Query has been canceled.
-     */
-    CANCELED(StandardQueryState.CANCELED),
-
-    /**
-     * Query has exited successfully.
-     */
-    SUCCESS(StandardQueryState.SUCCESS),
-
-    /**
-     * Query has failed.
-     */
-    FAILED(StandardQueryState.FAILED);
-
-    private final String statusString;
-
-    State(String statusString)
-    {
-      this.statusString = statusString;
-    }
-
-    public String getStatusString()
-    {
-      return statusString;
-    }
-  }
+  private static final Logger log = new Logger(ControllerHolder.class);
 
   private final Controller controller;
   private final String sqlQueryId;
@@ -188,21 +161,70 @@ public class ControllerHolder
   }
 
   /**
-   * Calls {@link Controller#run(QueryListener)}, and returns true, if this holder was previously in state
-   * {@link State#ACCEPTED}. Otherwise returns false.
+   * Runs {@link Controller#run(QueryListener)} in the provided executor. Registers the controller with the provided
+   * registry while it is running.
    *
-   * @return whether {@link Controller#run(QueryListener)} was called.
+   * @return future that resolves when the controller is done or canceled.
    */
-  public boolean run(final QueryListener listener) throws Exception
+  public ListenableFuture<?> runAsync(
+      final QueryListener listener,
+      final DartControllerRegistry controllerRegistry,
+      final ControllerThreadPool threadPool
+  )
   {
-    if (state.compareAndSet(State.ACCEPTED, State.RUNNING)) {
-      final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
-      controller.run(reportListener);
-      updateStateOnQueryComplete(reportListener.getReport());
-      return true;
-    } else {
-      return false;
-    }
+    // Register controller before submitting anything to controllerExeuctor, so it shows up in
+    // "active controllers" lists.
+    controllerRegistry.register(this);
+
+    final ListenableFuture<?> future = threadPool.getExecutorService().submit(() -> {
+      final String threadName = Thread.currentThread().getName();
+      Thread.currentThread().setName(makeThreadName());
+
+      try {
+        final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
+
+        try {
+          if (state.compareAndSet(State.ACCEPTED, State.RUNNING)) {
+            controller.run(reportListener);
+            updateStateOnQueryComplete(reportListener.getReport());
+          } else {
+            // Canceled before running.
+            reportListener.onQueryComplete(makeCanceledReport());
+          }
+        }
+        catch (Throwable e) {
+          log.warn(
+              e,
+              "Controller[%s] failed, queryId[%s], sqlQueryId[%s]",
+              controller.queryId(),
+              controller.getQueryContext().getString(BaseQuery.QUERY_ID),
+              sqlQueryId
+          );
+        }
+        finally {
+          // Build report and then call "deregister".
+          final MSQTaskReport taskReport;
+
+          if (reportListener.hasReport()) {
+            taskReport = new MSQTaskReport(controller.queryId(), reportListener.getReport());
+          } else {
+            taskReport = null;
+          }
+
+          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
+          controllerRegistry.deregister(this, reportMap);
+        }
+      }
+      finally {
+        Thread.currentThread().setName(threadName);
+      }
+    });
+
+    // Must not cancel the above future, otherwise "deregister" may never get called. If a controller is canceled
+    // before it runs, the runnable above stays in the queue until it gets a thread, then it exits without running
+    // the controller.
+    return Futures.nonCancellationPropagating(future);
   }
 
   private void updateStateOnQueryComplete(final MSQTaskReportPayload report)
@@ -215,6 +237,68 @@ public class ControllerHolder
       case FAILED:
         state.compareAndSet(State.RUNNING, State.FAILED);
         break;
+    }
+  }
+
+  /**
+   * Generate a name for the thread that {@link #runAsync} uses.
+   */
+  private String makeThreadName()
+  {
+    return StringUtils.format(
+        "%s[%s]-sqlQueryId[%s]",
+        Thread.currentThread().getName(),
+        controller.queryId(),
+        sqlQueryId
+    );
+  }
+
+  private MSQTaskReportPayload makeCanceledReport()
+  {
+    final MSQErrorReport errorReport =
+        MSQErrorReport.fromFault(controller.queryId(), null, null, CanceledFault.userRequest());
+    final MSQStatusReport statusReport =
+        new MSQStatusReport(TaskState.FAILED, errorReport, null, null, 0, Map.of(), 0, 0, null, null);
+    return new MSQTaskReportPayload(statusReport, null, null, null);
+  }
+
+  public enum State
+  {
+    /**
+     * Query has been accepted, but not yet {@link Controller#run(QueryListener)}.
+     */
+    ACCEPTED(StandardQueryState.ACCEPTED),
+
+    /**
+     * Query has had {@link Controller#run(QueryListener)} called.
+     */
+    RUNNING(StandardQueryState.RUNNING),
+
+    /**
+     * Query has been canceled.
+     */
+    CANCELED(StandardQueryState.CANCELED),
+
+    /**
+     * Query has exited successfully.
+     */
+    SUCCESS(StandardQueryState.SUCCESS),
+
+    /**
+     * Query has failed.
+     */
+    FAILED(StandardQueryState.FAILED);
+
+    private final String statusString;
+
+    State(String statusString)
+    {
+      this.statusString = statusString;
+    }
+
+    public String getStatusString()
+    {
+      return statusString;
     }
   }
 }

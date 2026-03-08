@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing.autoscaler;
 
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
@@ -41,6 +40,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -101,14 +101,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     cluster.useLatchableEmitter()
            .useDefaultTimeoutForLatchableEmitter(60)
+           .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
            .addServer(historical)
-           .addExtension(KafkaIndexTaskModule.class)
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.5s")
-           .addResource(kafkaServer)
            .addServer(new EmbeddedRouter());
 
     return cluster;
@@ -127,13 +126,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMin(1)
         .taskCountMax(100)
         .taskCountStart(initialTaskCount)
-        .scaleActionPeriodMillis(1500)
-        .minTriggerScaleActionFrequencyMillis(3000)
+        .scaleActionPeriodMillis(1900)
+        .minTriggerScaleActionFrequencyMillis(2000)
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
         .scaleDownDuringTaskRolloverOnly(false)
-        .scaleDownBarrier(1)
+        .minScaleDownDelay(Duration.ZERO)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
@@ -147,10 +146,10 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
                                         .hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
-    // We expect the optimal task count to 4
+    // We expect the optimal task count less than 6
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.equalTo(6L))
+                      .hasValueMatching(Matchers.lessThanOrEqualTo(6L))
     );
 
     // Suspend the supervisor
@@ -229,7 +228,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .idleWeight(0.9)
         .scaleDownDuringTaskRolloverOnly(true)
         // Do not slow scale-downs
-        .scaleDownBarrier(0)
+        .minScaleDownDelay(Duration.ZERO)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);

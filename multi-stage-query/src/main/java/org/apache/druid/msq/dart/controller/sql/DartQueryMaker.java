@@ -19,43 +19,35 @@
 
 package org.apache.druid.msq.dart.controller.sql;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Either;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
-import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
-import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
+import org.apache.druid.msq.exec.SequenceQueryListener;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
-import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CancellationReason;
-import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.indexing.report.MSQStatusReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
+import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
@@ -68,38 +60,24 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
-import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
-import java.time.Duration;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
  * SQL {@link QueryMaker}. Executes queries in two ways, depending on whether the user asked for a full report.
  *
- * When including a full report, the controller runs in the SQL planning thread (typically an HTTP thread) using
- * the method {@link #runWithReport(ControllerHolder)}. The entire response is buffered in memory, up to
+ * When including a full report, the entire response is buffered in memory, up to
  * {@link DartControllerConfig#getMaxQueryReportSize()}.
  *
- * When not including a full report, the controller runs in {@link #controllerExecutor} and results are streamed
- * back to the user through {@link ResultIterator}. There is no limit to the size of the returned results.
+ * When not including a full report, results are streamed back to the user through a {@link SequenceQueryListener}.
+ * There is no limit to the size of the returned results.
  */
 public class DartQueryMaker implements QueryMaker
 {
-  private static final Logger log = new Logger(DartQueryMaker.class);
-
   final List<Entry<Integer, String>> fieldMapping;
   private final DartControllerContextFactory controllerContextFactory;
   private final PlannerContext plannerContext;
@@ -115,10 +93,9 @@ public class DartQueryMaker implements QueryMaker
   private final DartControllerConfig controllerConfig;
 
   /**
-   * Executor for {@link #runWithIterator(ControllerHolder)}. Number of thread is equal to
-   * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
+   * Executor for running controllers.
    */
-  private final ExecutorService controllerExecutor;
+  private final ControllerThreadPool controllerThreadPool;
   private final ServerConfig serverConfig;
 
   final QueryKitSpecFactory queryKitSpecFactory;
@@ -130,7 +107,7 @@ public class DartQueryMaker implements QueryMaker
       PlannerContext plannerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor,
+      ControllerThreadPool controllerThreadPool,
       QueryKitSpecFactory queryKitSpecFactory,
       MultiQueryKit queryKit,
       ServerConfig serverConfig
@@ -141,7 +118,7 @@ public class DartQueryMaker implements QueryMaker
     this.plannerContext = plannerContext;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
-    this.controllerExecutor = controllerExecutor;
+    this.controllerThreadPool = controllerThreadPool;
     this.queryKitSpecFactory = queryKitSpecFactory;
     this.queryKit = queryKit;
     this.serverConfig = serverConfig;
@@ -166,8 +143,11 @@ public class DartQueryMaker implements QueryMaker
     return runLegacyMSQSpec(querySpec, druidQuery.getQuery().context(), resultsContext);
   }
 
-  public static ResultsContext makeResultsContext(DruidQuery druidQuery, List<Entry<Integer, String>> fieldMapping,
-      PlannerContext plannerContext)
+  public static ResultsContext makeResultsContext(
+      DruidQuery druidQuery,
+      List<Entry<Integer, String>> fieldMapping,
+      PlannerContext plannerContext
+  )
   {
     final List<Pair<SqlTypeName, ColumnType>> types = MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
     final ResultsContext resultsContext = new ResultsContext(
@@ -175,6 +155,32 @@ public class DartQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
     return resultsContext;
+  }
+
+  /**
+   * Creates a controller using {@link LegacyMSQSpec} and calls {@link #runController}.
+   */
+  public QueryResponse<Object[]> runLegacyMSQSpec(
+      LegacyMSQSpec querySpec,
+      QueryContext context,
+      ResultsContext resultsContext
+  )
+  {
+    final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport(), querySpec.getColumnMappings(), resultsContext);
+  }
+
+  /**
+   * Creates a controller using {@link QueryDefMSQSpec} and calls {@link #runController}.
+   */
+  public QueryResponse<Object[]> runQueryDefMSQSpec(
+      QueryDefMSQSpec querySpec,
+      QueryContext context,
+      ResultsContext resultsContext
+  )
+  {
+    final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport(), querySpec.getColumnMappings(), resultsContext);
   }
 
   private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
@@ -201,46 +207,6 @@ public class DartQueryMaker implements QueryMaker
     );
   }
 
-  public QueryResponse<Object[]> runLegacyMSQSpec(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
-  {
-    final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
-    return runController(controller, context.getFullReport());
-  }
-
-  public QueryResponse<Object[]> runQueryDefMSQSpec(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
-  {
-    final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
-    return runController(controller, context.getFullReport());
-  }
-
-  private QueryResponse<Object[]> runController(final ControllerImpl controller, final boolean fullReport)
-  {
-    final ControllerHolder controllerHolder = new ControllerHolder(
-        controller,
-        plannerContext.getSqlQueryId(),
-        plannerContext.getSql(),
-        plannerContext.getAuthenticationResult(),
-        DateTimes.nowUtc()
-    );
-
-    // Register controller before submitting anything to controllerExeuctor, so it shows up in
-    // "active controllers" lists.
-    controllerRegistry.register(controllerHolder);
-
-    try {
-      // runWithReport, runWithoutReport are responsible for calling controllerRegistry.deregister(controllerHolder)
-      // when their work is done.
-      final Sequence<Object[]> results =
-          fullReport ? runWithReport(controllerHolder) : runWithIterator(controllerHolder);
-      return QueryResponse.withEmptyContext(results);
-    }
-    catch (Throwable e) {
-      // Error while calling runWithReport or runWithoutReport. Deregister controller immediately.
-      controllerRegistry.deregister(controllerHolder, null);
-      throw e;
-    }
-  }
-
   /**
    * Adds the timeout parameter to the query context, considering the default and maximum values from
    * {@link ServerConfig}.
@@ -254,353 +220,124 @@ public class DartQueryMaker implements QueryMaker
   }
 
   /**
+   * Runs a controller in {@link #controllerThreadPool} and returns a {@link QueryResponse} object.
+   *
+   * @param controller     controller to run
+   * @param fullReport     if true, buffer the results into a report and return it in a single row.
+   *                       if false, stream the results back
+   * @param columnMappings SQL column mappings
+   * @param resultsContext SQL results context
+   */
+  private QueryResponse<Object[]> runController(
+      final ControllerImpl controller,
+      final boolean fullReport,
+      final ColumnMappings columnMappings,
+      final ResultsContext resultsContext
+  )
+  {
+    final ControllerHolder controllerHolder = new ControllerHolder(
+        controller,
+        plannerContext.getSqlQueryId(),
+        plannerContext.getSql(),
+        plannerContext.getAuthenticationResult(),
+        DateTimes.nowUtc()
+    );
+
+    // runWithReport, runWithoutReport are responsible for calling controllerRegistry.deregister(controllerHolder)
+    // when their work is done.
+    final Sequence<Object[]> results =
+        fullReport
+        ? runWithReport(controllerHolder, columnMappings, resultsContext)
+        : runWithSequence(controllerHolder, columnMappings, resultsContext);
+    return QueryResponse.withEmptyContext(results);
+  }
+
+  /**
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
    * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
-  private Sequence<Object[]> runWithReport(final ControllerHolder controllerHolder)
+  private Sequence<Object[]> runWithReport(
+      final ControllerHolder controllerHolder,
+      final ColumnMappings columnMappings,
+      final ResultsContext resultsContext
+  )
   {
-    final Future<TaskReport.ReportMap> reportFuture;
-
-    // Run in controllerExecutor. Control doesn't really *need* to be moved to another thread, but we have to
-    // use the controllerExecutor anyway, to ensure we respect the concurrentQueries configuration.
-    reportFuture = controllerExecutor.submit(() -> {
-      TaskReport.ReportMap retVal = null;
-      final String threadName = Thread.currentThread().getName();
-
-      try {
-        Thread.currentThread().setName(nameThread(plannerContext));
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-            () -> new LimitedOutputStream(
-                baos,
-                controllerConfig.getMaxQueryReportSize(),
-                limit -> StringUtils.format(
-                    "maxQueryReportSize[%,d] exceeded. "
-                    + "Try limiting the result set for your query, or run it with %s[false]",
-                    limit,
-                    QueryContexts.CTX_FULL_REPORT
-                )
-            ),
-            plannerContext.getJsonMapper(),
-            controllerHolder.getController().queryId(),
-            Collections.emptyMap(),
-            MSQDestination.UNLIMITED
-        );
-
-        if (controllerHolder.run(queryListener)) {
-          retVal = plannerContext.getJsonMapper()
-                                 .readValue(baos.toByteArray(), TaskReport.ReportMap.class);
-        } else {
-          // Controller was canceled before it ran.
-          throw MSQErrorReport
-              .fromFault(
-                  controllerHolder.getController().queryId(),
-                  null,
-                  null,
-                  CanceledFault.userRequest()
-              )
-              .toDruidException();
-        }
-      }
-      finally {
-        controllerRegistry.deregister(controllerHolder, retVal);
-        Thread.currentThread().setName(threadName);
-      }
-
-      return retVal;
-    });
-
-    // Return a sequence that reads one row (the report) from reportFuture.
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<>()
-        {
-          @Override
-          public Iterator<Object[]> make()
-          {
-            try {
-              return Iterators.singletonIterator(new Object[]{reportFuture.get()});
-            }
-            catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-            catch (ExecutionException e) {
-              // Unwrap ExecutionExceptions, so errors such as DruidException are serialized properly.
-              Throwables.throwIfUnchecked(e.getCause());
-              throw new RuntimeException(e.getCause());
-            }
-          }
-
-          @Override
-          public void cleanup(Iterator<Object[]> iterFromMake)
-          {
-            // Nothing to do.
-          }
-        }
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final TaskReportQueryListener listener = new TaskReportQueryListener(
+        () -> new LimitedOutputStream(
+            baos,
+            controllerConfig.getMaxQueryReportSize(),
+            limit -> StringUtils.format(
+                "maxQueryReportSize[%,d] exceeded. "
+                + "Try limiting the result set for your query, or run it with %s[false]",
+                limit,
+                QueryContexts.CTX_FULL_REPORT
+            )
+        ),
+        plannerContext.getJsonMapper(),
+        controllerHolder.getController().queryId(),
+        Collections.emptyMap(),
+        MSQDestination.UNLIMITED,
+        columnMappings,
+        resultsContext
     );
+
+    try {
+      // Submit controller and wait for it to finish.
+      controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool).get();
+
+      // Return a sequence with just one row (the report).
+      final TaskReport.ReportMap reportMap =
+          plannerContext.getJsonMapper().readValue(baos.toByteArray(), TaskReport.ReportMap.class);
+      return Sequences.simple(List.<Object[]>of(new Object[]{reportMap}));
+    }
+    catch (InterruptedException e) {
+      controllerHolder.cancel(CancellationReason.UNKNOWN);
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
-   * Run a query and return the results only, streamed back using {@link ResultIteratorMaker}.
+   * Run a query and return the results only, streamed back using {@link SequenceQueryListener}.
    *
    * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
-  private Sequence<Object[]> runWithIterator(final ControllerHolder controllerHolder)
+  private Sequence<Object[]> runWithSequence(
+      final ControllerHolder controllerHolder,
+      final ColumnMappings columnMappings,
+      final ResultsContext resultsContext
+  )
   {
-    return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
-  }
+    final SequenceQueryListener listener = new SequenceQueryListener();
+    final ListenableFuture<?> runFuture =
+        controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool);
 
-  /**
-   * Generate a name for a thread in {@link #controllerExecutor}.
-   */
-  private String nameThread(final PlannerContext plannerContext)
-  {
-    return StringUtils.format(
-        "%s-sqlQueryId[%s]-queryId[%s]",
-        Thread.currentThread().getName(),
-        plannerContext.getSqlQueryId(),
-        plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID)
-    );
-  }
-
-  /**
-   * Helper for {@link #runWithIterator(ControllerHolder)}.
-   */
-  class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
-  {
-    private final ControllerHolder controllerHolder;
-    private final ResultIterator resultIterator;
-    private boolean made;
-
-    public ResultIteratorMaker(ControllerHolder holder)
-    {
-      this.controllerHolder = holder;
-      this.resultIterator = new ResultIterator(controllerHolder.getController().getQueryContext().getTimeoutDuration());
-      submitController();
-    }
-
-    /**
-     * Submits the controller to the executor in the constructor, and remove it from the registry when the
-     * future resolves.
-     */
-    private void submitController()
-    {
-      controllerExecutor.submit(() -> {
-        final Controller controller = controllerHolder.getController();
-        final String threadName = Thread.currentThread().getName();
-
-        try {
-          Thread.currentThread().setName(nameThread(plannerContext));
-
-          if (!controllerHolder.run(resultIterator)) {
-            // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
-            // returned by "runWithoutReport" can resolve.
-            resultIterator.pushError(
-                MSQErrorReport.fromFault(
-                    controllerHolder.getController().queryId(),
-                    null,
-                    null,
-                    CanceledFault.userRequest()
-                ).toDruidException()
-            );
-          }
-        }
-        catch (Exception e) {
-          log.warn(
-              e,
-              "Controller failed for sqlQueryId[%s], controllerHost[%s]",
-              plannerContext.getSqlQueryId(),
-              controller.queryId()
-          );
-        }
-        catch (Throwable e) {
-          log.error(
-              e,
-              "Controller failed for sqlQueryId[%s], controllerHost[%s]",
-              plannerContext.getSqlQueryId(),
-              controller.queryId()
-          );
-          throw e;
-        }
-        finally {
-          final MSQTaskReport taskReport;
-
-          if (resultIterator.report != null) {
-            taskReport = new MSQTaskReport(
-                controllerHolder.getController().queryId(),
-                resultIterator.report
-            );
-          } else {
-            taskReport = null;
-          }
-
-          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
-          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
-          controllerRegistry.deregister(controllerHolder, reportMap);
-          Thread.currentThread().setName(threadName);
-        }
-      });
-    }
-
-    @Override
-    public ResultIterator make()
-    {
-      if (made) {
-        throw new ISE("Cannot call make() more than once");
-      }
-
-      made = true;
-      return resultIterator;
-    }
-
-    @Override
-    public void cleanup(final ResultIterator iterFromMake)
-    {
-      if (!iterFromMake.complete) {
-        controllerHolder.cancel(CancellationReason.UNKNOWN);
-      }
-    }
-  }
-
-  /**
-   * Helper for {@link ResultIteratorMaker}, which is in turn a helper for {@link #runWithIterator(ControllerHolder)}.
-   */
-  static class ResultIterator implements Iterator<Object[]>, QueryListener
-  {
-    /**
-     * Number of rows to buffer from {@link #onResultRow(Object[])}.
-     */
-    private static final int BUFFER_SIZE = 128;
-
-    /**
-     * Empty optional signifies results are complete.
-     */
-    private final BlockingQueue<Either<Throwable, Object[]>> rowBuffer = new ArrayBlockingQueue<>(BUFFER_SIZE);
-
-    /**
-     * Only accessed by {@link Iterator} methods, so no need to be thread-safe.
-     */
-    @Nullable
-    private Either<Throwable, Object[]> current;
-
-    private volatile boolean complete;
-    private volatile MSQTaskReportPayload report;
-
-    @Nullable
-    private final Duration timeout;
-
-    public ResultIterator(@Nullable Duration timeout)
-    {
-      this.timeout = timeout;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return populateAndReturnCurrent().isPresent();
-    }
-
-    @Override
-    public Object[] next()
-    {
-      final Object[] retVal = populateAndReturnCurrent().orElseThrow(NoSuchElementException::new);
-      current = null;
-      return retVal;
-    }
-
-    private Optional<Object[]> populateAndReturnCurrent()
-    {
-      if (current == null) {
-        try {
-          if (timeout != null) {
-            current = rowBuffer.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            if (current == null) {
-              throw DruidException.defensive("Result reader timed out [%s]", timeout);
+    return Sequences.wrap(
+        listener.getSequence().flatMap(
+            rac -> SqlStatementResourceHelper.getResultSequence(
+                rac.as(Frame.class),
+                listener.getFrameReader(),
+                columnMappings,
+                resultsContext,
+                plannerContext.getJsonMapper()
+            )
+        ),
+        new SequenceWrapper()
+        {
+          @Override
+          public void after(final boolean isDone, final Throwable thrown)
+          {
+            if (!isDone || thrown != null) {
+              runFuture.cancel(true); // Cancel on early stop or failure
             }
-          } else {
-            current = rowBuffer.take();
           }
         }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
-        }
-      }
-
-      if (current.isValue()) {
-        return Optional.ofNullable(current.valueOrThrow());
-      } else {
-        // Don't use valueOrThrow to throw errors; here we *don't* want the wrapping in RuntimeException
-        // that Either.valueOrThrow does. We want the original DruidException to be propagated to the user, if
-        // there is one.
-        final Throwable e = current.error();
-        Throwables.throwIfUnchecked(e);
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public boolean readResults()
-    {
-      return !complete;
-    }
-
-    @Override
-    public void onResultsStart(
-        final List<MSQResultsReport.ColumnAndType> signature,
-        @Nullable final List<SqlTypeName> sqlTypeNames
-    )
-    {
-      // Nothing to do.
-    }
-
-    @Override
-    public boolean onResultRow(Object[] row)
-    {
-      try {
-        rowBuffer.put(Either.value(row));
-        return !complete;
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public void onResultsComplete()
-    {
-      // Nothing to do.
-    }
-
-    @Override
-    public void onQueryComplete(MSQTaskReportPayload report)
-    {
-      try {
-        this.report = report;
-        this.complete = true;
-
-        final MSQStatusReport statusReport = report.getStatus();
-
-        if (statusReport.getStatus().isSuccess()) {
-          rowBuffer.put(Either.value(null));
-        } else {
-          pushError(statusReport.getErrorReport().toDruidException());
-        }
-      }
-      catch (InterruptedException e) {
-        // Can't fix this by pushing an error, because the rowBuffer isn't accepting new entries.
-        // Give up, allow controllerHolder.run() to fail.
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-    }
-
-    public void pushError(final Throwable e) throws InterruptedException
-    {
-      rowBuffer.put(Either.error(e));
-    }
+    );
   }
 }

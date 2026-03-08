@@ -44,6 +44,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.timeline.DataSegment;
@@ -344,6 +345,10 @@ public class EmbeddedClusterApis implements EmbeddedResource
           agg -> agg.hasSumAtLeast(numTombstones)
       );
     }
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   /**

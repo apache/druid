@@ -993,7 +993,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         if (maxDelayBefore > 0) {
           Thread.sleep(ThreadLocalRandom.current().nextInt(maxDelayBefore));
         }
-        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment).map(closer::register);
+        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId()).map(closer::register);
         if (segmentReference.isPresent()) {
           PhysicalSegmentInspector gadget = segmentReference.get().as(PhysicalSegmentInspector.class);
           if (maxDelayAfter > 0) {

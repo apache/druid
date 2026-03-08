@@ -22,7 +22,9 @@ package org.apache.druid.msq.kernel.controller;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +37,7 @@ public class ControllerTestInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+  public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
   {
     final List<InputSlice> slices = new ArrayList<>(maxNumSlices);
     for (int i = 0; i < maxNumSlices; i++) {
@@ -47,6 +49,7 @@ public class ControllerTestInputSpecSlicer implements InputSpecSlicer
   @Override
   public List<InputSlice> sliceDynamic(
       InputSpec inputSpec,
+      @Nullable SegmentPruner segmentPruner,
       int maxNumSlices,
       int maxFilesPerSlice,
       long maxBytesPerSlice

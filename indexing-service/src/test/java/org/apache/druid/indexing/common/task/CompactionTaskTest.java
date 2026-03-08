@@ -145,6 +145,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -430,7 +431,7 @@ public class CompactionTaskTest
   public void testCreateCompactionTaskWithTransformSpec()
   {
     CompactionTransformSpec transformSpec =
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory
@@ -1602,7 +1603,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     final CompactionTask compactionTask = builder.build();
     // granularitySpec=null should assume a possible rollup
@@ -1616,7 +1617,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
                                             .withForceGuaranteedRollup(true)
@@ -1640,7 +1641,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
 
@@ -1658,7 +1659,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
 
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
@@ -1685,7 +1686,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
 
     DimensionSchema stringDim = new AutoTypeColumnSchema("string_dim_1", ColumnType.STRING, null);
@@ -1773,7 +1774,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null))
         .build();
     Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }
@@ -1972,11 +1973,16 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
       {
-        return Optional.of(
-            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
-        );
+        for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
+          if (entry.getKey().getId().equals(segmentId)) {
+            return Optional.of(
+                new QueryableIndexSegment(indexIO.loadIndex(entry.getValue()), segmentId)
+            );
+          }
+        }
+        return Optional.empty();
       }
 
       @Override

@@ -173,6 +173,8 @@ public class BlockingQueueFrameChannel
           // If this happens, it's a bug, potentially due to incorrectly using this class with multiple writers.
           throw new ISE("Could not write error to channel");
         }
+
+        notifyReader();
       }
     }
 
