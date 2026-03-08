@@ -592,9 +592,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
-    currentActiveTaskCount = activeTaskGroups.size();
+    final int currentActiveTaskCount = activeTaskGroups.size();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
@@ -624,7 +623,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       emitter.emit(metricBuilder.setMetric(AUTOSCALER_SCALING_TIME_METRIC, scaleActionStopwatch.millisElapsed()));
       emitter.emit(metricBuilder.setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) desiredActiveTaskCount));
-      log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
+      log.info(
+          "Changed taskCount from [%s] to [%s] for supervisor[%s] for dataSource[%s].",
+          currentActiveTaskCount, desiredActiveTaskCount, supervisorId, dataSource
+      );
       return true;
     }
   }
@@ -2961,7 +2963,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public int getPartitionCount()
   {
-    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
+    recordSupplierLock.lock();
+    try {
+      return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
+    }
+    finally {
+      recordSupplierLock.unlock();
+    }
   }
 
   private boolean updatePartitionDataFromStream()
@@ -3561,8 +3569,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * <p>
    * This method is invoked to determine whether a task count adjustment is needed
    * during a task rollover based on the recommendations from the task auto-scaler.
- */
-
+   */
   @VisibleForTesting
   void maybeScaleDuringTaskRollover()
   {

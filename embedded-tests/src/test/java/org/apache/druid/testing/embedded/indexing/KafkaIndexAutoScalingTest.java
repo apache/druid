@@ -46,11 +46,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Work in progress.
- *
- * Pending items:
- * - ensure that auto-scaler is stable and doesn't scale up or down too rapidly
- * - ensure that there are no task failures
+ * Tests to verify behaviour of Kafka supervisor with auto-scaling.
  */
 public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
 {
@@ -67,14 +63,14 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
   {
     return super
         .createCluster()
-        .useDefaultTimeoutForLatchableEmitter(600)
+        .useDefaultTimeoutForLatchableEmitter(60)
         .addExtension(ClusterTestingModule.class)
         .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
         .addCommonProperty("druid.unsafe.cluster.testing", "true");
   }
 
   @Test
-  public void test_supervisorWithAutoScaler_runsTasksSuccessfully_ifPublishIsSlow()
+  public void test_supervisor_scalesUpAndDown_basedOnCost_withSlowPublish()
   {
     final String topic = EmbeddedClusterApis.createTestDatasourceName();
     kafkaResource.createTopicWithPartitions(topic, 4);
@@ -84,15 +80,22 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
-                .withTaskDuration(Period.minutes(2))
-                .withAutoScalerConfig(
-                    new CostBasedAutoScalerConfig(
-                        4,
-                        1,
-                        true, null, 1000L, null, 1000L, 1.0, 0.0, null, null, Duration.standardSeconds(2), null
-                    )
-                )
+                .withTaskDuration(Period.seconds(1))
                 .withLagAggregator(new HttpLagAggregator(null))
+                .withSupervisorRunPeriod(Period.millis(10))
+                .withAutoScalerConfig(
+                    CostBasedAutoScalerConfig
+                        .builder()
+                        .taskCountMin(1)
+                        .taskCountMax(4)
+                        .lagWeight(1.0)
+                        .idleWeight(1.0)
+                        .enableTaskAutoScaler(true)
+                        .minTriggerScaleActionFrequencyMillis(10L)
+                        .scaleActionPeriodMillis(10L)
+                        .minScaleDownDelay(Duration.standardSeconds(1))
+                        .build()
+                )
         )
         .build(dataSource, topic);
     cluster.callApi().postSupervisor(supervisor);
@@ -116,17 +119,12 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(4L))
     );
-    // Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
-
-    // Keep publish blocked
-    // Ensure that there are no task failures
-    // Do some more ingestion
-    // Unblock publish
+    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
 
     totalRecords += publish1kRecords(topic, false);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
-    // Force a scale-down by setting the lag to a low value
+    // Force a scale-down by setting the lag to zero
     cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.POST, updateLagPath).jsonContent(
             mapper,
@@ -139,7 +137,7 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(1L))
     );
-    // Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
+    Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
 
     totalRecords += publish1kRecords(topic, false);
     waitUntilPublishedRecordsAreIngested(totalRecords);
@@ -151,13 +149,14 @@ public class KafkaIndexAutoScalingTest extends StreamIndexTestBase
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
 
+    // Ensure that there are no task failures due to auto-scaling
+    final String expectedErrorOnShutdown = "Killing task for graceful shutdown";
     final Map<String, String> taskIdToError = new HashMap<>();
     for (TaskStatusPlus task : tasks) {
-      if (task.getStatusCode() == TaskState.FAILED) {
+      if (task.getStatusCode() == TaskState.FAILED && !expectedErrorOnShutdown.equals(task.getErrorMsg())) {
         taskIdToError.put(task.getId(), task.getErrorMsg());
       }
     }
-
     Assertions.assertTrue(
         taskIdToError.isEmpty(),
         StringUtils.format(

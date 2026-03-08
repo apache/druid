@@ -170,20 +170,21 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
     // Perform scale-up actions; scale-down actions only if configured.
-    int taskCount = -1;
+    final int taskCount;
     if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("New task count [%d] on supervisor [%s], scaling up", taskCount, supervisorId);
+      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);
     } else if (!config.isScaleDownOnTaskRolloverOnly()
                && isScaleActionAllowed()
                && optimalTaskCount < currentTaskCount
                && optimalTaskCount > 0) {
       taskCount = optimalTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("New task count [%d] on supervisor [%s], scaling down", taskCount, supervisorId);
+      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).", supervisorId, currentTaskCount, taskCount);
     } else {
-      log.info("No scaling required for supervisor [%s]", supervisorId);
+      taskCount = -1;
+      log.debug("No scaling required for supervisor [%s]", supervisorId);
     }
     return taskCount;
   }
@@ -206,7 +207,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
-    if (metrics == null) {
+    if (metrics == null || metrics.getAvgProcessingRate() < 0) {
       log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
       return -1;
     }
@@ -232,8 +233,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    int optimalTaskCount = -1;
-    CostResult optimalCost = new CostResult();
+    // Start with the current task count as optimal
+    int optimalTaskCount = currentTaskCount;
+    CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
 
     log.info(
         "Current metrics: avgPartitionLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
@@ -244,6 +246,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         config.getIdleWeight()
     );
 
+    // Find the task count which reduces cost
     for (int taskCount : validTaskCounts) {
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
