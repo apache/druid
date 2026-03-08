@@ -97,6 +97,8 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 
   protected void verifySegmentsCount(int numExpectedSegments)
   {
+    // Ensure that Broker has synced latest segments from the Coordinator
+    broker.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
     cluster.callApi().verifyNumVisibleSegmentsIs(numExpectedSegments, dataSource, overlord);
   }
 

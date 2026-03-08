@@ -24,7 +24,15 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
 import org.apache.druid.common.aws.AWSModule;
+import org.apache.druid.data.input.s3.S3InputSourceConfig;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
@@ -124,6 +132,40 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     return s3Client;
   }
 
+  /**
+   * Creates temporary S3 credentials using the {@link AssumeRoleRequest} that
+   * can be used for S3 ingestion.
+   *
+   * @return S3InputSourceConfig with temporary credentials. The
+   * {@code assumeRoleArn} and {@code assumeRoleExternalId} fields are set to null
+   * since Min IO does not support them.
+   */
+  public S3InputSourceConfig createTempCredentialsForInputSource()
+  {
+    ensureRunning();
+
+    final AWSSecurityTokenService stsClient = createSTSClient();
+
+    // assumeRoleArn and assumeRoleExternalId need not be specified since MinIO ignores them
+    final AssumeRoleRequest assumeRoleRequest = new AssumeRoleRequest()
+        .withRoleSessionName("test-session");
+
+    final AssumeRoleResult result = stsClient.assumeRole(assumeRoleRequest);
+    final int statusCode = result.getSdkHttpMetadata().getHttpStatusCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      throw new ISE("AssumeRole request failed with code[%s]: %s", statusCode, result.getAssumedRoleUser());
+    }
+
+    final Credentials credentials = stsClient.assumeRole(assumeRoleRequest).getCredentials();
+    return new S3InputSourceConfig(
+        new DefaultPasswordProvider(credentials.getAccessKeyId()),
+        new DefaultPasswordProvider(credentials.getSecretAccessKey()),
+        null,
+        null,
+        new DefaultPasswordProvider(credentials.getSessionToken())
+    );
+  }
+
   private AmazonS3 createS3Client()
   {
     return AmazonS3Client
@@ -131,6 +173,15 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
         .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(getEndpointUrl(), "us-east-1"))
         .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getAccessKey(), getSecretKey())))
         .withPathStyleAccessEnabled(true)
+        .build();
+  }
+
+  private AWSSecurityTokenService createSTSClient()
+  {
+    return AWSSecurityTokenServiceClientBuilder
+        .standard()
+        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(getEndpointUrl(), "us-east-1"))
+        .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getAccessKey(), getSecretKey())))
         .build();
   }
 }
