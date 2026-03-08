@@ -57,9 +57,9 @@ public class FaultyLagAggregator implements LagAggregator
   }
 
   @Override
-  public <PartitionIdType> LagStats aggregate(String supervisorId, Map<PartitionIdType, Long> partitionLags)
+  public <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags)
   {
-    LagStats originalAggregate = delegate.aggregate(supervisorId, partitionLags);
+    LagStats originalAggregate = delegate.aggregate(partitionLags);
     return new LagStats(
         originalAggregate.getMaxLag() * getLagMultiplier(),
         originalAggregate.getTotalLag() * getLagMultiplier(),

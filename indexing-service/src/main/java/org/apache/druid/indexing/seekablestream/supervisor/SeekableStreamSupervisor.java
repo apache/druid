@@ -611,20 +611,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       clearPartitionAssignmentsForScaling();
 
 
-      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent
-          .builder()
-          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-          .setDimension(DruidMetrics.DATASOURCE, dataSource)
-          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-          .setDimensionIfNotNull(
-              DruidMetrics.TAGS,
-              spec.getContextValue(DruidMetrics.TAGS)
-          );
-
+      final ServiceMetricEvent.Builder metricBuilder = getMetricBuilder();
       emitter.emit(metricBuilder.setMetric(AUTOSCALER_SCALING_TIME_METRIC, scaleActionStopwatch.millisElapsed()));
       emitter.emit(metricBuilder.setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) desiredActiveTaskCount));
       log.info(
-          "Changed taskCount from [%s] to [%s] for supervisor[%s] for dataSource[%s].",
+          "Updated taskCount from [%s] to [%s] for supervisor[%s] for dataSource[%s].",
           currentActiveTaskCount, desiredActiveTaskCount, supervisorId, dataSource
       );
       return true;
@@ -3574,21 +3565,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   void maybeScaleDuringTaskRollover()
   {
     if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
-      int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
-      if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
-        log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
+      final int currentTaskCount = getIoConfig().getTaskCount();
+      final int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
+      if (rolloverTaskCount > 0 && rolloverTaskCount != currentTaskCount) {
         changeTaskCountInIOConfig(rolloverTaskCount);
+        log.info(
+            "Updated taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
+            supervisorId, currentTaskCount, rolloverTaskCount
+        );
+
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
         clearPartitionAssignmentsForScaling();
-
-        ServiceMetricEvent.Builder event = ServiceMetricEvent
-            .builder()
-            .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-            .setDimension(DruidMetrics.DATASOURCE, dataSource)
-            .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
-
-        emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, rolloverTaskCount));
+        emitter.emit(getMetricBuilder().setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) rolloverTaskCount));
       }
     }
   }
@@ -4882,6 +4871,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return ServiceMetricEvent
+        .builder()
+        .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+        .setDimension(DruidMetrics.DATASOURCE, dataSource)
+        .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+        .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS));
+  }
+
   protected void emitLag()
   {
     SupervisorStateManager.State basicState = stateManager.getSupervisorState().getBasicState();
@@ -4982,7 +4981,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   protected LagStats aggregatePartitionLags(Map<PartitionIdType, Long> partitionLags)
   {
-    return spec.getIoConfig().getLagAggregator().aggregate(spec.getId(), partitionLags);
+    return spec.getIoConfig().getLagAggregator().aggregate(partitionLags);
   }
 
   /**

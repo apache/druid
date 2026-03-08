@@ -40,7 +40,7 @@ public interface LagAggregator
 {
   LagAggregator DEFAULT = new DefaultLagAggregator();
 
-  <PartitionIdType> LagStats aggregate(String supervisorId, Map<PartitionIdType, Long> partitionLags);
+  <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags);
 
   /**
    * Default implementation of LagAggregator which should be used for all
@@ -49,7 +49,7 @@ public interface LagAggregator
   class DefaultLagAggregator implements LagAggregator
   {
     @Override
-    public <PartitionIdType> LagStats aggregate(String supervisorId, Map<PartitionIdType, Long> partitionLags)
+    public <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags)
     {
       long maxLag = 0, totalLag = 0;
       for (long lag : partitionLags.values()) {
