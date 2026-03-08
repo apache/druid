@@ -221,7 +221,6 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    // Historical uses strict, realtime uses custom
     Assert.assertTrue(historical instanceof PreferredTierSelectorStrategy);
     PreferredTierSelectorStrategyConfig historicalPreferredTierConfig = ((PreferredTierSelectorStrategy) historical).getConfig();
     Assert.assertEquals("historical-tier", historicalPreferredTierConfig.getTier());
