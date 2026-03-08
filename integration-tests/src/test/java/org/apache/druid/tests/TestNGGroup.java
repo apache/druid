@@ -27,23 +27,9 @@ public class TestNGGroup
 {
 
   /**
-   * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
-   */
-  public static final String S3_DEEP_STORAGE = "s3-deep-storage";
-
-  /**
    * This group is not part of CI. To run this group, azure configs/credentials for your oss must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
    * See integration-tests/docker/environment-configs/override-examples/oss for env vars to provide.
    */
   public static final String ALIYUN_OSS_DEEP_STORAGE = "aliyun-oss-deep-storage";
-
-  /**
-   * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
-   */
-  public static final String S3_INGESTION = "s3-ingestion";
 }
