@@ -330,7 +330,21 @@ public class OpenLineageRequestLoggerTest
     Field transportTypeField = OpenLineageRequestLoggerProvider.class.getDeclaredField("transportType");
     transportTypeField.setAccessible(true);
     transportTypeField.set(provider, OpenLineageRequestLoggerProvider.TransportType.HTTP);
-    provider.get();
+    // Validation moved to start() method for proper lifecycle management
+    OpenLineageRequestLogger logger = (OpenLineageRequestLogger) provider.get();
+    logger.start();
+  }
+
+  @Test
+  public void testNativeQueryWithNullQueryDoesNotCrash() throws Exception
+  {
+    // Simulate a native query parse failure where query is null
+    RequestLogLine logLine = RequestLogLine.forNative(null, TIMESTAMP, REMOTE_ADDR, new QueryStats(ImmutableMap.of()));
+
+    // Should not throw NPE, should return early without emitting event
+    logger.logNativeQuery(logLine);
+
+    Assert.assertEquals(0, capturedEvents.size());
   }
 
   private static RequestLogLine sqlLine(String sql, Map<String, Object> context, Map<String, Object> stats)

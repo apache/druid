@@ -34,16 +34,17 @@ import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -81,6 +82,8 @@ public class OpenLineageRequestLogger implements RequestLogger
   private final OpenLineageRequestLoggerProvider.TransportType transportType;
   @Nullable
   private final String transportUrl;
+  @Nullable
+  private final HttpClient httpClient;
 
   public OpenLineageRequestLogger(
       ObjectMapper jsonMapper,
@@ -93,13 +96,45 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.namespace = namespace;
     this.transportType = transportType;
     this.transportUrl = transportUrl;
+    this.httpClient = transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP
+                      ? HttpClientBuilder.create().build()
+                      : null;
+  }
+
+  @LifecycleStart
+  @Override
+  public void start() throws Exception
+  {
+    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP && transportUrl == null) {
+      throw new IllegalStateException(
+          "druid.request.logging.transportUrl must be set when transportType=HTTP"
+      );
+    }
+    log.info(
+        "Started OpenLineage %s transport%s",
+        transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP ? "HTTP" : "console",
+        transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP ? " to [" + transportUrl + "]" : ""
+    );
+  }
+
+  @LifecycleStop
+  @Override
+  public void stop()
+  {
+    // HTTP client cleanup is handled by Druid lifecycle management
+    log.info("Stopped OpenLineage request logger");
   }
 
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
+    // Skip if query failed to parse (query is null)
+    if (requestLogLine.getQuery() == null) {
+      return;
+    }
+
     // Skip native sub-queries of a SQL execution to avoid duplicating the SQL-level event.
-    if (requestLogLine.getQuery().getContextValue(BaseQuery.SQL_QUERY_ID) != null) {
+    if (requestLogLine.getQuery().getContext().get(BaseQuery.SQL_QUERY_ID) != null) {
       return;
     }
 
@@ -215,7 +250,9 @@ public class OpenLineageRequestLogger implements RequestLogger
         errorFacet.put("_producer", PRODUCER);
         errorFacet.put("_schemaURL", ERROR_FACET_SCHEMA_URL);
         errorFacet.put("message", exception.toString());
-        errorFacet.put("programmingLanguage", "SQL");
+        if ("sql".equals(queryType)) {
+          errorFacet.put("programmingLanguage", "SQL");
+        }
         facets.set("errorMessage", errorFacet);
       }
     }
@@ -367,18 +404,16 @@ public class OpenLineageRequestLogger implements RequestLogger
 
   private void emitHttp(String json)
   {
-    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-      HttpPost post = new HttpPost(transportUrl);
-      post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
-      try (CloseableHttpResponse response = httpClient.execute(post)) {
-        int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode >= 400) {
-          log.warn("OpenLineage endpoint [%s] returned HTTP %d", transportUrl, statusCode);
-        }
-      }
+    HttpPost post = new HttpPost(transportUrl);
+    post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
+    try {
+      httpClient.execute(post);
     }
     catch (Exception e) {
       log.error(e, "Failed to POST OpenLineage event to [%s]", transportUrl);
+    }
+    finally {
+      post.releaseConnection();
     }
   }
 
