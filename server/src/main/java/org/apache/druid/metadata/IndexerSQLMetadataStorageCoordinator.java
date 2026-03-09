@@ -1894,7 +1894,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                 .map(ReplaceTaskLock::getSupervisorTaskId)
                                                 .findFirst().orElse(null);
     final Map<String, String> upgradeSegmentToLockVersion
-        = getSegmentsCoveredByTaskLock(transaction, taskId);
+        = getSegmentsCoveredByReplaceTaskLock(transaction, taskId);
 
     final List<DataSegmentPlus> segmentsToUpgrade
         = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
@@ -2229,7 +2229,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  private Map<String, String> getSegmentsCoveredByTaskLock(
+  private Map<String, String> getSegmentsCoveredByReplaceTaskLock(
       SegmentMetadataTransaction transaction,
       String taskId
   )

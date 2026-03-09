@@ -107,6 +107,7 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -614,7 +615,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         }
       }
       if (!segmentsToUpgrade.isEmpty()) {
-        log.info("Marking [%d]segments to upgrade", segmentsToUpgrade.size());
+        log.info(
+            "Marking [%d]segments to upgrade, showing the first 10 segments:%s",
+            segmentsToUpgrade.size(),
+            segmentsToUpgrade.stream().map(DataSegment::getId).map(SegmentId::toString).limit(10L)
+        );
         toolbox.getTaskActionClient()
                .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
       }
@@ -680,7 +685,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           segmentProvider::shouldUpgradeSegment
       ));
       if (!segmentsToUpgrade.isEmpty()) {
-        log.info("Marking [%d]segments to upgrade", segmentsToUpgrade.size());
+        log.info(
+            "Marking [%d]segments to upgrade, showing the first 10 segments:%s",
+            segmentsToUpgrade.size(),
+            segmentsToUpgrade.stream().map(DataSegment::getId).map(SegmentId::toString).limit(10L)
+        );
         toolbox.getTaskActionClient()
                .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
       }
