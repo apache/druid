@@ -224,6 +224,70 @@ public class ReindexingPartitioningRuleTest
   }
 
   @Test
+  public void test_equals_sameObject_returnsTrue()
+  {
+    Assertions.assertEquals(rule, rule);
+  }
+
+  @Test
+  public void test_equals_null_returnsFalse()
+  {
+    Assertions.assertNotEquals(null, rule);
+  }
+
+  @Test
+  public void test_equals_differentClass_returnsFalse()
+  {
+    Assertions.assertNotEquals("not a rule", rule);
+  }
+
+  @Test
+  public void test_equals_equalObjects_returnsTrue()
+  {
+    ReindexingPartitioningRule other = new ReindexingPartitioningRule(
+        "test-rule",
+        "Test partitioning rule",
+        PERIOD_7_DAYS,
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(5000000, null),
+        null
+    );
+
+    Assertions.assertEquals(rule, other);
+    Assertions.assertEquals(rule.hashCode(), other.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentId_returnsFalse()
+  {
+    ReindexingPartitioningRule other = new ReindexingPartitioningRule(
+        "different-id",
+        "Test partitioning rule",
+        PERIOD_7_DAYS,
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(5000000, null),
+        null
+    );
+
+    Assertions.assertNotEquals(rule, other);
+  }
+
+  @Test
+  public void test_equals_differentGranularity_returnsFalse()
+  {
+    ReindexingPartitioningRule other = new ReindexingPartitioningRule(
+        "test-rule",
+        "Test partitioning rule",
+        PERIOD_7_DAYS,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null
+    );
+
+    Assertions.assertNotEquals(rule, other);
+  }
+
+  @Test
   public void test_constructor_unsupportedGranularities_allThrowDruidException()
   {
     Granularity[] unsupportedGranularities = {

@@ -210,6 +210,51 @@ public class InlineReindexingRuleProviderTest
     Assertions.assertEquals("inline", provider.getType());
   }
 
+  @Test
+  public void test_equals_sameObject_returnsTrue()
+  {
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
+
+    Assertions.assertEquals(provider, provider);
+  }
+
+  @Test
+  public void test_equals_null_returnsFalse()
+  {
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
+
+    Assertions.assertNotEquals(null, provider);
+  }
+
+  @Test
+  public void test_equals_equalObjects_returnsTrue()
+  {
+    ReindexingDeletionRule rule = createFilterRule("filter-30d", Period.days(30));
+
+    InlineReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(rule))
+        .build();
+    InlineReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(rule))
+        .build();
+
+    Assertions.assertEquals(provider1, provider2);
+    Assertions.assertEquals(provider1.hashCode(), provider2.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentRules_returnsFalse()
+  {
+    InlineReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(createFilterRule("filter-30d", Period.days(30))))
+        .build();
+    InlineReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(createFilterRule("filter-60d", Period.days(60))))
+        .build();
+
+    Assertions.assertNotEquals(provider1, provider2);
+  }
+
   private ReindexingDeletionRule createFilterRule(String id, Period period)
   {
     return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);

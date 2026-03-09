@@ -157,4 +157,56 @@ public class ReindexingIndexSpecRuleTest
         () -> new ReindexingIndexSpecRule("test-id", "description", PERIOD_21_DAYS, null)
     );
   }
+
+  @Test
+  public void test_equals_sameObject_returnsTrue()
+  {
+    Assertions.assertEquals(rule, rule);
+  }
+
+  @Test
+  public void test_equals_null_returnsFalse()
+  {
+    Assertions.assertNotEquals(null, rule);
+  }
+
+  @Test
+  public void test_equals_equalObjects_returnsTrue()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "test-index-spec-rule",
+        "Custom index spec",
+        PERIOD_21_DAYS,
+        IndexSpec.getDefault()
+    );
+
+    Assertions.assertEquals(rule, other);
+    Assertions.assertEquals(rule.hashCode(), other.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentId_returnsFalse()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "different-id",
+        "Custom index spec",
+        PERIOD_21_DAYS,
+        IndexSpec.getDefault()
+    );
+
+    Assertions.assertNotEquals(rule, other);
+  }
+
+  @Test
+  public void test_equals_differentOlderThan_returnsFalse()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "test-index-spec-rule",
+        "Custom index spec",
+        Period.days(90),
+        IndexSpec.getDefault()
+    );
+
+    Assertions.assertNotEquals(rule, other);
+  }
 }
