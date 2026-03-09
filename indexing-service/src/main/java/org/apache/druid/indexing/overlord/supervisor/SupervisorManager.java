@@ -42,9 +42,11 @@ import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +57,7 @@ import java.util.concurrent.Future;
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
  */
-public class SupervisorManager
+public class SupervisorManager implements SupervisorStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
@@ -83,6 +85,29 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  @Override
+  public Collection<SupervisorStatsProvider.SupervisorStats> getSupervisorStats()
+  {
+    List<SupervisorStatsProvider.SupervisorStats> stats = new ArrayList<>();
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+      final String supervisorId = entry.getKey();
+      final Supervisor supervisor = entry.getValue().lhs;
+      final SupervisorSpec spec = entry.getValue().rhs;
+
+      SupervisorStateManager.State state = supervisor.getState();
+      String stateStr = state != null && state.getBasicState() != null
+                        ? state.getBasicState().toString()
+                        : "UNKNOWN";
+
+      stats.add(new SupervisorStatsProvider.SupervisorStats(
+          supervisorId,
+          spec.getType(),
+          stateStr
+      ));
+    }
+    return stats;
   }
 
   /**
