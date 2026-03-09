@@ -408,6 +408,10 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
+    );
   }
 
   /**

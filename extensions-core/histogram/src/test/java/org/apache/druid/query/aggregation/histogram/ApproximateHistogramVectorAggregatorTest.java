@@ -122,6 +122,32 @@ public class ApproximateHistogramVectorAggregatorTest
   }
 
   @Test
+  public void testAggregateMultiPositionsWithNullsAndRowsIndirection()
+  {
+    // field_1 has a null vector where index 10 is null (value 45).
+    // By using rows indirection to map loop index 0 -> row 10, we verify the null check
+    // correctly skips the null row.
+    ApproximateHistogramAggregatorFactory factory = buildHistogramAggFactory("field_1");
+    final int size = factory.getMaxIntermediateSize();
+    ByteBuffer byteBuffer = ByteBuffer.allocate(size * 2);
+    VectorAggregator vectorAggregator = factory.factorizeVector(vectorColumnSelectorFactory);
+    final int[] positions = new int[]{0, size};
+    vectorAggregator.init(byteBuffer, positions[0]);
+    vectorAggregator.init(byteBuffer, positions[1]);
+
+    // rows[0]=10 (null row, value 45), rows[1]=0 (non-null, value 23)
+    // Position 0 should skip the null; position 1 should get value 23.
+    vectorAggregator.aggregate(byteBuffer, 2, positions, new int[]{10, 0}, 0);
+
+    ApproximateHistogram h0 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, 0);
+    Assert.assertEquals(0, h0.count());
+
+    ApproximateHistogram h1 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, size);
+    Assert.assertArrayEquals(new float[]{23}, h1.positions(), 0.1f);
+    Assert.assertArrayEquals(new long[]{1}, h1.bins());
+  }
+
+  @Test
   public void testAggregateMultiPositions()
   {
     ApproximateHistogramAggregatorFactory factory = buildHistogramAggFactory("field_2");
