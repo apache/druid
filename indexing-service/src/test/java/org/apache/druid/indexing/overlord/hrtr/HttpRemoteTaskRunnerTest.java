@@ -2053,6 +2053,7 @@ public class HttpRemoteTaskRunnerTest
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(workerHolder.getUnderlyingSyncer()).andReturn(syncer).anyTimes();
     EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    EasyMock.expect(workerHolder.getState()).andReturn(WorkerHolder.State.READY).anyTimes();
     workerHolder.start();
     EasyMock.expectLastCall();
     workerHolder.stop();
