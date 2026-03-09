@@ -3495,6 +3495,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             if (group.getHandoffEarly()) {
               numStoppedTasks.getAndIncrement();
             }
+            if (stopTasksEarly) {
+              hasTaskRolloverStarted.set(true);
+            }
           } else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
             // Stop this task group if it has run longer than the configured duration
             // and the pending task groups are less than the configured stop task count.

@@ -191,7 +191,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).", supervisorId, currentTaskCount, taskCount);
     } else {
       taskCount = -1;
-      log.debug("No scaling required for supervisor [%s]", supervisorId);
+      log.debug("No scaling required for supervisor[%s]", supervisorId);
     }
     return taskCount;
   }
