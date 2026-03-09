@@ -65,11 +65,6 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    if (transportType == TransportType.HTTP && transportUrl == null) {
-      throw new IllegalStateException(
-          "druid.request.logging.transportUrl must be set when transportType=HTTP"
-      );
-    }
     OpenLineageRequestLogger logger = new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
