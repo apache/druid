@@ -3564,7 +3564,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   void maybeScaleDuringTaskRollover()
   {
-    if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
+    if (taskAutoScaler == null) {
+      // Do nothing
+    } else if (activelyReadingTaskGroups.isEmpty()) {
+      log.info("Computing optimal taskCount before rollover.");
       final int currentTaskCount = getIoConfig().getTaskCount();
       final int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
       if (rolloverTaskCount > 0 && rolloverTaskCount != currentTaskCount) {
@@ -3579,6 +3582,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         clearPartitionAssignmentsForScaling();
         emitter.emit(getMetricBuilder().setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) rolloverTaskCount));
       }
+    } else {
+      log.info(
+          "Skipping scaling during rollover since taskGroups[%s] are still reading.",
+          activelyReadingTaskGroups
+      );
     }
   }
 
