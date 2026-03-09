@@ -58,6 +58,7 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -101,6 +102,7 @@ ECS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -329,6 +331,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
