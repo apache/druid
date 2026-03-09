@@ -1899,6 +1899,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final List<DataSegmentPlus> segmentsToUpgrade
         = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
 
+    // If there is nothing to upgrade, return the replaceSegments unchanged
     if (segmentsToUpgrade.isEmpty()) {
       return replaceSegments.stream()
                             .map(s -> new DataSegmentPlus(s, null, null, null, null, null, null, null))
