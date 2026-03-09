@@ -553,7 +553,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       log.makeAlert(
           "Supervisor[%s] has high partition lag[%.0f] but processing rate is zero. Check if the tasks are stuck.",
           supervisorId, metrics.getAvgPartitionLag()
-      );
+      ).emit();
       return Either.error("Lag is high but processing rate is zero");
     } else {
       return Either.value(true);
