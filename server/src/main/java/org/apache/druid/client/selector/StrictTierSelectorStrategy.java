@@ -44,14 +44,17 @@ import java.util.Set;
  * <p>
  * Unlike other strategies like {@link CustomTierSelectorStrategy} that falls back to servers with different priorities,
  * this strategy strictly filters the available servers to the configured priorities.
- * If no servers match the configured priorities, an empty server list is returned, which may cause queries to
- * return partial or no data.
+ * If no servers match the configured priorities, an empty server list is returned from {@link #pick(Query, Int2ObjectRBTreeMap, DataSegment, int)},
+ * which may cause queries to return partial or no data.
+ * <p>
+ * When multiple priorities are configured, they are evaluated in the order specified, with earlier priorities
+ * preferred over later ones.
  * <p>
  * Example configuration:
  * <li> <code> druid.broker.select.tier=strict </code> </li>
- * <li> <code> druid.broker.select.tier.strict.priorities=[1] </code> </li>
+ * <li> <code> druid.broker.select.tier.strict.priorities=[2,1] </code> </li>
  * <p>
- * With this configuration, only servers with priority 1 are selected as candidates for queries.
+ * With this configuration, servers with priority 2 are preferred over servers with priority 1.
  * Servers with any other tier priority are not considered.
  * <p>
  * This strategy is useful when query isolation is required between different server priority tiers. Brokers may still
@@ -98,6 +101,9 @@ public class StrictTierSelectorStrategy extends AbstractTierSelectorStrategy
         return 1;
       }
 
+      // Priorities outside configuredPriorities don't matter and won't be selected in pick() for this strategy.
+      // This fallback ordering can be anything and is needed because the comparator may be used by ServerSelector/ServerView
+      // which maintains views of all servers, including those with unconfigured priorities.
       return Integer.compare(p2, p1);
     };
   }
