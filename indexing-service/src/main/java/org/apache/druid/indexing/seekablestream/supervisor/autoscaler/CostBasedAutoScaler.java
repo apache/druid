@@ -242,7 +242,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     if (validTaskCounts.length == 0) {
-      log.warn("No valid task counts after applying constraints for supervisorId [%s]", supervisorId);
+      log.warn("No valid task counts after applying constraints for supervisor[%s]", supervisorId);
       return -1;
     }
 
@@ -251,8 +251,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
 
     log.info(
-        "Current metrics: aggregateLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
-        metrics.getAggregateLag(),
+        "Computing optimal taskCount for supervisor[%s] with metrics:"
+        + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f],"
+        + " pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f].",
+        supervisorId,
+        currentTaskCount,
+        metrics.getAvgPartitionLag(),
         metrics.getAvgProcessingRate(),
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
@@ -260,17 +264,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     // Find the task count which reduces cost
-    for (int taskCount : validTaskCounts) {
+    final CostResult[] costResults = new CostResult[validTaskCounts.length];
+    for (int i = 0; i < validTaskCounts.length; ++i) {
+      final int taskCount = validTaskCounts[i];
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
 
-      log.info(
-          "Proposed task count[%d] has total cost[%.4f] = lagCost[%.4f] + idleCost[%.4f].",
-          taskCount,
-          cost,
-          costResult.lagCost(),
-          costResult.idleCost()
-      );
+      costResults[i] = costResult;
       if (cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
         optimalCost = costResult;
@@ -281,19 +281,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
     emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
 
-    log.debug(
-        "Cost-based scaling evaluation for supervisorId [%s]: current=%d, optimal=%d, cost=%.4f, "
-        + "avgPartitionLag=%.2f, pollIdleRatio=%.3f",
-        supervisorId,
-        metrics.getCurrentTaskCount(),
-        optimalTaskCount,
-        optimalCost.totalCost(),
-        metrics.getAvgPartitionLag(),
-        metrics.getPollIdleRatio()
-    );
-
     if (optimalTaskCount == currentTaskCount) {
       return -1;
+    } else {
+      log.info(
+          "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
+          optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
+      );
     }
 
     // Scale up is performed eagerly.
@@ -514,6 +508,29 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
         movingAvgRate
     );
+  }
+
+  private static String constructCostTable(int[] taskCounts, CostResult[] results)
+  {
+    final StringBuilder table = new StringBuilder();
+    table.append("Task count ");
+    for (int taskCount : taskCounts) {
+      table.append(StringUtils.format("| %8d", taskCount));
+    }
+    table.append("\nLag cost   ");
+    for (CostResult result : results) {
+      table.append(StringUtils.format("| %8.1f", result.lagCost()));
+    }
+    table.append("\nIdle cost  ");
+    for (CostResult result : results) {
+      table.append(StringUtils.format("| %8.1f", result.idleCost()));
+    }
+    table.append("\nTotal cost ");
+    for (CostResult result : results) {
+      table.append(StringUtils.format("| %8.1f", result.totalCost()));
+    }
+
+    return table.toString();
   }
 
   /**

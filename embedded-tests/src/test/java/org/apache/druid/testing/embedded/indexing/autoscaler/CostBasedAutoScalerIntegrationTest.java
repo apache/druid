@@ -326,6 +326,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(taskCount)
+                .withTaskDuration(Period.seconds(7))
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .build(dataSource, topic);
