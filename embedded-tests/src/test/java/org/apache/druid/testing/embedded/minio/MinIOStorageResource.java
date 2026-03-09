@@ -147,10 +147,15 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     final StsClient stsClient = createStsClient();
 
-    // MinIO ignores the role ARN, but SDK v2 requires a non-null value
+    // SDK v2 requires a non-null roleArn. MinIO does not validate the ARN,
+    // but without an inline policy the resulting session may have no permissions.
+    // An explicit S3 full-access policy ensures the temp credentials work.
+    final String s3FullAccessPolicy =
+        "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:*\"],\"Resource\":[\"*\"]}]}";
     final AssumeRoleRequest assumeRoleRequest = AssumeRoleRequest.builder()
         .roleArn("arn:aws:iam::000000000000:role/test-role")
         .roleSessionName("test-session")
+        .policy(s3FullAccessPolicy)
         .build();
 
     final AssumeRoleResponse result = stsClient.assumeRole(assumeRoleRequest);
