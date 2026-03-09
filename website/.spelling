@@ -191,6 +191,7 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
@@ -206,6 +207,7 @@ OLAP
 OOMs
 OpenJDK
 OpenLDAP
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
