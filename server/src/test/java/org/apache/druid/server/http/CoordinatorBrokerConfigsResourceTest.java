@@ -51,7 +51,7 @@ public class CoordinatorBrokerConfigsResourceTest
   @Test
   public void testGetBrokerDynamicConfig()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
     AtomicReference<BrokerDynamicConfig> currentConfig = new AtomicReference<>(config);
 
     EasyMock.expect(
@@ -79,7 +79,7 @@ public class CoordinatorBrokerConfigsResourceTest
   @Test
   public void testGetBrokerDynamicConfigHistory()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
     AtomicReference<BrokerDynamicConfig> currentConfig = new AtomicReference<>(config);
 
     EasyMock.expect(
@@ -115,7 +115,7 @@ public class CoordinatorBrokerConfigsResourceTest
   @Test
   public void testGetBrokerDynamicConfigHistoryWithNullIntervalAndCount()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
     AtomicReference<BrokerDynamicConfig> currentConfig = new AtomicReference<>(config);
 
     EasyMock.expect(
@@ -151,7 +151,7 @@ public class CoordinatorBrokerConfigsResourceTest
   @Test
   public void testSetBrokerDynamicConfig()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
     AtomicReference<BrokerDynamicConfig> currentConfig = new AtomicReference<>(config);
     HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
 

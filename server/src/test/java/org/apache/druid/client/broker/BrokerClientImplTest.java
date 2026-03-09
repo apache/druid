@@ -190,7 +190,7 @@ public class BrokerClientImplTest
   @Test
   public void testUpdateBrokerDynamicConfig() throws Exception
   {
-    final BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    final BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/broker")

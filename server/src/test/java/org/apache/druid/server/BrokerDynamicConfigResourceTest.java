@@ -50,7 +50,7 @@ public class BrokerDynamicConfigResourceTest
   @Test
   public void testGetBrokerDynamicConfig()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
     Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(config);
 
     Response response = resource.getBrokerDynamicConfig();
@@ -63,7 +63,7 @@ public class BrokerDynamicConfigResourceTest
   @Test
   public void testSetBrokerDynamicConfig()
   {
-    BrokerDynamicConfig config = new BrokerDynamicConfig(null);
+    BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
 
     Response response = resource.setBrokerDynamicConfig(config);
 

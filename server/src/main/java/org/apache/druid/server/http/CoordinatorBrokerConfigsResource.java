@@ -66,7 +66,7 @@ public class CoordinatorBrokerConfigsResource
     this.currentConfig = configManager.watch(
         BrokerDynamicConfig.CONFIG_KEY,
         BrokerDynamicConfig.class,
-        new BrokerDynamicConfig(null)
+        BrokerDynamicConfig.builder().build()
     );
     this.brokerDynamicConfigSyncer = brokerDynamicConfigSyncer;
   }

@@ -38,7 +38,7 @@ public class BrokerViewOfBrokerConfigTest
   @Before
   public void setUp() throws Exception
   {
-    config = new BrokerDynamicConfig(null);
+    config = BrokerDynamicConfig.builder().build();
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.getBrokerDynamicConfig()).thenReturn(Futures.immediateFuture(config));
     target = new BrokerViewOfBrokerConfig(coordinatorClient);
