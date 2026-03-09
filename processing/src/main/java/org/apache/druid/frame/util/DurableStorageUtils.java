@@ -66,7 +66,7 @@ public class DurableStorageUtils
     if (!elements.get(1).startsWith("controller_")) {
       return null;
     }
-    return elements.get(1).substring(11);
+    return elements.get(1).substring("controller_".length());
   }
 
 

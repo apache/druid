@@ -25,11 +25,8 @@ import com.google.common.collect.Sets;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -38,8 +35,6 @@ import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
@@ -51,7 +46,6 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class DurableStorageCleanerTest
@@ -138,7 +132,7 @@ public class DurableStorageCleanerTest
   @Test
   public void testRunExcludesQueryDirectory() throws Exception
   {
-    Task completedTask = new TestTask(TASK_ID);
+    Task completedTask = new NoopTask(TASK_ID, null, null, 1, 0, null);
     EasyMock.expect(TASK_STORAGE.getCompletedTasksInfo(EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(List.of(new TaskInfo(DateTimes.of("2020-01-01"), TaskStatus.success("not-used"), completedTask)))
             .anyTimes();
@@ -182,99 +176,5 @@ public class DurableStorageCleanerTest
     DutySchedule schedule = durableStorageCleaner.getSchedule();
     Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getPeriodMillis());
     Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getInitialDelayMillis());
-  }
-
-  public static class TestTask implements Task
-  {
-    private final String taskId;
-
-    TestTask(String taskId)
-    {
-      this.taskId = taskId;
-    }
-
-    @Override
-    public String getId()
-    {
-      return taskId;
-    }
-
-    @Override
-    public String getGroupId()
-    {
-      return "";
-    }
-
-    @Override
-    public TaskResource getTaskResource()
-    {
-      return null;
-    }
-
-    @Override
-    public String getType()
-    {
-      return "";
-    }
-
-    @Override
-    public String getNodeType()
-    {
-      return "";
-    }
-
-    @Override
-    public String getDataSource()
-    {
-      return "";
-    }
-
-    @Override
-    public <T> QueryRunner<T> getQueryRunner(Query<T> query)
-    {
-      return null;
-    }
-
-    @Override
-    public boolean supportsQueries()
-    {
-      return false;
-    }
-
-    @Override
-    public String getClasspathPrefix()
-    {
-      return "";
-    }
-
-    @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
-    {
-      return false;
-    }
-
-    @Override
-    public boolean canRestore()
-    {
-      return false;
-    }
-
-    @Override
-    public void stopGracefully(TaskConfig taskConfig)
-    {
-
-    }
-
-    @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
-    {
-      return null;
-    }
-
-    @Override
-    public Map<String, Object> getContext()
-    {
-      return Map.of();
-    }
   }
 }

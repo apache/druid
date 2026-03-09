@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.indexing.cleaner;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -61,7 +60,7 @@ public class DurableStorageCleaner implements OverlordDuty
   public DurableStorageCleaner(
       final DurableStorageCleanerConfig config,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
-      @JacksonInject final Provider<TaskMaster> taskMasterProvider,
+      final Provider<TaskMaster> taskMasterProvider,
       final TaskStorage taskStorage
   )
   {
