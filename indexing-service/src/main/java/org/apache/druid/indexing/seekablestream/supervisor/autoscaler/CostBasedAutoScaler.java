@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -62,9 +63,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
+  public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
 
   static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
   static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+
+  /**
+   * If average partition lag crosses this value and the processing rate is
+   * still zero, scaling actions are skipped and an alert is raised.
+   */
+  static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
   /**
    * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
@@ -78,7 +86,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ServiceEmitter emitter;
   private final SupervisorSpec spec;
   private final CostBasedAutoScalerConfig config;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
   private volatile CostMetrics lastKnownMetrics;
@@ -101,7 +108,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
-    this.metricBuilder =
+  }
+
+  private ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return
         ServiceMetricEvent.builder()
                           .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                           .setDimension(
@@ -161,10 +172,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
-    if (lastKnownMetrics == null) {
-      log.debug("Metrics not available for supervisorId [%s], skipping scaling action", supervisorId);
-      return -1;
-    }
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
@@ -207,8 +214,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
-    if (metrics == null || metrics.getAvgProcessingRate() < 0) {
-      log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
+    final Either<String, Boolean> result = validateMetricsForScaling(metrics);
+    if (result.isError()) {
+      log.debug("Valid metrics are not yet available for scaling supervisor[%s]", supervisorId);
+      emitter.emit(
+          getMetricBuilder()
+              .setDimension(DruidMetrics.DESCRIPTION, result.error())
+              .setMetric(INVALID_METRICS_COUNT, 1L)
+      );
       return -1;
     }
 
@@ -238,7 +251,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
 
     log.info(
-        "Current metrics: avgPartitionLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+        "Current metrics: aggregateLag[%.1f], avgProcessingRate[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
         metrics.getAggregateLag(),
         metrics.getAvgProcessingRate(),
         metrics.getPollIdleRatio(),
@@ -264,9 +277,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(metricBuilder.setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(metricBuilder.setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
-    emitter.emit(metricBuilder.setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
+    emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
+    emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
 
     log.debug(
         "Cost-based scaling evaluation for supervisorId [%s]: current=%d, optimal=%d, cost=%.4f, "
@@ -478,9 +491,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     final LagStats lagStats = supervisor.computeLagStats();
+    final double avgPartitionLag;
     if (lagStats == null) {
       log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
-      return null;
+      avgPartitionLag = -1;
+    } else {
+      avgPartitionLag = lagStats.getAvgLag();
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
@@ -488,12 +504,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
     final double movingAvgRate = extractMovingAverage(taskStats);
-    // If moving average is not available, we stop scaling effort.
-    if (movingAvgRate < 0) {
-      return null;
-    }
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
-    final double avgPartitionLag = lagStats.getAvgLag();
 
     return new CostMetrics(
         avgPartitionLag,
@@ -503,6 +514,33 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
         movingAvgRate
     );
+  }
+
+  /**
+   * Checks if the given metrics are valid for auto-scaling. If they are not
+   * valid, auto-scaling will be skipped until fresh metrics are available.
+   *
+   * @return Either an error or a success boolean.
+   */
+  private Either<String, Boolean> validateMetricsForScaling(CostMetrics metrics)
+  {
+    if (metrics == null) {
+      return Either.error("No metrics collected");
+    } else if (metrics.getAvgProcessingRate() < 0 || metrics.getPollIdleRatio() < 0) {
+      return Either.error("Task metrics not available");
+    } else if (metrics.getCurrentTaskCount() <= 0 || metrics.getPartitionCount() <= 0) {
+      return Either.error("Supervisor metrics not available");
+    } else if (metrics.getAvgPartitionLag() < 0) {
+      return Either.error("Lag metrics not available");
+    } else if (metrics.getAvgProcessingRate() < 1 && metrics.getAvgPartitionLag() > MAX_IDLENESS_PARTITION_LAG) {
+      log.makeAlert(
+          "Supervisor[%s] has high partition lag[%.0f] but processing rate is zero. Check if the tasks are stuck.",
+          supervisorId, metrics.getAvgPartitionLag()
+      );
+      return Either.error("Lag is high but processing rate is zero");
+    } else {
+      return Either.value(true);
+    }
   }
 
   /**

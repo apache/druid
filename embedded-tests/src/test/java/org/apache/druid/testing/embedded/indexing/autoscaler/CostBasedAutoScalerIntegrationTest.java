@@ -74,7 +74,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   {
     return super
         .createCluster()
-        .useDefaultTimeoutForLatchableEmitter(180);
+        .useDefaultTimeoutForLatchableEmitter(600);
   }
 
   @BeforeEach
@@ -188,7 +188,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // A small value of maxRowsPerSegment ensures that there are a large number
     // of segments to publish, thus slowing down publish actions
-    final int maxRowsPerSegment = 1000;
+    final int maxRowsPerSegment = 100;
 
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
@@ -202,12 +202,13 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
 
+    // taskDuration of 10s gives enough time to auto-scaler to fetch task metrics
     final SupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
         .withTuningConfig(t -> t.withMaxRowsPerSegment(maxRowsPerSegment))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
-                .withTaskDuration(Period.seconds(1))
+                .withTaskDuration(Period.seconds(10))
                 .withSupervisorRunPeriod(Period.millis(10))
                 .withAutoScalerConfig(autoScalerConfig)
         )
@@ -215,8 +216,9 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisor);
 
     // Ingest a large number of records to trigger a scale-up
+    // 10k records = 100 segments to publish * 100 rows per segment
     int totalRecords = 0;
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 10; ++i) {
       totalRecords += publish1kRecords(topic, false);
     }
 
@@ -240,7 +242,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    Assertions.assertEquals("100000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals("10000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
