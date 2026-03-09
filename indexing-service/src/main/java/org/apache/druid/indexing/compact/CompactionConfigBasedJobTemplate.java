@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -95,10 +97,14 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       // Allow template-specific customization of the config per candidate
       DataSourceCompactionConfig finalConfig = configOptimizer.optimizeConfig(config, candidate, params);
 
+      final CompactionEngine engine = Configs.valueOrDefault(
+          finalConfig.getEngine(),
+          params.getClusterCompactionConfig().getEngine()
+      );
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
           candidate,
           finalConfig,
-          params.getClusterCompactionConfig().getEngine(),
+          engine,
           indexingStateFingerprint,
           params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
       );
