@@ -80,7 +80,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   @BeforeEach
   public void createTopic()
   {
-    topic = EmbeddedClusterApis.createTestDatasourceName();
+    topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, PARTITION_COUNT);
   }
 
@@ -274,8 +274,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .enableTaskAutoScaler(true)
         .taskCountMin(1)
         .taskCountMax(10)
-        .scaleActionPeriodMillis(10)
-        .minTriggerScaleActionFrequencyMillis(10)
+        .scaleActionPeriodMillis(100)
+        .minTriggerScaleActionFrequencyMillis(100)
         // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
         .lagWeight(0.1)
         .idleWeight(0.9)
@@ -326,7 +326,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(taskCount)
-                .withTaskDuration(Period.seconds(7))
+                .withTaskDuration(Period.seconds(1))
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .build(dataSource, topic);

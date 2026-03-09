@@ -339,7 +339,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       return false;
     }
 
-    return toolbox.getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(
+    return !toolbox.getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(
         supervisorId,
         task.getId(),
         startMetadata

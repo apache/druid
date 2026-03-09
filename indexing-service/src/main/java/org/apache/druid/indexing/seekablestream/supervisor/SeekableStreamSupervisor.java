@@ -130,6 +130,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -504,7 +505,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
-            if (!list.isEmpty()) {
+            // There are expected to be pending tasks if this scaling is happening on task rollover
+            if (!list.isEmpty() && !isScalingTasksOnRollover.get()) {
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for supervisor[%s] for datasource[%s] because following tasks are pending [%s]",
                   supervisorId,
@@ -592,8 +594,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
-    final int currentActiveTaskCount = activeTaskGroups.size();
+    final int currentActiveTaskCount = getCurrentTaskCount();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
@@ -637,6 +638,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     catch (Exception e) {
       log.error(e, "Failed to sync taskCount to MetaStorage for supervisor[%s] for dataSource[%s].", supervisorId, dataSource);
     }
+  }
+
+  /**
+   * @return Current task count for this supervisor.
+   */
+  private int getCurrentTaskCount()
+  {
+    return getIoConfig().getTaskCount();
   }
 
   /**
@@ -964,6 +973,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Wired by {@link SupervisorManager} after supervisor creation.
    */
   private volatile SupervisorTaskAutoScaler taskAutoScaler;
+  private final AtomicBoolean isScalingTasksOnRollover = new AtomicBoolean(false);
 
   // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
@@ -3461,6 +3471,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     final AtomicInteger numStoppedTasks = new AtomicInteger();
+    final AtomicBoolean hasTaskRolloverStarted = new AtomicBoolean(false);
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
     activelyReadingTaskGroups.entrySet().stream().sorted(
             Comparator.comparingLong(
@@ -3497,6 +3508,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               futureGroupIds.add(groupId);
               futures.add(checkpointTaskGroup(group, true));
               numStoppedTasks.getAndIncrement();
+              hasTaskRolloverStarted.set(true);
             }
           }
         });
@@ -3552,7 +3564,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.remove(groupId);
     }
 
-    maybeScaleDuringTaskRollover();
+    // If rollover has started, check if scaling needs to be done
+    if (numStoppedTasks.get() > 0 && hasTaskRolloverStarted.get()) {
+      maybeScaleDuringTaskRollover();
+    }
   }
 
   /**
@@ -3562,31 +3577,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * during a task rollover based on the recommendations from the task auto-scaler.
    */
   @VisibleForTesting
-  void maybeScaleDuringTaskRollover()
+  void maybeScaleDuringTaskRollover() throws ExecutionException, InterruptedException
   {
     if (taskAutoScaler == null) {
       // Do nothing
-    } else if (activelyReadingTaskGroups.isEmpty()) {
-      log.info("Computing optimal taskCount before rollover.");
-      final int currentTaskCount = getIoConfig().getTaskCount();
+    } else {
+      log.info("Computing optimal taskCount for supervisor[%s] during rollover.", supervisorId);
+      final int currentTaskCount = getCurrentTaskCount();
       final int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
       if (rolloverTaskCount > 0 && rolloverTaskCount != currentTaskCount) {
-        changeTaskCountInIOConfig(rolloverTaskCount);
         log.info(
-            "Updated taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
+            "Updating taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
             supervisorId, currentTaskCount, rolloverTaskCount
         );
-
-        // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
-        // This seems the best way to inject task amount recalculation during the rollover.
-        clearPartitionAssignmentsForScaling();
-        emitter.emit(getMetricBuilder().setMetric(AUTOSCALER_UPDATED_TASK_METRIC, (long) rolloverTaskCount));
+        isScalingTasksOnRollover.set(true);
+        new DynamicAllocationTasksNotice(
+            () -> rolloverTaskCount,
+            () -> isScalingTasksOnRollover.set(false),
+            emitter
+        ).handle();
       }
-    } else {
-      log.info(
-          "Skipping scaling during rollover since taskGroups[%s] are still reading.",
-          activelyReadingTaskGroups
-      );
     }
   }
 

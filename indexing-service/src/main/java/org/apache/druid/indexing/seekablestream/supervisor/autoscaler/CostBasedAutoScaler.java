@@ -174,7 +174,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
-    final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
+    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
 
     // Perform scale-up actions; scale-down actions only if configured.
     final int taskCount;
