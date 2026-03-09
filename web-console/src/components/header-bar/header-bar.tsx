@@ -36,6 +36,7 @@ import React, { useState } from 'react';
 
 import {
   AboutDialog,
+  BrokerDynamicConfigDialog,
   CompactionDynamicConfigDialog,
   CoordinatorDynamicConfigDialog,
   DoctorDialog,
@@ -75,6 +76,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
+  const [brokerDynamicConfigDialogOpen, setBrokerDynamicConfigDialogOpen] = useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
   const [webConsoleConfigDialogOpen, setWebConsoleConfigDialogOpen] = useState(false);
@@ -182,6 +184,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         icon={IconNames.SETTINGS}
         text="Coordinator dynamic config"
         onClick={() => setCoordinatorDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
+      />
+      <MenuItem
+        icon={IconNames.APPLICATIONS}
+        text="Broker dynamic config"
+        onClick={() => setBrokerDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
@@ -399,6 +407,9 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <CoordinatorDynamicConfigDialog
           onClose={() => setCoordinatorDynamicConfigDialogOpen(false)}
         />
+      )}
+      {brokerDynamicConfigDialogOpen && (
+        <BrokerDynamicConfigDialog onClose={() => setBrokerDynamicConfigDialogOpen(false)} />
       )}
       {overlordDynamicConfigDialogOpen && (
         <OverlordDynamicConfigDialog onClose={() => setOverlordDynamicConfigDialogOpen(false)} />
