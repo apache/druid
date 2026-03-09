@@ -45,9 +45,7 @@
     "tutorials/tutorial-jdbc",
     {"type": "category",
     "label": "Hadoop tutorials",
-    "items": [  
-      "tutorials/tutorial-batch-hadoop",
-      "tutorials/tutorial-kerberos-hadoop"]
+    "items": ["tutorials/tutorial-kerberos-hadoop"]
     }]
 }
     ,
@@ -120,8 +118,7 @@
         "type": "category",
         "label": "Classic batch",
         "items": [
-          "ingestion/native-batch",
-          "ingestion/hadoop"
+          "ingestion/native-batch"
         ]
       },
       "ingestion/ingestion-spec",
@@ -332,7 +329,6 @@
       "operations/rolling-updates",
       "operations/rule-configuration",
       "operations/migrate-from-firehose",
-      "operations/other-hadoop",
       {
         "type": "category",
         "label": "Misc",
@@ -343,8 +339,7 @@
           "operations/pull-deps",
           "operations/deep-storage-migration",
           "operations/export-metadata",
-          "operations/metadata-migration",
-          "operations/use_sbt_to_build_fat_jar"
+          "operations/metadata-migration"
         ]
       }
     ]},
