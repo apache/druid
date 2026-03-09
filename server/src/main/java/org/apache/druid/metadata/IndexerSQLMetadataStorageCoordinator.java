@@ -2223,7 +2223,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Finds segments were covered by the given task REPLACE locks.
+   * Finds segments that were covered by the given task REPLACE locks.
    * These segments must now be upgraded to the same version as the segments
    * being committed by this replace task.
    *

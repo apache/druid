@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.compact;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
@@ -44,16 +43,15 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -103,7 +101,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -281,7 +278,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     pauseCompaction(dayGranularityConfig);
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals("2000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(2000, getTotalRowCount());
 
     verifyCompactedSegmentsHaveFingerprints(dayGranularityConfig);
 
@@ -302,7 +299,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     // 1 compacted segment + 2 appended segment
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(3000, getTotalRowCount());
 
     runCompactionWithSpec(dayGranularityConfig);
     waitForAllCompactionTasksToFinish();
@@ -315,7 +312,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     // performed minor compaction: 1 previously compacted segment + 1 incrementally compacted segment
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals("3000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(3000, getTotalRowCount());
   }
 
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
@@ -521,7 +518,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
-    Assertions.assertEquals("4", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(4, getTotalRowCount());
 
     VirtualColumns virtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn(
@@ -572,7 +569,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     // Verify: Should have 2 rows left (valueA appeared in 2 rows, both filtered out)
-    Assertions.assertEquals("2", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(2, getTotalRowCount());
 
     // Verify the correct rows were filtered
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
@@ -716,30 +713,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private int getTotalRowCount()
   {
-    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
-    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
-    List<Map<String, Object>> rows = JacksonUtils.readValue(
-        new DefaultObjectMapper(),
-        result.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>() {}
-    );
-    return ((Number) rows.get(0).get("cnt")).intValue();
+    return Numbers.parseInt(cluster.runSql("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource));
   }
 
   private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
   {
-    String sql = StringUtils.format(
+    String result = cluster.runSql(
         "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
         dataSource,
         nestedColumn,
         field,
         value
     );
-    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(sql, null, false, false, false, null, null);
-    List<Map<String, Object>> rows = parse(cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(clientSqlQuery)));
     Assertions.assertEquals(
         0,
-        ((Number) rows.get(0).get("cnt")).intValue(),
+        Numbers.parseInt(result),
         StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
     );
   }
@@ -904,27 +892,16 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     DateTime now = DateTimes.nowUtc();
     DateTime threshold = now.minus(period);
 
-    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(
-        StringUtils.format(
-            "SELECT COUNT(*) as cnt FROM \"%s\" WHERE %s = '%s' AND __time < MILLIS_TO_TIMESTAMP(%d)",
-            dataSource,
-            dimension,
-            value,
-            threshold.getMillis()
-        ),
-        null,
-        false,
-        false,
-        false,
-        null,
-        null
+    String result = cluster.runSql(
+        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE %s = '%s' AND __time < MILLIS_TO_TIMESTAMP(%d)",
+        dataSource,
+        dimension,
+        value,
+        threshold.getMillis()
     );
-    List<Map<String, Object>> result = parse(cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(clientSqlQuery)));
-
-    Assertions.assertEquals(1, result.size());
     Assertions.assertEquals(
         expectedCount,
-        result.get(0).get("cnt"),
+        Numbers.parseInt(result),
         StringUtils.format(
             "Expected %d events where %s='%s' older than %s",
             expectedCount,
@@ -957,17 +934,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null
-    );
-  }
-
-  private static List<Map<String, Object>> parse(String resultAsJson)
-  {
-    return JacksonUtils.readValue(
-        new DefaultObjectMapper(),
-        resultAsJson.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>()
-        {
-        }
     );
   }
 }
