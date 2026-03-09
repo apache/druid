@@ -34,6 +34,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -46,6 +47,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.joda.time.Duration;
 
 import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
@@ -114,7 +116,12 @@ public class MetadataSegmentView
     }
     try {
       if (isCacheEnabled) {
-        scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
+        ScheduledExecutors.scheduleAtFixedRate(
+            scheduledExec,
+            Duration.millis(500L),
+            Duration.millis(pollPeriodInMS),
+            this::poll
+        );
       }
       lifecycleLock.started();
       log.info("MetadataSegmentView is started.");
@@ -199,30 +206,4 @@ public class MetadataSegmentView
         true
     );
   }
-
-  private class PollTask implements Runnable
-  {
-    @Override
-    public void run()
-    {
-      long delayMS = pollPeriodInMS;
-      try {
-        final long pollStartTime = System.nanoTime();
-        poll();
-        final long pollEndTime = System.nanoTime();
-        final long pollTimeNS = pollEndTime - pollStartTime;
-        final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
-        delayMS = Math.max(pollPeriodInMS - pollTimeMS, 0);
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Problem polling Coordinator.").emit();
-      }
-      finally {
-        if (!Thread.currentThread().isInterrupted()) {
-          scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
-        }
-      }
-    }
-  }
-
 }
