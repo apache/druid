@@ -25,7 +25,7 @@ title: "Thrift"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-thrift-extensions` in the extensions load list.
 
-This extension enables Druid to ingest Thrift-encoded data from streaming sources such as Kafka and Kinesis, as well as from Hadoop batch jobs reading SequenceFiles or LzoThriftBlock files. The binary, compact, and JSON Thrift wire protocols are all supported, with optional Base64 encoding.
+This extension enables Druid to ingest Thrift-encoded data from streaming sources such as Kafka and Kinesis, as well as from Hadoop batch jobs reading SequenceFile or LzoThriftBlock files. The binary, compact, and JSON Thrift wire protocols are all supported, with optional Base64 encoding.
 
 You may want to use another version of thrift, change the dependency in pom and compile yourself.
 
