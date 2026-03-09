@@ -70,8 +70,8 @@ public class JdbcQueryTest extends QueryTestBase
     connectionProperties.setProperty("password", "priest");
     connections = new String[]{
         StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(router)),
-        StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(broker)),
-        };
+        StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(broker))
+    };
 
     dataSourceName = ingestBasicData();
   }

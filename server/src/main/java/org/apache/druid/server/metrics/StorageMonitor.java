@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.Inject;
+import com.google.common.base.Supplier;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -30,6 +30,7 @@ import org.apache.druid.segment.loading.StorageLocationStats;
 import org.apache.druid.segment.loading.StorageStats;
 import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -59,13 +60,15 @@ public class StorageMonitor extends AbstractMonitor
   public static final String VSF_REJECT_COUNT = "storage/virtual/reject/count";
 
   private final SegmentCacheManager cacheManager;
+  private final Supplier<ServiceMetricEvent.Builder> builderSupplier;
 
-  @Inject
   public StorageMonitor(
-      SegmentCacheManager cacheManager
+      SegmentCacheManager cacheManager,
+      @Nullable Supplier<ServiceMetricEvent.Builder> builderSupplier
   )
   {
     this.cacheManager = cacheManager;
+    this.builderSupplier = builderSupplier == null ? ServiceMetricEvent.Builder::new : builderSupplier;
   }
 
   @Override
@@ -76,8 +79,8 @@ public class StorageMonitor extends AbstractMonitor
     if (stats != null) {
       for (Map.Entry<String, StorageLocationStats> location : stats.getLocationStats().entrySet()) {
         final StorageLocationStats staticStats = location.getValue();
-        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-            .setDimension(LOCATION_DIMENSION, location.getKey());
+        final ServiceMetricEvent.Builder builder = builderSupplier.get()
+                                                                  .setDimension(LOCATION_DIMENSION, location.getKey());
         emitter.emit(builder.setMetric(USED_BYTES, staticStats.getUsedBytes()));
         emitter.emit(builder.setMetric(LOAD_COUNT, staticStats.getLoadCount()));
         emitter.emit(builder.setMetric(LOAD_BYTES, staticStats.getLoadBytes()));
@@ -87,10 +90,8 @@ public class StorageMonitor extends AbstractMonitor
 
       for (Map.Entry<String, VirtualStorageLocationStats> location : stats.getVirtualLocationStats().entrySet()) {
         final VirtualStorageLocationStats weakStats = location.getValue();
-        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension(
-            LOCATION_DIMENSION,
-            location.getKey()
-        );
+        final ServiceMetricEvent.Builder builder = builderSupplier.get()
+                                                                  .setDimension(LOCATION_DIMENSION, location.getKey());
         emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
         emitter.emit(builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount()));
         emitter.emit(builder.setMetric(VSF_HIT_BYTES, weakStats.getHitBytes()));

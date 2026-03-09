@@ -79,6 +79,8 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   {
     ingestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
     dataSchema = EasyMock.mock(DataSchema.class);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn(DATASOURCE).anyTimes();
+    EasyMock.replay(dataSchema);
     seekableStreamSupervisorTuningConfig = EasyMock.mock(SeekableStreamSupervisorTuningConfig.class);
     seekableStreamSupervisorIOConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
     supervisorConfig = new SupervisorStateManagerConfig();
@@ -89,6 +91,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
 
     EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
+    EasyMock.expect(spec.getDataSources()).andReturn(ImmutableList.of(DATASOURCE)).anyTimes();
   }
 
   @Test
@@ -416,7 +419,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(10),
             LagBasedAutoScalerConfig.class
@@ -479,7 +481,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -534,7 +535,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -580,7 +580,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(2);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(3),
             LagBasedAutoScalerConfig.class
@@ -628,7 +627,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleInProperties(),
             LagBasedAutoScalerConfig.class
@@ -686,7 +684,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             modifiedScaleInProps,
             LagBasedAutoScalerConfig.class
@@ -749,7 +746,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleInProperties(),
             LagBasedAutoScalerConfig.class
@@ -792,6 +788,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         LagAggregator.DEFAULT,
+        null,
         null,
         null,
         null
@@ -851,6 +848,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, null),
+        null,
         null
     )
     {
@@ -859,9 +857,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.replay(ingestionSchema);
-    EasyMock.expect(dataSchema.getDataSource()).andReturn(DATASOURCE);
-    EasyMock.replay(dataSchema);
-
     spec = new SeekableStreamSupervisorSpec(
         SUPERVISOR,
         ingestionSchema,
@@ -1206,7 +1201,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -1221,7 +1215,8 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         Set.of("dummyTask"),
-        Collections.emptySet()
+        Collections.emptySet(),
+        null
     );
 
     supervisor.start();
@@ -1271,7 +1266,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -1325,7 +1319,6 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
-        DATASOURCE,
         mapper.convertValue(
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
@@ -1443,11 +1436,9 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   private void mockIngestionSchema()
   {
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(dataSchema.getDataSource()).andReturn(DATASOURCE).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
-    EasyMock.replay(dataSchema);
   }
 
   private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)
@@ -1469,6 +1460,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           LagAggregator.DEFAULT,
           null,
           null,
+          null,
           null
       )
       {
@@ -1488,6 +1480,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
           LagAggregator.DEFAULT,
+          null,
           null,
           null,
           null

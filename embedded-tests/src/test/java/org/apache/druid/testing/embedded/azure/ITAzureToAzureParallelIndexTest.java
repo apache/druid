@@ -31,6 +31,6 @@ public class ITAzureToAzureParallelIndexTest extends AbstractAzureInputSourcePar
   @MethodSource("resources")
   public void testAzureIndexData(Pair<String, List<?>> azureInputSource) throws Exception
   {
-    doTest(azureInputSource, new Pair<>(false, false), "azure");
+    doTest(azureInputSource, new Pair<>(false, false), "azure", null);
   }
 }

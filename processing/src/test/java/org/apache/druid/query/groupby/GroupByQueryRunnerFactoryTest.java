@@ -161,8 +161,8 @@ public class GroupByQueryRunnerFactoryTest
     String[] rows = new String[]{
         "2011-01-12T00:00:00.000Z,product_1,t1",
         "2011-01-13T00:00:00.000Z,product_2,t2",
-        "2011-01-14T00:00:00.000Z,product_3,t2",
-        };
+        "2011-01-14T00:00:00.000Z,product_3,t2"
+    };
 
     for (String row : rows) {
       incrementalIndex.add(parser.parse(row));

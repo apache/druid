@@ -34,13 +34,11 @@ import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -151,7 +149,7 @@ public class ReindexingConfigBuilderTest
 
     int count = configBuilder.applyTo(builder);
 
-    Assertions.assertEquals(6, count);
+    Assertions.assertEquals(5, count);
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
@@ -168,7 +166,6 @@ public class ReindexingConfigBuilderTest
     Assertions.assertEquals("count", config.getMetricsSpec()[0].getName());
 
     Assertions.assertNotNull(config.getDimensionsSpec());
-    Assertions.assertNotNull(config.getIoConfig());
 
     Assertions.assertNotNull(config.getProjections());
     Assertions.assertEquals(1, config.getProjections().size()); // only 1 as we match the 2nd dataSchemaRule
@@ -195,15 +192,14 @@ public class ReindexingConfigBuilderTest
 
     // Verify applied rules list
     Assertions.assertNotNull(buildResult.getAppliedRules());
-    Assertions.assertEquals(6, buildResult.getAppliedRules().size());
+    Assertions.assertEquals(5, buildResult.getAppliedRules().size());
 
-    // Verify rule types in order: tuning, io, dataSchema, 2 deletion rules, segment granularity
+    // Verify rule types in order: tuning, dataSchema, 2 deletion rules, segment granularity
     Assertions.assertTrue(buildResult.getAppliedRules().get(0) instanceof ReindexingTuningConfigRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(1) instanceof ReindexingIOConfigRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(2) instanceof ReindexingDataSchemaRule);
+    Assertions.assertTrue(buildResult.getAppliedRules().get(1) instanceof ReindexingDataSchemaRule);
+    Assertions.assertTrue(buildResult.getAppliedRules().get(2) instanceof ReindexingDeletionRule);
     Assertions.assertTrue(buildResult.getAppliedRules().get(3) instanceof ReindexingDeletionRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(4) instanceof ReindexingDeletionRule);
-    Assertions.assertTrue(buildResult.getAppliedRules().get(5) instanceof ReindexingSegmentGranularityRule);
+    Assertions.assertTrue(buildResult.getAppliedRules().get(4) instanceof ReindexingSegmentGranularityRule);
 
     // Verify the config produced by applyToWithDetails() matches the original
     InlineSchemaDataSourceCompactionConfig configFromDetails = builderForDetails.build();
@@ -279,13 +275,6 @@ public class ReindexingConfigBuilderTest
         null
     );
 
-    ReindexingIOConfigRule ioConfigRule = new ReindexingIOConfigRule(
-        "io-30d",
-        null,
-        Period.days(30),
-        new UserCompactionTaskIOConfig(null)
-    );
-
     ReindexingDataSchemaRule dataSchemaRule1 = new ReindexingDataSchemaRule(
         "schema-30d",
         null,
@@ -319,7 +308,6 @@ public class ReindexingConfigBuilderTest
     return InlineReindexingRuleProvider.builder()
         .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
-        .ioConfigRules(ImmutableList.of(ioConfigRule))
         .deletionRules(ImmutableList.of(filterRule1, filterRule2))
         .dataSchemaRules(ImmutableList.of(dataSchemaRule1, dataSchemaRule2))
         .build();
