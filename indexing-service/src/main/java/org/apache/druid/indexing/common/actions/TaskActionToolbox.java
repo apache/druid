@@ -23,8 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -134,5 +137,28 @@ public class TaskActionToolbox
   public boolean canBatchSegmentAllocation()
   {
     return segmentAllocationQueue != null && segmentAllocationQueue.isEnabled();
+  }
+
+  /**
+   * Checks if the given publish action should be failed without allowing any
+   * more retries. A failed publish action should be retried only if there is
+   * another task waiting to publish offsets for an overlapping set of partitions.
+   */
+  public boolean shouldFailSegmentPublishImmediately(
+      SegmentPublishResult result,
+      Task task,
+      String supervisorId,
+      DataSourceMetadata startMetadata
+  )
+  {
+    if (result.isSuccess() || !result.isRetryable() || startMetadata == null) {
+      return false;
+    }
+
+    return !getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(
+        supervisorId,
+        task.getId(),
+        startMetadata
+    );
   }
 }
