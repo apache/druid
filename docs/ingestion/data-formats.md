@@ -190,9 +190,6 @@ For example:
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
-:::info
- To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
-:::
 
 Configure the ORC `inputFormat` to load ORC data as follows:
 
