@@ -31,6 +31,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -59,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
@@ -794,6 +796,109 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertTrue(manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
 
     verifyAll();
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorIdIsNull()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.isAnotherTaskGroupPublishingToPartitions(null, "task1", null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs("'supervisorId' cannot be null")
+    );
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorNotFound()
+  {
+    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            Map.of("0", "10", "1", "20"),
+            Set.of()
+        )
+    );
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", startMetadata)
+        ),
+        DruidExceptionMatcher.notFound().expectMessageIs("Could not find supervisor[supervisor1]")
+    );
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorTypeIsInvalid()
+  {
+    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            Map.of("0", "10", "1", "20"),
+            Set.of()
+        )
+    );
+
+    final String supervisorId = "supervisor1";
+    final SupervisorSpec supervisorSpec = new TestSupervisorSpec(supervisorId, supervisor1);
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        supervisorId, new TestSupervisorSpec(supervisorId, supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    metadataSupervisorManager.insert(supervisorId, supervisorSpec);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    manager.start();
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", startMetadata)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Supervisor[supervisor1] of type[TestSupervisorSpec] is not a streaming supervisor"
+        )
+    );
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsNull()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Start metadata[null] of type[null] is not valid streaming metadata"
+        )
+    );
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsInvalid()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", new ObjectMetadata("abc"))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Start metadata[ObjectMetadata{theObject=abc}] of"
+            + " type[class org.apache.druid.indexing.overlord.ObjectMetadata]"
+            + " is not valid streaming metadata"
+        )
+    );
+  }
+
+  @Test
+  public void test_isAnotherTaskGroupPublishingToPartitions()
+  {
+
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec

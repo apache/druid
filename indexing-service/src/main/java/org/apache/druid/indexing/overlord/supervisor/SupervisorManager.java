@@ -440,26 +440,26 @@ public class SupervisorManager
       DataSourceMetadata startMetadata
   )
   {
+    InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
+      throw InvalidInput.exception(
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
+      );
+    }
+
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor == null || supervisor.rhs == null) {
+      throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
+    }
+    if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
+      throw InvalidInput.exception(
+          "Supervisor[%s] of type[%s] is not a streaming supervisor",
+          supervisorId, supervisor.rhs.getType()
+      );
+    }
+
     try {
-      InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
-      if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
-        throw InvalidInput.exception(
-              "Start metadata[%s] of type[%s] is not valid streaming metadata",
-            supervisorId, startMetadata.getClass()
-        );
-      }
-
-      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
-      if (supervisor == null || supervisor.rhs == null) {
-        throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
-      }
-      if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
-        throw InvalidInput.exception(
-            "Supervisor[%s] of type[%s] is not a streaming supervisor",
-            supervisorId, supervisor.rhs.getType()
-        );
-      }
-
       final Set<Object> partitionIds = Set.copyOf(
           ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
               .getSeekableStreamSequenceNumbers()
