@@ -433,6 +433,10 @@ public class SupervisorManager
   /**
    * Checks if there is a Task distinct from the given {@code taskId} or its replicas
    * that is currently waiting to publish offsets for the given partitions.
+   *
+   * @return true only if the given {@param supervisorId} represents a
+   * {@link SeekableStreamSupervisor} and the supervisor has other tasks that
+   * are currently publishing offsets to an overlapping set of partitions.
    */
   public boolean isAnotherTaskGroupPublishingToPartitions(
       String supervisorId,
@@ -441,21 +445,18 @@ public class SupervisorManager
   )
   {
     InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
-    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
-      throw InvalidInput.exception(
-          "Start metadata[%s] of type[%s] is not valid streaming metadata",
-          startMetadata, startMetadata == null ? null : startMetadata.getClass()
-      );
-    }
-
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
     if (supervisor == null || supervisor.rhs == null) {
       throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
     }
     if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
+      return false;
+    }
+
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
       throw InvalidInput.exception(
-          "Supervisor[%s] of type[%s] is not a streaming supervisor",
-          supervisorId, supervisor.rhs.getType()
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
       );
     }
 

@@ -3600,7 +3600,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               () -> {},
               emitter
           ).handle();
-        } finally {
+        }
+        finally {
           isScalingTasksOnRollover.set(false);
         }
       }

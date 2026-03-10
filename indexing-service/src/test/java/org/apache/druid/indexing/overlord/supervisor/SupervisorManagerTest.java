@@ -61,7 +61,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
@@ -814,33 +813,18 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorNotFound()
   {
-    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
-            "topic",
-            Map.of("0", "10", "1", "20"),
-            Set.of()
-        )
-    );
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", startMetadata)
+            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
         ),
         DruidExceptionMatcher.notFound().expectMessageIs("Could not find supervisor[supervisor1]")
     );
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorTypeIsInvalid()
+  public void test_isAnotherTaskGroupPublishingToPartitions_returnsFalse_forNonStreamingSupervisor()
   {
-    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
-            "topic",
-            Map.of("0", "10", "1", "20"),
-            Set.of()
-        )
-    );
-
     final String supervisorId = "supervisor1";
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
         Map.of(supervisorId, new TestSupervisorSpec(supervisorId, supervisor1))
@@ -852,24 +836,32 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", startMetadata)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Supervisor[supervisor1] of type[TestSupervisorSpec] is not a streaming supervisor"
-        )
+    Assert.assertFalse(
+        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
     );
   }
 
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsNull()
   {
+    final String supervisorId = "supervisor1";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =
+        EasyMock.createMock(SeekableStreamSupervisor.class);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
+        Map.of(supervisorId, new TestSupervisorSpec(supervisorId, seekableStreamSupervisor))
+    );
+
+    seekableStreamSupervisor.start();
+    EasyMock.expect(seekableStreamSupervisor.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    EasyMock.replay(seekableStreamSupervisor);
+
+    manager.start();
+
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
+            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Start metadata[null] of type[null] is not valid streaming metadata"
@@ -880,10 +872,24 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsInvalid()
   {
+    final String supervisorId = "supervisor1";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =
+        EasyMock.createMock(SeekableStreamSupervisor.class);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
+        Map.of(supervisorId, new TestSupervisorSpec(supervisorId, seekableStreamSupervisor))
+    );
+
+    seekableStreamSupervisor.start();
+    EasyMock.expect(seekableStreamSupervisor.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    EasyMock.replay(seekableStreamSupervisor);
+
+    manager.start();
+
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", new ObjectMetadata("abc"))
+            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", new ObjectMetadata("abc"))
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Start metadata[ObjectMetadata{theObject=abc}] of"
@@ -928,8 +934,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(seekableStreamSupervisor);
     manager.start();
 
-    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>("topic", Map.of("0", "10"), Set.of())
+    final DataSourceMetadata startMetadata = TestSeekableStreamDataSourceMetadata.start(
+        "topic",
+        Map.of("0", "10")
     );
     Assert.assertTrue(
         manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, conflictingTaskId, startMetadata)
