@@ -25,6 +25,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -114,7 +117,19 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_5", "src/test/resources/defaultInvalidMetricsTest.json", null, null, true, true, null, null, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        null,
+        "test_5",
+        resolveResourcePath("defaultInvalidMetricsTest.json"),
+        null,
+        null,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null
+    );
     ISE iseException = Assert.assertThrows(ISE.class, () -> {
       new Metrics(config);
     });
@@ -124,7 +139,19 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithTimerHistogramBuckets()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_6", "src/test/resources/defaultMetricsTest.json", null, null, true, true, null, null, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        null,
+        "test_6",
+        resolveResourcePath("defaultMetricsTest.json"),
+        null,
+        null,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null
+    );
     Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
@@ -136,6 +163,17 @@ public class MetricsTest
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] expectedHistogramBuckets = {10.0, 30.0, 60.0, 120.0, 200.0, 300.0};
     Assert.assertArrayEquals(expectedHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+  }
+
+  private static String resolveResourcePath(final String resourceName)
+  {
+    try {
+      final Path resourcePath = Paths.get(MetricsTest.class.getClassLoader().getResource(resourceName).toURI());
+      return resourcePath.toString();
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

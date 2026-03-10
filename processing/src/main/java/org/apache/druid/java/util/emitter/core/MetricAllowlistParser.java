@@ -23,7 +23,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Set;
 
+/**
+ * Parses a metric specification document into a set of metric names that can be used for filtering.
+ *
+ * <p>The expected JSON shape is parser-dependent and is implemented by each parser implementation.
+ */
 public interface MetricAllowlistParser
 {
+  /**
+   * Parses metric configuration from the provided JSON node.
+   *
+   * @param metricConfig root JSON node of the metric specification
+   * @param source source identifier used for error reporting (for example, a path)
+   *
+   * @return metric names extracted from the configuration
+   */
   Set<String> parse(JsonNode metricConfig, String source);
 }

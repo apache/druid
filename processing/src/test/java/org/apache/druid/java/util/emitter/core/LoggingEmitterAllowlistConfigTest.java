@@ -40,8 +40,8 @@ public class LoggingEmitterAllowlistConfigTest
 
     final LoggingEmitter emitter = new LoggingEmitter(config, new ObjectMapper());
     Assert.assertNotNull(emitter);
-    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/cpu"));
-    Assert.assertTrue(emitter.getMetricNames().contains("query/time"));
+    Assert.assertTrue(emitter.getAllowedMetricNames().contains("jvm/gc/cpu"));
+    Assert.assertTrue(emitter.getAllowedMetricNames().contains("query/time"));
   }
 
   @Test
@@ -57,9 +57,9 @@ public class LoggingEmitterAllowlistConfigTest
 
     final LoggingEmitter emitter = new LoggingEmitter(config, new ObjectMapper());
     Assert.assertNotNull(emitter);
-    Assert.assertEquals(2, emitter.getMetricNames().size());
-    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/cpu"));
-    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/count"));
-    Assert.assertFalse(emitter.getMetricNames().contains("query/time"));
+    Assert.assertEquals(2, emitter.getAllowedMetricNames().size());
+    Assert.assertTrue(emitter.getAllowedMetricNames().contains("jvm/gc/cpu"));
+    Assert.assertTrue(emitter.getAllowedMetricNames().contains("jvm/gc/count"));
+    Assert.assertFalse(emitter.getAllowedMetricNames().contains("query/time"));
   }
 }

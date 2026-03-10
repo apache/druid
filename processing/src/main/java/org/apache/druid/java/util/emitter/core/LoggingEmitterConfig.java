@@ -27,6 +27,8 @@ import javax.validation.constraints.NotNull;
  */
 public class LoggingEmitterConfig extends GlobalEmitterConfig
 {
+  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultMetrics.json";
+
   @NotNull
   @JsonProperty
   private String loggerClass = LoggingEmitter.class.getName();

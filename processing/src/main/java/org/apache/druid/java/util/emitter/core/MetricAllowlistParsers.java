@@ -21,7 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 
 import java.util.Set;
 
@@ -31,7 +31,9 @@ public final class MetricAllowlistParsers
   public static Set<String> parseMetricNameObject(JsonNode metricConfig, String source)
   {
     if (!metricConfig.isObject()) {
-      throw new ISE("Metric allowlist file [%s] must be a JSON object of metric names", source);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Metric allowlist file [%s] must be a JSON object of metric names.", source);
     }
     final ImmutableSet.Builder<String> metricNames = ImmutableSet.builder();
     metricConfig.fieldNames().forEachRemaining(metricNames::add);

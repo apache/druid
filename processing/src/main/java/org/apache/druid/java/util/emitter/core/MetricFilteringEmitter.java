@@ -19,9 +19,22 @@
 
 package org.apache.druid.java.util.emitter.core;
 
+/**
+ * Contract for emitters that can filter metric events based on metric name.
+ */
 public interface MetricFilteringEmitter
 {
+  /**
+   * Returns whether a metric should be filtered out (not emitted).
+   *
+   * @param metricName metric name from {@link org.apache.druid.java.util.emitter.service.ServiceMetricEvent}
+   *
+   * @return {@code true} when the metric should be dropped
+   */
   boolean shouldFilterOutMetric(String metricName);
 
+  /**
+   * Returns the parser used to load metric names from the configured metric specification.
+   */
   MetricAllowlistParser getMetricAllowlistParser();
 }

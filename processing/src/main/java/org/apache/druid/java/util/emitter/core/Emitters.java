@@ -126,6 +126,18 @@ public class Emitters
           Float.parseFloat(props.getProperty("org.apache.druid.java.util.emitter.http.minHttpTimeoutMillis"))
       );
     }
+    if (props.containsKey("org.apache.druid.java.util.emitter.shouldFilterMetrics")) {
+      httpMap.put(
+          "shouldFilterMetrics",
+          Boolean.parseBoolean(props.getProperty("org.apache.druid.java.util.emitter.shouldFilterMetrics"))
+      );
+    }
+    if (props.containsKey("org.apache.druid.java.util.emitter.metricSpecPath")) {
+      httpMap.put(
+          "metricSpecPath",
+          props.getProperty("org.apache.druid.java.util.emitter.metricSpecPath")
+      );
+    }
     return httpMap;
   }
 

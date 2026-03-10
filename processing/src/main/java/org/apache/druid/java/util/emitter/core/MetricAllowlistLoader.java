@@ -21,9 +21,9 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -33,36 +33,72 @@ import java.util.Set;
 public final class MetricAllowlistLoader
 {
 
-  public static final String DEFAULT_METRIC_ALLOWLIST_PATH = "defaultLoggingMetrics.json";
-
-  public static Set<String> loadAllowlist(
-      ObjectMapper mapper,
-      String allowlistPath,
-      MetricAllowlistParser parser
+  public static Set<String> loadAllowlistFromFile(
+      final ObjectMapper mapper,
+      final String allowlistPath,
+      final MetricAllowlistParser parser
   )
   {
-    try (final InputStream is = openAllowlistFile(allowlistPath)) {
-      return parser.parse(mapper.readTree(is), allowlistPath);
+    validateAllowlistPath(allowlistPath);
+
+    final File allowlistFile = new File(allowlistPath);
+
+    try (final InputStream is = new FileInputStream(allowlistFile)) {
+      return parseAllowlist(mapper, is, allowlistFile.getPath(), parser);
+    }
+    catch (FileNotFoundException e) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("Metric spec file path [%s] was not found.", allowlistFile.getPath());
     }
     catch (IOException e) {
-      throw new ISE(e, "Failed to parse metric allowlist file [%s]", allowlistPath);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Failed to parse metric spec file path [%s].", allowlistFile.getPath());
     }
   }
 
-  private static InputStream openAllowlistFile(String allowlistPath)
+  public static Set<String> loadAllowlistFromClasspath(
+      final ObjectMapper mapper,
+      final String resourcePath,
+      final MetricAllowlistParser parser
+  )
+  {
+    validateAllowlistPath(resourcePath);
+
+    final InputStream classpathInputStream = MetricAllowlistLoader.class.getClassLoader().getResourceAsStream(resourcePath);
+    if (classpathInputStream == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("Metric spec file path [%s] was not found.", resourcePath);
+    }
+
+    try (final InputStream is = classpathInputStream) {
+      return parseAllowlist(mapper, is, resourcePath, parser);
+    }
+    catch (IOException e) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Failed to parse metric spec file path [%s].", resourcePath);
+    }
+  }
+
+  private static Set<String> parseAllowlist(
+      final ObjectMapper mapper,
+      final InputStream inputStream,
+      final String source,
+      final MetricAllowlistParser parser
+  ) throws IOException
+  {
+    return parser.parse(mapper.readTree(inputStream), source);
+  }
+
+  private static void validateAllowlistPath(final String allowlistPath)
   {
     if (Strings.isNullOrEmpty(allowlistPath)) {
-      throw new IAE("Metric allowlist file path is empty");
-    }
-    try {
-      return new FileInputStream(allowlistPath);
-    }
-    catch (FileNotFoundException e) {
-      final InputStream classpathInputStream = MetricAllowlistLoader.class.getClassLoader().getResourceAsStream(allowlistPath);
-      if (classpathInputStream != null) {
-        return classpathInputStream;
-      }
-      throw new IAE(e, "Metric allowlist file [%s] not found", allowlistPath);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Metric spec file path was empty, value [%s].", allowlistPath);
     }
   }
 }

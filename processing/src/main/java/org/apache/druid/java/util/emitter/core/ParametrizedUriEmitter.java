@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
-public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, MetricFilteringEmitter
+public class ParametrizedUriEmitter extends AbstractFilteringEmitter implements Flushable, Closeable
 {
   private static final Logger log = new Logger(ParametrizedUriEmitter.class);
   private static final Set<String> ONLY_FEED_PARAM = ImmutableSet.of("feed");
@@ -69,8 +69,6 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, Me
   private final AsyncHttpClient client;
   private final ObjectMapper jsonMapper;
   private final ParametrizedUriEmitterConfig config;
-  private final boolean filterMetrics;
-  private final Set<String> metricAllowlist;
 
   public ParametrizedUriEmitter(
       ParametrizedUriEmitterConfig config,
@@ -88,18 +86,20 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, Me
       UriExtractor uriExtractor
   )
   {
+    super(
+        config.isShouldFilterMetrics(),
+        loadAllowedMetricNames(
+            config.isShouldFilterMetrics(),
+            jsonMapper,
+            config.getMetricSpecPath(),
+            ParametrizedUriEmitterConfig.DEFAULT_METRIC_SPEC_PATH,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+    );
     this.config = config;
     this.client = client;
     this.jsonMapper = jsonMapper;
     this.uriExtractor = uriExtractor;
-    this.filterMetrics = config.isShouldFilterMetrics();
-    this.metricAllowlist = this.filterMetrics
-                           ? MetricAllowlistLoader.loadAllowlist(
-                               this.jsonMapper,
-                               config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
-                               getMetricAllowlistParser()
-                           )
-                           : Set.of();
   }
 
   @Override
@@ -126,11 +126,15 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, Me
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
   {
-    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
-      return;
-    }
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void emitFilteredEvent(final Event event)
+  {
     try {
       URI uri = uriExtractor.apply(event);
       // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
@@ -219,12 +223,6 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, Me
            ", uriExtractor=" + uriExtractor +
            ", config=" + config +
            '}';
-  }
-
-  @Override
-  public boolean shouldFilterOutMetric(String metricName)
-  {
-    return filterMetrics && !metricAllowlist.contains(metricName);
   }
 
   @Override

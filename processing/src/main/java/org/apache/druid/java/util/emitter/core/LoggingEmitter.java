@@ -19,13 +19,8 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-/**
- */
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -33,20 +28,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.slf4j.MarkerFactory;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- */
-public class LoggingEmitter implements Emitter, MetricFilteringEmitter
+public class LoggingEmitter extends AbstractFilteringEmitter
 {
   private final Logger log;
   private final Level level;
   private final ObjectMapper jsonMapper;
-  private final boolean shouldFilterMetrics;
-  private final Set<String> metricNames;
-
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public LoggingEmitter(LoggingEmitterConfig config, ObjectMapper jsonMapper)
@@ -56,7 +47,7 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
         Level.toLevel(config.getLogLevel()),
         jsonMapper,
         config.isShouldFilterMetrics(),
-        config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH)
+        config.getMetricSpecPath().orElse(null)
     );
   }
 
@@ -78,23 +69,22 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
         level,
         jsonMapper,
         shouldFilterMetrics,
-        shouldFilterMetrics
-        ? MetricAllowlistLoader.loadAllowlist(
+        loadAllowedMetricNames(
+            shouldFilterMetrics,
             jsonMapper,
-            Strings.isNullOrEmpty(metricSpecPath) ? MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH : metricSpecPath,
+            Strings.isNullOrEmpty(metricSpecPath) ? Optional.empty() : Optional.of(metricSpecPath),
+            LoggingEmitterConfig.DEFAULT_METRIC_SPEC_PATH,
             MetricAllowlistParsers::parseMetricNameObject
         )
-        : ImmutableSet.of()
     );
   }
 
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean shouldFilterMetrics, Set<String> metricNames)
   {
+    super(shouldFilterMetrics, metricNames);
     this.log = log;
     this.level = level;
     this.jsonMapper = jsonMapper;
-    this.shouldFilterMetrics = shouldFilterMetrics;
-    this.metricNames = Set.copyOf(metricNames);
   }
 
   @Override
@@ -131,16 +121,25 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
+  {
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void preEmit(final Event event)
   {
     synchronized (started) {
       if (!started.get()) {
         throw new RejectedExecutionException("Service not started.");
       }
     }
-    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
-      return;
-    }
+  }
+
+  @Override
+  protected void emitFilteredEvent(final Event event)
+  {
     try {
       switch (level) {
         case TRACE:
@@ -216,26 +215,14 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
     return "LoggingEmitter{" +
            "log=" + log +
            ", level=" + level +
-           ", shouldFilterMetrics=" + shouldFilterMetrics +
+           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
            '}';
-  }
-
-  @Override
-  public boolean shouldFilterOutMetric(String metricName)
-  {
-    return shouldFilterMetrics && !metricNames.contains(metricName);
   }
 
   @Override
   public MetricAllowlistParser getMetricAllowlistParser()
   {
     return MetricAllowlistParsers::parseMetricNameObject;
-  }
-
-  @VisibleForTesting
-  Set<String> getMetricNames()
-  {
-    return metricNames;
   }
 
   public enum Level

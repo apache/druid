@@ -47,7 +47,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayDeque;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -61,7 +60,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.zip.GZIPOutputStream;
 
-public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFilteringEmitter
+public class HttpPostEmitter extends AbstractFilteringEmitter implements Flushable, Closeable
 {
   private static final int MAX_EVENT_SIZE = 1023 * 1024; // Set max size slightly less than 1M to allow for metadata
 
@@ -102,8 +101,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
   private final AsyncHttpClient client;
   private final ObjectMapper jsonMapper;
   private final String url;
-  private final boolean filterMetrics;
-  private final Set<String> metricAllowlist;
 
   private final ConcurrentLinkedQueue<byte[]> buffersToReuse = new ConcurrentLinkedQueue<>();
   /**
@@ -156,6 +153,16 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
 
   public HttpPostEmitter(HttpEmitterConfig config, AsyncHttpClient client, ObjectMapper jsonMapper)
   {
+    super(
+        config.isShouldFilterMetrics(),
+        loadAllowedMetricNames(
+            config.isShouldFilterMetrics(),
+            jsonMapper,
+            config.getMetricSpecPath(),
+            BaseHttpEmittingConfig.DEFAULT_METRIC_SPEC_PATH,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+    );
     batchingStrategy = config.getBatchingStrategy();
     final int batchOverhead = batchingStrategy.batchStartLength() + batchingStrategy.batchEndLength();
     Preconditions.checkArgument(
@@ -173,14 +180,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
     this.largeEventThreshold = (bufferSize - batchOverhead - batchingStrategy.separatorLength()) / 2;
     this.client = client;
     this.jsonMapper = jsonMapper;
-    this.filterMetrics = config.isShouldFilterMetrics();
-    this.metricAllowlist = this.filterMetrics
-                           ? MetricAllowlistLoader.loadAllowlist(
-                               this.jsonMapper,
-                               config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
-                               getMetricAllowlistParser()
-                           )
-                           : Set.of();
     try {
       this.url = new URL(config.getRecipientBaseUrl()).toString();
     }
@@ -233,11 +232,15 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
   {
-    if (event instanceof ServiceMetricEvent && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric())) {
-      return;
-    }
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void emitFilteredEvent(final Event event)
+  {
     emitAndReturnBatch(event);
   }
 
@@ -292,12 +295,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Override
-  public boolean shouldFilterOutMetric(String metricName)
-  {
-    return filterMetrics && !metricAllowlist.contains(metricName);
   }
 
   @Override

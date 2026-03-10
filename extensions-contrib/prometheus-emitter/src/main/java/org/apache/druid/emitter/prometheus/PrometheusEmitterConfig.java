@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
  */
 public class PrometheusEmitterConfig extends GlobalEmitterConfig
 {
+  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultPrometheusMetrics.json";
 
   static final Pattern PATTERN = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
@@ -47,6 +48,11 @@ public class PrometheusEmitterConfig extends GlobalEmitterConfig
   @JsonProperty
   private final String namespace;
 
+  /**
+   * Deprecated in favor of {@link GlobalEmitterConfig#getMetricSpecPath()} kept for backward compatibility.
+   * If metricSpecPath is not provided, the emitter falls back to this value.
+   */
+  @Deprecated
   @JsonProperty
   @Nullable
   private final String dimensionMapPath;
@@ -160,6 +166,10 @@ public class PrometheusEmitterConfig extends GlobalEmitterConfig
     return namespace;
   }
 
+  /**
+   * Deprecated alias for {@link GlobalEmitterConfig#getMetricSpecPath()}.
+   */
+  @Deprecated
   public String getDimensionMapPath()
   {
     return dimensionMapPath;

@@ -25,6 +25,7 @@ import javax.validation.constraints.NotNull;
 
 public class ParametrizedUriEmitterConfig extends GlobalEmitterConfig
 {
+  public static final String DEFAULT_METRIC_SPEC_PATH = BaseHttpEmittingConfig.DEFAULT_METRIC_SPEC_PATH;
   private static final BaseHttpEmittingConfig DEFAULT_HTTP_EMITTING_CONFIG = new BaseHttpEmittingConfig();
 
   @NotNull
