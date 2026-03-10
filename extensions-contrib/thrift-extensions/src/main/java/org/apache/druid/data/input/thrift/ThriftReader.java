@@ -124,7 +124,7 @@ public class ThriftReader extends IntermediateRowParsingReader<byte[]>
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "ReturnValueIgnored"})
   private Class<TBase> getThriftClass() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
   {
     if (thriftClass == null) {
