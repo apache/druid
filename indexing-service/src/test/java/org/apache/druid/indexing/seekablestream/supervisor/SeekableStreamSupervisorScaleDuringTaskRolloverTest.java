@@ -48,7 +48,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   }
 
   @Test
-  public void test_maybeScaleDuringTaskRollover_noAutoScaler_doesNotScale() throws Exception
+  public void test_maybeScaleDuringTaskRollover_noAutoScaler_doesNotScale()
   {
     // Given
     setupSpecExpectations(createIOConfig(DEFAULT_TASK_COUNT, null));
@@ -68,7 +68,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   }
 
   @Test
-  public void test_maybeScaleDuringTaskRollover_rolloverCountNonPositive_doesNotScale() throws Exception
+  public void test_maybeScaleDuringTaskRollover_rolloverCountNonPositive_doesNotScale()
   {
     // Given
     setupSpecExpectations(getIOConfigWithCostBasedAutoScaler());
@@ -96,7 +96,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   }
 
   @Test
-  public void test_maybeScaleDuringTaskRollover_rolloverCountPositive_performsScaling() throws Exception
+  public void test_maybeScaleDuringTaskRollover_rolloverCountPositive_performsScaling()
   {
     // Given
     final int targetTaskCount = 5;
@@ -127,7 +127,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   }
 
   @Test
-  public void test_maybeScaleDuringTaskRollover_rolloverCountZero_doesNotScale() throws Exception
+  public void test_maybeScaleDuringTaskRollover_rolloverCountZero_doesNotScale()
   {
     // Given
     setupSpecExpectations(getIOConfigWithCostBasedAutoScaler());
