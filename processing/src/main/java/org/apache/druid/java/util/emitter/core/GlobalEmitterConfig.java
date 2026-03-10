@@ -26,18 +26,28 @@ import java.util.Optional;
 public class GlobalEmitterConfig
 {
   @JsonProperty
-  boolean filterMetrics;
+  private boolean shouldFilterMetrics;
 
   @JsonProperty
-  String metricAllowlistPath;
+  private String metricSpecPath;
 
-  public boolean isFilterMetrics()
+  public boolean isShouldFilterMetrics()
   {
-    return filterMetrics;
+    return shouldFilterMetrics;
   }
 
-  public Optional<String> getMetricAllowlistPath()
+  public Optional<String> getMetricSpecPath()
   {
-    return Optional.ofNullable(metricAllowlistPath);
+    return Optional.ofNullable(metricSpecPath);
+  }
+
+  public void setShouldFilterMetrics(boolean shouldFilterMetrics)
+  {
+    this.shouldFilterMetrics = shouldFilterMetrics;
+  }
+
+  public void setMetricSpecPath(String metricSpecPath)
+  {
+    this.metricSpecPath = metricSpecPath;
   }
 }

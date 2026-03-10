@@ -145,9 +145,9 @@ public class Emitters
           "shouldFilterMetrics", Boolean.parseBoolean(props.getProperty("org.apache.druid.java.util.emitter.logging.shouldFilterMetrics"))
       );
     }
-    if (props.containsKey("org.apache.druid.java.util.emitter.logging.allowedMetricsPath")) {
+    if (props.containsKey("org.apache.druid.java.util.emitter.logging.metricSpecPath")) {
       loggingMap.put(
-          "allowedMetricsPath", props.getProperty("org.apache.druid.java.util.emitter.logging.allowedMetricsPath")
+          "metricSpecPath", props.getProperty("org.apache.druid.java.util.emitter.logging.metricSpecPath")
       );
     }
     return loggingMap;

@@ -35,13 +35,13 @@ public class LoggingEmitterAllowlistConfigTest
   public void testUsesDefaultAllowlistWhenCustomPathIsNotProvided()
   {
     final Map<String, Object> configMap = new HashMap<>();
-    configMap.put("filterMetrics", true);
+    configMap.put("shouldFilterMetrics", true);
     final LoggingEmitterConfig config = new ObjectMapper().convertValue(configMap, LoggingEmitterConfig.class);
 
     final LoggingEmitter emitter = new LoggingEmitter(config, new ObjectMapper());
     Assert.assertNotNull(emitter);
-    Assert.assertTrue(emitter.getMetricAllowlist().contains("jvm/gc/cpu"));
-    Assert.assertTrue(emitter.getMetricAllowlist().contains("query/time"));
+    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/cpu"));
+    Assert.assertTrue(emitter.getMetricNames().contains("query/time"));
   }
 
   @Test
@@ -51,15 +51,15 @@ public class LoggingEmitterAllowlistConfigTest
     Files.writeString(allowlist, "{\"jvm/gc/cpu\": [], \"jvm/gc/count\": []}");
 
     final Map<String, Object> configMap = new HashMap<>();
-    configMap.put("filterMetrics", true);
-    configMap.put("metricAllowlistPath", allowlist.toAbsolutePath().toString());
+    configMap.put("shouldFilterMetrics", true);
+    configMap.put("metricSpecPath", allowlist.toAbsolutePath().toString());
     final LoggingEmitterConfig config = new ObjectMapper().convertValue(configMap, LoggingEmitterConfig.class);
 
     final LoggingEmitter emitter = new LoggingEmitter(config, new ObjectMapper());
     Assert.assertNotNull(emitter);
-    Assert.assertEquals(2, emitter.getMetricAllowlist().size());
-    Assert.assertTrue(emitter.getMetricAllowlist().contains("jvm/gc/cpu"));
-    Assert.assertTrue(emitter.getMetricAllowlist().contains("jvm/gc/count"));
-    Assert.assertFalse(emitter.getMetricAllowlist().contains("query/time"));
+    Assert.assertEquals(2, emitter.getMetricNames().size());
+    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/cpu"));
+    Assert.assertTrue(emitter.getMetricNames().contains("jvm/gc/count"));
+    Assert.assertFalse(emitter.getMetricNames().contains("query/time"));
   }
 }

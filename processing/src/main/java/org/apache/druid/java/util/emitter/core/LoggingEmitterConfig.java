@@ -51,8 +51,8 @@ public class LoggingEmitterConfig extends GlobalEmitterConfig
     return "LoggingEmitterConfig{" +
            "loggerClass='" + loggerClass + '\'' +
            ", logLevel='" + logLevel + '\'' +
-           ", filterMetrics=" + filterMetrics +
-           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
+           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
+           ", metricSpecPath='" + getMetricSpecPath() + '\'' +
            '}';
   }
 }

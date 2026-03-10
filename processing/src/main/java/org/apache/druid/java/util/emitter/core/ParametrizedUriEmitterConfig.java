@@ -50,8 +50,8 @@ public class ParametrizedUriEmitterConfig extends GlobalEmitterConfig
     return "ParametrizedUriEmitterConfig{" +
            "recipientBaseUrlPattern='" + recipientBaseUrlPattern + '\'' +
            ", httpEmittingConfig=" + httpEmittingConfig +
-           ", filterMetrics=" + filterMetrics +
-           ", metricAllowlistPath='" + metricAllowlistPath + '\'' +
+           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
+           ", metricSpecPath='" + getMetricSpecPath() + '\'' +
            '}';
   }
 }

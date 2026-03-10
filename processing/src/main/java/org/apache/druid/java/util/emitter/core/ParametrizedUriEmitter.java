@@ -92,11 +92,11 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter, Me
     this.client = client;
     this.jsonMapper = jsonMapper;
     this.uriExtractor = uriExtractor;
-    this.filterMetrics = config.isFilterMetrics();
+    this.filterMetrics = config.isShouldFilterMetrics();
     this.metricAllowlist = this.filterMetrics
                            ? MetricAllowlistLoader.loadAllowlist(
                                this.jsonMapper,
-                               config.getMetricAllowlistPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
+                               config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
                                getMetricAllowlistParser()
                            )
                            : Set.of();

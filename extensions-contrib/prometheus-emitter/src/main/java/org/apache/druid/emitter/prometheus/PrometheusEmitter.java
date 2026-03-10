@@ -81,11 +81,11 @@ public class PrometheusEmitter implements Emitter, MetricFilteringEmitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    this.filterMetrics = config.isFilterMetrics();
+    this.filterMetrics = config.isShouldFilterMetrics();
     this.metricAllowlist = this.filterMetrics
                            ? MetricAllowlistLoader.loadAllowlist(
                                new ObjectMapper(),
-                               config.getMetricAllowlistPath()
+                               config.getMetricSpecPath()
                                      .orElseGet(
                                          () -> Strings.isNullOrEmpty(config.getDimensionMapPath())
                                                ? "defaultMetrics.json"

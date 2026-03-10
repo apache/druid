@@ -173,11 +173,11 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter, MetricFil
     this.largeEventThreshold = (bufferSize - batchOverhead - batchingStrategy.separatorLength()) / 2;
     this.client = client;
     this.jsonMapper = jsonMapper;
-    this.filterMetrics = config.isFilterMetrics();
+    this.filterMetrics = config.isShouldFilterMetrics();
     this.metricAllowlist = this.filterMetrics
                            ? MetricAllowlistLoader.loadAllowlist(
                                this.jsonMapper,
-                               config.getMetricAllowlistPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
+                               config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH),
                                getMetricAllowlistParser()
                            )
                            : Set.of();

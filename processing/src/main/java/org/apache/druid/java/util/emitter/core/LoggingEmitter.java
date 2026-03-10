@@ -41,13 +41,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class LoggingEmitter implements Emitter, MetricFilteringEmitter
 {
-  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH;
-
   private final Logger log;
   private final Level level;
   private final ObjectMapper jsonMapper;
-  private final boolean filterMetrics;
-  private final Set<String> metricAllowlist;
+  private final boolean shouldFilterMetrics;
+  private final Set<String> metricNames;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -57,8 +55,8 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
         new Logger(config.getLoggerClass()),
         Level.toLevel(config.getLogLevel()),
         jsonMapper,
-        config.isFilterMetrics(),
-        config.getMetricAllowlistPath().orElse(DEFAULT_METRIC_ALLOWLIST_PATH)
+        config.isShouldFilterMetrics(),
+        config.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH)
     );
   }
 
@@ -72,7 +70,7 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
       Level level,
       ObjectMapper jsonMapper,
       boolean shouldFilterMetrics,
-      String allowedMetricsPath
+      String metricSpecPath
   )
   {
     this(
@@ -83,20 +81,20 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
         shouldFilterMetrics
         ? MetricAllowlistLoader.loadAllowlist(
             jsonMapper,
-            Strings.isNullOrEmpty(allowedMetricsPath) ? DEFAULT_METRIC_ALLOWLIST_PATH : allowedMetricsPath,
+            Strings.isNullOrEmpty(metricSpecPath) ? MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH : metricSpecPath,
             MetricAllowlistParsers::parseMetricNameObject
         )
         : ImmutableSet.of()
     );
   }
 
-  public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean filterMetrics, Set<String> metricAllowlist)
+  public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean shouldFilterMetrics, Set<String> metricNames)
   {
     this.log = log;
     this.level = level;
     this.jsonMapper = jsonMapper;
-    this.filterMetrics = filterMetrics;
-    this.metricAllowlist = Set.copyOf(metricAllowlist);
+    this.shouldFilterMetrics = shouldFilterMetrics;
+    this.metricNames = Set.copyOf(metricNames);
   }
 
   @Override
@@ -218,14 +216,14 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
     return "LoggingEmitter{" +
            "log=" + log +
            ", level=" + level +
-           ", filterMetrics=" + filterMetrics +
+           ", shouldFilterMetrics=" + shouldFilterMetrics +
            '}';
   }
 
   @Override
   public boolean shouldFilterOutMetric(String metricName)
   {
-    return filterMetrics && !metricAllowlist.contains(metricName);
+    return shouldFilterMetrics && !metricNames.contains(metricName);
   }
 
   @Override
@@ -235,9 +233,9 @@ public class LoggingEmitter implements Emitter, MetricFilteringEmitter
   }
 
   @VisibleForTesting
-  Set<String> getMetricAllowlist()
+  Set<String> getMetricNames()
   {
-    return metricAllowlist;
+    return metricNames;
   }
 
   public enum Level

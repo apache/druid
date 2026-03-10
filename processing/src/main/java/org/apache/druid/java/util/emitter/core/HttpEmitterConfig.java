@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.NotNull;
@@ -52,8 +53,8 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
     this.batchQueueSizeLimit = base.batchQueueSizeLimit;
     this.httpTimeoutAllowanceFactor = base.httpTimeoutAllowanceFactor;
     this.minHttpTimeoutMillis = base.minHttpTimeoutMillis;
-    this.filterMetrics = base.filterMetrics;
-    this.metricAllowlistPath = base.metricAllowlistPath;
+    this.setShouldFilterMetrics(base.isShouldFilterMetrics());
+    this.setMetricSpecPath(base.getMetricSpecPath().orElse(MetricAllowlistLoader.DEFAULT_METRIC_ALLOWLIST_PATH));
   }
 
   public String getRecipientBaseUrl()

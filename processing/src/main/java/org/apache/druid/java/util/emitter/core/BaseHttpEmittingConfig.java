@@ -182,7 +182,7 @@ public class BaseHttpEmittingConfig extends GlobalEmitterConfig
         ", batchQueueSizeLimit=" + batchQueueSizeLimit +
         ", httpTimeoutAllowanceFactor=" + httpTimeoutAllowanceFactor +
         ", minHttpTimeoutMillis=" + minHttpTimeoutMillis +
-        ", filterMetrics=" + filterMetrics +
-        ", metricAllowlistPath='" + metricAllowlistPath + '\'';
+        ", shouldFilterMetrics=" + isShouldFilterMetrics() +
+        ", metricSpecPath='" + getMetricSpecPath() + '\'';
   }
 }
