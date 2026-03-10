@@ -45,13 +45,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.Manifest;
 
 /**
  *
@@ -94,19 +95,9 @@ public class EmitterModule implements Module
     extraServiceDimensions
         .addBinding("version")
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
-    
-    // Add git commit SHA to all emitted metrics
-    Map<String, String> gitProperties = loadGitProperties();
-    if (gitProperties != null) {
-      extraServiceDimensions
-          .addBinding("gitSha")
-          .toInstance(StringUtils.nullToEmptyNonDruidDataString(gitProperties.get("git.commit.id.abbrev")));
-    } else {
-      // Fallback value when git properties are not available
-      extraServiceDimensions
-          .addBinding("gitSha")
-          .toInstance("unknown-commit");
-    }
+    extraServiceDimensions
+        .addBinding("buildRevision")
+        .toInstance(StringUtils.nullToEmptyNonDruidDataString(getBuildRevision()));
   }
 
   @Provides
@@ -194,31 +185,26 @@ public class EmitterModule implements Module
   }
 
   /**
-   * Loads git properties from the classpath resource git.properties.
-   * Returns null if the properties file is not found or cannot be loaded.
+   * Returns the {@code Build-Revision} attribute from {@code META-INF/MANIFEST.MF}, or {@code null}
+   * if the manifest is absent or the attribute is not set. This value is null during {@code mvn test}.
    */
-  private static Map<String, String> loadGitProperties()
+  protected String getBuildRevision()
   {
-    try (InputStream is = EmitterModule.class.getClassLoader().getResourceAsStream("git.properties")) {
-      if (is != null) {
-        Properties props = new Properties();
-        props.load(is);
-        
-        // Convert Properties to Map<String, String>
-        Map<String, String> gitProperties = new HashMap<>();
-        for (String key : props.stringPropertyNames()) {
-          String value = props.getProperty(key);
-          if (value != null && !value.trim().isEmpty()) {
-            gitProperties.put(key, value.trim());
-          }
-        }
-        
-        return gitProperties;
-      }
+    try (InputStream is = getClass().getResourceAsStream("/META-INF/MANIFEST.MF")) {
+      return parseBuildRevision(is);
     }
-    catch (Exception e) {
-      log.debug("Failed to load git properties: %s", e.getMessage());
+    catch (IOException e) {
+      log.warn(e, "Failed to read Build-Revision from manifest");
+      return null;
     }
-    return null;
+  }
+
+  static String parseBuildRevision(InputStream is) throws IOException
+  {
+    if (is == null) {
+      return null;
+    }
+    String revision = new Manifest(is).getMainAttributes().getValue("Build-Revision");
+    return (revision != null && !revision.trim().isEmpty()) ? revision.trim() : null;
   }
 }
