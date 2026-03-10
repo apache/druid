@@ -453,6 +453,10 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-deltalake-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-consul-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbit-indexing-service</argument>
