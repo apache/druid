@@ -69,7 +69,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   {
     final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
     final ChannelCounters inputCounters = counters.channel(CounterNames.inputChannel(inputNumber))
-                                                  .setTotalFiles(slice.fileCount());
+                                                  .addTotalFiles(slice.fileCount());
     final List<LoadableSegment> loadableSegments = new ArrayList<>();
     final List<DataServerQueryHandler> queryableServers = new ArrayList<>();
 

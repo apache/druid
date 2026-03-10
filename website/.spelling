@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
