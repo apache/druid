@@ -484,6 +484,7 @@ public class CostBasedAutoScalerTest
     when(spec.isSuspended()).thenReturn(false);
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
     when(supervisor.computeLagStats()).thenReturn(new LagStats(100, 100, 100));
     // No task stats means the moving average rate is unavailable
     when(supervisor.getStats()).thenReturn(Collections.emptyMap());

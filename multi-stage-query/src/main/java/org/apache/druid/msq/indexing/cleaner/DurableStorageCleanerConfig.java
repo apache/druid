@@ -20,6 +20,8 @@
 package org.apache.druid.msq.indexing.cleaner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 
@@ -39,6 +41,14 @@ public class DurableStorageCleanerConfig
   @Min(1)
   public long delaySeconds = 86400L;
 
+  /**
+   * The duration to retain query results in durable storage after task completion.
+   * Query result files will be deleted if they are older than this duration.
+   * Defaults to 6 hours.
+   */
+  @JsonProperty
+  public Duration durationToRetain = new Period("PT6H").toStandardDuration();
+
   public boolean isEnabled()
   {
     return enabled;
@@ -49,12 +59,18 @@ public class DurableStorageCleanerConfig
     return delaySeconds;
   }
 
+  public Duration getDurationToRetain()
+  {
+    return durationToRetain;
+  }
+
   @Override
   public String toString()
   {
     return "DurableStorageCleanerConfig{" +
            "enabled=" + enabled +
            ", delaySeconds=" + delaySeconds +
+           ", durationToRetain=" + durationToRetain +
            '}';
   }
 }

@@ -29,6 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Scopes;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
@@ -78,8 +79,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -123,6 +126,9 @@ public class QueryLifecycleTest
   AuthConfig authConfig;
   @Bind(lazy = true)
   PolicyEnforcer policyEnforcer;
+  @Bind(lazy = true)
+  @Nullable
+  BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
 
   QueryMetrics metrics;
   AuthenticationResult authenticationResult;
@@ -818,6 +824,99 @@ public class QueryLifecycleTest
       }
     });
     return null;
+  }
+
+  @Test
+  public void testRunSimple_queryBlocklisted()
+  {
+    // Create a blocklist rule that matches our test query
+    QueryBlocklistRule rule = new QueryBlocklistRule(
+        "test-rule",
+        ImmutableSet.of(DATASOURCE),
+        null,
+        null
+    );
+
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+    // When exception is thrown, metrics are still emitted
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).once();
+
+    replayAll();
+
+    // Create lifecycle with blocklist
+    List<QueryBlocklistRule> queryBlocklist = ImmutableList.of(rule);
+    QueryLifecycle lifecycle = new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        queryConfig,
+        authConfig,
+        policyEnforcer,
+        queryBlocklist,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+
+    // This should throw because query matches blocklist rule
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+    );
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertTrue(e.getMessage().contains("blocked by rule"));
+    Assert.assertTrue(e.getMessage().contains("test-rule"));
+  }
+
+  @Test
+  public void testRunSimple_queryNotBlocklisted()
+  {
+    // Create a blocklist rule that does NOT match our test query
+    QueryBlocklistRule rule = new QueryBlocklistRule(
+        "test-rule",
+        ImmutableSet.of("other_datasource"),
+        null,
+        null
+    );
+
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
+
+    replayAll();
+
+    // Create lifecycle with blocklist
+    List<QueryBlocklistRule> queryBlocklist = ImmutableList.of(rule);
+    QueryLifecycle lifecycle = new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        queryConfig,
+        authConfig,
+        policyEnforcer,
+        queryBlocklist,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+
+    // This should succeed because query doesn't match blocklist rule
+    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
   }
 
   private HttpServletRequest mockRequest()

@@ -27,11 +27,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -427,6 +430,55 @@ public class SupervisorManager
     return false;
   }
 
+  /**
+   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * that is currently waiting to publish offsets for the given partitions.
+   *
+   * @return true only if the given {@param supervisorId} represents a
+   * {@link SeekableStreamSupervisor} and the supervisor has other tasks that
+   * are currently publishing offsets to an overlapping set of partitions.
+   */
+  public boolean isAnotherTaskGroupPublishingToPartitions(
+      String supervisorId,
+      String taskId,
+      DataSourceMetadata startMetadata
+  )
+  {
+    InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor == null || supervisor.rhs == null) {
+      throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
+    }
+    if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
+      return false;
+    }
+
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
+      throw InvalidInput.exception(
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
+      );
+    }
+
+    try {
+      final Set<Object> partitionIds = Set.copyOf(
+          ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
+              .getSeekableStreamSequenceNumbers()
+              .getPartitionSequenceNumberMap()
+              .keySet()
+      );
+      return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
+          .isAnotherTaskGroupPublishingToPartitions(taskId, partitionIds);
+    }
+    catch (Exception e) {
+      log.error(
+          e,
+          "Failed to check if a publish is pending for supervisor[%s], metadata[%s]",
+          supervisorId, startMetadata
+      );
+      return false;
+    }
+  }
 
   /**
    * Stops a supervisor with a given id and then removes it from the list.

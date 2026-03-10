@@ -34,6 +34,7 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -118,6 +119,22 @@ public class BrokerClientImpl implements BrokerClient
   {
     final RequestBuilder requestBuilder =
         new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+            .jsonContent(jsonMapper, config);
+
+    return FutureUtils.transform(
+        client.asyncRequest(requestBuilder, new BytesFullResponseHandler()),
+        holder -> {
+          final HttpResponseStatus status = holder.getStatus();
+          return status.equals(HttpResponseStatus.OK);
+        }
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> updateBrokerDynamicConfig(BrokerDynamicConfig config)
+  {
+    final RequestBuilder requestBuilder =
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/broker")
             .jsonContent(jsonMapper, config);
 
     return FutureUtils.transform(
