@@ -53,7 +53,7 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
     this.httpTimeoutAllowanceFactor = base.httpTimeoutAllowanceFactor;
     this.minHttpTimeoutMillis = base.minHttpTimeoutMillis;
     this.setShouldFilterMetrics(base.isShouldFilterMetrics());
-    base.getMetricSpecPath().ifPresent(this::setMetricSpecPath);
+    this.setMetricSpecPath(base.getMetricSpecPath().orElse(null));
   }
 
   public String getRecipientBaseUrl()
