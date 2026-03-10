@@ -16,10 +16,15 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-druid_storage_type=hdfs
-druid_storage_storageDirectory=/druid/segments
-# Depending on the test, additional extension(s) may be required.
-# Please refer to the other integration-tests/docker/environment-configs/override-examples/ files and Druid docs for
-# additional env vars to provide for each extension.
-druid_extensions_loadList=["druid-hdfs-storage", "mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service","druid-s3-extensions"]
-druid_indexer_task_allowHadoopTaskExecution=true
+
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> and <YOUR_GOOGLE_CREDENTIALS_FILE_NAME> with your cloud configs/credentials
+#
+druid_storage_type=google
+druid_google_bucket=<OVERRIDE_THIS>
+druid_google_prefix=<OVERRIDE_THIS>
+
+druid_extensions_loadList=["druid-google-extensions","druid-hdfs-storage"]
+
+GOOGLE_APPLICATION_CREDENTIALS=/shared/docker/credentials/<YOUR_GOOGLE_CREDENTIALS_FILE_NAME>

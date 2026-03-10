@@ -16,10 +16,26 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> with your cloud configs/credentials
+#
+druid_s3_accessKey=<OVERRIDE_THIS>
+druid_s3_secretKey=<OVERRIDE_THIS>
+
 druid_storage_type=hdfs
 druid_storage_storageDirectory=/druid/segments
-# Depending on the test, additional extension(s) may be required.
-# Please refer to the other integration-tests/docker/environment-configs/override-examples/ files and Druid docs for
-# additional env vars to provide for each extension.
-druid_extensions_loadList=["druid-hdfs-storage", "mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service","druid-s3-extensions"]
-druid_indexer_task_allowHadoopTaskExecution=true
+
+AWS_REGION=<OVERRIDE_THIS>
+
+druid_extensions_loadList=["druid-s3-extensions","druid-hdfs-storage"]
+
+#
+# Please replace <LIB_VERSIONS> with corresponding libs
+#
+# Sample hadoop 3 config
+# druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client-api:3.2.2", "org.apache.hadoop:hadoop-client-runtime:3.2.2", "org.apache.hadoop:hadoop-azure:3.2.2"]
+#
+
+druid_indexer_task_defaultHadoopCoordinates=<LIB_VERSIONS>

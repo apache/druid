@@ -38,6 +38,11 @@
         </repository>
     </repositories>
 
+    <properties>
+        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+        <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.druid.integration-tests</groupId>
@@ -362,6 +367,11 @@
                             <filtering>true</filtering>
                         </resource>
                         <resource>
+                            <directory>src/test/resources/hadoop/</directory>
+                            <includes>*template.json</includes>
+                            <filtering>true</filtering>
+                        </resource>
+                        <resource>
                             <directory>src/test/resources</directory>
                             <filtering>false</filtering>
                         </resource>
@@ -377,6 +387,32 @@
                 <artifactId>copy-rename-maven-plugin</artifactId>
                 <version>1.0</version>
                 <executions>
+                    <execution>
+                        <id>copy-file-azure</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>${project.build.outputDirectory}/wikipedia_hadoop_azure_input_index_task_template.json</sourceFile>
+                            <destinationFile>${project.build.outputDirectory}/wikipedia_hadoop_azure_input_index_task.sh</destinationFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-file-s3</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>
+                                ${project.build.outputDirectory}/wikipedia_hadoop_s3_input_index_task_template.json
+                            </sourceFile>
+                            <destinationFile>
+                                ${project.build.outputDirectory}/wikipedia_hadoop_s3_input_index_task.json
+                            </destinationFile>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>rename-file</id>
                         <phase>process-resources</phase>
@@ -423,6 +459,8 @@
                                 <phase>pre-integration-test</phase>
                                 <configuration>
                                     <environmentVariables>
+                                        <DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER>${docker.build.hadoop}</DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
                                         <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>

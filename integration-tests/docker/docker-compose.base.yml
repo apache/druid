@@ -25,7 +25,7 @@ version: "2.2"
 # 172.172.172.50-59: indexers
 # 172.172.172.60-69: brokers
 # 172.172.172.70-79: routers
-# 172.172.172.101+:  other supporting infra
+# 172.172.172.101+:  hadoop, other supporting infra
 networks:
   druid-it-net:
     name: druid-it-net
