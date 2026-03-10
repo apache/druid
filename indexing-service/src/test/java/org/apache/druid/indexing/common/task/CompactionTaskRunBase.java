@@ -442,9 +442,9 @@ public abstract class CompactionTaskRunBase
       for (int i = 0; i < 3; i++) {
         Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
         Assert.assertEquals(interval, segments.get(i).getInterval());
-        Interval inputInterval = segmentGranularity == null ? interval : TEST_ACTUAL_INTERVAL;
+        Interval compactInterval = segmentGranularity == null ? interval : TEST_ACTUAL_INTERVAL;
         Assert.assertEquals(
-            getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, DEFAULT_QUERY_GRAN, List.of(inputInterval)),
+            getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, DEFAULT_QUERY_GRAN, List.of(compactInterval)),
             segments.get(i).getLastCompactionState()
         );
         // overwrite shard starts at NON_ROOT_GEN_START_PARTITION_ID + 1, and minor version 2 for the second compaction
@@ -1809,9 +1809,9 @@ public abstract class CompactionTaskRunBase
         Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
         Assert.assertEquals(interval, segments.get(i).getInterval());
         // native runner use interval from actual seen segments, while msq runner use never use this gran
-        Interval inputInterval = gran == null ? interval : TEST_ACTUAL_INTERVAL;
+        Interval compactInterval = gran == null ? interval : TEST_ACTUAL_INTERVAL;
         Assert.assertEquals(
-            getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, queryGran, List.of(inputInterval)),
+            getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, queryGran, List.of(compactInterval)),
             segments.get(i).getLastCompactionState()
         );
         if (useOverwriteShard) {
