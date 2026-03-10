@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHandler
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupUtils;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -257,16 +259,23 @@ public class CoordinatorClientImpl implements CoordinatorClient
   @Override
   public ListenableFuture<BrokerDynamicConfig> getBrokerDynamicConfig()
   {
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/broker/config"),
-            new BytesFullResponseHandler()
+    // Older coordinators may not support this endpoint; fall back to an empty config on 404.
+    return Futures.catching(
+        FutureUtils.transform(
+            client.asyncRequest(
+                new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/broker/config"),
+                new BytesFullResponseHandler()
+            ),
+            holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), BrokerDynamicConfig.class)
         ),
-        holder -> JacksonUtils.readValue(
-            jsonMapper,
-            holder.getContent(),
-            BrokerDynamicConfig.class
-        )
+        HttpResponseException.class,
+        e -> {
+          if (e != null && e.getResponse().getStatus().getCode() == 404) {
+            return BrokerDynamicConfig.builder().build();
+          }
+          throw new RuntimeException(e);
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
