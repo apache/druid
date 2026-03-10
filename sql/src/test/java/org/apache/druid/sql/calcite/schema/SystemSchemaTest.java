@@ -151,6 +151,8 @@ public class SystemSchemaTest extends CalciteTestBase
 {
   private static final ObjectMapper MAPPER = CalciteTests.getJsonMapper();
 
+  private static final String DATASOURCE_ALL_ACCESS = "allAccess";
+
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
@@ -1490,8 +1492,9 @@ public class SystemSchemaTest extends CalciteTestBase
     SystemSchema.SupervisorsTable supervisorTable =
         new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
 
-    final String json = "[{\n"
-                  + "\t\"id\": \"wikipedia\",\n"
+    String json = "[{\n"
+                  + "\t\"id\": \"wikipedia_supervisor\",\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
                   + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
                   + "\t\"healthy\": false,\n"
@@ -1679,6 +1682,100 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.verify(mockEngine);
   }
 
+  @Test
+  public void testSupervisorTableAuthOnDataSourceName() throws JsonProcessingException
+  {
+    SystemSchema.SupervisorsTable supervisorTable =
+        new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
+
+    // Verify that 1 row is returned for datasource name DATASOURCE_ALL_ACCESS
+    String datasourceAllAccessSupervisor =
+        "[{\n"
+        + "\t\"id\": \"wikipedia_supervisor\",\n"
+        + "\t\"dataSource\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"wikipedia\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceAllAccessSupervisor, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    List<Object[]> rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertEquals(1, rows.size());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+
+    // Verify that no row is returned for datasource name not matching DATASOURCE_ALL_ACCESS
+    String datasourceNotAllAccess =
+        "[{\n"
+        + "\t\"id\": \"wikipedia_supervisor\",\n"
+        + "\t\"dataSource\": \"wikipedia\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"wikipedia\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceNotAllAccess, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+
+    // Verify that no row is returned for datasource source and id matching DATASOURCE_ALL_ACCESS
+    String datasourceSourceAndIdAllAccess =
+        "[{\n"
+        + "\t\"id\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"dataSource\": \"wikipedia\",\n"
+        + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+        + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+        + "\t\"healthy\": false,\n"
+        + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+        + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+        + "\t\"type\": \"kafka\",\n"
+        + "\t\"source\": \"" + DATASOURCE_ALL_ACCESS + "\",\n"
+        + "\t\"suspended\": false\n"
+        + "}]";
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                MAPPER.readValue(datasourceSourceAndIdAllAccess, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).times(1);
+    EasyMock.replay(overlordClient);
+    rows = supervisorTable
+        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+    EasyMock.verify(overlordClient);
+    EasyMock.reset(overlordClient);
+  }
+
   /**
    * Creates a test QueryInfo implementation for testing purposes.
    */
@@ -1781,6 +1878,7 @@ public class SystemSchemaTest extends CalciteTestBase
                 username.equals(Users.SUPER)
                 || (action == Action.READ && username.equals(Users.DATASOURCE_READ))
                 || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
+                || (resource.getName().equals(DATASOURCE_ALL_ACCESS))
             );
           }
 
@@ -1865,5 +1963,6 @@ public class SystemSchemaTest extends CalciteTestBase
     private static final String SUPER = CalciteTests.TEST_SUPERUSER_NAME;
     private static final String DATASOURCE_READ = "datasourceRead";
     private static final String DATASOURCE_WRITE = "datasourceWrite";
+    private static final String ONLY_DATASOURCE_ALL_ACCESS = "onlyDatasourceAllAccess";
   }
 }

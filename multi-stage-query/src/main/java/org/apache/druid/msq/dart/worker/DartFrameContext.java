@@ -101,12 +101,6 @@ public class DartFrameContext implements FrameContext
   }
 
   @Override
-  public GroupingEngine groupingEngine()
-  {
-    return groupingEngine;
-  }
-
-  @Override
   public RowIngestionMeters rowIngestionMeters()
   {
     return new NoopRowIngestionMeters();

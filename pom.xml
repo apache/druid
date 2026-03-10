@@ -83,7 +83,7 @@
         <gson.version>2.12.0</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
         <avatica.version>1.27.0</avatica.version>
-        <avro.version>1.11.4</avro.version>
+        <avro.version>1.11.5</avro.version>
         <bytebuddy.version>1.18.3</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -1573,7 +1573,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.6.0</version>
                 <configuration>
                     <sourceDirectories>
                         <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
@@ -1582,19 +1582,19 @@
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
                     <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
-                    <encoding>UTF-8</encoding>
+                    <inputEncoding>UTF-8</inputEncoding>
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <excludes>
-                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java
+                        *com/fasterxml/jackson/databind/*
                     </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.21</version>
+                        <version>12.3.1</version>
                     </dependency>
                 </dependencies>
                 <executions>

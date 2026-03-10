@@ -31,6 +31,8 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -39,8 +41,11 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents the native engine's execution vertex - the execution unit it may execute in one execution cycle.
@@ -82,6 +87,31 @@ import java.util.List;
  */
 public class ExecutionVertex
 {
+  /**
+   * Identifies the vertex for the given query.
+   */
+  public static ExecutionVertex of(Query<?> query)
+  {
+    ExecutionVertexExplorer explorer = new ExecutionVertexExplorer(query);
+    return new ExecutionVertex(explorer);
+  }
+
+  /**
+   * Builds the {@link ExecutionVertex} around a {@link DataSource}.
+   *
+   * Kept for backward compatibility reasons - incorporating
+   * {@link ExecutionVertex} into Filtration will make this obsolete.
+   */
+  public static ExecutionVertex ofDataSource(DataSource dataSource)
+  {
+    ScanQuery query = Druids
+        .newScanQueryBuilder()
+        .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+        .dataSource(dataSource)
+        .build();
+    return ExecutionVertex.of(query);
+  }
+
   /** The top level query this vertex is describing. */
   protected final Query<?> topQuery;
   /** The base datasource which will be read during the execution.  */
@@ -90,6 +120,7 @@ public class ExecutionVertex
   protected final QuerySegmentSpec querySegmentSpec;
   /** Retained for compatibility with earlier implementation. See {@link #isBaseColumn(String)} */
   protected final List<String> joinPrefixes;
+
   /** Retained for compatibility with earlier implementation. */
   protected boolean allRightsAreGlobal;
 
@@ -100,15 +131,6 @@ public class ExecutionVertex
     this.querySegmentSpec = explorer.querySegmentSpec;
     this.joinPrefixes = explorer.joinPrefixes;
     this.allRightsAreGlobal = explorer.allRightsAreGlobal;
-  }
-
-  /**
-   * Identifies the vertex for the given query.
-   */
-  public static ExecutionVertex of(Query<?> query)
-  {
-    ExecutionVertexExplorer explorer = new ExecutionVertexExplorer(query);
-    return new ExecutionVertex(explorer);
   }
 
   /**
@@ -137,6 +159,141 @@ public class ExecutionVertex
   {
     return baseDataSource instanceof TableDataSource
            || (baseDataSource instanceof UnionDataSource && ((UnionDataSource) baseDataSource).isTableBased());
+  }
+
+  /**
+   * Unwraps the {@link #getBaseDataSource()} if its a {@link TableDataSource}.
+   *
+   * @throws DruidException error of type {@link DruidException.Category#DEFENSIVE} if the {@link #getBaseDataSource()}
+   * is not a table. Note that this may not be true even {@link #isProcessable()} ()} is true - in cases when the base
+   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
+   */
+  public final TableDataSource getBaseTableDataSource()
+  {
+    if (baseDataSource instanceof TableDataSource) {
+      return (TableDataSource) baseDataSource;
+    } else {
+      throw DruidException.defensive("Base dataSource[%s] is not a table!", baseDataSource);
+    }
+  }
+
+  /**
+   * The applicable {@link QuerySegmentSpec} for this vertex.
+   *
+   * There might be more queries inside a single vertex; so the outer one is not
+   * necessary correct.
+   */
+  public QuerySegmentSpec getEffectiveQuerySegmentSpec()
+  {
+    Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec is null!");
+    return querySegmentSpec;
+  }
+
+  /**
+   * Decides if the query can be executed using the cluster walker.
+   */
+  public boolean canRunQueryUsingClusterWalker()
+  {
+    return isProcessable() && isTableBased();
+  }
+
+  /**
+   * Decides if the query can be executed using the local walker.
+   */
+  public boolean canRunQueryUsingLocalWalker()
+  {
+    return isProcessable() && !isTableBased();
+  }
+
+  /**
+   * Decides if the execution time segment mapping function will be expensive.
+   */
+  public boolean isSegmentMapFunctionExpensive()
+  {
+    boolean hasJoin = !joinPrefixes.isEmpty();
+    return hasJoin;
+  }
+
+  @Nullable
+  public SegmentPruner getSegmentPruner()
+  {
+    if (!topQuery.context().isSecondaryPartitionPruningEnabled()) {
+      return null;
+    }
+    if (topQuery.getFilter() == null) {
+      return null;
+    }
+    final Set<String> baseFields = new HashSet<>();
+    for (final String field : topQuery.getFilter().getRequiredColumns()) {
+      if (isBaseColumn(field)) {
+        baseFields.add(field);
+      }
+    }
+
+    return new FilterSegmentPruner(
+        topQuery.getFilter(),
+        baseFields
+    );
+  }
+
+  /**
+   * Answers if the given column is coming from the base datasource or not.
+   *
+   * Retained for backward compatibility for now. The approach taken here relies
+   * on join prefixes - which might classify the output of a
+   * {@link VirtualColumn} to be coming from the base datasource. <br/>
+   * An alternate approach would be to analyze these during the segmentmap
+   * function creation.
+   */
+  public boolean isBaseColumn(String columnName)
+  {
+    for (String prefix : joinPrefixes) {
+      if (JoinPrefixUtils.isPrefixedBy(columnName, prefix)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @SuppressWarnings("rawtypes")
+  public Query buildQueryWithBaseDataSource(DataSource newBaseDataSource)
+  {
+    return new ReplaceBaseDataSource(baseDataSource, newBaseDataSource).traverse(topQuery);
+  }
+
+  /**
+   * Assembles the segment mapping function which should be applied to the input segments.
+   */
+  public SegmentMapFunction createSegmentMapFunction(PolicyEnforcer policyEnforcer)
+  {
+    return getTopDataSource().createSegmentMapFunction(topQuery).thenMap(segment -> {
+      segment.validateOrElseThrow(policyEnforcer);
+      return segment;
+    });
+  }
+
+  /**
+   * Returns the first datasource which is not collapsible by the topQuery.
+   */
+  private DataSource getTopDataSource()
+  {
+    Query<?> q = topQuery;
+    while (q.mayCollapseQueryDataSource()) {
+      q = ((QueryDataSource) q.getDataSource()).getQuery();
+    }
+    return q.getDataSource();
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -234,100 +391,6 @@ public class ExecutionVertex
   }
 
   /**
-   * Builds the {@link ExecutionVertex} around a {@link DataSource}.
-   *
-   * Kept for backward compatibility reasons - incorporating
-   * {@link ExecutionVertex} into Filtration will make this obsolete.
-   */
-  public static ExecutionVertex ofDataSource(DataSource dataSource)
-  {
-    ScanQuery query = Druids
-        .newScanQueryBuilder()
-        .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
-        .dataSource(dataSource)
-        .build();
-    return ExecutionVertex.of(query);
-  }
-
-  /**
-   * Unwraps the {@link #getBaseDataSource()} if its a {@link TableDataSource}.
-   *
-   * @throws DruidException error of type {@link DruidException.Category#DEFENSIVE} if the {@link #getBaseDataSource()}
-   * is not a table. Note that this may not be true even {@link #isProcessable()} ()} is true - in cases when the base
-   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
-   */
-  public final TableDataSource getBaseTableDataSource()
-  {
-    if (baseDataSource instanceof TableDataSource) {
-      return (TableDataSource) baseDataSource;
-    } else {
-      throw DruidException.defensive("Base dataSource[%s] is not a table!", baseDataSource);
-    }
-  }
-
-  /**
-   * The applicable {@link QuerySegmentSpec} for this vertex.
-   *
-   * There might be more queries inside a single vertex; so the outer one is not
-   * necessary correct.
-   */
-  public QuerySegmentSpec getEffectiveQuerySegmentSpec()
-  {
-    Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec is null!");
-    return querySegmentSpec;
-  }
-
-  /**
-   * Decides if the query can be executed using the cluster walker.
-   */
-  public boolean canRunQueryUsingClusterWalker()
-  {
-    return isProcessable() && isTableBased();
-  }
-
-  /**
-   * Decides if the query can be executed using the local walker.
-   */
-  public boolean canRunQueryUsingLocalWalker()
-  {
-    return isProcessable() && !isTableBased();
-  }
-
-  /**
-   * Decides if the execution time segment mapping function will be expensive.
-   */
-  public boolean isSegmentMapFunctionExpensive()
-  {
-    boolean hasJoin = !joinPrefixes.isEmpty();
-    return hasJoin;
-  }
-
-  /**
-   * Answers if the given column is coming from the base datasource or not.
-   *
-   * Retained for backward compatibility for now. The approach taken here relies
-   * on join prefixes - which might classify the output of a
-   * {@link VirtualColumn} to be coming from the base datasource. <br/>
-   * An alternate approach would be to analyze these during the segmentmap
-   * function creation.
-   */
-  public boolean isBaseColumn(String columnName)
-  {
-    for (String prefix : joinPrefixes) {
-      if (JoinPrefixUtils.isPrefixedBy(columnName, prefix)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @SuppressWarnings("rawtypes")
-  public Query buildQueryWithBaseDataSource(DataSource newBaseDataSource)
-  {
-    return new ReplaceBaseDataSource(baseDataSource, newBaseDataSource).traverse(topQuery);
-  }
-
-  /**
    * Replaces the base datasource of the given query.
    */
   static class ReplaceBaseDataSource extends ExecutionVertexShuttle
@@ -367,40 +430,5 @@ public class ExecutionVertex
     {
       return query;
     }
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public int hashCode()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Assembles the segment mapping function which should be applied to the input segments.
-   */
-  public SegmentMapFunction createSegmentMapFunction(PolicyEnforcer policyEnforcer)
-  {
-    return getTopDataSource().createSegmentMapFunction(topQuery).thenMap(segment -> {
-      segment.validateOrElseThrow(policyEnforcer);
-      return segment;
-    });
-  }
-
-  /**
-   * Returns the first datasource which is not collapsible by the topQuery.
-   */
-  private DataSource getTopDataSource()
-  {
-    Query<?> q = topQuery;
-    while (q.mayCollapseQueryDataSource()) {
-      q = ((QueryDataSource) q.getDataSource()).getQuery();
-    }
-    return q.getDataSource();
   }
 }

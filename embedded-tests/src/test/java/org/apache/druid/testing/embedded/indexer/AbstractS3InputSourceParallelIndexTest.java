@@ -41,7 +41,7 @@ import java.util.List;
 public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
   private static final Logger LOG = new Logger(AbstractS3InputSourceParallelIndexTest.class);
-  private final MinIOStorageResource minIOStorageResource = new MinIOStorageResource();
+  protected final MinIOStorageResource minIOStorageResource = new MinIOStorageResource();
   private S3TestUtil s3;
 
   @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -44,6 +45,7 @@ import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 
@@ -51,6 +53,10 @@ import java.util.List;
 public class GroupByPostShuffleStageProcessor extends BasicStageProcessor
 {
   private final GroupByQuery query;
+
+  @JacksonInject
+  @Nullable
+  private GroupingEngine groupingEngine;
 
   @JsonCreator
   public GroupByPostShuffleStageProcessor(
@@ -74,7 +80,6 @@ public class GroupByPostShuffleStageProcessor extends BasicStageProcessor
     // Expecting a single input slice from some prior stage.
     final List<InputSlice> inputSlices = context.workOrder().getInputs();
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
-    final GroupingEngine engine = context.frameContext().groupingEngine();
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
     for (final ReadablePartition partition : slice.getPartitions()) {
@@ -99,7 +104,7 @@ public class GroupByPostShuffleStageProcessor extends BasicStageProcessor
 
           return new GroupByPostShuffleFrameProcessor(
               query,
-              engine,
+              groupingEngine,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
               context.workOrder().getStageDefinition().createFrameWriterFactory(

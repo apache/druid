@@ -23,8 +23,10 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.testing.embedded.indexing.KafkaTestBase;
+import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,8 +37,16 @@ import java.util.List;
 /**
  * Contains miscellaneous tests for Kafka supervisors.
  */
-public class KafkaMultiSupervisorTest extends KafkaTestBase
+public class KafkaMultiSupervisorTest extends StreamIndexTestBase
 {
+  private final KafkaResource kafkaServer = new KafkaResource();
+
+  @Override
+  protected StreamIngestResource<?> getStreamIngestResource()
+  {
+    return kafkaServer;
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   public void test_ingestIntoSingleDatasource_fromDifferentTopics(boolean useTransactions)
@@ -49,7 +59,7 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
     final String topic1 = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic1, 1);
 
-    final KafkaSupervisorSpec supervisor1 = createSupervisor()
+    final KafkaSupervisorSpec supervisor1 = createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io.withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null)))
         .withDataSchema(d -> d.withDimensions(dimensionsSpec))
         .withId(topic1)
@@ -60,7 +70,7 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
     final String topic2 = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic2, 1);
 
-    final KafkaSupervisorSpec supervisor2 = createSupervisor()
+    final KafkaSupervisorSpec supervisor2 = createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io.withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null)))
         .withDataSchema(d -> d.withDimensions(dimensionsSpec))
         .withId(topic2)

@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -212,18 +213,12 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
           null
       );
     });
-    when(segmentCacheManager.acquireCachedSegment(any())).thenAnswer(invocation -> {
-      DataSegment segment = invocation.getArgument(0);
-      QueryableIndexSegment index = new QueryableIndexSegment(
-          new TestUtils().getTestIndexIO().loadIndex(new File((String) segment.getLoadSpec().get("path"))),
-          segment.getId()
-      );
-      return Optional.of(index);
-    });
+    when(segmentCacheManager.acquireCachedSegment(any())).thenReturn(Optional.empty());
     GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig(),
         TestGroupByBuffers.createDefault()
     ).getGroupingEngine();
+    ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(GroupingEngine.class, groupingEngine);
 
     Module modules = Modules.combine(
         new DruidGuiceExtensions(),

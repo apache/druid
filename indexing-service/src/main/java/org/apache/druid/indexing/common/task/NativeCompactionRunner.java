@@ -89,6 +89,14 @@ public class NativeCompactionRunner implements CompactionRunner
       Map<Interval, DataSchema> intervalDataSchemaMap
   )
   {
+    // Virtual columns in filter rules are not supported by native compaction
+    if (compactionTask.getTransformSpec() != null
+        && compactionTask.getTransformSpec().getVirtualColumns() != null
+        && compactionTask.getTransformSpec().getVirtualColumns().getVirtualColumns().length > 0) {
+      return CompactionConfigValidationResult.failure(
+          "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead."
+      );
+    }
     return CompactionConfigValidationResult.success();
   }
 

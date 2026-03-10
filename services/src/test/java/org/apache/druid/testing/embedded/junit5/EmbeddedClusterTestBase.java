@@ -70,6 +70,19 @@ public abstract class EmbeddedClusterTestBase
   }
 
   /**
+   * Returns the TLS-enabled HTTPS url of the given server.
+   */
+  protected static String getServerHttpsUrl(EmbeddedDruidServer<?> server)
+  {
+    final DruidNode node = server.bindings().selfNode();
+    return StringUtils.format(
+        "https://%s:%s",
+        node.getHost(),
+        node.getTlsPort()
+    );
+  }
+
+  /**
    * Creates the cluster to be used in this test class. This method is invoked
    * only once before any of the {@code @Test} methods have run.
    * Implementations of this method should not start the cluster as it is done in

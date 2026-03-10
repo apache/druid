@@ -43,7 +43,6 @@ import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
@@ -158,7 +157,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
   }
 
   @Override
@@ -229,12 +228,6 @@ public class MSQTestWorkerContext implements WorkerContext
     public SegmentWrangler segmentWrangler()
     {
       return injector.getInstance(SegmentWrangler.class);
-    }
-
-    @Override
-    public GroupingEngine groupingEngine()
-    {
-      return injector.getInstance(GroupingEngine.class);
     }
 
     @Override

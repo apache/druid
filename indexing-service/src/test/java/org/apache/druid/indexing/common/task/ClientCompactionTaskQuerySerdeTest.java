@@ -97,7 +97,7 @@ public class ClientCompactionTaskQuerySerdeTest
       new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true);
   private static final AggregatorFactory[] METRICS_SPEC = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
   private static final CompactionTransformSpec CLIENT_COMPACTION_TASK_TRANSFORM_SPEC =
-      new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+      new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
   private static final DynamicPartitionsSpec DYNAMIC_PARTITIONS_SPEC = new DynamicPartitionsSpec(100, 30000L);
   private static final SegmentsSplitHintSpec SEGMENTS_SPLIT_HINT_SPEC = new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10);
 

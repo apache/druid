@@ -20,6 +20,7 @@ import type { Field } from '../../components';
 
 export interface WebConsoleConfig {
   showLocalTime?: boolean;
+  consoleSystemQueryBrokerService?: string;
 }
 
 export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
@@ -31,6 +32,19 @@ export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
       <>
         Boolean flag for whether we show local time in the &quot;Tasks&quot;, &quot;Segments&quot;
         and &quot;Services&quot; views.
+      </>
+    ),
+  },
+  {
+    name: 'consoleSystemQueryBrokerService',
+    type: 'string',
+    placeholder: 'druid/broker',
+    info: (
+      <>
+        Sets brokerService in the query context for console system queries
+        (e.g.,&quot;druid/broker-all-tiers&quot;). Useful when configuring
+        druid.broker.segment.watchedTiers if the default Broker server does not have visibility into
+        some Historical tiers. Does not affect user-initiated queries.
       </>
     ),
   },

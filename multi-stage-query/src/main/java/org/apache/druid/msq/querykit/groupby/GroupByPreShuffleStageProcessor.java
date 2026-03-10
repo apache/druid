@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -33,9 +34,11 @@ import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +46,10 @@ import java.util.List;
 public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
 {
   private final GroupByQuery query;
+
+  @JacksonInject
+  @Nullable
+  private GroupingEngine groupingEngine;
 
   @JsonCreator
   public GroupByPreShuffleStageProcessor(@JsonProperty("query") GroupByQuery query)
@@ -68,7 +75,7 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
   {
     return new GroupByPreShuffleFrameProcessor(
         query,
-        frameContext.groupingEngine(),
+        groupingEngine,
         frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,

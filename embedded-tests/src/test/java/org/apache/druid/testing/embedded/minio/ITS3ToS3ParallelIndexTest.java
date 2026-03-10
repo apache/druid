@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.minio;
 
+import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.indexer.AbstractS3InputSourceParallelIndexTest;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,14 @@ public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelInde
   @MethodSource("resources")
   public void testS3IndexData(Pair<String, List<?>> s3InputSource) throws Exception
   {
-    doTest(s3InputSource, new Pair<>(false, false), "s3");
+    doTest(s3InputSource, new Pair<>(false, false), "s3", null);
+  }
+
+  @ParameterizedTest
+  @MethodSource("resources")
+  public void testS3IndexData_withTempCredentials(Pair<String, List<?>> s3InputSource) throws Exception
+  {
+    final S3InputSourceConfig inputSourceConfig = minIOStorageResource.createTempCredentialsForInputSource();
+    doTest(s3InputSource, new Pair<>(false, false), "s3", inputSourceConfig);
   }
 }

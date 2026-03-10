@@ -38,7 +38,7 @@ import java.util.Set;
 public interface SupervisorSpec
 {
   /**
-   * Return an unique id of {@link Supervisor}.
+   * Return a unique id of {@link Supervisor}.
    */
   String getId();
 
@@ -93,10 +93,12 @@ public interface SupervisorSpec
   }
 
   /**
-   * This API is only used for informational purposes in
-   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
+   * Return source (like stream or topic name) for the supervisor
+   * This API is currently used for spec validation in {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec}
+   * and for returning the spec with source in {@link org.apache.druid.indexing.overlord.supervisor.SupervisorResource}
+   * when the spec is requested with system flag.
    *
-   * @return source like stream or topic name
+   * @return source
    */
   String getSource();
 

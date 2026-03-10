@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
@@ -33,12 +34,15 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.server.metrics.StorageMonitor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -60,6 +64,7 @@ public class StorageNodeModule implements Module
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    MetricsModule.register(binder, StorageMonitor.class);
   }
 
   @Provides
@@ -134,6 +139,16 @@ public class StorageNodeModule implements Module
   public List<StorageLocation> provideStorageLocation(SegmentLoaderConfig config)
   {
     return config.toStorageLocations();
+  }
+
+  @Provides
+  @LazySingleton
+  @Nullable
+  public StorageMonitor provideStorageMonitor(
+      Injector injector
+  )
+  {
+    return new StorageMonitor(injector.getInstance(SegmentCacheManager.class), null);
   }
 
   /**

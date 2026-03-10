@@ -50,7 +50,7 @@ public class BrokerSegmentMetadataCacheConfigTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
     Assert.assertTrue(config.isAwaitInitializationOnStart());
-    Assert.assertFalse(config.isMetadataSegmentCacheEnable());
+    Assert.assertTrue(config.isMetadataSegmentCacheEnable());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
     Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
@@ -70,6 +70,7 @@ public class BrokerSegmentMetadataCacheConfigTest
     );
     properties.setProperty(CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
     properties.setProperty(CONFIG_BASE + ".awaitInitializationOnStart", "false");
+    properties.setProperty(CONFIG_BASE + ".metadataSegmentCacheEnable", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
     Assert.assertFalse(config.isAwaitInitializationOnStart());

@@ -69,7 +69,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
     
     return cluster
         .useContainerFriendlyHostname()
-        .useDefaultTimeoutForLatchableEmitter(60)
+        .useDefaultTimeoutForLatchableEmitter(120)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)
@@ -78,7 +78,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\", \"druid-kubernetes-overlord-extensions\"]"
+            + "\"postgresql-metadata-storage\", \"druid-kubernetes-overlord-extensions\"]"
         );
   }
 
