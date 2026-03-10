@@ -409,13 +409,18 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    eventCollector.latchableEmitter().waitForNextEvent(
-        event -> event.hasMetricName("segment/metadataCache/sync/time")
-                      .hasService("druid/coordinator")
-    );
+    waitForNextCoordinatorCacheSync();
     eventCollector.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/broker")
+    );
+  }
+
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/coordinator")
     );
   }
 
