@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -115,8 +114,7 @@ public class TestUtils
             context.registerSubtypes(
                 new NamedType(LocalLoadSpec.class, "local"),
                 new NamedType(NoopInputSource.class, "noop"),
-                new NamedType(NoopInputFormat.class, "noop"),
-                new NamedType(TestSeekableStreamDataSourceMetadata.class, "testStream")
+                new NamedType(NoopInputFormat.class, "noop")
             );
           }
         }
