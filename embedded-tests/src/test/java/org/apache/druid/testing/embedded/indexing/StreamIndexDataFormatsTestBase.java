@@ -44,7 +44,6 @@ import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.thrift.ThriftExtensionsModule;
 import org.apache.druid.data.input.thrift.ThriftInputFormat;
-import org.apache.druid.data.input.thrift.ThriftInputRowParser;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
@@ -553,7 +552,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_thriftDataFormat() throws Exception
+  public void test_thriftDataFormat()
   {
     streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ThriftEventSerializer();
@@ -566,36 +565,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
 
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_thriftDataFormat_withParser() throws Exception
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new ThriftEventSerializer();
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-
-    JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        new JSONPathSpec(true, null),
-        null,
-        false
-    );
-
-    ThriftInputRowParser parser = new ThriftInputRowParser(
-        parseSpec,
-        null,
-        WikipediaThriftEvent.class.getName()
-    );
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
