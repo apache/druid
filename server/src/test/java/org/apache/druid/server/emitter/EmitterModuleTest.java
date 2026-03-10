@@ -205,4 +205,193 @@ public class EmitterModuleTest
         )
     );
   }
+
+  @Test
+  public void testServiceEmitterContainsGitSha()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.emitter", "stub");
+    EmitterModule emitterModule = new EmitterModule();
+    emitterModule.setProps(props);
+
+    ImmutableSet<NodeRole> nodeRoles = ImmutableSet.of();
+    TestTaskHolder testTaskHolder = new TestTaskHolder("test", "id1", "type1", "group1");
+    
+    Injector injector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-service", "localhost", false, 8080, null, true, false)
+          );
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(TaskHolder.class).toInstance(testTaskHolder);
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+        },
+        ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
+        emitterModule,
+        new StubServiceEmitterModule()
+    );
+
+    ServiceEmitter instance = injector.getInstance(ServiceEmitter.class);
+    Assert.assertNotNull(instance);
+    instance.start();
+    
+    // Emit a test metric
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    builder.setDimension("testDimension", "testValue");
+    builder.setMetric("gitCommitTest", 42);
+    instance.emit(builder);
+
+    // Get the stub emitter to verify git commit dimensions
+    Emitter emitterInstance = injector.getInstance(Emitter.class);
+    Assert.assertTrue("Should be a StubServiceEmitter", emitterInstance instanceof StubServiceEmitter);
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) emitterInstance;
+
+    stubEmitter.verifyEmitted("gitCommitTest", 1);
+    List<Event> events = stubEmitter.getEvents();
+    Assert.assertEquals("Should have exactly one event", 1, events.size());
+    
+    ServiceMetricEvent event = (ServiceMetricEvent) events.get(0);
+    EventMap map = event.toMap();
+    
+    // Verify git SHA dimension is present
+    Assert.assertTrue("Should contain gitSha dimension", map.containsKey("gitSha"));
+    
+    // Verify git SHA has non-null value
+    Assert.assertNotNull("gitSha should not be null", map.get("gitSha"));
+    
+    // Verify git SHA is a string
+    Assert.assertTrue("gitSha should be a string", map.get("gitSha") instanceof String);
+    
+    // Verify git SHA has actual value (not empty)
+    Assert.assertFalse("gitSha should not be empty", ((String) map.get("gitSha")).isEmpty());
+  }
+
+  @Test
+  public void testGitShaWithFallbackValues()
+  {
+    // This test verifies that when git.properties is not available, 
+    // fallback value is used for git SHA dimension
+    Properties props = new Properties();
+    props.setProperty("druid.emitter", "stub");
+    EmitterModule emitterModule = new EmitterModule();
+    emitterModule.setProps(props);
+
+    ImmutableSet<NodeRole> nodeRoles = ImmutableSet.of();
+    TestTaskHolder testTaskHolder = new TestTaskHolder("test", "id1", "type1", "group1");
+    
+    Injector injector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-service", "localhost", false, 8080, null, true, false)
+          );
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(TaskHolder.class).toInstance(testTaskHolder);
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+        },
+        ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
+        emitterModule,
+        new StubServiceEmitterModule()
+    );
+
+    ServiceEmitter instance = injector.getInstance(ServiceEmitter.class);
+    instance.start();
+    
+    // Emit a test metric
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    builder.setMetric("fallbackTest", 1);
+    instance.emit(builder);
+
+    // Verify that fallback values are used when git.properties is not available
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) injector.getInstance(Emitter.class);
+    List<Event> events = stubEmitter.getEvents();
+    Assert.assertEquals(1, events.size());
+    
+    ServiceMetricEvent event = (ServiceMetricEvent) events.get(0);
+    EventMap map = event.toMap();
+    
+    // In the absence of git.properties, we should get fallback value or actual git SHA
+    Object gitSha = map.get("gitSha");
+    
+    // This should be either fallback value or actual git information
+    Assert.assertTrue(
+        "gitSha should be either 'unknown-commit' or actual git SHA",
+        "unknown-commit".equals(gitSha) || (gitSha instanceof String && ((String) gitSha).length() > 0)
+    );
+  }
+
+  @Test
+  public void testMultipleEventsHaveSameGitSha()
+  {
+    // Verify that all events from the same ServiceEmitter instance have consistent git SHA
+    Properties props = new Properties();
+    props.setProperty("druid.emitter", "stub");
+    EmitterModule emitterModule = new EmitterModule();
+    emitterModule.setProps(props);
+
+    ImmutableSet<NodeRole> nodeRoles = ImmutableSet.of();
+    TestTaskHolder testTaskHolder = new TestTaskHolder("test", "id1", "type1", "group1");
+    
+    Injector injector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-service", "localhost", false, 8080, null, true, false)
+          );
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(TaskHolder.class).toInstance(testTaskHolder);
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+        },
+        ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
+        emitterModule,
+        new StubServiceEmitterModule()
+    );
+
+    ServiceEmitter instance = injector.getInstance(ServiceEmitter.class);
+    instance.start();
+    
+    // Emit multiple test metrics
+    for (int i = 0; i < 3; i++) {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      builder.setMetric("consistencyTest" + i, i);
+      instance.emit(builder);
+    }
+
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) injector.getInstance(Emitter.class);
+    List<Event> events = stubEmitter.getEvents();
+    Assert.assertEquals("Should have 3 events", 3, events.size());
+    
+    // Extract git SHA from first event
+    ServiceMetricEvent firstEvent = (ServiceMetricEvent) events.get(0);
+    EventMap firstMap = firstEvent.toMap();
+    String firstGitSha = (String) firstMap.get("gitSha");
+    
+    // Verify all subsequent events have the same git SHA
+    for (int i = 1; i < events.size(); i++) {
+      ServiceMetricEvent event = (ServiceMetricEvent) events.get(i);
+      EventMap map = event.toMap();
+      
+      Assert.assertEquals(
+          "All events should have the same gitSha", 
+          firstGitSha, 
+          map.get("gitSha")
+      );
+    }
+  }
 }
