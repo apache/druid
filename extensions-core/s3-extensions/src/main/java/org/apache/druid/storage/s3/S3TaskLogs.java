@@ -133,7 +133,7 @@ public class S3TaskLogs implements TaskLogs
           .bucket(config.getS3Bucket())
           .key(taskKey)
           .ifMatch(ensureQuotated(objectMetadata.eTag()))
-          .range(StringUtils.format("bytes=%d-%d", start, end));
+          .range(AwsBytesRange.of(start, end).getBytesRange());
 
       return Optional.of(service.getObject(requestBuilder));
     }

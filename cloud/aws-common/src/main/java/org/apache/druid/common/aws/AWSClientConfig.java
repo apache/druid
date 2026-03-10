@@ -72,12 +72,12 @@ public class AWSClientConfig
     return forceGlobalBucketAccessEnabled;
   }
 
-  public int getConnectionTimeout()
+  public int getConnectionTimeoutMillis()
   {
     return connectionTimeout;
   }
 
-  public int getSocketTimeout()
+  public int getSocketTimeoutMillis()
   {
     return socketTimeout;
   }

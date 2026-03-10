@@ -147,8 +147,8 @@ public class S3StorageDruidModule implements DruidModule
     final Supplier<S3Client> s3ClientSupplier = () -> {
       // Build HTTP client with proxy configuration
       ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
-          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
-          .socketTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+          .socketTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
           .maxConnections(clientConfig.getMaxConnections());
 
       ProxyConfiguration proxyConfiguration = S3Utils.buildProxyConfiguration(proxyConfig);
@@ -182,8 +182,8 @@ public class S3StorageDruidModule implements DruidModule
     // Create async client supplier for S3TransferManager
     final Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
       NettyNioAsyncHttpClient.Builder asyncHttpClientBuilder = NettyNioAsyncHttpClient.builder()
-          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
-          .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+          .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
           .maxConcurrency(clientConfig.getMaxConnections());
 
       S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder()

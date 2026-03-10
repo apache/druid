@@ -37,11 +37,13 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.Permission;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.Type;
@@ -63,42 +65,6 @@ public class S3Utils
   private static final String SCHEME = S3StorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final Logger log = new Logger(S3Utils.class);
-
-  /**
-   * A holder for S3Object with its associated bucket name.
-   * In AWS SDK v2, S3Object doesn't include the bucket name, so we need to track it separately.
-   */
-  public static class S3ObjectWithBucket
-  {
-    private final String bucket;
-    private final S3Object s3Object;
-
-    public S3ObjectWithBucket(String bucket, S3Object s3Object)
-    {
-      this.bucket = bucket;
-      this.s3Object = s3Object;
-    }
-
-    public String getBucket()
-    {
-      return bucket;
-    }
-
-    public String getKey()
-    {
-      return s3Object.key();
-    }
-
-    public long getSize()
-    {
-      return s3Object.size();
-    }
-
-    public S3Object getS3Object()
-    {
-      return s3Object;
-    }
-  }
 
   /**
    * Error for calling putObject with an entity over 5GB in size.
@@ -291,8 +257,10 @@ public class S3Utils
   static Grant grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
   {
     final String ownerId = s3Client.getBucketAcl(bucket).owner().id();
-    return Grant.builder()
-        .grantee(Grantee.builder()
+    return Grant
+        .builder()
+        .grantee(Grantee
+            .builder()
             .type(Type.CANONICAL_USER)
             .id(ownerId)
             .build())
@@ -429,15 +397,30 @@ public class S3Utils
                                       .collect(Collectors.toList());
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
-    DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
-        .bucket(bucket)
-        .delete(Delete.builder().objects(keysToDelete).build())
-        .build();
-    S3Utils.retryS3Operation(() -> {
-      s3Client.deleteObjects(deleteRequest);
-      return null;
-    }, retries);
-    log.info("Deleted %d files", keysToDelete.size());
+    List<ObjectIdentifier> remaining = keysToDelete;
+    List<S3Error> lastErrors = null;
+    for (int attempt = 0; attempt <= retries; attempt++) {
+      DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
+          .bucket(bucket)
+          .delete(Delete.builder().objects(remaining).build())
+          .build();
+      DeleteObjectsResponse response = retryS3Operation(() -> s3Client.deleteObjects(deleteRequest));
+      if (!response.hasErrors()) {
+        log.info("Deleted %d files", keysToDelete.size());
+        return;
+      }
+      lastErrors = response.errors();
+      remaining = lastErrors.stream()
+                            .map(e -> ObjectIdentifier.builder().key(e.key()).build())
+                            .collect(Collectors.toList());
+      log.warn(
+          "S3 multi-object delete had %d error(s) on attempt %d/%d, retrying failed keys only",
+          remaining.size(),
+          attempt + 1,
+          retries + 1
+      );
+    }
+    throw new S3MultiObjectDeleteException(lastErrors);
   }
 
   /**

@@ -99,13 +99,15 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
   public String getPassword()
   {
     try {
-      RdsUtilities rdsUtilities = RdsUtilities.builder()
+      RdsUtilities rdsUtilities = RdsUtilities
+          .builder()
           .credentialsProvider(awsCredentialsProvider)
           .region(Region.of(region))
           .build();
 
       String authToken = rdsUtilities.generateAuthenticationToken(
-          GenerateAuthenticationTokenRequest.builder()
+          GenerateAuthenticationTokenRequest
+              .builder()
               .hostname(host)
               .port(port)
               .username(user)

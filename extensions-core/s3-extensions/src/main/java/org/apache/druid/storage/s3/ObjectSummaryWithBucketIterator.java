@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Iterator that returns S3 objects along with their bucket names.
  * This is needed because AWS SDK v2's S3Object doesn't include the bucket name.
  */
-public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3ObjectWithBucket>
+public class ObjectSummaryWithBucketIterator implements Iterator<S3ObjectWithBucket>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final Iterator<URI> prefixesIterator;
@@ -46,7 +46,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
   private String continuationToken;
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
-  private S3Utils.S3ObjectWithBucket currentObjectSummary;
+  private S3ObjectWithBucket currentObjectSummary;
   private AtomicBoolean initialized;
 
   ObjectSummaryWithBucketIterator(
@@ -80,14 +80,14 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
   }
 
   @Override
-  public S3Utils.S3ObjectWithBucket next()
+  public S3ObjectWithBucket next()
   {
     initialize();
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
 
-    final S3Utils.S3ObjectWithBucket retVal = currentObjectSummary;
+    final S3ObjectWithBucket retVal = currentObjectSummary;
     advanceObjectSummary();
     return retVal;
   }
@@ -140,7 +140,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
         S3Object s3Object = objectSummaryIterator.next();
         // skips directories and empty objects
         if (!isDirectoryPlaceholder(s3Object) && s3Object.size() > 0) {
-          currentObjectSummary = new S3Utils.S3ObjectWithBucket(currentBucket, s3Object);
+          currentObjectSummary = new S3ObjectWithBucket(currentBucket, s3Object);
           return;
         }
       }

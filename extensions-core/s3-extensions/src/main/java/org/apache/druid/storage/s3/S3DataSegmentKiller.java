@@ -57,6 +57,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   // AWS has max limit of 1000 objects that can be requested to be deleted at a time.
   private static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
 
+  private static final int NUM_RETRIES = 3;
   private static final String MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT = "message: [%s], code: [%s]";
 
   /**
@@ -161,45 +162,50 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         MAX_MULTI_OBJECT_DELETE_SIZE
     );
     for (List<ObjectIdentifier> chunkOfKeys : keysChunks) {
-      List<String> keysToDeleteStrings = chunkOfKeys.stream().map(
-          ObjectIdentifier::key).collect(Collectors.toList());
       try {
-        DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
-            .bucket(s3Bucket)
-            .delete(Delete.builder()
-                .objects(chunkOfKeys)
-                .quiet(true)
-                .build())
-            .build();
         log.info(
             "Deleting the following segment files from S3 bucket[%s]: [%s]",
             s3Bucket,
-            keysToDeleteStrings
+            chunkOfKeys.stream().map(ObjectIdentifier::key).collect(Collectors.toList())
         );
-        S3Utils.retryS3Operation(
-            () -> {
-              DeleteObjectsResponse response = s3Client.deleteObjects(deleteObjectsRequest);
-              // Check for errors in the response
-              if (response.hasErrors()) {
-                Map<String, List<String>> errorToKeys = new HashMap<>();
-                for (S3Error error : response.errors()) {
-                  errorToKeys.computeIfAbsent(StringUtils.format(
-                      MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT,
-                      error.message(),
-                      error.code()
-                  ), k -> new ArrayList<>()).add(error.key());
-                }
-                errorToKeys.forEach((key, value) -> log.error(
-                    "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
-                    s3Bucket,
-                    String.join(", ", value),
-                    key
-                ));
-              }
-              return null;
-            },
-            3
-        );
+        List<ObjectIdentifier> remaining = chunkOfKeys;
+        for (int attempt = 0; attempt <= NUM_RETRIES; attempt++) {
+          DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
+              .bucket(s3Bucket)
+              .delete(Delete.builder()
+                  .objects(remaining)
+                  .quiet(true)
+                  .build())
+              .build();
+          DeleteObjectsResponse response = S3Utils.retryS3Operation(
+              () -> s3Client.deleteObjects(deleteObjectsRequest)
+          );
+          if (!response.hasErrors()) {
+            break;
+          }
+          List<S3Error> errors = response.errors();
+          Map<String, List<String>> errorToKeys = new HashMap<>();
+          for (S3Error error : errors) {
+            errorToKeys.computeIfAbsent(StringUtils.format(
+                MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT,
+                error.message(),
+                error.code()
+            ), k -> new ArrayList<>()).add(error.key());
+          }
+          errorToKeys.forEach((key, value) -> log.error(
+              "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
+              s3Bucket,
+              String.join(", ", value),
+              key
+          ));
+          remaining = errors.stream()
+                            .map(e -> ObjectIdentifier.builder().key(e.key()).build())
+                            .collect(Collectors.toList());
+          if (attempt == NUM_RETRIES) {
+            throw new S3MultiObjectDeleteException(errors);
+          }
+          log.warn("Retrying %d failed key(s), attempt %d/%d", remaining.size(), attempt + 2, NUM_RETRIES + 1);
+        }
       }
       catch (S3Exception e) {
         hadException = true;

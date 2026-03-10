@@ -83,21 +83,21 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   // SDK v2 Records for API responses
   private static final List<Record> SHARD0_RECORDS_V2 = ImmutableList.of(
-      buildV2Record(jb("2008", "a", "y", "10", "20.0", "1.0"), "0"),
-      buildV2Record(jb("2009", "b", "y", "10", "20.0", "1.0"), "1")
+      buildRecord(jb("2008", "a", "y", "10", "20.0", "1.0"), "0"),
+      buildRecord(jb("2009", "b", "y", "10", "20.0", "1.0"), "1")
   );
   private static final List<Record> SHARD1_RECORDS_EMPTY_V2 = ImmutableList.of();
   private static final List<Record> SHARD1_RECORDS_V2 = ImmutableList.of(
-      buildV2Record(jb("2011", "d", "y", "10", "20.0", "1.0"), "0"),
-      buildV2Record(jb("2011", "e", "y", "10", "20.0", "1.0"), "1"),
-      buildV2Record(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"), "2"),
-      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")), "3"),
-      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2")), "4"),
-      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("{}")), "5"),
-      buildV2Record(jb("2013", "f", "y", "10", "20.0", "1.0"), "6"),
-      buildV2Record(jb("2049", "f", "y", "notanumber", "20.0", "1.0"), "7"),
-      buildV2Record(jb("2012", "g", "y", "10", "20.0", "1.0"), "8"),
-      buildV2Record(jb("2011", "h", "y", "10", "20.0", "1.0"), "9")
+      buildRecord(jb("2011", "d", "y", "10", "20.0", "1.0"), "0"),
+      buildRecord(jb("2011", "e", "y", "10", "20.0", "1.0"), "1"),
+      buildRecord(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"), "2"),
+      buildRecord(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")), "3"),
+      buildRecord(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2")), "4"),
+      buildRecord(ByteBuffer.wrap(StringUtils.toUtf8("{}")), "5"),
+      buildRecord(jb("2013", "f", "y", "10", "20.0", "1.0"), "6"),
+      buildRecord(jb("2049", "f", "y", "notanumber", "20.0", "1.0"), "7"),
+      buildRecord(jb("2012", "g", "y", "10", "20.0", "1.0"), "8"),
+      buildRecord(jb("2011", "h", "y", "10", "20.0", "1.0"), "9")
   );
 
   private static final List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> ALL_RECORDS = ImmutableList.<OrderedPartitionableRecord<String, String, KinesisRecordEntity>>builder()
@@ -139,7 +139,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
   }
 
-  private static Record buildV2Record(ByteBuffer data, String sequenceNumber)
+  private static Record buildRecord(ByteBuffer data, String sequenceNumber)
   {
     return Record.builder()
         .data(SdkBytes.fromByteBuffer(data.duplicate()))
@@ -149,13 +149,13 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         .build();
   }
 
-  private static KinesisClientRecord toKinesisClientRecord(Record v2Record)
+  private static KinesisClientRecord toKinesisClientRecord(Record record)
   {
     return KinesisClientRecord.builder()
-        .data(v2Record.data().asByteBuffer())
-        .sequenceNumber(v2Record.sequenceNumber())
-        .partitionKey(v2Record.partitionKey())
-        .approximateArrivalTimestamp(v2Record.approximateArrivalTimestamp())
+        .data(record.data().asByteBuffer())
+        .sequenceNumber(record.sequenceNumber())
+        .partitionKey(record.partitionKey())
+        .approximateArrivalTimestamp(record.approximateArrivalTimestamp())
         .build();
   }
 
@@ -560,7 +560,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void testPollDeaggregate() throws InterruptedException
+  public void testPoll() throws InterruptedException
   {
     GetShardIteratorResponse getShardIteratorResult0 = GetShardIteratorResponse.builder()
         .shardIterator(SHARD0_ITERATOR)

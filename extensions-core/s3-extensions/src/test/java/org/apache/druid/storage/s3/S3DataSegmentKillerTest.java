@@ -45,6 +45,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -363,21 +364,18 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_multiDeleteExceptionIsThrown()
+  public void test_kill_listOfSegments_multiDeleteErrorsInResponse()
   {
-    // struggled with the idea of making it match on equaling this
-    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
-    // In v2 SDK, multi-object delete errors are returned in the response, not thrown as exceptions
-    // For testing purposes, we simulate an S3Exception being thrown
-    S3Exception s3Exception = (S3Exception) S3Exception.builder()
-        .message("MultiObjectDeleteException")
-        .awsErrorDetails(AwsErrorDetails.builder()
-            .errorCode("MultiObjectDeleteException")
-            .errorMessage("Failed to delete: " + KEY_1_PATH)
-            .build())
-        .statusCode(500)
+    // In v2 SDK, multi-object delete errors appear in the response body (hasErrors() == true), not as thrown exceptions.
+    // S3MultiObjectDeleteException is thrown by our code and is retried. After all retries are exhausted,
+    // the exception propagates and the kill method throws SegmentLoadingException.
+    DeleteObjectsResponse errorResponse = DeleteObjectsResponse
+        .builder()
+        .errors(S3Error.builder().key(KEY_1_PATH).code("AccessDenied").message("Access Denied").build())
         .build();
-    EasyMock.expectLastCall().andThrow(s3Exception).once();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+        .andReturn(errorResponse)
+        .anyTimes();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
@@ -390,28 +388,17 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_multiDeleteExceptionIsThrownMultipleTimes()
+  public void test_kill_listOfSegments_multiDeleteErrorsInResponseForMultipleChunks()
   {
-    // struggled with the idea of making it match on equaling this
-    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
-    S3Exception s3Exception1 = (S3Exception) S3Exception.builder()
-        .message("MultiObjectDeleteException")
-        .awsErrorDetails(AwsErrorDetails.builder()
-            .errorCode("MultiObjectDeleteException")
-            .errorMessage("Failed to delete: " + KEY_1_PATH)
-            .build())
-        .statusCode(500)
+    // When a delete request spans multiple chunks and all chunks have errors, SegmentLoadingException is thrown.
+    // Both chunks use the same error response since the mock matches anyObject.
+    DeleteObjectsResponse errorResponse = DeleteObjectsResponse
+        .builder()
+        .errors(S3Error.builder().key(KEY_1_PATH).code("AccessDenied").message("Access Denied").build())
         .build();
-    EasyMock.expectLastCall().andThrow(s3Exception1).once();
-    S3Exception s3Exception2 = (S3Exception) S3Exception.builder()
-        .message("MultiObjectDeleteException")
-        .awsErrorDetails(AwsErrorDetails.builder()
-            .errorCode("MultiObjectDeleteException")
-            .errorMessage("Failed to delete: " + KEY_2_PATH)
-            .build())
-        .statusCode(500)
-        .build();
-    EasyMock.expectLastCall().andThrow(s3Exception2).once();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+        .andReturn(errorResponse)
+        .anyTimes();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
@@ -427,6 +414,66 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     );
 
     Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+  }
+
+  @Test
+  public void test_kill_listOfSegments_partialDeleteFailureThrowsException()
+  {
+    // Partial failure: the response has hasErrors() == true for some keys.
+    // This mirrors the v1 MultiObjectDeleteException partial-failure case.
+    // Even when only some keys failed, the killer should propagate the failure via SegmentLoadingException.
+    DeleteObjectsResponse partialErrorResponse = DeleteObjectsResponse
+        .builder()
+        .errors(S3Error.builder().key(KEY_1_PATH).code("InternalError").message("Internal Error").build())
+        .build();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+        .andReturn(partialErrorResponse)
+        .anyTimes();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+
+    SegmentLoadingException thrown = Assert.assertThrows(
+        SegmentLoadingException.class,
+        () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
+    );
+    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+  }
+
+  @Test
+  public void test_kill_listOfSegments_partialDeleteFailureRetriesOnlyFailedKeys() throws SegmentLoadingException
+  {
+    // First attempt: KEY_1_PATH fails, KEY_2_PATH succeeds
+    DeleteObjectsResponse firstResponse = DeleteObjectsResponse
+        .builder()
+        .errors(S3Error.builder().key(KEY_1_PATH).code("InternalError").message("Internal Error").build())
+        .build();
+    // Second attempt (retry): only KEY_1_PATH is sent, succeeds
+    DeleteObjectsResponse successResponse = DeleteObjectsResponse.builder().build();
+
+    org.easymock.Capture<DeleteObjectsRequest> capturedRequests =
+        org.easymock.Capture.newInstance(org.easymock.CaptureType.ALL);
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(capturedRequests)))
+        .andReturn(firstResponse)
+        .andReturn(successResponse);
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2));
+
+    // Verify the second request only contained the failed key
+    List<DeleteObjectsRequest> requests = capturedRequests.getValues();
+    Assert.assertEquals(2, requests.size());
+
+    List<String> firstKeys = requests.get(0).delete().objects()
+                                 .stream().map(ObjectIdentifier::key).collect(java.util.stream.Collectors.toList());
+    Assert.assertTrue("First request should contain KEY_1_PATH", firstKeys.contains(KEY_1_PATH));
+    Assert.assertTrue("First request should contain KEY_2_PATH", firstKeys.contains(KEY_2_PATH));
+
+    List<String> retryKeys = requests.get(1).delete().objects()
+                                 .stream().map(ObjectIdentifier::key).collect(java.util.stream.Collectors.toList());
+    Assert.assertEquals("Retry should only contain the failed key", 1, retryKeys.size());
+    Assert.assertEquals(KEY_1_PATH, retryKeys.get(0));
   }
 
   @Test

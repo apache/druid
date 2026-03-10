@@ -19,13 +19,22 @@
 
 package org.apache.druid.storage.s3;
 
+import org.easymock.Capture;
+import org.easymock.CaptureType;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class S3UtilsTest
 {
@@ -244,5 +253,82 @@ public class S3UtilsTest
         )
     );
     Assert.assertEquals(1, count.get());
+  }
+
+  @Test
+  public void testDeleteBucketKeysSuccess() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    DeleteObjectsResponse successResponse = DeleteObjectsResponse.builder().build();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(successResponse)
+            .once();
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 3);
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testDeleteBucketKeysRetriesOnlyFailedKeys() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    // First call: key "b" fails
+    DeleteObjectsResponse firstResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+    // Second call (retry): only "b" is sent, succeeds
+    DeleteObjectsResponse secondResponse = DeleteObjectsResponse.builder().build();
+
+    Capture<DeleteObjectsRequest> capturedRequests = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(capturedRequests)))
+            .andReturn(firstResponse)
+            .andReturn(secondResponse);
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 3);
+    EasyMock.verify(s3Client);
+
+    // First request should have both keys
+    List<String> firstKeys = capturedRequests.getValues().get(0).delete().objects()
+                                 .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
+    Assert.assertEquals(List.of("a", "b"), firstKeys);
+
+    // Second request should only have the failed key
+    List<String> secondKeys = capturedRequests.getValues().get(1).delete().objects()
+                                  .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
+    Assert.assertEquals(List.of("b"), secondKeys);
+  }
+
+  @Test
+  public void testDeleteBucketKeysThrowsAfterAllRetriesExhausted()
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    DeleteObjectsResponse errorResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("a").code("InternalError").message("err").build())
+        .build();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(errorResponse)
+            .anyTimes();
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(ObjectIdentifier.builder().key("a").build());
+    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+        S3MultiObjectDeleteException.class,
+        () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 2)
+    );
+    Assert.assertEquals(1, thrown.getErrors().size());
+    Assert.assertEquals("a", thrown.getErrors().get(0).key());
+    EasyMock.verify(s3Client);
   }
 }

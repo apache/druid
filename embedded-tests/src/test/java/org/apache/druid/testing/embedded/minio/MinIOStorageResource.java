@@ -175,7 +175,8 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
   private S3Client createS3Client()
   {
-    return S3Client.builder()
+    return S3Client
+        .builder()
         .endpointOverride(URI.create(getEndpointUrl()))
         .region(Region.US_EAST_1)
         .credentialsProvider(StaticCredentialsProvider.create(
@@ -187,7 +188,8 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
   private StsClient createStsClient()
   {
-    return StsClient.builder()
+    return StsClient
+        .builder()
         .endpointOverride(URI.create(getEndpointUrl()))
         .region(Region.US_EAST_1)
         .credentialsProvider(StaticCredentialsProvider.create(

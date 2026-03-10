@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
+import org.apache.druid.storage.s3.AwsBytesRange;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -131,7 +132,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.objectSupplier((start, end) -> GetObjectRequest.builder()
                                                            .bucket(config.getBucket())
                                                            .key(objectPath(path))
-                                                           .range(StringUtils.format("bytes=%d-%d", start, end - 1)));
+                                                           .range(AwsBytesRange.of(start, end - 1).getBytesRange()));
     builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
@@ -164,11 +165,11 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
 
             if (endPart.isEmpty()) {
               // Was "bytes=X-", keep it open-ended
-              builder.range("bytes=" + (oldStart + offset) + "-");
+              builder.range(AwsBytesRange.from(oldStart + offset).getBytesRange());
             } else {
               // Was "bytes=X-Y", keep the original end
               long oldEnd = Long.parseLong(endPart);
-              builder.range("bytes=" + (oldStart + offset) + "-" + oldEnd);
+              builder.range(AwsBytesRange.of(oldStart + offset, oldEnd).getBytesRange());
             }
           }
           catch (Exception e) {
@@ -176,7 +177,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
           }
         } else {
           // No range existed, start fresh from offset
-          builder.range("bytes=" + offset + "-");
+          builder.range(AwsBytesRange.from(offset).getBytesRange());
         }
 
         return open(builder);
