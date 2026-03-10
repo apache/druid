@@ -45,8 +45,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -92,6 +94,19 @@ public class EmitterModule implements Module
     extraServiceDimensions
         .addBinding("version")
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
+    
+    // Add git commit SHA to all emitted metrics
+    Map<String, String> gitProperties = loadGitProperties();
+    if (gitProperties != null) {
+      extraServiceDimensions
+          .addBinding("gitSha")
+          .toInstance(StringUtils.nullToEmptyNonDruidDataString(gitProperties.get("git.commit.id.abbrev")));
+    } else {
+      // Fallback value when git properties are not available
+      extraServiceDimensions
+          .addBinding("gitSha")
+          .toInstance("unknown-commit");
+    }
   }
 
   @Provides
@@ -176,5 +191,34 @@ public class EmitterModule implements Module
       }
       return emitter;
     }
+  }
+
+  /**
+   * Loads git properties from the classpath resource git.properties.
+   * Returns null if the properties file is not found or cannot be loaded.
+   */
+  private static Map<String, String> loadGitProperties()
+  {
+    try (InputStream is = EmitterModule.class.getClassLoader().getResourceAsStream("git.properties")) {
+      if (is != null) {
+        Properties props = new Properties();
+        props.load(is);
+        
+        // Convert Properties to Map<String, String>
+        Map<String, String> gitProperties = new HashMap<>();
+        for (String key : props.stringPropertyNames()) {
+          String value = props.getProperty(key);
+          if (value != null && !value.trim().isEmpty()) {
+            gitProperties.put(key, value.trim());
+          }
+        }
+        
+        return gitProperties;
+      }
+    }
+    catch (Exception e) {
+      log.debug("Failed to load git properties: %s", e.getMessage());
+    }
+    return null;
   }
 }
