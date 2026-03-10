@@ -105,6 +105,7 @@ public interface CoordinatorClient
   /**
    * Gets the latest broker dynamic config from the Coordinator.
    * Brokers use this to fetch their configuration from the Coordinator on startup.
+   * Returns an empty {@link BrokerDynamicConfig} when querying older coordinators to ensure backwards-compatibility.
    * <p>
    * API: {@code GET /druid/coordinator/v1/broker/config}
    */
