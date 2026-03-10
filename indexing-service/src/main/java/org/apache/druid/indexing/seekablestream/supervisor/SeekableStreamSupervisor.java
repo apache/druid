@@ -3580,7 +3580,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * during a task rollover based on the recommendations from the task auto-scaler.
    */
   @VisibleForTesting
-  void maybeScaleDuringTaskRollover() throws ExecutionException, InterruptedException
+  void maybeScaleDuringTaskRollover()
   {
     if (taskAutoScaler == null) {
       // Do nothing
@@ -3594,11 +3594,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             supervisorId, currentTaskCount, rolloverTaskCount
         );
         isScalingTasksOnRollover.set(true);
-        new DynamicAllocationTasksNotice(
-            () -> rolloverTaskCount,
-            () -> isScalingTasksOnRollover.set(false),
-            emitter
-        ).handle();
+        try {
+          new DynamicAllocationTasksNotice(
+              () -> rolloverTaskCount,
+              () -> {},
+              emitter
+          ).handle();
+        } finally {
+          isScalingTasksOnRollover.set(false);
+        }
       }
     }
   }
