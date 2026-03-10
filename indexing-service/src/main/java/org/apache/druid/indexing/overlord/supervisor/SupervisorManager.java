@@ -49,7 +49,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -95,27 +94,16 @@ public class SupervisorManager implements SupervisorStatsProvider
   {
     List<SupervisorStatsProvider.SupervisorStats> stats = new ArrayList<>();
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
-      final String supervisorId = entry.getKey();
-      final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec spec = entry.getValue().rhs;
-
-      SupervisorStateManager.State state = supervisor.getState();
-      String stateStr = state != null && state.getBasicState() != null
-                        ? state.getBasicState().toString()
-                        : "UNKNOWN";
-      String dataSource = DefaultQueryMetrics.getTableNamesAsString(
-          new HashSet<>(spec.getDataSources() != null ? spec.getDataSources() : Collections.emptyList())
-      );
-      String stream = spec.getSource();
-      String detailedState = state != null ? state.toString() : null;
+      final SupervisorStateManager.State state = entry.getValue().lhs.getState();
 
       stats.add(new SupervisorStatsProvider.SupervisorStats(
-          supervisorId,
+          spec.getId(),
           spec.getType(),
-          stateStr,
-          dataSource,
-          stream,
-          detailedState
+          state == null ? "UNKNOWN" : state.getBasicState().toString(),
+          DefaultQueryMetrics.getTableNamesAsString(new HashSet<>(spec.getDataSources())),
+          spec.getSource(),
+          state == null ? "UNKNOWN" : state.toString()
       ));
     }
     return stats;
