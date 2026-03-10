@@ -1953,7 +1953,7 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            -Xmx2048m
+                            -Xmx4096m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
                             -XX:+HeapDumpOnOutOfMemoryError
