@@ -137,6 +137,18 @@
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-thrift-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.googlecode.json-simple</groupId>
+          <artifactId>json-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
 
     <dependency>
       <groupId>joda-time</groupId>
@@ -590,7 +602,12 @@
       <version>5.5</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>0.13.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
