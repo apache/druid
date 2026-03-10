@@ -42,7 +42,7 @@ import java.util.Set;
  * A {@link TierSelectorStrategy} that only considers servers whose priorities
  * are explicitly listed in {@link StrictTierSelectorStrategyConfig#getPriorities()}.
  * <p>
- * Unlike other strategies like {@link CustomTierSelectorStrategy} that falls back to servers with different priorities,
+ * Unlike other strategies like {@link CustomTierSelectorStrategy} that fall back to servers with different priorities,
  * this strategy strictly filters the available servers to the configured priorities.
  * If no servers match the configured priorities, an empty server list is returned from {@link #pick(Query, Int2ObjectRBTreeMap, DataSegment, int)},
  * which may cause queries to return partial or no data.

@@ -623,6 +623,60 @@ public class TierSelectorStrategyTest
   }
 
   @Test
+  public void testStrictTierSelectorStrategyWithPartialMatchOfPriorities()
+  {
+    // Create 3 servers with priorities: -1, 0, 2
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer pNeg1 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        client
+    );
+    QueryableDruidServer p0 = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        client
+    );
+    QueryableDruidServer p2 = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 2),
+        client
+    );
+
+
+    // Configure strict strategy with only priorities [0, 2]
+    final ServerSelector serverSelector = new ServerSelector(
+        DataSegment.builder(SegmentId.dummy("foo")).shardSpec(NoneShardSpec.instance()).build(),
+        new StrictTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new StrictTierSelectorStrategyConfig(List.of(0, 2)),
+            serviceEmitter
+        ),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+
+    for (QueryableDruidServer server : List.of(p0, pNeg1, p2)) {
+      serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
+    }
+
+    // Verify all 3 servers are registered
+    List<DruidServerMetadata> allServers = serverSelector.getAllServers(CloneQueryMode.EXCLUDECLONES);
+    Assert.assertEquals(3, allServers.size());
+
+    Assert.assertEquals(p0, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(p0, serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
+
+    Assert.assertEquals(
+        "Only p0 should be returned when 1 candidate is requested",
+        List.of(p0.getServer().getMetadata()),
+        serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES)
+    );
+
+    Assert.assertEquals(
+        "Only p0 and p2 should be returned, pNeg1 shouldn't be a candidate",
+        List.of(p0.getServer().getMetadata(), p2.getServer().getMetadata()),
+        serverSelector.getCandidates(3, CloneQueryMode.EXCLUDECLONES)
+    );
+  }
+
+  @Test
   public void testStrictTierSelectorStrategyNoMatchingPriorities()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
@@ -649,8 +703,7 @@ public class TierSelectorStrategyTest
         HistoricalFilter.IDENTITY_FILTER
     );
 
-    List<QueryableDruidServer> servers = List.of(p0, p1, p2);
-    for (QueryableDruidServer server : servers) {
+    for (QueryableDruidServer server : List.of(p0, p1, p2)) {
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 

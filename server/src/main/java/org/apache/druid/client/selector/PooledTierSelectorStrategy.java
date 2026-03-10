@@ -60,7 +60,6 @@ public class PooledTierSelectorStrategy extends AbstractTierSelectorStrategy
   private static final EmittingLogger log = new EmittingLogger(PooledTierSelectorStrategy.class);
   public static final String TYPE = "pooled";
 
-  private final ServerSelectorStrategy serverSelectorStrategy;
   private final PooledTierSelectorStrategyConfig config;
   private final ServiceEmitter emitter;
   private final Set<Integer> configuredPriorities;
@@ -73,7 +72,6 @@ public class PooledTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
-    this.serverSelectorStrategy = serverSelectorStrategy;
     this.config = config;
     this.emitter = emitter;
     this.configuredPriorities = config.getPriorities();
@@ -135,7 +133,7 @@ public class PooledTierSelectorStrategy extends AbstractTierSelectorStrategy
 
   /**
    * @return the natural order of priorities since priority order doesn't matter for this strategy as the configured set of
-   * priorities in the pool are treated equally and delegated ot {@link #serverSelectorStrategy}.
+   * priorities in the pool are treated equally and delegated to {@link #serverSelectorStrategy}.
    */
   @Override
   public Comparator<Integer> getComparator()
