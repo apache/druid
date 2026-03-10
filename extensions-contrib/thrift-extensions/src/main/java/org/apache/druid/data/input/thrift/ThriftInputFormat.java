@@ -22,11 +22,11 @@ package org.apache.druid.data.input.thrift;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
@@ -41,33 +41,34 @@ import java.util.Objects;
  */
 public class ThriftInputFormat extends NestedInputFormat
 {
-  private final String jarPath;
-  private final String thriftClassName;
+  private final String thriftJar;
+  private final String thriftClass;
 
   @JsonCreator
   public ThriftInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
-      @JsonProperty("thriftJar") @Nullable String jarPath,
-      @JsonProperty("thriftClass") String thriftClassName
+      @JsonProperty("thriftJar") @Nullable String thriftJar,
+      @JsonProperty("thriftClass") String thriftClass
   )
   {
     super(flattenSpec);
-    this.jarPath = jarPath;
-    this.thriftClassName = Preconditions.checkNotNull(thriftClassName, "thriftClass must not be null");
+    this.thriftJar = thriftJar;
+    InvalidInput.conditionalException(thriftClass != null, "thriftClass must not be null");
+    this.thriftClass = thriftClass;
   }
 
+  @Nullable
   @JsonProperty("thriftJar")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
-  public String getJarPath()
+  public String getThriftJar()
   {
-    return jarPath;
+    return thriftJar;
   }
 
   @JsonProperty("thriftClass")
-  public String getThriftClassName()
+  public String getThriftClass()
   {
-    return thriftClassName;
+    return thriftClass;
   }
 
   @Override
@@ -79,7 +80,7 @@ public class ThriftInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new ThriftReader(inputRowSchema, source, jarPath, thriftClassName, getFlattenSpec());
+    return new ThriftReader(inputRowSchema, source, thriftJar, thriftClass, getFlattenSpec());
   }
 
   @Override
@@ -95,13 +96,13 @@ public class ThriftInputFormat extends NestedInputFormat
       return false;
     }
     ThriftInputFormat that = (ThriftInputFormat) o;
-    return Objects.equals(jarPath, that.jarPath) &&
-           Objects.equals(thriftClassName, that.thriftClassName);
+    return Objects.equals(thriftJar, that.thriftJar) &&
+           Objects.equals(thriftClass, that.thriftClass);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), jarPath, thriftClassName);
+    return Objects.hash(super.hashCode(), thriftJar, thriftClass);
   }
 }

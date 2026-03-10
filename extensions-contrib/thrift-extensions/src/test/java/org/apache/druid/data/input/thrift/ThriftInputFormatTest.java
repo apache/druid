@@ -22,6 +22,7 @@ package org.apache.druid.data.input.thrift;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
@@ -142,12 +143,7 @@ public class ThriftInputFormatTest
   @Test
   public void testEquals()
   {
-    ThriftInputFormat format1 = new ThriftInputFormat(flattenSpec, null, THRIFT_CLASS);
-    ThriftInputFormat format2 = new ThriftInputFormat(flattenSpec, null, THRIFT_CLASS);
-    ThriftInputFormat format3 = new ThriftInputFormat(null, null, THRIFT_CLASS);
-
-    Assert.assertEquals(format1, format2);
-    Assert.assertNotEquals(format1, format3);
+    EqualsVerifier.forClass(ThriftInputFormat.class).usingGetClass().verify();
   }
 
   private void assertParsedRow(byte[] bytes) throws IOException
