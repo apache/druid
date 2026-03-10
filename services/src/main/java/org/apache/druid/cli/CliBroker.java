@@ -28,6 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -184,6 +185,7 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(BrokerViewOfCoordinatorConfig.class).in(ManageLifecycle.class);
+          binder.bind(BrokerViewOfBrokerConfig.class).in(ManageLifecycle.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);

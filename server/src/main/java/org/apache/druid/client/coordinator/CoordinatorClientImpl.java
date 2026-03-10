@@ -42,6 +42,7 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -249,6 +250,22 @@ public class CoordinatorClientImpl implements CoordinatorClient
             jsonMapper,
             holder.getContent(),
             CoordinatorDynamicConfig.class
+        )
+    );
+  }
+
+  @Override
+  public ListenableFuture<BrokerDynamicConfig> getBrokerDynamicConfig()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/broker/config"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            BrokerDynamicConfig.class
         )
     );
   }
