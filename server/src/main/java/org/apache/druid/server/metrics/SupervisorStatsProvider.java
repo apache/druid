@@ -43,12 +43,18 @@ public interface SupervisorStatsProvider
     private final String supervisorId;
     private final String type;
     private final String state;
+    private final String dataSource;
+    private final String stream;
+    private final String detailedState;
 
-    public SupervisorStats(String supervisorId, String type, String state)
+    public SupervisorStats(String supervisorId, String type, String state, String dataSource, String stream, String detailedState)
     {
       this.supervisorId = supervisorId;
       this.type = type;
       this.state = state;
+      this.dataSource = dataSource;
+      this.stream = stream;
+      this.detailedState = detailedState;
     }
 
     public String getSupervisorId()
@@ -64,6 +70,21 @@ public interface SupervisorStatsProvider
     public String getState()
     {
       return state;
+    }
+
+    public String getDataSource()
+    {
+      return dataSource;
+    }
+
+    public String getStream()
+    {
+      return stream;
+    }
+
+    public String getDetailedState()
+    {
+      return detailedState;
     }
   }
 }

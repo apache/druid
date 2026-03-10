@@ -56,6 +56,9 @@ public class SupervisorStatsMonitor extends AbstractMonitor
                             .setDimension(DruidMetrics.SUPERVISOR_ID, stat.getSupervisorId())
                             .setDimension(DruidMetrics.TYPE, stat.getType())
                             .setDimension("state", stat.getState())
+                            .setDimension(DruidMetrics.DATASOURCE, stat.getDataSource())
+                            .setDimensionIfNotNull(DruidMetrics.STREAM, stat.getStream())
+                            .setDimensionIfNotNull("detailedState", stat.getDetailedState())
                             .setMetric("supervisor/count", 1)
       );
     }

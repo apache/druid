@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
@@ -48,6 +49,8 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -100,11 +103,19 @@ public class SupervisorManager implements SupervisorStatsProvider
       String stateStr = state != null && state.getBasicState() != null
                         ? state.getBasicState().toString()
                         : "UNKNOWN";
+      String dataSource = DefaultQueryMetrics.getTableNamesAsString(
+          new HashSet<>(spec.getDataSources() != null ? spec.getDataSources() : Collections.emptyList())
+      );
+      String stream = spec.getSource();
+      String detailedState = state != null ? state.toString() : null;
 
       stats.add(new SupervisorStatsProvider.SupervisorStats(
           supervisorId,
           spec.getType(),
-          stateStr
+          stateStr,
+          dataSource,
+          stream,
+          detailedState
       ));
     }
     return stats;
