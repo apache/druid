@@ -203,7 +203,7 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.retryableFailure(
+        SegmentPublishResult.fail(
             "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
             + " ahead of the last committed end state[null]. Try resetting the supervisor."
         ),
