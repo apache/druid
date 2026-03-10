@@ -480,6 +480,27 @@ public class OverlordCompactionSchedulerTest
     scheduler.stopBeingLeader();
   }
 
+  @Test
+  public void test_getAllCompactionSnapshots_returnsEmpty_beforeFirstRun()
+  {
+    Assert.assertTrue(scheduler.isEnabled());
+    Assert.assertFalse(scheduler.isRunning());
+
+    Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
+  }
+
+  @Test
+  public void test_getCompactionSnapshot_returnsAwaitingFirstRunWithActiveSupervisor_beforeFirstRun()
+  {
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+
+    AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assert.assertEquals(
+        AutoCompactionSnapshot.ScheduleStatus.AWAITING_FIRST_RUN,
+        snapshot.getScheduleStatus()
+    );
+  }
+
   private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)
   {
     final List<DataSegment> segments = CreateDataSegments
