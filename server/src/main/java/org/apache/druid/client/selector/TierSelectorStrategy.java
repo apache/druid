@@ -39,6 +39,8 @@ import java.util.Set;
     @JsonSubTypes.Type(name = LowestPriorityTierSelectorStrategy.TYPE, value = LowestPriorityTierSelectorStrategy.class),
     @JsonSubTypes.Type(name = CustomTierSelectorStrategy.TYPE, value = CustomTierSelectorStrategy.class),
     @JsonSubTypes.Type(name = PreferredTierSelectorStrategy.TYPE, value = PreferredTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = StrictTierSelectorStrategy.TYPE, value = StrictTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = PooledTierSelectorStrategy.TYPE, value = PooledTierSelectorStrategy.class),
 })
 public interface TierSelectorStrategy
 {
