@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.InvalidInput;
@@ -841,13 +842,10 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
 
     final String supervisorId = "supervisor1";
-    final SupervisorSpec supervisorSpec = new TestSupervisorSpec(supervisorId, supervisor1);
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
-        supervisorId, new TestSupervisorSpec(supervisorId, supervisor1)
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
+        Map.of(supervisorId, new TestSupervisorSpec(supervisorId, supervisor1))
     );
 
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
-    metadataSupervisorManager.insert(supervisorId, supervisorSpec);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
@@ -898,7 +896,47 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions()
   {
+    final String supervisorId = "supervisor1";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =
+        EasyMock.createMock(SeekableStreamSupervisor.class);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
+        Map.of(supervisorId, new TestSupervisorSpec(supervisorId, seekableStreamSupervisor))
+    );
 
+    seekableStreamSupervisor.start();
+    EasyMock.expect(seekableStreamSupervisor.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+
+    // Expect a readyTaskId for which no other group is currently publishing
+    final String readyTaskId = "task1";
+    EasyMock.expect(
+        seekableStreamSupervisor.isAnotherTaskGroupPublishingToPartitions(
+            EasyMock.eq(readyTaskId),
+            EasyMock.anyObject()
+        )
+    ).andReturn(false).atLeastOnce();
+
+    // Expect a conflictingTaskId for which another group is currently publishing
+    final String conflictingTaskId = "task2";
+    EasyMock.expect(
+        seekableStreamSupervisor.isAnotherTaskGroupPublishingToPartitions(
+            EasyMock.eq(conflictingTaskId),
+            EasyMock.anyObject()
+        )
+    ).andReturn(true).atLeastOnce();
+
+    replayAll();
+    EasyMock.replay(seekableStreamSupervisor);
+    manager.start();
+
+    final DataSourceMetadata startMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>("topic", Map.of("0", "10"), Set.of())
+    );
+    Assert.assertTrue(
+        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, conflictingTaskId, startMetadata)
+    );
+    Assert.assertFalse(
+        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, readyTaskId, startMetadata)
+    );
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec
