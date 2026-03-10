@@ -54,7 +54,7 @@ public class SupervisorStatsMonitor extends AbstractMonitor
       emitter.emit(
           ServiceMetricEvent.builder()
                             .setDimension(DruidMetrics.SUPERVISOR_ID, stat.getSupervisorId())
-                            .setDimension("type", stat.getType())
+                            .setDimension(DruidMetrics.TYPE, stat.getType())
                             .setDimension("state", stat.getState())
                             .setMetric("supervisor/count", 1)
       );
