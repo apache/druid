@@ -372,7 +372,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.HOUR,
               Granularities.MINUTE,
               true,
-              ImmutableList.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"))
+              ImmutableList.of(INTERVAL_TO_INDEX)
           ),
           null
       );
