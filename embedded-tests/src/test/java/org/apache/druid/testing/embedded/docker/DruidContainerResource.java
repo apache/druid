@@ -154,7 +154,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     );
 
     // Mount directories used by this container for easier debugging with service logs
-    this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
+    this.containerDirectory = new File("druid-container-logs", name);
 
     final File logDirectory = new File(containerDirectory, "log");
     this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
