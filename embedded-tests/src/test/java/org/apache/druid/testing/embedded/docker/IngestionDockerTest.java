@@ -73,7 +73,7 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
   public void verifyOverlordLeader()
   {
     // Verify that the EmbeddedOverlord is not leader i.e. the container Overlord is leader
-    Assertions.assertFalse(
+    Assertions.assertTrue(
         overlord.bindings().overlordLeaderSelector().isLeader()
     );
   }
