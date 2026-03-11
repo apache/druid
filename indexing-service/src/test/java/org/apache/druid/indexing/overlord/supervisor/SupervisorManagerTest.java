@@ -388,7 +388,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertEquals("id1", stat.getSupervisorId());
     Assert.assertEquals("TestSupervisorSpec", stat.getType());
     Assert.assertEquals("RUNNING", stat.getState());
-    Assert.assertEquals("", stat.getDataSource());
+    Assert.assertEquals("[]", stat.getDataSource());
     Assert.assertNull(stat.getStream());
     Assert.assertEquals("RUNNING", stat.getDetailedState());
 
