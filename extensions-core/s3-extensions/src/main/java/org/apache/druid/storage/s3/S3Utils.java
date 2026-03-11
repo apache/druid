@@ -108,6 +108,8 @@ public class S3Utils
         // This can happen sometimes when AWS returns a 200 response with internal error message
         // https://repost.aws/knowledge-center/s3-resolve-200-internalerror
         return true;
+      } else if (e instanceof S3MultiObjectDeleteException) {
+        return true;
       } else if (e instanceof InterruptedException) {
         Thread.interrupted(); // Clear interrupted state and not retry
         return false;
@@ -179,7 +181,7 @@ public class S3Utils
    * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
    * constructed.
    */
-  public static Iterator<S3Object> objectSummaryIterator(
+  public static Iterator<S3ObjectWithBucket> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength
@@ -197,7 +199,7 @@ public class S3Utils
    * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
    * constructed.
    */
-  public static Iterator<S3Object> objectSummaryIterator(
+  public static Iterator<S3ObjectWithBucket> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength,
@@ -205,23 +207,6 @@ public class S3Utils
   )
   {
     return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength, maxRetries);
-  }
-
-  /**
-   * Create an iterator over a set of S3 objects with their bucket names.
-   *
-   * Similar to {@link #objectSummaryIterator} but returns {@link S3ObjectWithBucket} which includes
-   * the bucket name for each object. This is needed because AWS SDK v2's S3Object doesn't include
-   * the bucket name.
-   */
-  public static Iterator<S3ObjectWithBucket> objectSummaryWithBucketIterator(
-      final ServerSideEncryptingAmazonS3 s3Client,
-      final Iterable<URI> prefixes,
-      final int maxListingLength,
-      final int maxRetries
-  )
-  {
-    return new ObjectSummaryWithBucketIterator(s3Client, prefixes, maxListingLength, maxRetries);
   }
 
   /**
@@ -361,16 +346,16 @@ public class S3Utils
     log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
     final List<ObjectIdentifier> keysToDelete = new ArrayList<>(maxListingLength);
-    final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
+    final Iterator<S3ObjectWithBucket> iterator = objectSummaryIterator(
         s3Client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
         maxListingLength
     );
 
     while (iterator.hasNext()) {
-      final S3Object nextObject = iterator.next();
-      if (filter.apply(nextObject)) {
-        keysToDelete.add(ObjectIdentifier.builder().key(nextObject.key()).build());
+      final S3ObjectWithBucket nextObject = iterator.next();
+      if (filter.apply(nextObject.getS3Object())) {
+        keysToDelete.add(ObjectIdentifier.builder().key(nextObject.getKey()).build());
         if (keysToDelete.size() == maxListingLength) {
           deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
           keysToDelete.clear();

@@ -33,11 +33,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.AwsBytesRange;
+import org.apache.druid.storage.s3.S3ObjectWithBucket;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -272,7 +272,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     final String prefixBasePath = objectPath(dirName);
     try {
 
-      Iterator<S3Object> files = S3Utils.objectSummaryIterator(
+      Iterator<S3ObjectWithBucket> files = S3Utils.objectSummaryIterator(
           s3Client,
           ImmutableList.of(new CloudObjectLocation(
               config.getBucket(),
@@ -285,7 +285,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       return Iterators.transform(
           files,
           summary -> {
-            String[] size = summary.key().split(prefixBasePath, 2);
+            String[] size = summary.getKey().split(prefixBasePath, 2);
             if (size.length > 1) {
               return size[1];
             } else {

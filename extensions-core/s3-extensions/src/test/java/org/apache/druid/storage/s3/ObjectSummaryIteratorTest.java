@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+
 public class ObjectSummaryIteratorTest
 {
   // Store bucket with each object for testing
@@ -191,7 +192,7 @@ public class ObjectSummaryIteratorTest
     Assert.assertEquals(1, listCalls.get());
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(1, listCalls.get());
-    Assert.assertEquals("foo/file", iterator.next().key());
+    Assert.assertEquals("foo/file", iterator.next().getKey());
     Assert.assertEquals(1, listCalls.get());
   }
 
@@ -216,7 +217,7 @@ public class ObjectSummaryIteratorTest
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }
 
-    final List<S3Object> actualObjects = ImmutableList.copyOf(
+    final List<S3ObjectWithBucket> actualObjects = ImmutableList.copyOf(
         S3Utils.objectSummaryIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).collect(Collectors.toList()),
@@ -224,14 +225,10 @@ public class ObjectSummaryIteratorTest
         )
     );
 
-    // For comparison, we need to extract bucket from prefix since S3Object doesn't have bucket
-    // Using the first prefix's bucket for comparison
-    final String bucketForComparison = prefixes.isEmpty() ? TEST_BUCKET : URI.create(prefixes.get(0)).getAuthority();
-
     Assert.assertEquals(
         prefixes.toString(),
-        expectedObjects.stream().map(obj -> S3Utils.summaryToUri(obj, bucketForComparison)).collect(Collectors.toList()),
-        actualObjects.stream().map(obj -> S3Utils.summaryToUri(obj, bucketForComparison)).collect(Collectors.toList())
+        expectedObjects.stream().map(obj -> S3Utils.summaryToUri(obj, TEST_BUCKET)).collect(Collectors.toList()),
+        actualObjects.stream().map(obj -> S3Utils.summaryToUri(obj.getS3Object(), obj.getBucket())).collect(Collectors.toList())
     );
   }
 

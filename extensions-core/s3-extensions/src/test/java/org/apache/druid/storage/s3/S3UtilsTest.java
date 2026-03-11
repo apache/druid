@@ -331,4 +331,55 @@ public class S3UtilsTest
     Assert.assertEquals("a", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
   }
+
+  @Test
+  public void testDeleteBucketKeysPartialFailureRetriesAlsoFail()
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    // First call: key "b" fails; second call (retry of "b"): still fails
+    DeleteObjectsResponse firstResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+    DeleteObjectsResponse retryResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(firstResponse)
+            .andReturn(retryResponse);
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+        S3MultiObjectDeleteException.class,
+        () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 1)
+    );
+    Assert.assertEquals(1, thrown.getErrors().size());
+    Assert.assertEquals("b", thrown.getErrors().get(0).key());
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testRetryWithS3MultiObjectDeleteException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "success";
+          } else {
+            throw new S3MultiObjectDeleteException(
+                List.of(S3Error.builder().key("x").code("InternalError").message("err").build())
+            );
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
 }

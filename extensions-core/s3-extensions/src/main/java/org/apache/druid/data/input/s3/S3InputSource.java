@@ -379,7 +379,7 @@ public class S3InputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            S3Utils.objectSummaryWithBucketIterator(
+            S3Utils.objectSummaryIterator(
                 s3ClientSupplier.get(),
                 prefixes,
                 inputDataConfig.getMaxListingLength(),

@@ -37,7 +37,7 @@ import java.util.NoSuchElementException;
  * As required by the specification of that method, this iterator is computed incrementally in batches of
  * {@code maxListLength}. The first S3 call is made at the same time the iterator is constructed.
  */
-public class ObjectSummaryIterator implements Iterator<S3Object>
+public class ObjectSummaryIterator implements Iterator<S3ObjectWithBucket>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final Iterator<URI> prefixesIterator;
@@ -48,7 +48,7 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
   private String continuationToken;
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
-  private S3Object currentObjectSummary;
+  private S3ObjectWithBucket currentObjectSummary;
   private int maxRetries; // this is made available for testing mostly
 
   ObjectSummaryIterator(
@@ -96,13 +96,13 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
   }
 
   @Override
-  public S3Object next()
+  public S3ObjectWithBucket next()
   {
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
 
-    final S3Object retVal = currentObjectSummary;
+    final S3ObjectWithBucket retVal = currentObjectSummary;
     advanceObjectSummary();
     return retVal;
   }
@@ -155,9 +155,10 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
   {
     while (objectSummaryIterator.hasNext() || result.isTruncated() || prefixesIterator.hasNext()) {
       while (objectSummaryIterator.hasNext()) {
-        currentObjectSummary = objectSummaryIterator.next();
+        final S3Object candidateObject = objectSummaryIterator.next();
         // skips directories and empty objects
-        if (!isDirectoryPlaceholder(currentObjectSummary) && currentObjectSummary.size() > 0) {
+        if (!isDirectoryPlaceholder(candidateObject) && candidateObject.size() > 0) {
+          currentObjectSummary = new S3ObjectWithBucket(currentBucket, candidateObject);
           return;
         }
       }
