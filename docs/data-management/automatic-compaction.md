@@ -52,7 +52,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-:::info[Experimental]
+:::info
 
 The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
 
@@ -230,10 +230,6 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 
 ## Auto-compaction using compaction supervisors  
 
-:::info[Experimental]
-Compaction supervisors are experimental. For production use, we recommend [auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
-:::
-
 You can run automatic compaction using compaction supervisors on the Overlord rather than Coordinator duties. Compaction supervisors provide the following benefits over Coordinator duties:
 
 * Can use the supervisor framework to get information about the auto-compaction, such as status or state
@@ -305,7 +301,7 @@ curl --location --request POST 'http://localhost:8081/druid/indexer/v1/superviso
 }'
 ```
 
-Note that if you omit `spec.engine`, Druid uses the default compaction engine. You can control the default compaction engine with the `druid.supervisor.compaction.engine` Overlord runtime property. If `spec.engine` and `druid.supervisor.compaction.engine` are omitted, Druid defaults to the native engine.
+Note that if you omit `spec.engine`, Druid uses the default compaction engine. You can control the default compaction engine by setting `engine` in the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config). If `spec.engine` and `engine` in compaction dynamic config are omitted, Druid defaults to the `native` engine.
 
 To stop the automatic compaction task, suspend or terminate the supervisor through the UI or API.
 
@@ -313,10 +309,11 @@ To stop the automatic compaction task, suspend or terminate the supervisor throu
 
 The MSQ task engine is available as a compaction engine if you configure auto-compaction to use compaction supervisors. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
 
-* In your Overlord runtime properties, set the following properties:
-  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task.
-  *  Optionally, set `druid.supervisor.compaction.engine` to `msq` to specify the MSQ task engine as the default compaction engine. If you don't do this, you'll need to set `spec.engine` to `msq` for each compaction supervisor spec where you want to use the MSQ task engine.
-* Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
+* Enable [incremental segment metadata caching](../configuration/index.md#metadata-retrieval) on the Overlord.
+* Enable [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
+* Update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set `engine` to `msq` to use the MSQ task engine as the default compaction engine for all compaction supervisors.
+  * Alternatively, you may override the default engine by setting `spec.engine` to `msq` in the compaction supervisor for the relevant datasource.
+* Have at least two compaction task slots available or set `spec.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
 
 You can use [MSQ task engine context parameters](../multi-stage-query/reference.md#context-parameters) in `spec.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `spec.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
 
