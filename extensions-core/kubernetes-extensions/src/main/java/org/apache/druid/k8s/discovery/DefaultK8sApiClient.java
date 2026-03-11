@@ -208,7 +208,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                     if (WatchResult.MODIFIED.equals(item.type)) {
                       // Pod was previously ready but is now unready (e.g., OOM-killed
                       // container). Convert to NOT_READY to ensure the host is removed from discovery cache if it exists there.
-                      LOGGER.warn(
+                      LOGGER.info(
                           "Pod [%s] for role [%s] notified that it was modified and is now showing as not ready, "
                           + "treating as removed for discovery purposes.",
                           item.object.getMetadata().getName(),

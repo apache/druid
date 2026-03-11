@@ -181,8 +181,8 @@ public class BaseNodeRoleWatcher
   /**
    * Remove a node from the discovery cache.
    * <p>
-   * If {@code warnIfUnknown} is false and the node is not known to be present in the cache,
-   * the removal will be ignored and a debug message will be logged.
+   * If {@code warnIfUnknown} is true, the removal is attempted unconditionally. If false,
+   * the removal is skipped if the node is not already present in the cache.
    */
   public void childRemoved(DiscoveryDruidNode druidNode, boolean warnIfUnknown)
   {
