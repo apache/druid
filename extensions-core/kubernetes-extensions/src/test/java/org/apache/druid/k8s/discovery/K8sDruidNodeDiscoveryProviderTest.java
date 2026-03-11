@@ -226,6 +226,71 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
+  @Test(timeout = 60_000)
+  public void testNotReadyEventRemovesNodeAndReAddOnReady() throws Exception
+  {
+    String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
+    K8sApiClient mockK8sApiClient = EasyMock.createMock(K8sApiClient.class);
+
+    // Initial list returns two healthy nodes
+    EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER)).andReturn(
+        new DiscoveryDruidNodeList(
+            "v1",
+            ImmutableMap.of(
+                testNode1.getDruidNode().getHostAndPortToUse(), testNode1,
+                testNode2.getDruidNode().getHostAndPortToUse(), testNode2
+            )
+        )
+    );
+
+    // Watch returns: testNode1 becomes NOT_READY (OOM), then comes back as ADDED (recovered)
+    EasyMock.expect(mockK8sApiClient.watchPods(
+        podInfo.getPodNamespace(), labelSelector, "v1", NodeRole.ROUTER)).andReturn(
+        new MockWatchResult(
+            ImmutableList.of(
+                new Watch.Response<>(WatchResult.NOT_READY, new DiscoveryDruidNodeAndResourceVersion("v2", testNode1)),
+                // Repeated NOT_READY during CrashLoopBackOff — should be silently ignored
+                new Watch.Response<>(WatchResult.NOT_READY, new DiscoveryDruidNodeAndResourceVersion("v3", testNode1)),
+                // Pod recovers and becomes ready again
+                new Watch.Response<>(WatchResult.ADDED, new DiscoveryDruidNodeAndResourceVersion("v4", testNode1))
+            ),
+            false,
+            false
+        )
+    );
+    EasyMock.replay(mockK8sApiClient);
+
+    K8sDruidNodeDiscoveryProvider discoveryProvider = new K8sDruidNodeDiscoveryProvider(
+        podInfo,
+        discoveryConfig,
+        mockK8sApiClient,
+        1
+    );
+    discoveryProvider.start();
+
+    K8sDruidNodeDiscoveryProvider.NodeRoleWatcher nodeDiscovery = discoveryProvider.getForNodeRole(NodeRole.ROUTER, false);
+
+    MockListener testListener = new MockListener(
+        ImmutableList.of(
+            MockListener.Event.added(testNode1),
+            MockListener.Event.added(testNode2),
+            MockListener.Event.inited(),
+            // testNode1 goes NOT_READY — removed
+            MockListener.Event.deleted(testNode1),
+            // Second NOT_READY is silently skipped (not in cache)
+            // testNode1 recovers — re-added
+            MockListener.Event.added(testNode1)
+        )
+    );
+    nodeDiscovery.registerListener(testListener);
+
+    nodeDiscovery.start();
+
+    testListener.assertSuccess();
+
+    discoveryProvider.stop();
+  }
+
   @Test(timeout = 10_000)
   public void testNodeRoleWatcherLoopOnNullItems() throws Exception
   {

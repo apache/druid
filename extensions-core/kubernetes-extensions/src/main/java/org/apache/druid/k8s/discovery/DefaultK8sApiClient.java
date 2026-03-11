@@ -117,8 +117,8 @@ public class DefaultK8sApiClient implements K8sApiClient
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
       for (V1Pod podDef : podList.getItems()) {
         if (!isPodReady(podDef)) {
-          LOGGER.warn(
-              "Ignoring pod [%s] for role [%s] during list: poad has discovery label but is not ready.",
+          LOGGER.info(
+              "Ignoring pod [%s] for role [%s] during list: pod has discovery label but is not yet reporting as ready.",
               podDef.getMetadata().getName(),
               nodeRole
           );
@@ -207,7 +207,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                   if (!isPodReady(item.object)) {
                     if (WatchResult.MODIFIED.equals(item.type)) {
                       // Pod was previously ready but is now unready (e.g., OOM-killed
-                      // container). Convert to DELETED to remove from discovery cache.
+                      // container). Convert to NOT_READY to ensure the host is removed from discovery cache if it exists there.
                       LOGGER.warn(
                           "Pod [%s] for role [%s] notified that it was modified and is now showing as not ready, "
                           + "treating as removed for discovery purposes.",
