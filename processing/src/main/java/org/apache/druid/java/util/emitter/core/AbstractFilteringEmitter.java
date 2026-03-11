@@ -61,7 +61,7 @@ public abstract class AbstractFilteringEmitter implements Emitter, MetricFilteri
   @Override
   public final void emit(final Event event)
   {
-    preEmit(event);
+    preEmit();
     if (shouldFilterMetrics && shouldFilterEvent(event)) {
       return;
     }
@@ -94,7 +94,7 @@ public abstract class AbstractFilteringEmitter implements Emitter, MetricFilteri
   /**
    * Hook for pre-emission checks that must run before metric filtering.
    */
-  protected void preEmit(final Event event)
+  protected void preEmit()
   {
     // default no-op
   }

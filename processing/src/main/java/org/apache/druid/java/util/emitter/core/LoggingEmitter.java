@@ -128,7 +128,7 @@ public class LoggingEmitter extends AbstractFilteringEmitter
   }
 
   @Override
-  protected void preEmit(final Event event)
+  protected void preEmit()
   {
     synchronized (started) {
       if (!started.get()) {
