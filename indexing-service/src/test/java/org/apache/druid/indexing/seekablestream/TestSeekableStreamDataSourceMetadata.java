@@ -23,8 +23,24 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
+import java.util.Map;
+
 public class TestSeekableStreamDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, String>
 {
+  public static TestSeekableStreamDataSourceMetadata start(String topic, Map<String, String> partitionOffsets)
+  {
+    return new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(topic, partitionOffsets, null)
+    );
+  }
+
+  public static TestSeekableStreamDataSourceMetadata end(String topic, Map<String, String> partitionOffsets)
+  {
+    return new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(topic, partitionOffsets)
+    );
+  }
+
   @JsonCreator
   public TestSeekableStreamDataSourceMetadata(
       @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers)

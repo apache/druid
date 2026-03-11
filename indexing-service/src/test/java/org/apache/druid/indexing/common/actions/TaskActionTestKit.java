@@ -36,6 +36,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SQLMetadataSupervisorManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
@@ -64,6 +65,7 @@ public class TaskActionTestKit extends ExternalResource
   private TestDerbyConnector testDerbyConnector;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskActionToolbox taskActionToolbox;
+  private SupervisorManager supervisorManager;
   private SegmentMetadataCache segmentMetadataCache;
   private BlockingExecutorService metadataCachePollExec;
 
@@ -144,6 +146,11 @@ public class TaskActionTestKit extends ExternalResource
     return taskActionToolbox;
   }
 
+  public SupervisorManager getSupervisorManager()
+  {
+    return supervisorManager;
+  }
+
   public void syncSegmentMetadataCache()
   {
     metadataCachePollExec.finishNextPendingTasks(4);
@@ -200,7 +207,14 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
 
-    SupervisorManager supervisorManager = new SupervisorManager(objectMapper, null);
+    this.supervisorManager = new SupervisorManager(
+        objectMapper,
+        new SQLMetadataSupervisorManager(
+            objectMapper,
+            testDerbyConnector,
+            () -> testDerbyConnector.getMetadataTablesConfig()
+        )
+    );
     SegmentAllocationQueue segmentAllocationQueue = new SegmentAllocationQueue(
         taskLockbox,
         taskLockConfig,
@@ -230,7 +244,9 @@ public class TaskActionTestKit extends ExternalResource
     testDerbyConnector.createTaskTables();
     testDerbyConnector.createAuditTable();
     testDerbyConnector.createIndexingStatesTable();
+    testDerbyConnector.createSupervisorsTable();
 
+    supervisorManager.start();
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
     syncSegmentMetadataCache();
@@ -289,6 +305,7 @@ public class TaskActionTestKit extends ExternalResource
     taskActionToolbox = null;
     segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
+    supervisorManager.stop();
     useSegmentMetadataCache = false;
   }
 }
