@@ -52,11 +52,11 @@ jobs:
         timeout-minutes: 60
 
       - name: Tar Druid container logs
-        # if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: tar cvzf ./druid-container-logs.tgz ./druid-container-logs
 
-      - name: Upload docker logs to GitHub
-        # if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+      - name: Upload Druid container logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
           name: failure-druid-container-logs
