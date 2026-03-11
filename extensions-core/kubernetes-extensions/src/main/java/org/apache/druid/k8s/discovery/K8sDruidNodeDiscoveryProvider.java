@@ -276,7 +276,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                   case WatchResult.NOT_READY:
                     // Pod container became not-ready (e.g., OOM-killed). Remove if present
                     // in cache, but don't log errors for repeated events during CrashLoopBackOff.
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode(), false);
+                    baseNodeRoleWatcher.childRemoved(item.object.getNode(), true);
                     break;
                   default:
                 }

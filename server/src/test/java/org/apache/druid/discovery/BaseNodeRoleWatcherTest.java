@@ -259,8 +259,8 @@ public class BaseNodeRoleWatcherTest
 
     Assert.assertEquals(ImmutableList.of(broker1), listener.nodesAddedList);
 
-    // Remove with warnIfUnknown=false — node IS in cache, should remove and notify
-    nodeRoleWatcher.childRemoved(broker1, false);
+    // Remove with skipIfUnknown=true — node IS in cache, should remove and notify
+    nodeRoleWatcher.childRemoved(broker1, true);
 
     Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
     Assert.assertTrue(nodeRoleWatcher.getAllNodes().isEmpty());
@@ -280,8 +280,8 @@ public class BaseNodeRoleWatcherTest
     TestListener listener = new TestListener();
     nodeRoleWatcher.registerListener(listener);
 
-    // Remove broker2 with warnIfUnknown=false — node is NOT in cache, should silently skip
-    nodeRoleWatcher.childRemoved(broker2, false);
+    // Remove broker2 with skipIfUnknown=true — node is NOT in cache, should silently skip
+    nodeRoleWatcher.childRemoved(broker2, true);
 
     Assert.assertTrue(listener.nodesRemovedList.isEmpty());
     Assert.assertEquals(1, nodeRoleWatcher.getAllNodes().size());
@@ -301,11 +301,11 @@ public class BaseNodeRoleWatcherTest
     nodeRoleWatcher.registerListener(listener);
 
     // First removal should remove and notify
-    nodeRoleWatcher.childRemoved(broker1, false);
+    nodeRoleWatcher.childRemoved(broker1, true);
     Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
 
     // Second removal should silently skip (node already removed)
-    nodeRoleWatcher.childRemoved(broker1, false);
+    nodeRoleWatcher.childRemoved(broker1, true);
     // Still only one removal notification
     Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
   }

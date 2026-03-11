@@ -175,16 +175,16 @@ public class BaseNodeRoleWatcher
 
   public void childRemoved(DiscoveryDruidNode druidNode)
   {
-    childRemoved(druidNode, true);
+    childRemoved(druidNode, false);
   }
 
   /**
    * Remove a node from the discovery cache.
    * <p>
-   * If {@code warnIfUnknown} is true, the removal is attempted unconditionally. If false,
-   * the removal is skipped if the node is not already present in the cache.
+   * If {@code skipIfUnknown} is true, the removal is skipped if the node is not already
+   * present in the cache. If false, the removal is attempted unconditionally.
    */
-  public void childRemoved(DiscoveryDruidNode druidNode, boolean warnIfUnknown)
+  public void childRemoved(DiscoveryDruidNode druidNode, boolean skipIfUnknown)
   {
     synchronized (lock) {
       if (!nodeRole.equals(druidNode.getNodeRole())) {
@@ -197,7 +197,7 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      if (!warnIfUnknown && !nodes.containsKey(druidNode.getDruidNode().getHostAndPortToUse())) {
+      if (skipIfUnknown && !nodes.containsKey(druidNode.getDruidNode().getHostAndPortToUse())) {
         LOGGER.debug(
             "Ignoring removal of node [%s] of role [%s] because it is not known to be present in the cache.",
             druidNode.getDruidNode().getUriToUse(),
