@@ -22,7 +22,7 @@ jobs:
     name: Run Docker tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set Docker image env var
         run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
       - name: Build the Docker image
@@ -41,7 +41,7 @@ jobs:
           docker load --input druid-dist-container.tar.gz
           docker images
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 17
@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload docker logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: failure-docker-logs
           path: docker-logs.tgz
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload failsafe reports to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: failure-failsafe-logs
           path: failsafe-logs.tgz
