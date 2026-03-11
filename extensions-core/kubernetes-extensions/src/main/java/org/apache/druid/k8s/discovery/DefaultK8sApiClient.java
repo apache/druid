@@ -30,6 +30,7 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.util.PatchUtils;
 import io.kubernetes.client.util.Watch;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
@@ -65,7 +66,22 @@ public class DefaultK8sApiClient implements K8sApiClient
   public void patchPod(String podName, String podNamespace, String jsonPatchStr)
   {
     try {
-      coreV1Api.patchNamespacedPod(podName, podNamespace, new V1Patch(jsonPatchStr), "true", null, null, null, null);
+      PatchUtils.patch(
+          V1Pod.class,
+          () -> coreV1Api.patchNamespacedPodCall(
+              podName,
+              podNamespace,
+              new V1Patch(jsonPatchStr),
+              "true",
+              null,
+              null,
+              null,
+              null,
+              null
+          ),
+          V1Patch.PATCH_FORMAT_JSON_PATCH,
+          realK8sClient
+      );
     }
     catch (ApiException ex) {
       throw new RE(ex, "Failed to patch pod[%s/%s], code[%d], error[%s].", podNamespace, podName, ex.getCode(), ex.getResponseBody());
@@ -80,7 +96,20 @@ public class DefaultK8sApiClient implements K8sApiClient
   )
   {
     try {
-      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null, null, null);
+      V1PodList podList = coreV1Api.listNamespacedPod(
+          podNamespace,
+          null,
+          null,
+          null,
+          null,
+          labelSelector,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
       Preconditions.checkState(podList != null, "WTH: NULL podList");
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
@@ -113,8 +142,20 @@ public class DefaultK8sApiClient implements K8sApiClient
       Watch<V1Pod> watch =
           Watch.createWatch(
               realK8sClient,
-              coreV1Api.listNamespacedPodCall(namespace, null, true, null, null,
-                                              labelSelector, null, lastKnownResourceVersion, null, null, 0, true, null
+              coreV1Api.listNamespacedPodCall(
+                  namespace,
+                  null,
+                  true,
+                  null,
+                  null,
+                  labelSelector,
+                  null,
+                  lastKnownResourceVersion,
+                  null,
+                  null,
+                  null,
+                  true,
+                  null
               ),
               new TypeReference<Watch.Response<V1Pod>>()
               {

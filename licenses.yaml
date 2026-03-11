@@ -191,7 +191,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.784
+version: 1.12.793
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -408,7 +408,7 @@ name: LMAX Disruptor
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.3.6
+version: 3.4.4
 libraries:
   - com.lmax: disruptor
 
@@ -498,7 +498,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.1
+version: 1.20.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -667,7 +667,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.19.0
+version: 3.20.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -860,7 +860,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.5.2
+version: 7.6.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -900,13 +900,14 @@ libraries:
   - io.vertx: vertx-core
   - io.vertx: vertx-web-client
   - io.vertx: vertx-web-common
+  - io.vertx: vertx-uri-template
 ---
 
 name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 19.0.0
+version: 25.0.0-legacy
 libraries:
   - io.kubernetes: client-java
   - io.kubernetes: client-java-api
@@ -924,6 +925,16 @@ license_name: Apache License version 2.0
 libraries:
   - io.swagger: swagger-core
   - io.swagger: swagger-models
+
+---
+
+name: Swagger
+version: 1.6.12
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-annotations
 
 ---
 
@@ -947,21 +958,11 @@ libraries:
 
 ---
 
-name: com.squareup.okio okio
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 1.17.2
-libraries:
-  - com.squareup.okio: okio
-
----
-
 name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.5
+version: 1.9.0
 libraries:
   - io.gsonfire: gson-fire
 
@@ -971,7 +972,7 @@ name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.12
+version: 1.6.16
 libraries:
   - io.swagger: swagger-annotations
 
@@ -1032,19 +1033,22 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.12.0
+version: 5.3.2
 libraries:
   - com.squareup.okhttp3: okhttp
+  - com.squareup.okhttp3: okhttp-jvm
   - com.squareup.okhttp3: logging-interceptor
 
 ---
 
-name: com.squareup.okhttp3 okhttp logging-interceptor
+name: com.squareup.okhttp3 okhttp
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.11.0
+version: 5.3.2
 libraries:
+  - com.squareup.okhttp3: okhttp
+  - com.squareup.okhttp3: okhttp-jvm
   - com.squareup.okhttp3: logging-interceptor
 
 ---
@@ -1053,9 +1057,19 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.16.4
 libraries:
   - com.squareup.okio: okio
+  - com.squareup.okio: okio-jvm
+
+---
+
+name: com.squareup.okio okio
+license_category: binary
+module: extensions-core/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 3.16.4
+libraries:
   - com.squareup.okio: okio-jvm
 
 ---
@@ -1079,7 +1093,7 @@ name: org.snakeyaml snakeyaml-engine
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: "2.10"
+version: 3.0.1
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1099,7 +1113,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.5
 libraries:
   - org.yaml: snakeyaml
 
@@ -1109,7 +1123,7 @@ name: com.flipkart.zjsonpatch zjsonpatch
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.4.14
+version: 0.4.16
 libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
 
@@ -1152,7 +1166,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.9.25
+version: 2.2.21
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -2548,7 +2562,7 @@ name: Gson
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.12.0
+version: 2.13.2
 libraries:
   - com.google.code.gson: gson
 
@@ -2971,6 +2985,16 @@ name: jakarta.annotation
 version: 1.3.5
 license_category: binary
 module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - jakarta.annotation: jakarta.annotation-api
+
+---
+
+name: jakarta.annotation
+version: 3.0.0
+license_category: binary
+module: extensions/druid-kubernetes-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.annotation: jakarta.annotation-api

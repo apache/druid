@@ -23,10 +23,13 @@ import com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.query.DruidMetrics;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.List;
 
 public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends SeekableStreamSupervisorTestBase
 {
@@ -101,6 +104,9 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     setupSpecExpectations(getIOConfigWithCostBasedAutoScaler());
     EasyMock.expect(spec.createAutoscaler(EasyMock.anyObject()))
             .andReturn(createMockAutoScaler(targetTaskCount))
+            .anyTimes();
+    EasyMock.expect(spec.getContextValue(EasyMock.eq(DruidMetrics.TAGS)))
+            .andReturn(List.of("tag1", "tag2"))
             .anyTimes();
     EasyMock.replay(spec);
 

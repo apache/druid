@@ -35,7 +35,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
 {
-  @Parameterized.Parameters(name = "name={0}, inputInterval={5}, segmentGran={6}")
+  @Parameterized.Parameters(name = "name={0}, inputInterval={6}, segmentGran={7}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();

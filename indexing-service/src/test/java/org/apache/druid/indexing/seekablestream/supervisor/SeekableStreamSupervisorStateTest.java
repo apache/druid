@@ -2760,7 +2760,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         "stream",
         null,
         1,
-        99,
+        null,
         new Period("PT1H"),
         new Period("PT1S"),
         new Period("PT30S"),
