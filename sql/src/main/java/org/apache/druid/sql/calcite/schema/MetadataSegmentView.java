@@ -118,7 +118,7 @@ public class MetadataSegmentView
       if (isCacheEnabled) {
         ScheduledExecutors.scheduleAtFixedRate(
             scheduledExec,
-            Duration.millis(500L),
+            Duration.millis(Math.min(pollPeriodInMS, 500L)),
             Duration.millis(pollPeriodInMS),
             this::poll
         );
