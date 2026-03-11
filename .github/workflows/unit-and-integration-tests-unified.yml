@@ -51,16 +51,11 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  unit-tests:
-    name: "unit tests"
-    uses: ./.github/workflows/ci.yml
-
   docker-tests:
-    needs: [unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [unit-tests, docker-tests]
+    needs: [docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
