@@ -190,7 +190,7 @@ public class EmitterModule implements Module
    */
   protected String getBuildRevision()
   {
-    try (InputStream is = getClass().getResourceAsStream("/META-INF/MANIFEST.MF")) {
+    try (InputStream is = EmitterModule.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
       return parseBuildRevision(is);
     }
     catch (IOException e) {
