@@ -60,7 +60,7 @@ Additionally, this extension has following configuration.
 
 ### Readiness probes and discovery
 
-This extension uses Kubernetes container readiness to decide whether a pod is available for service discovery. When a container becomes not-ready (for example, after an OOM kill or crash), the pod is automatically removed from discovery until it becomes ready again. This prevents routing requests to pods that are unable to serve them.
+This extension uses Kubernetes container readiness to decide whether a pod is available for service discovery. When a container becomes not-ready (for example, after an out of memory kill or crash), the pod is automatically removed from discovery until it becomes ready again. This prevents routing requests to pods that are unable to serve them.
 
 Because of this, you should configure [readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) on all Druid pods. Without a readiness probe, Kubernetes marks a container as ready the moment the process starts, which may be before the Druid service is fully initialized and able to handle requests.
 
