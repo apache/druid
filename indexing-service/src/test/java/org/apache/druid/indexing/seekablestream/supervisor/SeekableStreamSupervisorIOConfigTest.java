@@ -21,19 +21,31 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+
+import javax.annotation.Nullable;
+import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class SeekableStreamSupervisorIOConfigTest
 {
+
+  private final Map<Integer, Integer> serverPriorityToReplicas = Map.of(
+      1, 2,
+      2, 3
+  );
+
   @Test
   public void testAllDefaults()
   {
@@ -54,6 +66,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         lagAggregator,
+        null,
         null,
         null,
         null
@@ -77,10 +90,11 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertNull(config.getStopTaskCount());
     Assert.assertEquals(lagAggregator, config.getLagAggregator());
     Assert.assertEquals(1, config.getMaxAllowedStops());
+    Assert.assertNull(config.getServerPriorityToReplicas());
   }
 
   @Test
-  public void testAutoScalerEnabledTrueAndFalse()
+  public void testAutoScalerEnabledPreservesTaskCountWhenNonNull()
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
@@ -106,6 +120,7 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
@@ -128,6 +143,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         lagAggregator,
+        null,
         null,
         null,
         null
@@ -161,6 +177,7 @@ public class SeekableStreamSupervisorIOConfigTest
             lagAggregator,
             DateTimes.nowUtc(),
             null,
+            null,
             null
         )
         {
@@ -181,6 +198,7 @@ public class SeekableStreamSupervisorIOConfigTest
         DruidException.class,
         () -> new SeekableStreamSupervisorIOConfig(
             "stream",
+            null,
             null,
             null,
             null,
@@ -227,6 +245,7 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
@@ -250,7 +269,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        3
+        3,
+        null
     )
     {
     };
@@ -285,7 +305,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        1
+        1,
+        null
     )
     {
     };
@@ -317,7 +338,8 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
-        1
+        1,
+        null
     )
     {
     };
@@ -346,11 +368,97 @@ public class SeekableStreamSupervisorIOConfigTest
         lagAggregator,
         null,
         null,
+        null,
         null
     )
     {
     };
 
     Assert.assertEquals(10, config3.getMaxAllowedStops());
+  }
+
+  @Test
+  public void testReplicasIsSetWhenserverPriorityToReplicas()
+  {
+    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(null, serverPriorityToReplicas);
+    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
+    Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
+  }
+
+  @Test
+  public void testReplicasOnlyConfig()
+  {
+    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(4, null);
+    Assert.assertEquals(Integer.valueOf(4), config.getReplicas());
+    Assert.assertNull(config.getServerPriorityToReplicas());
+  }
+
+  @Test
+  public void testMatchingReplicasAndServerPriority()
+  {
+    final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(5, serverPriorityToReplicas);
+    Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
+    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
+  }
+
+  @Test
+  public void testMismatchBetweenReplicasAndServerPriorityReplicasThrowsException()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> makeSeekableStreamSupervisorIOConfig(3, serverPriorityToReplicas)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            StringUtils.format(
+                "Configured replicas[3] does not match the sum of replicas[5] specified in serverPriorityToReplicas[%s]."
+                + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
+                serverPriorityToReplicas
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testNegativeReplicasThrowsException()
+  {
+    final Map<Integer, Integer> invalidServerPriorityToReplicas = Map.of(0, 2, 1, -1);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> makeSeekableStreamSupervisorIOConfig(null, invalidServerPriorityToReplicas)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            StringUtils.format(
+                "Found invalid server replica[-1] for priority[1] in serverPriorityToReplicas[%s]. Replicas must be >= 0.",
+                invalidServerPriorityToReplicas
+            )
+        )
+    );
+  }
+
+  private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicas)
+  {
+    return new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        replicas,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        mock(LagAggregator.class),
+        null,
+        null,
+        null,
+        serverPriorityToReplicas
+    )
+    {
+    };
   }
 }

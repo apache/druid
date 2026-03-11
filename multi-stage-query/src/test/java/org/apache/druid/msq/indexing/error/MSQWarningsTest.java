@@ -145,7 +145,11 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -350,7 +354,11 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -372,7 +380,11 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -391,7 +403,11 @@ public class MSQWarningsTest extends MSQTestBase
                              + ") group by 1  PARTITIONED by day ")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
 
     // Temporary directory should not contain any controller-related folders

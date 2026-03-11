@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
@@ -31,6 +32,6 @@ public class FileOutputChannelFactoryTest extends OutputChannelFactoryTest
 
   public FileOutputChannelFactoryTest() throws IOException
   {
-    super(new FileOutputChannelFactory(folder.newFolder(), 100, null), 100);
+    super(new FileOutputChannelFactory(folder.newFolder(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
   }
 }

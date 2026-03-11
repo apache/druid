@@ -25,29 +25,6 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
-  public static final String KAFKA_INDEX = "kafka-index";
-
-  public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
-
-  public static final String TRANSACTIONAL_KAFKA_INDEX = "kafka-transactional-index";
-
-  public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
-
-  public static final String APPEND_INGESTION = "append-ingestion";
-
-  /**
-   * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
-   */
-  public static final String QUERY = "query";
-
-  public static final String QUERY_RETRY = "query-retry";
-
-  public static final String QUERY_ERROR = "query-error";
-
-  /**
-   * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
-   */
-  public static final String SECURITY = "security";
 
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
@@ -95,35 +72,4 @@ public class TestNGGroup
 
   public static final String HADOOP_GCS_TO_GCS = "hadoop-gcs-to-gcs-deep-storage";
   public static final String HADOOP_GCS_TO_HDFS = "hadoop-gcs-to-hdfs-deep-storage";
-
-  /**
-   * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
-   */
-  public static final String S3_INGESTION = "s3-ingestion";
-
-  /**
-   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
-   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
-   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
-   */
-  public static final String KINESIS_INDEX = "kinesis-index";
-
-  /**
-   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
-   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
-   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
-   */
-  public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
-
-  public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
-
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
-
-  public static final String CDS_TASK_SCHEMA_PUBLISH_DISABLED = "cds-task-schema-publish-disabled";
-
-  public static final String CDS_COORDINATOR_METADATA_QUERY_DISABLED = "cds-coordinator-metadata-query-disabled";
 }

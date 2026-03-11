@@ -429,6 +429,24 @@ public class DruidExpression
   }
 
   /**
+   * Returns true if this expression or any of its arguments (recursively) has
+   * {@link NodeType#SPECIALIZED} type, indicating the expression would benefit
+   * from virtual column specialization.
+   */
+  public boolean containsSpecializedNodes()
+  {
+    if (nodeType == NodeType.SPECIALIZED) {
+      return true;
+    }
+    for (final DruidExpression arg : arguments) {
+      if (arg.containsSpecializedNodes()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * The {@link ColumnType} of this expression as inferred when this expression was created. This is likely the result
    * of converting the output of {@link org.apache.calcite.rex.RexNode#getType()} using
    * {@link org.apache.druid.sql.calcite.planner.Calcites#getColumnTypeForRelDataType(RelDataType)}, but may also be

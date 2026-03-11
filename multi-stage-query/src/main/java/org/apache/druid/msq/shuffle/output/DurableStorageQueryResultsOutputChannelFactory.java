@@ -28,6 +28,7 @@ import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
@@ -47,10 +48,20 @@ public class DurableStorageQueryResultsOutputChannelFactory extends DurableStora
       String taskId,
       int frameSize,
       StorageConnector storageConnector,
-      File tmpDir
+      File tmpDir,
+      WireTransferableContext wireTransferableContext
   )
   {
-    super(controllerTaskId, workerNumber, stageNumber, taskId, frameSize, storageConnector, tmpDir);
+    super(
+        controllerTaskId,
+        workerNumber,
+        stageNumber,
+        taskId,
+        frameSize,
+        storageConnector,
+        tmpDir,
+        wireTransferableContext
+    );
   }
 
   @Override
@@ -83,7 +94,8 @@ public class DurableStorageQueryResultsOutputChannelFactory extends DurableStora
             FrameFileWriter.open(
                 Channels.newChannel(storageConnector.write(fileName)),
                 null,
-                ByteTracker.unboundedTracker()
+                ByteTracker.unboundedTracker(),
+                wireTransferableContext
             )
         );
 

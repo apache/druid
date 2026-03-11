@@ -19,7 +19,6 @@
 import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Column } from 'react-table';
 import ReactTable from 'react-table';
@@ -51,6 +50,7 @@ import {
   clamp,
   deepGet,
   filterMap,
+  formatByteRate,
   formatBytesCompact,
   formatDurationWithMs,
   formatDurationWithMsIfNeeded,
@@ -77,7 +77,6 @@ function summarizeTableInput(tableStageInput: StageInput): string {
   return assemble(
     `Datasource: ${tableStageInput.dataSource}`,
     `Interval: ${tableStageInput.intervals.join('; ')}`,
-    tableStageInput.filter && `Filter: ${JSONBig.stringify(tableStageInput.filter)}`,
   ).join('\n');
 }
 
@@ -96,6 +95,23 @@ const formatFileOfTotal = (files: number, totalFiles: number) =>
 
 const formatFileOfTotalForBrace = (files: number, totalFiles: number) =>
   `(${formatInteger(files)} /GB ${formatInteger(totalFiles)})`;
+
+function formatLoadTooltip(
+  loadFiles: number,
+  loadBytes?: number,
+  loadTime?: number,
+  loadWait?: number,
+): string {
+  return assemble(
+    `Loaded files: ${formatInteger(loadFiles)}`,
+    loadBytes != null && `Loaded bytes: ${formatBytesCompact(loadBytes)}`,
+    loadTime != null && loadTime > 0 && `Load time: ${formatDurationWithMs(loadTime)}`,
+    loadTime && loadBytes
+      ? `Load rate: ${formatByteRate(loadBytes / (loadTime / 1000))}`
+      : undefined,
+    loadWait != null && loadWait > 0 && `Load wait: ${formatDurationWithMs(loadWait)}`,
+  ).join('\n');
+}
 
 function inputLabelContent(stage: StageDefinition, inputIndex: number) {
   const { input, broadcast } = stage.definition;
@@ -337,6 +353,22 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                         />
                       </>
                     )}
+                    {Boolean(c.loadFiles) && (
+                      <>
+                        {' '}
+                        &nbsp;{' '}
+                        <Icon
+                          className="load-indicator"
+                          icon={IconNames.IMPORT}
+                          data-tooltip={formatLoadTooltip(
+                            c.loadFiles,
+                            c.loadBytes,
+                            c.loadTime,
+                            c.loadWait,
+                          )}
+                        />
+                      </>
+                    )}
                   </>
                 );
               },
@@ -505,6 +537,10 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
+    const loadFiles = stages.getTotalCounterForStage(stage, inputCounter, 'loadFiles');
+    const loadBytes = stages.getTotalCounterForStage(stage, inputCounter, 'loadBytes');
+    const loadTime = stages.getTotalCounterForStage(stage, inputCounter, 'loadTime');
+    const loadWait = stages.getTotalCounterForStage(stage, inputCounter, 'loadWait');
     const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
@@ -524,7 +560,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
           }
           braces={rowsValues}
         />
-        {inputFileCount ? (
+        {Boolean(inputFileCount) && (
           <>
             {' '}
             &nbsp;{' '}
@@ -536,7 +572,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               braces={filesValues}
             />
           </>
-        ) : undefined}
+        )}
+        {Boolean(loadFiles) && (
+          <>
+            {' '}
+            &nbsp;{' '}
+            <Icon
+              className="load-indicator"
+              icon={IconNames.IMPORT}
+              data-tooltip={formatLoadTooltip(loadFiles, loadBytes, loadTime, loadWait)}
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -925,7 +972,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <div>{formatInteger(value)}</div>
                   <div
                     className="detail-line"
-                    data-tooltip="Workers are counted as inactive until they reprot starting to read rows from their input."
+                    data-tooltip="Workers are counted as inactive until they report starting to read rows from their input."
                   >{`${formatInteger(inactiveWorkers)} inactive`}</div>
                 </div>
               );

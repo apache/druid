@@ -26,6 +26,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.CatalogCoreModule;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -142,7 +143,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
-        new CatalogCoreModule()
+        new CatalogCoreModule(),
+        new DefaultServerHolderModule()
     );
     return this;
   }

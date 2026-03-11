@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>36.0.0-SNAPSHOT</version>
+        <version>37.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -48,22 +48,6 @@
             <groupId>org.apache.druid.integration-tests</groupId>
             <artifactId>druid-it-tools</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <version>${aws.sdk.version}</version>
-            <exclusions>
-                <!-- aws-java-sdk-core is provided by Druid core. -->
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -181,17 +165,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.kafka</groupId>
-                    <artifactId>kafka-clients</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -201,11 +174,6 @@
             <artifactId>druid-testing-tools</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>simple-client-sslcontext</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -237,11 +205,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>${apache.kafka.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>

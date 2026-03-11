@@ -70,7 +70,6 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.NoopEscalator;
@@ -117,6 +116,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   private static final int WAIT_TIMEOUT_SECS = 6;
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private BrokerSegmentMetadataCache runningSchema;
+  private StubServiceEmitter emitter = new StubServiceEmitter();
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
   private CountDownLatch refreshLatch = new CountDownLatch(1);
@@ -156,7 +156,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         config,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient,
         CentralizedDatasourceSchemaConfig.create()
@@ -192,7 +192,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
@@ -260,7 +260,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient,
         CentralizedDatasourceSchemaConfig.create()
@@ -340,7 +340,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient,
         CentralizedDatasourceSchemaConfig.create()
@@ -373,7 +373,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient,
         CentralizedDatasourceSchemaConfig.create()
@@ -409,7 +409,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         config
@@ -431,6 +431,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo2"), 3L);
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "some_datasource"), 9L);
+
     Assert.assertEquals(0, refreshLatch.getCount());
   }
 
@@ -449,7 +453,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
@@ -726,7 +730,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
@@ -825,6 +829,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
+
     Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
     dataSources.remove("foo2");
 
@@ -842,6 +848,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
 
     fooDs = schema.getDatasource("foo");
+
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_CHANGED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1L);
+    emitter.verifySum(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 13L);
 
     // check if the new column present in the added segment is present in the datasource schema
     // ensuring that the schema is rebuilt
@@ -987,6 +996,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo2"), 3L);
+    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "some_datasource"), 9L);
+
+
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
@@ -1043,7 +1057,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         internalQueryConfig,
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
@@ -1108,7 +1122,6 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   {
     String dataSource = "xyz";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
-    StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
@@ -1204,7 +1217,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         internalQueryConfig,
-        new NoopServiceEmitter(),
+        emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()

@@ -203,6 +203,47 @@ public class BaseNodeRoleWatcherTest
     assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
+  @Test(timeout = 60_000L)
+  public void testDuplicateChildAddedAfterResetNodesDoesNotNotifyListeners()
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+    DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
+
+    // Initial discovery and cache initialization
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(broker2);
+    nodeRoleWatcher.cacheInitialized();
+
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+
+    // Verify listener received the initial nodes
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+
+    // Simulate watch reconnect: resetNodes with the same set of nodes
+    LinkedHashMap<String, DiscoveryDruidNode> resetMap = new LinkedHashMap<>();
+    resetMap.put(broker1.getDruidNode().getHostAndPortToUse(), broker1);
+    resetMap.put(broker2.getDruidNode().getHostAndPortToUse(), broker2);
+    nodeRoleWatcher.resetNodes(resetMap);
+
+    // No new additions or removals since the node set is unchanged
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+    Assert.assertTrue(listener.nodesRemovedList.isEmpty());
+
+    // Simulate K8s watch replaying ADDED events for already-present nodes
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(broker2);
+
+    // Listeners should NOT be notified again — the duplicate adds are no-ops
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+    Assert.assertTrue(listener.nodesRemovedList.isEmpty());
+
+    // The nodes map should still contain exactly the same two nodes
+    Assert.assertEquals(ImmutableSet.of(broker1, broker2), new HashSet<>(nodeRoleWatcher.getAllNodes()));
+  }
+
   private DiscoveryDruidNode buildDiscoveryDruidNode(NodeRole role, String host)
   {
     return new DiscoveryDruidNode(

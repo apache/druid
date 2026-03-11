@@ -78,10 +78,13 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       final QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(

@@ -48,6 +48,7 @@ async function getTaskCounts(capabilities: Capabilities, signal: AbortSignal): P
   COUNT(*) AS "count"
 FROM sys.tasks
 GROUP BY 1`,
+        context: { engine: 'native' },
       },
       signal,
     );

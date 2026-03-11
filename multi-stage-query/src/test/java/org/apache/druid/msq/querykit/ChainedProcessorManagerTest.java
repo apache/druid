@@ -129,7 +129,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
     Assert.assertEquals(new HashSet<>(expectedValues), actualValues);
@@ -168,7 +168,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
     Assert.assertEquals(expectedValues, actualValues);
@@ -205,7 +205,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
     Assert.assertEquals(expectedValues, actualValues);
@@ -252,7 +252,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
     Assert.assertEquals(expectedValues, actualValues);

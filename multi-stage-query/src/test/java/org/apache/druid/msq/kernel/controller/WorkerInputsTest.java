@@ -45,10 +45,12 @@ import org.apache.druid.msq.input.stage.StripedReadablePartitions;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -79,6 +81,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -108,6 +111,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(new IntAVLTreeSet(new int[]{1, 3, 4, 5}), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -137,6 +141,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -166,6 +171,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -192,6 +198,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -219,6 +226,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -245,6 +253,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -274,6 +283,7 @@ public class WorkerInputsTest
             new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -322,6 +332,7 @@ public class WorkerInputsTest
             new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -357,6 +368,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -384,6 +396,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(2), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -417,6 +430,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(1), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -449,11 +463,12 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Mockito.verify(testInputSpecSlicer, times(0)).canSliceDynamic(inputSpecToSplit);
-    Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), anyInt());
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), any(), anyInt());
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -493,11 +508,12 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         100
     );
 
     Mockito.verify(testInputSpecSlicer, times(1)).canSliceDynamic(inputSpecToSplit);
-    Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), anyInt(), anyInt(), anyLong());
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), any(), anyInt(), anyInt(), anyLong());
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -536,6 +552,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -642,7 +659,7 @@ public class WorkerInputsTest
     }
 
     @Override
-    public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+    public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
     {
       final TestInputSpec testInputSpec = (TestInputSpec) inputSpec;
       final List<List<Long>> assignments =
@@ -657,6 +674,7 @@ public class WorkerInputsTest
     @Override
     public List<InputSlice> sliceDynamic(
         InputSpec inputSpec,
+        @Nullable SegmentPruner segmentPruner,
         int maxNumSlices,
         int maxFilesPerSlice,
         long maxBytesPerSlice

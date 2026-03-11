@@ -76,7 +76,13 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
     for (int i = 0; i < 6; ++i) {
       DruidServer druidServer = new DruidServer(
           "server_" + i,
-          "localhost", null, 10_000_000L, ServerType.HISTORICAL, "hot", 1
+          "localhost",
+          null,
+          10_000_000L,
+          null,
+          ServerType.HISTORICAL,
+          "hot",
+          1
       );
       servers.add(druidServer);
     }

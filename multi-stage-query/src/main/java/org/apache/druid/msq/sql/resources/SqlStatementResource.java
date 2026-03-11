@@ -37,6 +37,7 @@ import org.apache.druid.error.Forbidden;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
@@ -73,6 +74,7 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
@@ -136,6 +138,7 @@ public class SqlStatementResource
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final ServerConfig serverConfig;
+  private final WireTransferableContext wireTransferableContext;
 
   @Inject
   public SqlStatementResource(
@@ -145,7 +148,8 @@ public class SqlStatementResource
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final WireTransferableContext wireTransferableContext
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -155,6 +159,7 @@ public class SqlStatementResource
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
     this.serverConfig = serverConfig;
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   /**
@@ -813,7 +818,8 @@ public class SqlStatementResource
           msqControllerTask.getId(),
           storageConnector,
           closer,
-          true
+          true,
+          wireTransferableContext
       );
       results = Optional.of(Yielders.each(
           Sequences.concat(pages.stream()
@@ -838,9 +844,9 @@ public class SqlStatementResource
                                   }
                                 })
                                 .collect(Collectors.toList()))
-                   .flatMap(frame ->
+                   .flatMap(rac ->
                                 SqlStatementResourceHelper.getResultSequence(
-                                    frame,
+                                    rac.as(Frame.class),
                                     finalStage.getFrameReader(),
                                     msqControllerTask.getQuerySpec().getColumnMappings(),
                                     new ResultsContext(

@@ -996,7 +996,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
     adminServers =
         "server,host,plaintext_port,tls_port,server_type,tier,curr_size,max_size,is_leader\n"
-        + "localhost:8083,localhost,8083,-1,historical,_default_tier,1939,100000000,\n"
+        + "localhost:8083,localhost,8083,-1,historical,_default_tier,2024,100000000,\n"
         + "localhost:8091,localhost,8091,-1,indexer,_default_tier,0,0,";
 
     adminServerSegments = StringUtils.format(
@@ -1004,6 +1004,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         + "localhost:8083,%s",
         segmentId
     );
+  }
+
+  protected EmbeddedCoordinator getCoordinator()
+  {
+    return coordinator;
   }
 
   protected String getCoordinatorUrl()
@@ -1018,9 +1023,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   /**
    * curr_size on historicals changes because cluster state is not isolated across
-   * different
-   * integration tests, zero it out for consistent test results
-   * version and start_time are not configurable therefore we zero them as well
+   * different integration tests, zero it out for consistent test results.
+   * version, start_time, available_processors, total_memory are not configurable therefore we zero them as well
    */
   protected static List<Map<String, Object>> getServersWithoutNonConfigurableFields(List<Map<String, Object>> servers)
   {
@@ -1031,6 +1035,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
           newServer.put("curr_size", 0);
           newServer.put("start_time", "0");
           newServer.put("version", "0.0.0");
+          newServer.put("available_processors", 0);
+          newServer.put("total_memory", 0);
           return newServer;
         }
     );

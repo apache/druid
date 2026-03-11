@@ -781,8 +781,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
         null,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
+            new DoubleSumAggregatorFactory("metric2", "col2")
+        },
         ARBITRARY_GRANULARITY,
         null,
         parser,

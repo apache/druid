@@ -23,10 +23,8 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
@@ -35,8 +33,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
-public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuffer>>
-    extends CompressedNestedDataComplexColumn<Indexed<ByteBuffer>, TStringDictionary>
+public final class NestedDataColumnV4<TKeyDictionary extends Indexed<ByteBuffer>, TStringDictionary extends Indexed<ByteBuffer>>
+    extends CompressedNestedDataComplexColumn<TKeyDictionary, TStringDictionary>
 {
   public NestedDataColumnV4(
       String columnName,
@@ -44,13 +42,13 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<ByteBuffer> fields,
+      Supplier<TKeyDictionary> fieldsSupplier,
       FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       SegmentFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
+      NestedCommonFormatColumnFormatSpec formatSpec,
       ByteOrder byteOrder
   )
   {
@@ -60,14 +58,14 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields::singleThreaded,
+        fieldsSupplier,
         fieldInfo,
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
         null,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder,
         NestedPathFinder.JSON_PATH_ROOT
     );

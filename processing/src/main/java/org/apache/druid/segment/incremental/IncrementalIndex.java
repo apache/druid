@@ -135,7 +135,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         inputRowHolder::getRowId,
         RowAdapters.standardRow(),
         RowSignature.empty(),
-        true,
         true
     );
 
@@ -1029,15 +1028,19 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         this.type = valueType.toString();
       } else if (valueType.is(ValueType.COMPLEX)) {
-        capabilities = ColumnCapabilitiesImpl.createDefault()
-                                             .setType(valueType)
-                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
         ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(valueType.getComplexTypeName());
-        if (serde != null) {
-          this.type = serde.getTypeName();
-        } else {
+        if (serde == null) {
           throw new ISE("Unable to handle complex type[%s]", valueType);
         }
+        this.type = serde.getTypeName();
+        // The serde's type name represents the canonical storage type (e.g., "HLLSketch"),
+        // while the aggregator's intermediate type may be more specific (e.g., "HLLSketchBuild").
+        // Using the serde's type ensures that segment metadata queries return consistent types
+        // across realtime (IncrementalIndex) and historical (QueryableIndex) segments.
+        // See https://github.com/apache/druid/issues/14315.
+        capabilities = ColumnCapabilitiesImpl.createDefault()
+                                             .setType(ColumnType.ofComplex(serde.getTypeName()))
+                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
       } else {
         // if we need to handle non-numeric and non-complex types (e.g. strings, arrays) it should be done here
         // and we should determine the appropriate ColumnCapabilities

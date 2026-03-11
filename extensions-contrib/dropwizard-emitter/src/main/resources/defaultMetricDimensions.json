@@ -126,7 +126,8 @@
   },
   "ingest/events/thrownAway": {
     "dimensions": [
-      "dataSource"
+      "dataSource",
+      "reason"
     ],
     "type": "counter"
   },
@@ -260,24 +261,6 @@
     "type": "counter"
   },
   "segment/unneeded/count": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/raw": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalization": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalized": {
     "dimensions": [
       "tier"
     ],

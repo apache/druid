@@ -25,11 +25,17 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -51,7 +57,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -59,6 +66,11 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
+  // size of wiki segments, adjust this if segment size changes for some reason
+  private static final long SIZE_BYTES = 3776682L;
+  private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
+  private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -72,7 +84,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    historical.addProperty("druid.segmentCache.virtualStorage", "true")
+    historical.setServerMemory(500_000_000)
+              .addProperty("druid.segmentCache.virtualStorage", "true")
               .addProperty("druid.segmentCache.virtualStorageLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
@@ -80,11 +93,16 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
                       StringUtils.format(
                           "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
                           cluster.getTestFolder().newFolder().getAbsolutePath(),
-                          HumanReadableBytes.parse("1MiB")
+                          CACHE_SIZE
                       )
                   )
               )
-              .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")));
+              .addProperty("druid.server.maxSize", String.valueOf(MAX_SIZE));
+
+    broker.setServerMemory(200_000_000)
+          .addProperty("druid.msq.dart.controller.maxRetainedReportCount", "10")
+          .addProperty("druid.query.default.context.maxConcurrentStages", "1")
+          .addProperty("druid.sql.planner.enableSysQueriesTable", "true");
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
@@ -101,7 +119,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         .useLatchableEmitter()
         .useDefaultTimeoutForLatchableEmitter(20)
         .addResource(storageResource)
+        .addCommonProperty("druid.msq.dart.enabled", "true")
         .addCommonProperty("druid.storage.zip", "false")
+        .addCommonProperty("druid.indexer.task.buildV10", "true")
+        .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(indexer)
@@ -129,7 +150,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     Throwable t = Assertions.assertThrows(
         RuntimeException.class,
-        () -> cluster.runSql("select * from \"%s\"", dataSource)
+        () -> cluster.runSql("select count(*) from \"%s\"", dataSource)
     );
     Assertions.assertTrue(t.getMessage().contains("Unable to load segment"));
     Assertions.assertTrue(t.getMessage().contains("] on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
@@ -152,88 +173,200 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         "select count(*) from \"%s\" WHERE __time >= TIMESTAMP '2015-09-12 14:00:00' and __time < TIMESTAMP '2015-09-12 19:00:00'",
         "select count(*) from \"%s\" WHERE __time >= TIMESTAMP '2015-09-12 19:00:00' and __time < TIMESTAMP '2015-09-13 00:00:00'"
     };
-    final long[] expectedResults = new long[] {
-        9770,
-        10524,
-        10267,
-        8683
-    };
+    final long[] expectedResults = new long[]{9770, 10524, 10267, 8683};
+    final long[] expectedLoads = new long[]{8L, 6L, 5L, 5L};
 
+
+    LatchableEmitter emitter = historical.latchableEmitter();
+    LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
+
+    // clear out the pipe to get zerod out storage monitor metrics
+    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
+      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    }
+    // then flush (which clears out the internal events stores in test emitter) so we can do clean sums across them
+    emitter.flush();
+
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    // confirm flushed
+    Assertions.assertEquals(0, beforeLoads);
+
+    // run the queries in order
     Assertions.assertEquals(expectedResults[0], Long.parseLong(cluster.runSql(queries[0], dataSource)));
-    assertMetrics(1, 8L);
+    assertQueryMetrics(1, expectedLoads[0]);
     Assertions.assertEquals(expectedResults[1], Long.parseLong(cluster.runSql(queries[1], dataSource)));
-    assertMetrics(2, 6L);
+    assertQueryMetrics(2, expectedLoads[1]);
     Assertions.assertEquals(expectedResults[2], Long.parseLong(cluster.runSql(queries[2], dataSource)));
-    assertMetrics(3, 5L);
+    assertQueryMetrics(3, expectedLoads[2]);
     Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
-    assertMetrics(4, 5L);
+    assertQueryMetrics(4, expectedLoads[3]);
 
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    Assertions.assertTrue(firstLoads >= 24, "expected " + 24 + " but only got " + firstLoads);
+
+    long expectedTotalHits = 0;
+    long expectedTotalLoad = 0;
     for (int i = 0; i < 1000; i++) {
       int nextQuery = ThreadLocalRandom.current().nextInt(queries.length);
       Assertions.assertEquals(expectedResults[nextQuery], Long.parseLong(cluster.runSql(queries[nextQuery], dataSource)));
-      assertMetrics(i + 5, null);
+      assertQueryMetrics(i + 5, null);
+      long actualLoads = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, i + 5);
+      expectedTotalLoad += actualLoads;
+      expectedTotalHits += (expectedLoads[nextQuery] - actualLoads);
+    }
+
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_COUNT));
+    long hits = emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_COUNT);
+    Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
+    if (expectedTotalHits > 0) {
+      emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_BYTES));
+      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) >= 0);
+    }
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES) > 0);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT));
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
+    Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
+    Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
+
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        CACHE_SIZE,
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
+    );
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        MAX_SIZE,
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+    );
+  }
+
+  @Test
+  void testQueryTooMuchDataButWithDart()
+  {
+    // dart uses vsf in a totally rad way so it can query all of the segments at once due to how it chunks up and
+    // fetches segments to do the work
+    final String sqlQueryId = UUID.randomUUID().toString();
+    final String resultString = cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(
+            new ClientSqlQuery(
+                StringUtils.format("select count(*) from \"%s\"", dataSource),
+                "CSV",
+                false,
+                false,
+                false,
+                Map.of(
+                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId,
+                    QueryContexts.ENGINE, "msq-dart"
+                ),
+                null
+            )
+        )
+    ).trim();
+
+    final Long result = Long.parseLong(resultString);
+    Assertions.assertEquals(39244L, result);
+
+    // Now fetch the report using the SQL query ID
+    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker);
+
+    // Verify the report response
+    Assertions.assertNotNull(reportResponse, "Report response should not be null");
+    ChannelCounters.Snapshot segmentChannelCounters =
+        (ChannelCounters.Snapshot) reportResponse.getReportMap()
+                                                 .findReport("multiStageQuery")
+                                                 .map(r ->
+                                                          ((MSQTaskReportPayload) r.getPayload()).getCounters()
+                                                                                                 .snapshotForStage(0)
+                                                                                                 .get(0)
+                                                                                                 .getMap()
+                                                                                                 .get("input0")
+                                                 ).orElse(null);
+
+    Assertions.assertNotNull(segmentChannelCounters);
+    Assertions.assertArrayEquals(new long[]{24L}, segmentChannelCounters.getFiles());
+    Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
+    // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
+    // test order
+    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
+    Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
+    Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
+  }
+
+  @Test
+  void testQuerySysTables()
+  {
+    String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
+    Assertions.assertEquals(
+        StringUtils.format("%s,%s,%s", SIZE_BYTES, MAX_SIZE, CACHE_SIZE),
+        cluster.callApi().runSql(query)
+    );
+  }
+
+
+  private void assertQueryMetrics(int expectedEventCount, @Nullable Long expectedLoadCount)
+  {
+    LatchableEmitter emitter = historical.latchableEmitter();
+
+    long loadCount = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
+    if (expectedLoadCount != null) {
+      Assertions.assertEquals(expectedLoadCount, loadCount);
+    }
+    boolean hasLoads = loadCount > 0;
+
+    long time = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BATCH_TIME, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(time > 0);
+    } else {
+      Assertions.assertEquals(0, time);
+    }
+
+    long maxTime = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_MAX, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(maxTime > 0);
+    } else {
+      Assertions.assertEquals(0, maxTime);
+    }
+
+    long avgTime = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_AVG, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(avgTime > 0);
+    } else {
+      Assertions.assertEquals(0, avgTime);
+    }
+
+    long maxWait = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_MAX, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(maxWait >= 0);
+    } else {
+      Assertions.assertEquals(0, maxWait);
+    }
+
+    long avgWait = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_AVG, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(avgWait >= 0);
+    } else {
+      Assertions.assertEquals(0, avgWait);
+    }
+
+    long bytes = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BYTES, expectedEventCount);
+    if (hasLoads) {
+      Assertions.assertTrue(bytes > 0);
+    } else {
+      Assertions.assertEquals(0, bytes);
     }
   }
 
-  private void assertMetrics(int expectedEventCount, @Nullable Long expectedLoadCount)
+  private long getMetricLatestValue(LatchableEmitter emitter, String metricName, int expectedCount)
   {
-    LatchableEmitter emitter = historical.latchableEmitter();
-    final int lastIndex = expectedEventCount - 1;
-
-    List<ServiceMetricEvent> countEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT);
-    Assertions.assertEquals(expectedEventCount, countEvents.size());
-    if (expectedLoadCount != null) {
-      Assertions.assertEquals(expectedLoadCount, countEvents.get(lastIndex).getValue());
-    }
-    boolean hasLoads = countEvents.get(lastIndex).getValue().longValue() > 0;
-
-    List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BATCH_TIME);
-    Assertions.assertEquals(expectedEventCount, timeEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(timeEvents.get(lastIndex).getValue().longValue() > 0);
-    } else {
-      Assertions.assertEquals(0, timeEvents.get(lastIndex).getValue().longValue());
-    }
-
-    List<ServiceMetricEvent> timeMaxEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_MAX);
-    Assertions.assertEquals(expectedEventCount, timeMaxEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(timeMaxEvents.get(lastIndex).getValue().longValue() > 0);
-    } else {
-      Assertions.assertEquals(0, timeMaxEvents.get(lastIndex).getValue().longValue());
-    }
-
-    List<ServiceMetricEvent> timeAvgEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_AVG);
-    Assertions.assertEquals(expectedEventCount, timeAvgEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(timeAvgEvents.get(lastIndex).getValue().longValue() > 0);
-    } else {
-      Assertions.assertEquals(0, timeAvgEvents.get(lastIndex).getValue().longValue());
-    }
-
-    List<ServiceMetricEvent> waitMaxEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_MAX);
-    Assertions.assertEquals(expectedEventCount, waitMaxEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(waitMaxEvents.get(lastIndex).getValue().longValue() >= 0);
-    } else {
-      Assertions.assertEquals(0, waitMaxEvents.get(lastIndex).getValue().longValue());
-    }
-
-    List<ServiceMetricEvent> waitAvgEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_AVG);
-    Assertions.assertEquals(expectedEventCount, waitAvgEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(waitAvgEvents.get(lastIndex).getValue().longValue() >= 0);
-    } else {
-      Assertions.assertEquals(0, waitAvgEvents.get(lastIndex).getValue().longValue());
-    }
-
-    List<ServiceMetricEvent> loadSizeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BYTES);
-    Assertions.assertEquals(expectedEventCount, loadSizeEvents.size());
-    if (hasLoads) {
-      Assertions.assertTrue(loadSizeEvents.get(lastIndex).getValue().longValue() > 0);
-    } else {
-      Assertions.assertEquals(0, loadSizeEvents.get(lastIndex).getValue().longValue());
-    }
+    Assertions.assertEquals(expectedCount, emitter.getMetricEventCount(metricName));
+    return emitter.getLatestMetricEventValue(metricName, 0).longValue();
   }
 
   private String createTestDatasourceName()

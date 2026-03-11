@@ -21,9 +21,11 @@ package org.apache.druid.msq.querykit.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -58,7 +60,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
   private final ObjectMapper jsonMapper;
 
-  public GroupByQueryKit(ObjectMapper jsonMapper)
+  @Inject
+  public GroupByQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }
@@ -80,8 +83,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );

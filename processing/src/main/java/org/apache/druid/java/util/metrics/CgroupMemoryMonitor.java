@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -29,8 +28,6 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Memory;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
-import java.util.Map;
-
 public class CgroupMemoryMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupMemoryMonitor.class);
@@ -38,40 +35,33 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   private static final String MEMORY_LIMIT_FILE = "memory.limit_in_bytes";
 
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
   private final boolean isRunningOnCgroupsV2;
   private final CgroupV2MemoryMonitor cgroupV2MemoryMonitor;
 
 
-  public CgroupMemoryMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupMemoryMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
-    
+
     // Check if we're running on cgroups v2
     this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
     if (isRunningOnCgroupsV2) {
-      this.cgroupV2MemoryMonitor = new CgroupV2MemoryMonitor(cgroupDiscoverer, dimensions, feed);
+      this.cgroupV2MemoryMonitor = new CgroupV2MemoryMonitor(cgroupDiscoverer, feed);
       LOG.info("Detected cgroups v2, using CgroupV2MemoryMonitor behavior for accurate metrics");
     } else {
       this.cgroupV2MemoryMonitor = null;
     }
   }
 
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupMemoryMonitor(String feed)
   {
-    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
   }
 
   public CgroupMemoryMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
@@ -80,7 +70,7 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
     if (isRunningOnCgroupsV2) {
       return cgroupV2MemoryMonitor.doMonitor(emitter);
     } else {
-      return parseAndEmit(emitter, cgroupDiscoverer, dimensions, MEMORY_USAGE_FILE, MEMORY_LIMIT_FILE, this);
+      return parseAndEmit(emitter, cgroupDiscoverer, MEMORY_USAGE_FILE, MEMORY_LIMIT_FILE, this);
     }
   }
 
@@ -90,7 +80,6 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   public static boolean parseAndEmit(
       ServiceEmitter emitter,
       CgroupDiscoverer cgroupDiscoverer,
-      Map<String, String[]> dimensions,
       String memoryUsageFile,
       String memoryLimitFile,
       FeedDefiningMonitor feedDefiningMonitor
@@ -99,7 +88,6 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
     final Memory memory = new Memory(cgroupDiscoverer);
     final Memory.MemoryStat stat = memory.snapshot(memoryUsageFile, memoryLimitFile);
     final ServiceMetricEvent.Builder builder = feedDefiningMonitor.builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
     builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
     emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
     emitter.emit(builder.setMetric("cgroup/memory/limit/bytes", stat.getLimit()));

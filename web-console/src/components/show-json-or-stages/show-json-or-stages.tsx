@@ -70,7 +70,7 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
         <ButtonGroup className="right-buttons">
           <Button
             disabled={jsonState.loading}
-            text="Refesh"
+            text="Refresh"
             minimal
             onClick={() => queryManager.rerunLastQuery()}
           />

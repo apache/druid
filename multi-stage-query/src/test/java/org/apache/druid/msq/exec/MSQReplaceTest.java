@@ -56,9 +56,13 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -107,7 +111,7 @@ public class MSQReplaceTest extends MSQTestBase
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
         {SUPERUSER, SUPERUSER_MSQ_CONTEXT},
         {WITH_REPLACE_LOCK_AND_COMPACTION_STATE, QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE}
-        };
+    };
     return Arrays.asList(data);
   }
 
@@ -1012,7 +1016,11 @@ public class MSQReplaceTest extends MSQTestBase
                              Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("user")),
                              GranularityType.HOUR,
-                             Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z")
+                             Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"),
+                             new CompactionTransformSpec(
+                                 new RangeFilter("v0", ColumnType.LONG, 1466989200000L, 1466992800000L, false, true, null),
+                                 null
+                             )
                          )
                      )
                      .verifyResults();
@@ -1648,7 +1656,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
+           ));
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE ALL "
@@ -1724,7 +1735,8 @@ public class MSQReplaceTest extends MSQTestBase
                                  new LongDimensionSchema("cnt")
                              ),
                              GranularityType.DAY,
-                             Intervals.ETERNITY
+                             Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                          )
                      )
                      .verifyResults();
@@ -2194,7 +2206,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.QUARTER,
-                         Intervals.of("2000-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z")
+                         Intervals.of("2000-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z"),
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2274,7 +2287,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.DAY,
-                         Intervals.ETERNITY
+                         Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2320,7 +2334,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.HOUR,
-                         Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
+                         Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00"),
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2368,7 +2383,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.DAY,
-                         Intervals.of("2016-06-29T00:00:00.000Z/2016-07-03T00:00:00.000Z")
+                         Intervals.of("2016-06-29T00:00:00.000Z/2016-07-03T00:00:00.000Z"),
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2416,7 +2432,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.DAY,
-                         Intervals.of("2016-05-25T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                         Intervals.of("2016-05-25T00:00:00.000Z/2016-06-03T00:00:00.000Z"),
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2464,7 +2481,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.DAY,
-                         Intervals.ETERNITY
+                         Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2510,7 +2528,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.ALL,
-                         Intervals.ETERNITY
+                         Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2556,7 +2575,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.ALL,
-                         Intervals.ETERNITY
+                         Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2593,12 +2613,10 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedLastCompactionState(expectedCompactionState(
                          context,
                          Collections.emptyList(),
-                         ImmutableList.of(
-                             new StringDimensionSchema("dim1"),
-                             new LongDimensionSchema("cnt")
-                         ),
+                         List.of(new StringDimensionSchema("dim1"), new LongDimensionSchema("cnt")),
                          GranularityType.ALL,
-                         Intervals.ETERNITY
+                         Intervals.ETERNITY,
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2668,7 +2686,8 @@ public class MSQReplaceTest extends MSQTestBase
                              new LongDimensionSchema("cnt")
                          ),
                          GranularityType.DAY,
-                         Intervals.of("2016-06-01T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                         Intervals.of("2016-06-01T00:00:00.000Z/2016-06-03T00:00:00.000Z"),
+                         new CompactionTransformSpec(new NotDimFilter(new NullFilter("dim1", null)), null)
                      ))
                      .verifyResults();
   }
@@ -2766,6 +2785,25 @@ public class MSQReplaceTest extends MSQTestBase
         new Object[]{978393600000L, "def", 1L},
         new Object[]{978480000000L, "abc", 1L}
     );
+  }
+
+  private CompactionState expectedCompactionState(
+      Map<String, Object> context,
+      List<String> partitionDimensions,
+      List<DimensionSchema> dimensions,
+      GranularityType segmentGranularity,
+      Interval interval,
+      CompactionTransformSpec transformSpec
+  )
+  {
+    CompactionState state = expectedCompactionState(
+        context,
+        partitionDimensions,
+        dimensions,
+        segmentGranularity,
+        interval
+    );
+    return state == null ? null : state.toBuilder().transformSpec(transformSpec).build();
   }
 
   private CompactionState expectedCompactionState(

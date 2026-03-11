@@ -23,6 +23,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -58,6 +59,7 @@ public class CompactionStatusTracker
     datasourceStatuses.remove(datasource);
   }
 
+  @Nullable
   public CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidates)
   {
     return datasourceStatuses
@@ -79,7 +81,11 @@ public class CompactionStatusTracker
    * Checks if compaction can be started for the given {@link CompactionCandidate}.
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
+   *
+   * @deprecated This method is used only by Coordinator-based CompactSegments
+   * duty and will be removed in the future.
    */
+  @Deprecated
   public CompactionStatus computeCompactionStatus(
       CompactionCandidate candidate,
       CompactionCandidateSearchPolicy searchPolicy
@@ -96,17 +102,19 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.complete(
+      return CompactionStatus.skipped(
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
 
     // Skip intervals that have been filtered out by the policy
-    if (!searchPolicy.isEligibleForCompaction(candidate, CompactionStatus.pending(""), lastTaskStatus)) {
-      return CompactionStatus.skipped("Rejected by search policy");
+    final CompactionCandidateSearchPolicy.Eligibility eligibility
+        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
+    if (eligibility.isEligible()) {
+      return CompactionStatus.pending("Not compacted yet");
+    } else {
+      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
     }
-
-    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**

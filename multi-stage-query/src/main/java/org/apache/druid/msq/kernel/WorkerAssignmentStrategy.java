@@ -24,11 +24,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -49,16 +50,18 @@ public enum WorkerAssignmentStrategy
         final InputSpec inputSpec,
         final Int2IntMap stageWorkerCountMap,
         final InputSpecSlicer slicer,
+        @Nullable final SegmentPruner segmentPruner,
+        final int maxInputFilesPerSlice,
         final long maxInputBytesPerSlice
     )
     {
-      return slicer.sliceStatic(inputSpec, stageDef.getMaxWorkerCount());
+      return slicer.sliceStatic(inputSpec, segmentPruner, stageDef.getMaxWorkerCount());
     }
   },
 
   /**
    * Use the lowest possible number of workers, while keeping each worker's workload under
-   * {@link Limits#MAX_INPUT_FILES_PER_WORKER} files and {@code maxInputBytesPerWorker} bytes.
+   * {@code maxInputFilesPerSlice} files and {@code maxInputBytesPerWorker} bytes.
    *
    * Implemented using {@link InputSpecSlicer#sliceDynamic} whenever possible.
    */
@@ -69,14 +72,17 @@ public enum WorkerAssignmentStrategy
         final InputSpec inputSpec,
         final Int2IntMap stageWorkerCountMap,
         final InputSpecSlicer slicer,
+        @Nullable final SegmentPruner segmentPruner,
+        final int maxInputFilesPerSlice,
         final long maxInputBytesPerSlice
     )
     {
       if (slicer.canSliceDynamic(inputSpec)) {
         return slicer.sliceDynamic(
             inputSpec,
+            segmentPruner,
             stageDef.getMaxWorkerCount(),
-            Limits.MAX_INPUT_FILES_PER_WORKER,
+            maxInputFilesPerSlice,
             maxInputBytesPerSlice
         );
       } else {
@@ -91,7 +97,7 @@ public enum WorkerAssignmentStrategy
         final IntSet inputStages = stageDef.getInputStageNumbers();
         final OptionalInt maxInputStageWorkerCount = inputStages.intStream().map(stageWorkerCountMap).max();
         final int workerCount = Math.min(stageDef.getMaxWorkerCount(), maxInputStageWorkerCount.orElse(1));
-        return slicer.sliceStatic(inputSpec, workerCount);
+        return slicer.sliceStatic(inputSpec, segmentPruner, workerCount);
       }
     }
   };
@@ -117,6 +123,7 @@ public enum WorkerAssignmentStrategy
    * @param inputSpec inputSpec containing information on where the input is read from
    * @param stageWorkerCountMap map of past stage number vs number of worker inputs
    * @param slicer creates slices of input spec based on other parameters
+   * @param maxInputFilesPerSlice hard maximum number of files per input slice
    * @param maxInputBytesPerSlice maximum suggested bytes per input slice
    * @return list containing input slices
    */
@@ -125,6 +132,8 @@ public enum WorkerAssignmentStrategy
       InputSpec inputSpec,
       Int2IntMap stageWorkerCountMap,
       InputSpecSlicer slicer,
+      @Nullable SegmentPruner segmentPruner,
+      int maxInputFilesPerSlice,
       long maxInputBytesPerSlice
   );
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -56,6 +55,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -165,23 +165,37 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ImmutableMap.of("x", "3"),
           segmentsAndCommitMetadata.getCommitMetadata()
       );
-      Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
-          sorted(
-              Lists.transform(
-                  segmentsAndCommitMetadata.getSegments(),
-                  new Function<DataSegment, SegmentIdWithShardSpec>()
-                  {
-                    @Override
-                    public SegmentIdWithShardSpec apply(DataSegment input)
-                    {
-                      return SegmentIdWithShardSpec.fromDataSegment(input);
-                    }
-                  }
-              )
-          )
+      final List<String> segments = Lists.transform(
+          sorted(segmentsAndCommitMetadata.getSegments()),
+          DataSegment::toString
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
+      Assert.assertEquals(
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(2)
+                         .build()
+                         .toString(),
+              DataSegment.builder(IDENTIFIERS.get(1).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(1).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(1)
+                         .build()
+                         .toString()
+          ), segments);
+      Assert.assertEquals(Lists.transform(sorted(tester.getPushedSegments()), DataSegment::toString), segments);
+
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
+      Assert.assertEquals(2, segmentGenerationMetrics.numPersists());
+      Assert.assertEquals(3, segmentGenerationMetrics.rowOutput());
+      Assert.assertTrue(segmentGenerationMetrics.persistTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.persistCpuTime() > 0);
+
+      Assert.assertTrue(segmentGenerationMetrics.mergeTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.mergeCpuTime() > 0);
 
       // clear
       appenderator.clear();
@@ -268,6 +282,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(
               CoreMatchers.startsWith("Push failure test"))))
       );
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
+      Assert.assertEquals(1, segmentGenerationMetrics.failedHandoffs());
     }
   }
 

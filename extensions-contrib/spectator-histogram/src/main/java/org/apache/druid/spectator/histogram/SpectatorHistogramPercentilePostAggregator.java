@@ -145,7 +145,7 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, field, percentile);
+    return (name.hashCode() * 31 + field.hashCode()) * 31 + Double.hashCode(percentile);
   }
 
   @Override

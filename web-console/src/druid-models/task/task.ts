@@ -81,6 +81,7 @@ export interface WorkerState {
   workerId: string;
   state: string;
   durationMs: number;
+  pendingMs: number;
 }
 
 export interface SegmentLoadWaiterStatus {

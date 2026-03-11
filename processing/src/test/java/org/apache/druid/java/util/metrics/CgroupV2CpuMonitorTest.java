@@ -61,7 +61,7 @@ public class CgroupV2CpuMonitorTest
   public void testMonitor() throws IOException, InterruptedException
   {
     final CgroupV2CpuMonitor monitor = new CgroupV2CpuMonitor(discoverer);
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(2, emitter.getNumEmittedEvents());
 

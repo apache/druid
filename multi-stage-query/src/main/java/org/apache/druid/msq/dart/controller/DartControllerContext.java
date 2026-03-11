@@ -32,7 +32,7 @@ import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -175,7 +175,7 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     metricBuilder.setDartDimensions(context);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));

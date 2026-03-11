@@ -71,8 +71,6 @@ export type StageInput =
       type: 'table';
       dataSource: string;
       intervals: string[];
-      filter?: any;
-      filterFields?: string[];
     }
   | {
       type: 'external';
@@ -178,9 +176,22 @@ export interface ChannelCounter {
   frames?: number[];
   files?: number[];
   totalFiles?: number[];
+  loadBytes?: number[];
+  loadTime?: number[];
+  loadWait?: number[];
+  loadFiles?: number[];
 }
 
-export type ChannelFields = 'rows' | 'bytes' | 'frames' | 'files' | 'totalFiles';
+export type ChannelFields =
+  | 'rows'
+  | 'bytes'
+  | 'frames'
+  | 'files'
+  | 'totalFiles'
+  | 'loadBytes'
+  | 'loadTime'
+  | 'loadWait'
+  | 'loadFiles';
 
 export interface SortProgressCounter {
   type: 'sortProgress';
@@ -310,6 +321,10 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     frames: 0,
     files: 0,
     totalFiles: 0,
+    loadBytes: 0,
+    loadTime: 0,
+    loadWait: 0,
+    loadFiles: 0,
   };
 }
 
@@ -608,6 +623,10 @@ export class Stages {
               frames: sum(c.frames || []),
               files: sum(c.files || []),
               totalFiles: sum(c.totalFiles || []),
+              loadBytes: sum(c.loadBytes || []),
+              loadTime: sum(c.loadTime || []),
+              loadWait: sum(c.loadWait || []),
+              loadFiles: sum(c.loadFiles || []),
             }
           : zeroChannelFields();
       }
@@ -619,17 +638,17 @@ export class Stages {
 
   getInactiveWorkerCount(stage: StageDefinition): number | undefined {
     const { counters } = this;
-    const { stageNumber, definition } = stage;
+    const { stageNumber } = stage;
     const forStageCounters = counters?.[stageNumber];
     if (!forStageCounters) return;
 
-    const inputChannelCounters = definition.input.map((_, i) => `input${i}` as ChannelCounterName);
+    const channelCounters = this.getChannelCounterNamesForStage(stage);
 
     // Calculate and return the number of workers that have zero count across all inputChannelCounters
     return sum(
       Object.values(forStageCounters).map(stageCounters =>
         Number(
-          inputChannelCounters.every(channel => {
+          channelCounters.every(channel => {
             const c = stageCounters[channel];
             if (!c) return true;
             const totalRows = sum(c.rows || []);
@@ -700,6 +719,10 @@ export class Stages {
           c.frames += channelCounter.frames?.[i] || 0;
           c.files += channelCounter.files?.[i] || 0;
           c.totalFiles += channelCounter.totalFiles?.[i] || 0;
+          c.loadBytes += channelCounter.loadBytes?.[i] || 0;
+          c.loadTime += channelCounter.loadTime?.[i] || 0;
+          c.loadWait += channelCounter.loadWait?.[i] || 0;
+          c.loadFiles += channelCounter.loadFiles?.[i] || 0;
         }
       }
     }

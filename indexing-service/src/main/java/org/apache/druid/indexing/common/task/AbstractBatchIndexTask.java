@@ -102,7 +102,6 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -230,7 +229,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     return new FilteringCloseableInputRowIterator(
         inputSourceReader.read(ingestionMeters),
-        rowFilter,
+        InputRowFilter.fromPredicate(rowFilter),
         ingestionMeters,
         parseExceptionHandler
     );
@@ -353,42 +352,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         // This branch is the only one that will not initialize taskLockHelper.
         return true;
       }
-    }
-  }
-
-  /**
-   * Attempts to acquire a lock that covers certain segments.
-   * <p>
-   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
-   * <p>
-   * This method will initialize {@link #taskLockHelper} as a side effect.
-   *
-   * @return whether the lock was acquired
-   */
-  boolean determineLockGranularityAndTryLockWithSegments(
-      TaskActionClient client,
-      List<DataSegment> segments,
-      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
-  ) throws IOException
-  {
-    final boolean forceTimeChunkLock = getContextValue(
-        Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
-        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
-    );
-
-    if (forceTimeChunkLock) {
-      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = createLockHelper(LockGranularity.TIME_CHUNK);
-      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
-      return tryTimeChunkLock(
-          client,
-          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
-      );
-    } else {
-      final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = createLockHelper(result.lockGranularity);
-      segmentCheckFunction.accept(result.lockGranularity, segments);
-      return tryLockWithDetermineResult(client, result);
     }
   }
 
@@ -639,6 +602,25 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
+  }
+
+  /**
+   * Returns a function that adds the given indexing state fingerprint to all segments.
+   * If the fingerprint is null, returns an identity function that leaves segments unchanged.
+   */
+  public static Function<Set<DataSegment>, Set<DataSegment>> addIndexingStateFingerprintToSegments(
+      String indexingStateFingerprint
+  )
+  {
+    if (indexingStateFingerprint != null) {
+      return segments -> segments.stream()
+                                 .map(
+                                     segment -> segment.withIndexingStateFingerprint(indexingStateFingerprint)
+                                 )
+                                 .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
   }
 
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(

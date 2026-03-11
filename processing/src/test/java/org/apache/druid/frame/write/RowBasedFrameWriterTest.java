@@ -74,7 +74,6 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
         RowAdapters.standardRow(),
         () -> largeRow,
         signature,
-        false,
         false
     );
 

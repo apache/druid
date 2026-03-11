@@ -282,7 +282,7 @@ export class SupervisorsView extends React.PureComponent<
       processQuery: async (
         { capabilities, visibleColumns, filtered, sorted, page, pageSize },
         signal,
-        setIntermediateQuery,
+        { setIntermediateQuery },
       ) => {
         let supervisors: SupervisorQueryResultRow[];
         let count = -1;
@@ -317,6 +317,7 @@ export class SupervisorsView extends React.PureComponent<
             await queryDruidSql<SupervisorQueryResultRow>(
               {
                 query: sqlQuery,
+                context: { engine: 'native' },
               },
               signal,
             )
@@ -336,6 +337,7 @@ export class SupervisorsView extends React.PureComponent<
               await queryDruidSql<{ cnt: number }>(
                 {
                   query: sqlQuery,
+                  context: { engine: 'native' },
                 },
                 signal,
               )

@@ -22,11 +22,13 @@ package org.apache.druid.msq.dart.controller.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.http.client.utils.URIBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
@@ -47,10 +49,35 @@ public class DartSqlClientImpl implements DartSqlClient
   }
 
   @Override
-  public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly)
+  public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly, final boolean includeComplete)
   {
     try {
       URIBuilder builder = new URIBuilder("/queries");
+      if (selfOnly) {
+        builder.addParameter("selfOnly", null);
+      }
+      if (includeComplete) {
+        builder.addParameter("includeComplete", null);
+      }
+
+      return FutureUtils.transform(
+          client.asyncRequest(
+              new RequestBuilder(HttpMethod.GET, builder.toString()),
+              new BytesFullResponseHandler()
+          ),
+          holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)
+      );
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public ListenableFuture<GetQueryReportResponse> getQueryReport(String sqlQueryId, boolean selfOnly)
+  {
+    try {
+      URIBuilder builder = new URIBuilder(StringUtils.format("/queries/%s/reports", StringUtils.urlEncode(sqlQueryId)));
       if (selfOnly) {
         builder.addParameter("selfOnly", null);
       }
@@ -60,7 +87,7 @@ public class DartSqlClientImpl implements DartSqlClient
               new RequestBuilder(HttpMethod.GET, builder.toString()),
               new BytesFullResponseHandler()
           ),
-          holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)
+          holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueryReportResponse.class)
       );
     }
     catch (URISyntaxException e) {

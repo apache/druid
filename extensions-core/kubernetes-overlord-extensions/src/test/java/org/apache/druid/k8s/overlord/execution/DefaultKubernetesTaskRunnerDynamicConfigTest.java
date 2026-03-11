@@ -31,9 +31,18 @@ public class DefaultKubernetesTaskRunnerDynamicConfigTest
   public void getPodTemplateSelectStrategyTest()
   {
     PodTemplateSelectStrategy strategy = new TaskTypePodTemplateSelectStrategy();
-    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy);
+    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy, 1);
 
     Assert.assertEquals(strategy, config.getPodTemplateSelectStrategy());
+  }
+
+  @Test
+  public void getCapacityTest()
+  {
+    Integer capacity = 4;
+    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(null, 4);
+
+    Assert.assertEquals(capacity, config.getCapacity());
   }
 
   @Test
@@ -41,7 +50,7 @@ public class DefaultKubernetesTaskRunnerDynamicConfigTest
   {
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     PodTemplateSelectStrategy strategy = new TaskTypePodTemplateSelectStrategy();
-    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy);
+    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy, 1);
 
     DefaultKubernetesTaskRunnerDynamicConfig config2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(config),

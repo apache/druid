@@ -41,6 +41,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -106,7 +107,8 @@ public class TaskLockBoxConcurrencyTest
             derby.metadataTablesConfigSupplier().get(),
             derbyConnector,
             segmentSchemaManager,
-            CentralizedDatasourceSchemaConfig.create()
+            CentralizedDatasourceSchemaConfig.create(),
+            new HeapMemoryIndexingStateStorage()
         )
     );
     lockbox.syncFromStorage();

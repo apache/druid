@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -601,7 +602,7 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+      return HadoopDruidIndexerConfig.INDEX_MERGER
           .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null);
     }
 
@@ -613,7 +614,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+      return HadoopDruidIndexerConfig.INDEX_MERGER
           .mergeQueryableIndex(
               indexes,
               rollup,
@@ -813,17 +814,17 @@ public class IndexGeneratorJob implements Jobby
           shardSpecForPublishing = shardSpecForPartitioning;
         }
 
-        final DataSegment segmentTemplate = new DataSegment(
-            config.getDataSource(),
-            interval,
-            config.getSchema().getTuningConfig().getVersion(),
-            null,
-            ImmutableList.copyOf(allDimensionNames),
-            metricNames,
-            shardSpecForPublishing,
-            -1,
-            0
-        );
+        final DataSegment segmentTemplate = DataSegment.builder(SegmentId.of(
+                                                         config.getDataSource(),
+                                                         interval,
+                                                         config.getSchema().getTuningConfig().getVersion(),
+                                                         null
+                                                     ))
+                                                     .dimensions(ImmutableList.copyOf(allDimensionNames))
+                                                     .metrics(metricNames)
+                                                     .shardSpec(shardSpecForPublishing)
+                                                     .binaryVersion(-1)
+                                                     .build();
 
         final DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath = JobHelper.serializeOutIndex(
             segmentTemplate,

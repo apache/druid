@@ -52,7 +52,8 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV10Factory;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
@@ -88,12 +89,14 @@ public class HadoopDruidIndexerConfig
   private static final Injector INJECTOR;
 
   static final String CONFIG_PROPERTY = "druid.indexer.config";
+  private static final String STORE_EMPTY_COLUMNS_KEY = "druid.indexer.task.storeEmptyColumns";
+  private static final String BUILD_V10_KEY = "druid.indexer.task.buildV10";
   static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
   static final Splitter TAB_SPLITTER = Splitter.on("\t");
   static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  static final IndexMerger INDEX_MERGER_V9; // storeEmptyColumns is off for this indexMerger
+  static final IndexMerger INDEX_MERGER;
   static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
@@ -129,10 +132,17 @@ public class HadoopDruidIndexerConfig
     );
     JSON_MAPPER = INJECTOR.getInstance(ObjectMapper.class);
     INDEX_IO = INJECTOR.getInstance(IndexIO.class);
-    INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
     HADOOP_KERBEROS_CONFIG = INJECTOR.getInstance(HadoopKerberosConfig.class);
     DATA_SEGMENT_PUSHER = INJECTOR.getInstance(DataSegmentPusher.class);
     PROPERTIES = INJECTOR.getInstance(Properties.class);
+
+    boolean buildV10 = Boolean.parseBoolean(PROPERTIES.getProperty(BUILD_V10_KEY, "false"));
+    if (buildV10) {
+      INDEX_MERGER = INJECTOR.getInstance(IndexMergerV10Factory.class).create();
+    } else {
+      boolean storeEmptyColumns = Boolean.parseBoolean(PROPERTIES.getProperty(STORE_EMPTY_COLUMNS_KEY, "true"));
+      INDEX_MERGER = INJECTOR.getInstance(IndexMergerV9Factory.class).create(storeEmptyColumns);
+    }
   }
 
   public enum IndexJobCounters
@@ -262,6 +272,7 @@ public class HadoopDruidIndexerConfig
     this.allowedHadoopPrefix.add("druid.javascript");
     this.allowedHadoopPrefix.addAll(DATA_SEGMENT_PUSHER.getAllowedPropertyPrefixesForHadoop());
     this.allowedHadoopPrefix.addAll(spec.getTuningConfig().getUserAllowedHadoopPrefix());
+    this.allowedHadoopPrefix.add("druid.indexer");
   }
 
   @JsonProperty(value = "spec")

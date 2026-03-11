@@ -71,6 +71,7 @@ public class TestServerInventoryView implements ServerInventoryView
           server.getHostAndPort(),
           server.getHostAndTlsPort(),
           server.getMaxSize(),
+          server.getStorageSize(),
           server.getType(),
           server.getTier(),
           server.getPriority()

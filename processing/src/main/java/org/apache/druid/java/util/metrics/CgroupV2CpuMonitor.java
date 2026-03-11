@@ -39,20 +39,18 @@ public class CgroupV2CpuMonitor extends FeedDefiningMonitor
 {
   private static final String SNAPSHOT = "snapshot";
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
   private final KeyedDiff diff = new KeyedDiff();
 
-  public CgroupV2CpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupV2CpuMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
   }
 
   @VisibleForTesting
   CgroupV2CpuMonitor(CgroupDiscoverer cgroupDiscoverer)
   {
-    this(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
+    this(cgroupDiscoverer, DEFAULT_METRICS_FEED);
   }
 
   CgroupV2CpuMonitor()
@@ -64,7 +62,6 @@ public class CgroupV2CpuMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
     builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
     final Cpu.CpuMetrics cpuSnapshot = cgroupDiscoverer.getCpuMetrics();
     emitter.emit(builder.setMetric("cgroup/cpu/shares", cpuSnapshot.getShares()));

@@ -44,7 +44,7 @@ public class ServersResourceTest
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0);
+    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, null, ServerType.HISTORICAL, "tier", 0);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
                                      .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
@@ -116,9 +116,9 @@ public class ServersResourceTest
   @Test
   public void testDruidServerSerde() throws Exception
   {
-    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1);
+    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, null, ServerType.HISTORICAL, "dummyTier", 1);
     String serverJson = objectMapper.writeValueAsString(server);
-    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"storageSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
     Assert.assertEquals(expected, serverJson);
     DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
     Assert.assertEquals(server, deserializedServer);
@@ -132,12 +132,13 @@ public class ServersResourceTest
         "host",
         null,
         1234,
+        null,
         ServerType.HISTORICAL,
         "tier",
         1
     );
     String metadataJson = objectMapper.writeValueAsString(metadata);
-    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"storageSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
     Assert.assertEquals(expected, metadataJson);
     DruidServerMetadata deserializedMetadata = objectMapper.readValue(metadataJson, DruidServerMetadata.class);
     Assert.assertEquals(metadata, deserializedMetadata);
@@ -147,6 +148,7 @@ public class ServersResourceTest
         "host:123",
         null,
         0,
+        null,
         ServerType.HISTORICAL,
         "t1",
         0
@@ -162,6 +164,7 @@ public class ServersResourceTest
         "host:123",
         "host:214",
         0,
+        null,
         ServerType.HISTORICAL,
         "t1",
         0

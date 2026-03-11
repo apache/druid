@@ -63,6 +63,8 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -75,6 +77,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -90,6 +93,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
@@ -1782,11 +1786,6 @@ public class MSQSelectTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testScanWithMultiValueSelectQuery(String contextName, Map<String, Object> context)
   {
-    RowSignature expectedScanSignature = RowSignature.builder()
-                                                     .add("dim3", ColumnType.STRING)
-                                                     .add("v0", ColumnType.STRING_ARRAY)
-                                                     .build();
-
     RowSignature expectedResultSignature = RowSignature.builder()
                                                        .add("dim3", ColumnType.STRING)
                                                        .add("dim3_array", ColumnType.STRING_ARRAY)
@@ -1832,6 +1831,78 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{null, null},
             new Object[]{null, null}
         )).verifyResults();
+  }
+
+  @Test
+  public void testMultiValueStringFromJsonObjectArray() throws IOException
+  {
+    // In this test, "language" includes a JSON array like [{},{}] (containing objects rather than strings).
+    final File toRead = getResourceAsTemporaryFile("/nonstring-mv-string-array.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("language", ColumnType.STRING_ARRAY)
+                                                  .build();
+
+    final ScanQuery expectedQuery =
+        newScanQueryBuilder()
+            .dataSource(
+                new ExternalDataSource(
+                    new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
+                    new JsonInputFormat(null, null, null, null, null),
+                    RowSignature.builder()
+                                .add("timestamp", ColumnType.STRING)
+                                .add("language", ColumnType.STRING)
+                                .build()
+                )
+            )
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .virtualColumns(
+                expressionVirtualColumn("v0", "timestamp_parse(\"timestamp\",null,'UTC')", ColumnType.LONG),
+                expressionVirtualColumn("v1", "mv_to_array(\"language\")", ColumnType.STRING_ARRAY)
+            )
+            .columns("v0", "v1")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING_ARRAY)
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .context(DEFAULT_MSQ_CONTEXT)
+            .build();
+
+    testSelectQuery()
+        .setSql("WITH\n"
+                + "kttm_data AS (\n"
+                + "SELECT * FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\":\"json\"}',\n"
+                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"language\",\"type\":\"string\"}]'\n"
+                + "  )\n"
+                + "))\n"
+                + "\n"
+                + "SELECT\n"
+                + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+                + "  MV_TO_ARRAY(\"language\") AS \"language\"\n"
+                + "FROM kttm_data")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1566691200031L, List.of("{}", "{}")},
+            new Object[]{1566691200059L, List.of("en", "es", "es-419", "es-MX")},
+            new Object[]{1566691200178L, List.of("en", "es", "es-419", "es-US")}
+        ))
+        .setExpectedMSQSpec(
+            LegacyMSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "__time"),
+                        new ColumnMapping("v1", "language")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -2885,5 +2956,59 @@ public class MSQSelectTest extends MSQTestBase
   public boolean isPageSizeLimited(String contextName)
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testTimeBoundaryGroupBy(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("EXPR$0", ColumnType.LONG)
+                                                  .add("EXPR$1", ColumnType.LONG)
+                                                  .build();
+
+    testSelectQuery()
+        .setSql("SELECT MIN(__time), MAX(__time) FROM foo")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                                  .setGranularity(Granularities.ALL)
+                                  .setAggregatorSpecs(
+                                      aggregators(
+                                          new LongMinAggregatorFactory("a0", ColumnHolder.TIME_COLUMN_NAME),
+                                          new LongMaxAggregatorFactory("a1", ColumnHolder.TIME_COLUMN_NAME)
+                                      )
+                                  )
+                                  .setContext(context)
+                                  .build()
+                   )
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("a0", "EXPR$0"),
+                               new ColumnMapping("a1", "EXPR$1")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{
+                    DateTimes.of("2000-01-01").getMillis(),
+                    DateTimes.of("2001-01-03").getMillis()
+                }
+            )
+        )
+        .verifyResults();
   }
 }

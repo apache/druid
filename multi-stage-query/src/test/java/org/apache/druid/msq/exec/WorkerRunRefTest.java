@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -82,6 +83,11 @@ public class WorkerRunRefTest
           workerFinished.countDown();
         }
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -123,6 +129,11 @@ public class WorkerRunRefTest
       {
         // Exit immediately
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -154,6 +165,11 @@ public class WorkerRunRefTest
       public void run()
       {
         throw expectedException;
+      }
+
+      @Override
+      public void stop()
+      {
       }
     };
 
@@ -187,6 +203,11 @@ public class WorkerRunRefTest
       {
         workerStarted.countDown();
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -213,6 +234,11 @@ public class WorkerRunRefTest
       {
         // Do nothing
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -237,6 +263,76 @@ public class WorkerRunRefTest
         DruidException.class,
         runRef::awaitStop
     );
+  }
+
+  @Test
+  public void testCancelCallsStop() throws Exception
+  {
+    final CountDownLatch workerStarted = new CountDownLatch(1);
+    final CountDownLatch workerFinished = new CountDownLatch(1);
+    final AtomicBoolean stopCalled = new AtomicBoolean(false);
+    final Worker worker = new TestWorker("test-worker")
+    {
+      @Override
+      public void run()
+      {
+        try {
+          workerStarted.countDown();
+          Thread.sleep(300_000);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        finally {
+          workerFinished.countDown();
+        }
+      }
+
+      @Override
+      public void stop()
+      {
+        stopCalled.set(true);
+      }
+    };
+
+    final WorkerRunRef runRef = new WorkerRunRef();
+    runRef.run(worker, exec);
+
+    workerStarted.await();
+    runRef.cancel();
+    workerFinished.await();
+
+    Assert.assertTrue(stopCalled.get());
+  }
+
+  @Test
+  public void testCancelBeforeRunDoesNotCallStop()
+  {
+    final AtomicBoolean stopCalled = new AtomicBoolean(false);
+    final Worker worker = new TestWorker("test-worker")
+    {
+      @Override
+      public void run()
+      {
+        // Should not run
+      }
+
+      @Override
+      public void stop()
+      {
+        stopCalled.set(true);
+      }
+    };
+
+    final WorkerRunRef runRef = new WorkerRunRef();
+    runRef.cancel();
+
+    Assert.assertThrows(
+        ExecutionException.class,
+        () -> runRef.run(worker, exec).get()
+    );
+
+    Assert.assertFalse(stopCalled.get());
   }
 
   /**

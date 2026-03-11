@@ -36,28 +36,26 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.MultiQueryKit;
-import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
-import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsStageProcessor;
 import org.apache.druid.msq.querykit.results.QueryResultStageProcessor;
-import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.operator.WindowOperatorQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
@@ -89,25 +87,6 @@ public class QueryKitBasedMSQPlanner
     this.query = query;
     this.resultsContext = resultsContext;
     this.queryKitSpec = queryKitSpec;
-  }
-
-  @SuppressWarnings("rawtypes")
-  public static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ObjectMapper jsonMapper)
-  {
-    final Map<Class<? extends Query>, QueryKit> kitMap =
-        ImmutableMap.<Class<? extends Query>, QueryKit>builder()
-                    .put(ScanQuery.class, new ScanQueryKit(jsonMapper))
-                    .put(GroupByQuery.class, new GroupByQueryKit(jsonMapper))
-                    .put(
-                        WindowOperatorQuery.class,
-                        new WindowOperatorQueryKit(
-                            jsonMapper,
-                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
-                        )
-                    )
-                    .build();
-
-    return new MultiQueryKit(kitMap);
   }
 
   @SuppressWarnings("unchecked")
@@ -151,7 +130,7 @@ public class QueryKitBasedMSQPlanner
     try {
       queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
           queryKitSpec,
-          queryToPlan,
+          propagateWindowOperatorTransformationContext(queryToPlan),
           makeResultShuffleSpecFacory(),
           0
       );
@@ -254,6 +233,54 @@ public class QueryKitBasedMSQPlanner
       return destination.getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
     } else {
       return destination.getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
+    }
+  }
+
+  /**
+   * Propagates {@link MultiStageQueryContext#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} from the outer query to
+   * any inner {@link WindowOperatorQuery}, so {@link WindowOperatorQueryKit} can see it. The original change
+   * in https://github.com/apache/druid/pull/17443 only added it to the outer query at the Broker, and since
+   * QueryKit became injectable via Guice, {@link WindowOperatorQueryKit} can no longer "see" parameters that
+   * come from the context of the outermost query. For compatibility reasons, this propagation must be done here
+   * rather than during SQL planning.
+   */
+  private static Query<?> propagateWindowOperatorTransformationContext(final Query<?> query)
+  {
+    final Boolean val = query.context().getBoolean(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION);
+    if (val != null) {
+      // Update inner queries.
+      return query.withDataSource(setWindowOperatorTransformationContext(query.getDataSource(), val));
+    } else {
+      return query;
+    }
+  }
+
+  /**
+   * Sets {@link MultiStageQueryContext#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} on all {@link QueryDataSource}
+   * found within the provided {@link DataSource}.
+   */
+  private static DataSource setWindowOperatorTransformationContext(final DataSource dataSource, final boolean val)
+  {
+    final List<DataSource> children = dataSource.getChildren();
+    final List<DataSource> newChildren = new ArrayList<>();
+    for (final DataSource child : children) {
+      newChildren.add(setWindowOperatorTransformationContext(child, val));
+    }
+    if (dataSource instanceof QueryDataSource
+        && ((QueryDataSource) dataSource).getQuery() instanceof WindowOperatorQuery) {
+      return new QueryDataSource(
+          ((QueryDataSource) dataSource)
+              .getQuery()
+              .withOverriddenContext(
+                  Map.of(
+                      MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+                      val
+                  )
+              )
+              .withDataSource(Iterables.getOnlyElement(newChildren))
+      );
+    } else {
+      return dataSource.withChildren(newChildren);
     }
   }
 }

@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -87,7 +86,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
    * @param frameWriterFactory writer for frames
    * @param sortKey            sort key for input and output frames
    * @param partitions         partitions for output frames. If non-null, output frames are written with
-   *                           {@link FrameWithPartition#partition()} set according to this parameter
+   *                           partition numbers set according to this parameter
    * @param rowLimit           maximum number of rows to write to the output channel
    */
   public FrameChannelMerger(
@@ -189,9 +188,9 @@ public class FrameChannelMerger implements FrameProcessor<Long>
     }
 
     // Generate one output frame and stop for now.
-    outputChannel.write(nextFrame());
+    writeNextFrame();
 
-    // Check finished() after nextFrame().
+    // Check finished() after writeNextFrame().
     if (finished()) {
       return ReturnOrAwait.returnObject(rowsOutput);
     } else {
@@ -199,7 +198,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
     }
   }
 
-  private FrameWithPartition nextFrame()
+  private void writeNextFrame() throws IOException
   {
     if (finished()) {
       throw new NoSuchElementException();
@@ -227,7 +226,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
               // Fall through: keep reading into the new partition.
               mergedFramePartition = currentPartition;
             } else {
-              // Return current frame.
+              // Write current frame.
               break;
             }
           }
@@ -240,7 +239,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
             throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
           }
 
-          // Frame is full. Return the current frame.
+          // Frame is full. Write the current frame.
           break;
         }
 
@@ -262,11 +261,11 @@ public class FrameChannelMerger implements FrameProcessor<Long>
 
             if (channel.canRead()) {
               // Read next frame from this channel.
-              final Frame frame = channel.read();
+              final Frame frame = channel.readFrame();
               final FramePlus framePlus = makeFramePlus(frame, frameReader);
               if (framePlus.isDone()) {
                 // Nothing to read in this frame. Not finished; we can't continue.
-                // Finish up the current frame and return it.
+                // Finish up the current frame and write it.
                 break;
               } else {
                 currentFrames[currentChannel] = framePlus;
@@ -275,7 +274,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
               // Done reading this channel. Fall through and continue with other channels.
               remainingChannels.remove(currentChannel);
             } else {
-              // Nothing available, not finished; we can't continue. Finish up the current frame and return it.
+              // Nothing available, not finished; we can't continue. Finish up the current frame and write it.
               break;
             }
           }
@@ -283,7 +282,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       }
 
       final Frame nextFrame = Frame.wrap(mergedFrameWriter.toByteArray());
-      return new FrameWithPartition(nextFrame, mergedFramePartition);
+      outputChannel.write(nextFrame, mergedFramePartition);
     }
   }
 
@@ -314,7 +313,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
         final ReadableFrameChannel channel = inputChannels.get(i);
 
         if (channel.canRead()) {
-          final Frame frame = channel.read();
+          final Frame frame = channel.readFrame();
           final FramePlus framePlus = makeFramePlus(frame, frameReader);
           if (framePlus.isDone()) {
             await.add(i);

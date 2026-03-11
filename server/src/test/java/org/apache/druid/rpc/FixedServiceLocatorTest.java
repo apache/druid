@@ -34,6 +34,7 @@ public class FixedServiceLocatorTest
       "hostName:9092",
       null,
       2,
+      null,
       ServerType.REALTIME,
       "tier1",
       2
@@ -44,6 +45,7 @@ public class FixedServiceLocatorTest
       "hostName:8083",
       null,
       2,
+      null,
       ServerType.REALTIME,
       "tier1",
       2

@@ -63,6 +63,7 @@ FROM "sys"."servers"
 WHERE "server_type" = 'historical'
 GROUP BY 1
 ORDER BY 1`,
+            context: { engine: 'native' },
           },
           signal,
         );

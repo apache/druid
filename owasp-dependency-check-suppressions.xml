@@ -144,6 +144,8 @@
     <cve>CVE-2024-22201</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to a hadoop-client which was not yet released  -->
     <cve>CVE-2025-52999</cve> <!--  This is vulneraability in all versions of hadoop-client-runtime and has not been fixed by hadoop yet -->
     <cve>CVE-2024-9823</cve> <!-- This is in hadoop's shadded jetty. no version of hadoop has updated to fixed version. It is a jetty server vuln, which should not be exploitable in hadoop client code -->
+    <cve>CVE-2025-27821</cve> <!-- native hdfs vulnerability -->
+    <cve>CVE-2025-5115</cve> <!-- netty issue in shaded hadoop -->
   </suppress>
 
   <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->

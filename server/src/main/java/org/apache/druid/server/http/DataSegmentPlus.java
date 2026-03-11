@@ -58,6 +58,9 @@ public class DataSegmentPlus
   @Nullable
   private final String upgradedFromSegmentId;
 
+  @Nullable
+  private final String indexingStateFingerprint;
+
   @JsonCreator
   public DataSegmentPlus(
       @JsonProperty("dataSegment") final DataSegment dataSegment,
@@ -66,7 +69,8 @@ public class DataSegmentPlus
       @JsonProperty("used") @Nullable final Boolean used,
       @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
       @JsonProperty("numRows") @Nullable final Long numRows,
-      @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId
+      @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId,
+      @JsonProperty("indexingStateFingerprint") @Nullable String indexingStateFingerprint
   )
   {
     this.dataSegment = dataSegment;
@@ -76,6 +80,7 @@ public class DataSegmentPlus
     this.schemaFingerprint = schemaFingerprint;
     this.numRows = numRows;
     this.upgradedFromSegmentId = upgradedFromSegmentId;
+    this.indexingStateFingerprint = indexingStateFingerprint;
   }
 
   @Nullable
@@ -126,6 +131,13 @@ public class DataSegmentPlus
     return upgradedFromSegmentId;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getIndexingStateFingerprint()
+  {
+    return indexingStateFingerprint;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -142,7 +154,8 @@ public class DataSegmentPlus
            && Objects.equals(used, that.getUsed())
            && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
            && Objects.equals(numRows, that.getNumRows())
-           && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId());
+           && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId())
+           && Objects.equals(indexingStateFingerprint, that.getIndexingStateFingerprint());
   }
 
   @Override
@@ -155,7 +168,8 @@ public class DataSegmentPlus
         used,
         schemaFingerprint,
         numRows,
-        upgradedFromSegmentId
+        upgradedFromSegmentId,
+        indexingStateFingerprint
     );
   }
 
@@ -170,6 +184,7 @@ public class DataSegmentPlus
            ", schemaFingerprint=" + getSchemaFingerprint() +
            ", numRows=" + getNumRows() +
            ", upgradedFromSegmentId=" + getUpgradedFromSegmentId() +
+           ", indexingStateFingerprint=" + getIndexingStateFingerprint() +
            '}';
   }
 }

@@ -48,7 +48,17 @@ public class Groupers
       + "for details."
   );
 
-  private static final int USED_FLAG_MASK = 0x7fffffff;
+  /**
+   * Mask to clear the used flag bit from a hash value. Used when reading a hash from a bucket
+   * to recover the original hash without the used flag.
+   */
+  public static final int USED_FLAG_MASK = 0x7fffffff;
+
+  /**
+   * Bit that indicates a bucket is used in the hash table. This is the sign bit (highest bit)
+   * of the hash value stored in each bucket.
+   */
+  public static final int USED_FLAG_BIT = 0x80000000;
 
   private static final int C1 = 0xcc9e2d51;
   private static final int C2 = 0x1b873593;
@@ -93,7 +103,7 @@ public class Groupers
 
   static int getUsedFlag(int keyHash)
   {
-    return keyHash | 0x80000000;
+    return keyHash | USED_FLAG_BIT;
   }
 
   public static ByteBuffer getSlice(ByteBuffer buffer, int sliceSize, int i)

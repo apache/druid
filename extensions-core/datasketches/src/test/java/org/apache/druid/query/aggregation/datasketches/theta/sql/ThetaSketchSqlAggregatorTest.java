@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
@@ -121,11 +122,14 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       SketchModule.registerSerde();
 
-      final QueryableIndex index = IndexBuilder.create()
+      final QueryableIndex index = IndexBuilder.create(jsonMapper)
                                                .tmpDir(tempDirProducer.newTempFolder())
                                                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                .schema(

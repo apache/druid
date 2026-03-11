@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
@@ -69,7 +68,6 @@ public class CpuAcctDeltaMonitorTest
   {
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
         "some_feed",
-        ImmutableMap.of(),
         TestUtils.exceptionThrowingDiscoverer()
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
@@ -91,7 +89,6 @@ public class CpuAcctDeltaMonitorTest
     }
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
         "some_feed",
-        ImmutableMap.of(),
         new CgroupDiscoverer()
         {
           @Override

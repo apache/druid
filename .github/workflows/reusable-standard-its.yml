@@ -68,15 +68,7 @@ jobs:
           java-version: ${{ inputs.runtime_jdk }}
           distribution: 'zulu'
 
-      - name: Restore Maven repository
-        id: maven-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
-
       - name: Maven build
-        if: steps.maven-restore.outputs.cache-hit != 'true'
         run: |
           ./it.sh ci
 

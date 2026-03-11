@@ -19,13 +19,17 @@
 
 package org.apache.druid.msq.test;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerRunRef;
@@ -36,33 +40,63 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
+  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(10);
+
   protected final Map<String, WorkerRunRef> inMemoryWorkers;
+  private final ObjectMapper objectMapper;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers)
+  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers, ObjectMapper objectMapper)
   {
     this.inMemoryWorkers = inMemoryWorkers;
+    this.objectMapper = objectMapper;
   }
 
   @Override
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
-    getWorkerFor(workerTaskId).postWorkOrder(workOrder);
+    getWorkerFor(workerTaskId).postWorkOrder(roundTripSerdeWorkOrder(workOrder));
     return Futures.immediateFuture(null);
   }
 
   protected Worker getWorkerFor(String workerTaskId)
   {
-    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker).worker();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+
+    // Wait for the worker to exist. It may not have been created or started up yet, especially if this is
+    // a worker trying to contact another worker.
+    WorkerRunRef workerRunRef;
+    while ((workerRunRef = inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker)) == null
+           || !workerRunRef.hasWorker()) {
+      if (stopwatch.millisElapsed() > WORKER_WAIT_TIMEOUT_MS) {
+        throw new ISE(
+            "Timed out after [%,d]ms waiting for worker[%s] to be registered",
+            stopwatch.millisElapsed(),
+            workerTaskId
+        );
+      }
+
+      try {
+        Thread.sleep(10);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new ISE("Interrupted while waiting for worker[%s]", workerTaskId);
+      }
+    }
+
+    return workerRunRef.worker();
   }
 
   protected WorkerRunRef newWorker(String workerId)
   {
-    throw new RuntimeException("Not implemented!");
+    // Return null so getWorkerFor waits for inMemoryWorkers to be populated
+    return null;
   }
 
   @Override
@@ -160,5 +194,15 @@ public class MSQTestWorkerClient implements WorkerClient
     if (closed.compareAndSet(false, true)) {
       inMemoryWorkers.forEach((k, v) -> v.cancel());
     }
+  }
+
+  /**
+   * Using {@link #objectMapper}, convert work order to work order. This ensures that any {@link JacksonInject} fields
+   * present on {@link StageProcessor} are populated. In production, this happens naturally because work orders are
+   * generally sent over HTTP.
+   */
+  private WorkOrder roundTripSerdeWorkOrder(final WorkOrder workOrder)
+  {
+    return objectMapper.convertValue(workOrder, WorkOrder.class);
   }
 }

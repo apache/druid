@@ -19,7 +19,7 @@
 import { Button } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
-import type { SqlExpression, SqlOrderByDirection, SqlQuery } from 'druid-query-toolkit';
+import type { SqlExpression, SqlOrderByDirection } from 'druid-query-toolkit';
 import { C, F } from 'druid-query-toolkit';
 import { useMemo } from 'react';
 
@@ -233,10 +233,10 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         .changeLimitValue(maxPivotValues);
     }, [querySource, where, moduleWhere, parameterValues]);
 
-    const [pivotValueState, queryManager] = useQueryManager({
+    const [pivotValueState, pivotValueQueryManager] = useQueryManager({
       query: pivotValueQuery,
-      processQuery: async (pivotValueQuery: SqlQuery) => {
-        return (await runSqlQuery(pivotValueQuery)).getColumnByName('v') as string[];
+      processQuery: async (pivotValueQuery, signal) => {
+        return (await runSqlQuery(pivotValueQuery, signal)).getColumnByName('v') as string[];
       },
     });
 
@@ -272,11 +272,12 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
       };
     }, [querySource.query, timezone, where, parameterValues, pivotValueState.data]);
 
-    const [resultState] = useQueryManager({
+    const [resultState, resultQueryManager] = useQueryManager({
       query: queryAndMore,
       processQuery: async (queryAndMore, signal) => {
         const { timezone, globalWhere, queryAndHints } = queryAndMore;
         const { query, columnHints } = queryAndHints;
+
         let result = await runSqlQuery({ query, timezone }, signal);
         if (result.sqlQuery) {
           result = result.attachQuery(
@@ -328,7 +329,13 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
           />
         ) : undefined}
         {resultState.loading && (
-          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+          <Loader
+            cancelText="Cancel query"
+            onCancel={() => {
+              pivotValueQueryManager.cancelCurrent();
+              resultQueryManager.cancelCurrent();
+            }}
+          />
         )}
       </div>
     );

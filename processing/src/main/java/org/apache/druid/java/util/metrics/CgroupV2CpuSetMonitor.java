@@ -20,12 +20,9 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
-
-import java.util.Map;
 
 /**
  * Monitor that reports CPU set metrics from cgroups v2 with native v2 file support.
@@ -33,16 +30,16 @@ import java.util.Map;
 public class CgroupV2CpuSetMonitor extends CgroupCpuSetMonitor
 {
 
-  public CgroupV2CpuSetMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupV2CpuSetMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
-    super(cgroupDiscoverer, dimensions, feed);
+    super(cgroupDiscoverer, feed);
 
   }
 
   @VisibleForTesting
   CgroupV2CpuSetMonitor(CgroupDiscoverer cgroupDiscoverer)
   {
-    this(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
+    this(cgroupDiscoverer, DEFAULT_METRICS_FEED);
   }
 
   CgroupV2CpuSetMonitor()

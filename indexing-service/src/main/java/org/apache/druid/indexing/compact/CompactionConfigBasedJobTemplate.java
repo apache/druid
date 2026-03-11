@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -31,6 +33,7 @@ import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -47,10 +50,20 @@ import java.util.Objects;
 public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
   private final DataSourceCompactionConfig config;
+  private final ReindexingConfigOptimizer configOptimizer;
 
   public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
   {
+    this(config, ReindexingConfigOptimizer.IDENTITY);
+  }
+
+  public CompactionConfigBasedJobTemplate(
+      DataSourceCompactionConfig config,
+      ReindexingConfigOptimizer configOptimizer
+  )
+  {
     this.config = config;
+    this.configOptimizer = configOptimizer;
   }
 
   @Nullable
@@ -70,17 +83,38 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
+    CompactionState compactionState = config.toCompactionState();
+
+    String indexingStateFingerprint = params.getFingerprintMapper().generateFingerprint(
+        config.getDataSource(),
+        compactionState
+    );
+
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
 
-      ClientCompactionTaskQuery taskPayload
-          = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
+      // Allow template-specific customization of the config per candidate
+      DataSourceCompactionConfig finalConfig = configOptimizer.optimizeConfig(config, candidate, params);
+
+      final CompactionEngine engine = Configs.valueOrDefault(
+          finalConfig.getEngine(),
+          params.getClusterCompactionConfig().getEngine()
+      );
+      ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
+          candidate,
+          finalConfig,
+          engine,
+          indexingStateFingerprint,
+          params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
+      );
       jobs.add(
           new CompactionJob(
               taskPayload,
               candidate,
-              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload)
+              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
+              indexingStateFingerprint,
+              compactionState
           )
       );
     }
@@ -118,7 +152,10 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         config,
         timeline,
         Intervals.complementOf(searchInterval),
-        new NewestSegmentFirstPolicy(null)
+        // This policy is used only while creating jobs
+        // The actual order of jobs is determined by the policy used in CompactionJobQueue
+        new NewestSegmentFirstPolicy(null),
+        params.getFingerprintMapper()
     );
 
     // Collect stats for segments that are already compacted

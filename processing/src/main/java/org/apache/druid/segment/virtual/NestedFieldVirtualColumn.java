@@ -411,7 +411,17 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (elementNumber < 0) {
         throw new IAE("Cannot make array element selector, negative array index not supported");
       }
-      return new ArrayElementColumnValueSelector(arraySelector, elementNumber);
+      final ColumnValueSelector<?> elementSelector = new ArrayElementColumnValueSelector(arraySelector, elementNumber);
+      final ColumnType fieldType = (ColumnType) arrayColumn.getLogicalType().getElementType();
+      if (fieldType != null && fieldSpec.expectedType != null && !fieldSpec.expectedType.equals(fieldType)) {
+        return ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            elementSelector,
+            fieldType,
+            fieldSpec.expectedType
+        );
+      }
+      return elementSelector;
     }
 
     if (holder.getCapabilities().isArray() || ColumnType.NESTED_DATA.equals(holder.getCapabilities().toColumnType())) {
@@ -1260,11 +1270,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 longs[i] = n.longValue();
                 nulls[i] = false;
               } else {
-                Double d = anArray[elementNumber] instanceof String
-                           ? Doubles.tryParse((String) anArray[elementNumber])
-                           : null;
-                if (d != null) {
-                  longs[i] = d.longValue();
+                Number number = anArray[elementNumber] instanceof String
+                                ? ExprEval.computeNumber((String) anArray[elementNumber])
+                                : null;
+                if (number != null) {
+                  longs[i] = number.longValue();
                   nulls[i] = false;
                 } else {
                   longs[i] = 0L;

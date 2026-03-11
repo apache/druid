@@ -63,15 +63,14 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
         .put("timestamp", getCreatedTime())
         .put("service", getService())
         .put("host", getHost())
+        .put("remoteAddr", getRemoteAddr())
+        .put("queryStats", getQueryStats())
         .putNonNull("query", getQuery());
 
     if (getSql() != null) {
-      builder.put("sql", getSql())
-             .put("sqlQueryContext", getSqlQueryContext());
+      builder.put("sqlQueryContext", getSqlQueryContext())
+             .put("sql", getSql());
     }
-
-    builder.put("remoteAddr", getRemoteAddr())
-           .put("queryStats", getQueryStats());
 
     return builder.build();
   }

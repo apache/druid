@@ -29,6 +29,7 @@ import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,17 +44,20 @@ public class DataSegmentsWithSchemasTest
   @Test
   public void testSerde() throws IOException
   {
-    final DataSegment segment = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.of(
+                                               "foo",
+                                               Intervals.of("2023-01-01/2023-01-02"),
+                                               "2023-01-01",
+                                               new LinearShardSpec(0)
+                                           ))
+                                           .loadSpec(ImmutableMap.of("path", "a-1"))
+                                           .dimensions(ImmutableList.of("dim1"))
+                                           .metrics(ImmutableList.of("m1"))
+                                           .shardSpec(new LinearShardSpec(0))
+                                           .binaryVersion(9)
+                                           .size(100)
+                                           .totalRows(10)
+                                           .build();
 
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(0);
     segmentSchemaMapping.addSchema(
@@ -66,7 +70,10 @@ public class DataSegmentsWithSchemasTest
         "fp"
     );
 
-    DataSegmentsWithSchemas dataSegmentsWithSchemas = new DataSegmentsWithSchemas(Collections.singleton(segment), segmentSchemaMapping);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = new DataSegmentsWithSchemas(
+        Collections.singleton(segment),
+        segmentSchemaMapping
+    );
 
     byte[] bytes = mapper.writeValueAsBytes(dataSegmentsWithSchemas);
 
@@ -78,17 +85,20 @@ public class DataSegmentsWithSchemasTest
   @Test
   public void testEquals()
   {
-    final DataSegment segment = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.of(
+                                               "foo",
+                                               Intervals.of("2023-01-01/2023-01-02"),
+                                               "2023-01-01",
+                                               new LinearShardSpec(0)
+                                           ))
+                                           .loadSpec(ImmutableMap.of("path", "a-1"))
+                                           .dimensions(ImmutableList.of("dim1"))
+                                           .metrics(ImmutableList.of("m1"))
+                                           .shardSpec(new LinearShardSpec(0))
+                                           .binaryVersion(9)
+                                           .size(100)
+                                           .totalRows(10)
+                                           .build();
 
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(0);
     segmentSchemaMapping.addSchema(
@@ -101,7 +111,10 @@ public class DataSegmentsWithSchemasTest
         "fp"
     );
 
-    DataSegmentsWithSchemas dataSegmentsWithSchemas = new DataSegmentsWithSchemas(Collections.singleton(segment), segmentSchemaMapping);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = new DataSegmentsWithSchemas(
+        Collections.singleton(segment),
+        segmentSchemaMapping
+    );
 
     DataSegmentsWithSchemas emptySegmentWithSchemas = new DataSegmentsWithSchemas(0);
 

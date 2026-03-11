@@ -51,7 +51,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -154,7 +153,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     // Wait for segments to be handed off
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/handoff/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
         agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
     );
 
@@ -197,7 +197,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     // Wait for a task to succeed
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/success/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for some segments to be published
@@ -212,7 +213,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+        = new ClusterCompactionConfig(1.0, 10, null, true, null, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );
@@ -323,7 +324,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+        = new ClusterCompactionConfig(1.0, 10, null, true, null, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );

@@ -74,13 +74,15 @@ public class WorkerStageKernel
   {
     this.workOrder = workOrder;
 
-    if (workOrder.getStageDefinition().doesShuffle()
-        && workOrder.getStageDefinition().getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
-        && !workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
-      // Use valueOrThrow instead of a nicer error collection mechanism, because we really don't expect the
-      // MAX_PARTITIONS to be exceeded here. It would involve having a shuffleSpec that was statically configured
-      // to use a huge number of partitions.
-      resultPartitionBoundaries = workOrder.getStageDefinition().generatePartitionBoundariesForShuffle(null).valueOrThrow();
+    final StageDefinition stageDef = workOrder.getStageDefinition();
+    if (stageDef.doesShuffle()
+        && stageDef.getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
+        && !stageDef.mustGatherResultKeyStatistics()) {
+      // Result key stats aren't needed, so the partition boundaries are knowable ahead of time. Compute them now.
+      // Use Integer.MAX_VALUE for maxPartitions since it isn't relevant in this path anyway.
+      resultPartitionBoundaries =
+          stageDef.generatePartitionBoundariesForShuffle(null, Integer.MAX_VALUE)
+                  .valueOrThrow();
     }
   }
 

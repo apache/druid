@@ -28,6 +28,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.LatchableEmitterConfig;
@@ -51,9 +52,10 @@ public class LatchableEmitterModule implements DruidModule
   @ManageLifecycle
   public LatchableEmitter makeEmitter(
       @Self DruidNode selfNode,
-      LatchableEmitterConfig config
+      LatchableEmitterConfig config,
+      TaskHolder taskHolder
   )
   {
-    return new LatchableEmitter(selfNode.getServiceName(), selfNode.getHost(), config);
+    return new LatchableEmitter(selfNode.getServiceName(), selfNode.getHost(), config, taskHolder);
   }
 }

@@ -75,4 +75,36 @@ public class KubernetesOverlordUtilsTest
     String jobName2 = KubernetesOverlordUtils.convertTaskIdToJobName("coordinator-issued_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_117_pcgkebcl_2023-07-19T16:53:11.416Z");
     Assert.assertNotEquals(jobName1, jobName2);
   }
+
+  @Test
+  public void test_longLabelEndsWithAlphanumeric()
+  {
+    // Test case for bug where truncation at 63 chars could result in a label ending with a special character
+    // This string is 80 characters and would be truncated at position 63, landing on a hyphen
+    String longLabelHyphen = "very-long-datasource-name-with-many-illegal_label_endings-that-exceeds-the--------limit-12345678";
+    String longLabelPeriod = "very-long-datasource-name-with-many-illegal_label_endings-that-exceeds-the........limit-12345678";
+    String longLabelUnderscore = "very-long-datasource-name-with-many-illegal_label_endings-that-exceeds-the________limit-12345678";
+
+    for (String longLabel : new String[]{longLabelHyphen, longLabelPeriod, longLabelUnderscore}) {
+      String result = KubernetesOverlordUtils.convertStringToK8sLabel(longLabel);
+
+      // Result should not exceed 63 characters
+      Assert.assertTrue("Label should not exceed 63 characters", result.length() <= 63);
+
+      // Result should not be empty
+      Assert.assertFalse("Label should not be empty", result.isEmpty());
+
+      // Result should not end with a hyphen, underscore, or dot
+      Assert.assertFalse("Label should not end with hyphen", result.endsWith("-"));
+      Assert.assertFalse("Label should not end with underscore", result.endsWith("_"));
+      Assert.assertFalse("Label should not end with dot", result.endsWith("."));
+
+      // Result should end with an alphanumeric character
+      char lastChar = result.charAt(result.length() - 1);
+      Assert.assertTrue(
+          "Label should end with alphanumeric character, but ends with: " + lastChar,
+          Character.isLetterOrDigit(lastChar)
+      );
+    }
+  }
 }

@@ -1508,7 +1508,7 @@ public class AutoCompactionTest extends CompactionTestBase
   @ParameterizedTest(name = "useSupervisors={0}")
   public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
   {
-    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null, true));
 
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1528,7 +1528,7 @@ public class AutoCompactionTest extends CompactionTestBase
           NO_SKIP_OFFSET,
           null,
           null,
-          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null)),
+          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null), null),
           null,
           false,
           CompactionEngine.NATIVE
@@ -1552,7 +1552,7 @@ public class AutoCompactionTest extends CompactionTestBase
   @ParameterizedTest(name = "useSupervisors={0}")
   public void testAutoCompationDutyWithMetricsSpec(boolean useSupervisors) throws Exception
   {
-    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null, true));
 
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1780,35 +1780,35 @@ public class AutoCompactionTest extends CompactionTestBase
                                               .forDataSource(fullDatasourceName)
                                               .withSkipOffsetFromLatest(skipOffsetFromLatest)
                                               .withTuningConfig(
-                                            new UserCompactionTaskQueryTuningConfig(
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                new MaxSizeSplitHintSpec(null, 1),
-                                                partitionsSpec,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                1,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                1,
-                                                null
-                                            )
-                                        )
+                                                  new UserCompactionTaskQueryTuningConfig(
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      new MaxSizeSplitHintSpec(null, 1),
+                                                      partitionsSpec,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1,
+                                                      null
+                                                  )
+                                              )
                                               .withGranularitySpec(granularitySpec)
                                               .withDimensionsSpec(dimensionsSpec)
                                               .withMetricsSpec(metricsSpec)
                                               .withTransformSpec(transformSpec)
                                               .withIoConfig(
-                                      !dropExisting ? null : new UserCompactionTaskIOConfig(true)
-                                  )
+                                                  !dropExisting ? null : new UserCompactionTaskIOConfig(true)
+                                              )
                                               .withEngine(engine)
                                               .withTaskContext(ImmutableMap.of("maxNumTasks", 2))
                                               .build();
@@ -1854,7 +1854,7 @@ public class AutoCompactionTest extends CompactionTestBase
           ).collect(Collectors.toList())
       );
       updateClusterConfig(
-          new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null)
+          new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null, true)
       );
 
       // Wait for scheduler to pick up the compaction job
@@ -1864,7 +1864,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // Disable all compaction
       updateClusterConfig(
-          new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
+          new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null, true)
       );
     } else {
       forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
@@ -1956,7 +1956,8 @@ public class AutoCompactionTest extends CompactionTestBase
             maxCompactionTaskSlots,
             oldConfig.getCompactionPolicy(),
             oldConfig.isUseSupervisors(),
-            oldConfig.getEngine()
+            oldConfig.getEngine(),
+            oldConfig.isStoreCompactionStatePerSegment()
         )
     );
 

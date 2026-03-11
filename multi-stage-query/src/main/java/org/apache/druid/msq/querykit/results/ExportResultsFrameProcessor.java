@@ -145,7 +145,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       exportWriter.writeResponseEnd();
       return ReturnOrAwait.returnObject(exportFilePath);
     } else {
-      exportFrame(inputChannel.read());
+      exportFrame(inputChannel.readFrame());
       return ReturnOrAwait.awaitAll(1);
     }
   }

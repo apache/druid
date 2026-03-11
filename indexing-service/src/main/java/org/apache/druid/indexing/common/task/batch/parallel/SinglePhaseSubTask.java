@@ -34,7 +34,6 @@ import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -362,7 +361,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, rowIngestionMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();

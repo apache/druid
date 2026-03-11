@@ -69,7 +69,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 {
   private static final Logger log = new Logger(K3sClusterResource.class);
 
-  private static final String K3S_IMAGE_NAME = "rancher/k3s:v1.28.8-k3s1";
+  private static final String K3S_IMAGE_NAME = "rancher/k3s:v1.35.0-k3s1";
 
   public static final String DRUID_NAMESPACE = "druid";
   private static final String NAMESPACE_MANIFEST = "manifests/druid-namespace.yaml";

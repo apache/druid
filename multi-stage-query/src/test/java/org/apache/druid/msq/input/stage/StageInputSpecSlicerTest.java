@@ -78,7 +78,7 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(0), 1)
+        slicer.sliceStatic(new StageInputSpec(0), null, 1)
     );
   }
 
@@ -98,7 +98,7 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(0), 2)
+        slicer.sliceStatic(new StageInputSpec(0), null, 2)
     );
   }
 
@@ -118,7 +118,7 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(1), 2)
+        slicer.sliceStatic(new StageInputSpec(1), null, 2)
     );
   }
 
@@ -127,7 +127,7 @@ public class StageInputSpecSlicerTest
   {
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> slicer.sliceStatic(new StageInputSpec(3), 1)
+        () -> slicer.sliceStatic(new StageInputSpec(3), null, 1)
     );
 
     MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("Stage[3] output partitions not available"));

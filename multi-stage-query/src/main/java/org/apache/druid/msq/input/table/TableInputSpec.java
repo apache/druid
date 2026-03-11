@@ -23,16 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Input spec representing a Druid table.
@@ -42,39 +43,33 @@ public class TableInputSpec implements InputSpec
 {
   private final String dataSource;
   private final List<Interval> intervals;
-
   @Nullable
-  private final DimFilter filter;
-
-  @Nullable
-  private final Set<String> filterFields;
+  private final List<SegmentDescriptor> segments;
 
   /**
    * Create a table input spec.
    *
    * @param dataSource   datasource to read
    * @param intervals    intervals to filter, or null if no time filtering is desired. Interval filtering is strict,
-   *                     meaning that when this spec is sliced and read, the returned {@link SegmentWithDescriptor}
-   *                     from {@link ReadableInput#getSegment()} are clipped to these intervals.
-   * @param filter       other filters to use for pruning, or null if no pruning is desired. Pruning filters are
-   *                     *not strict*, which means that processors must re-apply them when processing the returned
-   *                     {@link SegmentWithDescriptor} from {@link ReadableInput#getSegment()}. This matches how
-   *                     Broker-based pruning works for native queries.
-   * @param filterFields list of fields from {@link DimFilter#getRequiredColumns()} to consider for pruning. If null,
-   *                     all fields are considered for pruning.
+   *                     meaning that when this spec is sliced and read, the returned {@link LoadableSegment}
+   *                     from {@link PhysicalInputSlice#getLoadableSegments()} are clipped to these intervals using
+   *                     {@link LoadableSegment#descriptor()}.
+   * @param segments     specific segments to read, or null to read all segments in the intervals. If provided,
+   *                     only these segments will be read. Must not be empty if non-null.
    */
   @JsonCreator
   public TableInputSpec(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") @Nullable List<Interval> intervals,
-      @JsonProperty("filter") @Nullable DimFilter filter,
-      @JsonProperty("filterFields") @Nullable Set<String> filterFields
+      @JsonProperty("segments") @Nullable List<SegmentDescriptor> segments
   )
   {
     this.dataSource = dataSource;
     this.intervals = intervals == null ? Intervals.ONLY_ETERNITY : intervals;
-    this.filter = filter;
-    this.filterFields = filterFields;
+    if (segments != null && segments.isEmpty()) {
+      throw new IAE("Can not supply empty segments as input, please use either null or non-empty segments.");
+    }
+    this.segments = segments;
   }
 
   @JsonProperty
@@ -100,17 +95,9 @@ public class TableInputSpec implements InputSpec
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
-  public DimFilter getFilter()
+  public List<SegmentDescriptor> getSegments()
   {
-    return filter;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
-  public Set<String> getFilterFields()
-  {
-    return filterFields;
+    return segments;
   }
 
   @Override
@@ -125,14 +112,13 @@ public class TableInputSpec implements InputSpec
     TableInputSpec that = (TableInputSpec) o;
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(intervals, that.intervals)
-           && Objects.equals(filter, that.filter)
-           && Objects.equals(filterFields, that.filterFields);
+           && Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, intervals, filter, filterFields);
+    return Objects.hash(dataSource, intervals, segments);
   }
 
   @Override
@@ -141,8 +127,7 @@ public class TableInputSpec implements InputSpec
     return "TableInputSpec{" +
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
-           (filter == null ? "" : ", filter=" + filter) +
-           (filterFields == null ? "" : ", filterFields=" + filterFields) +
+           (segments == null ? "" : ", segments=" + segments) +
            '}';
   }
 }

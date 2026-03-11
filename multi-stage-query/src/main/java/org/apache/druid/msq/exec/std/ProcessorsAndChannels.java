@@ -32,11 +32,11 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
  */
 public class ProcessorsAndChannels<T, R>
 {
-  private final ProcessorManager<T, R> processorManager;
+  private final ProcessorManager<T, ? extends R> processorManager;
   private final OutputChannels outputChannels;
 
   public ProcessorsAndChannels(
-      final ProcessorManager<T, R> processorManager,
+      final ProcessorManager<T, ? extends R> processorManager,
       final OutputChannels outputChannels
   )
   {
@@ -44,7 +44,7 @@ public class ProcessorsAndChannels<T, R>
     this.outputChannels = outputChannels.readOnly();
   }
 
-  public ProcessorManager<T, R> getProcessorManager()
+  public ProcessorManager<T, ? extends R> getProcessorManager()
   {
     return processorManager;
   }

@@ -64,10 +64,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
    * context dependant dimensions.
    */
-  void emitMetric(MSQMetriceEventBuilder metricBuilder);
+  void emitMetric(MSQMetricEventBuilder metricBuilder);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection

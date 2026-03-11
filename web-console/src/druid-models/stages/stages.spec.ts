@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { aggregateSortProgressCounters } from './stages';
+import { aggregateSortProgressCounters, Stages } from './stages';
 import { STAGES } from './stages.mock';
 
 describe('aggregateSortProgressCounters', () => {
@@ -69,6 +69,361 @@ describe('Stages', () => {
     });
   });
 
+  describe('#getInactiveWorkerCount', () => {
+    it('returns undefined when no counters exist for stage', () => {
+      // Create a custom Stages instance where stage has no counters
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 5,
+            definition: {
+              id: 'test-stage-no-counters',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 1,
+            },
+            phase: 'NEW',
+            workerCount: 1,
+            partitionCount: 1,
+          },
+        ],
+        {},
+      );
+
+      expect(customStages.getInactiveWorkerCount(customStages.stages[0])).toBeUndefined();
+    });
+
+    it('counts workers with zero rows across all channels', () => {
+      // Stage 2 has counters data in the mock
+      const inactiveCount = STAGES.getInactiveWorkerCount(STAGES.stages[2]);
+      expect(inactiveCount).toBe(0);
+    });
+
+    it('identifies inactive workers correctly', () => {
+      // Create a custom Stages instance with workers that have zero rows
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 3,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 3,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              input0: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+              output: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+            },
+            '1': {
+              input0: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+              output: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+            },
+            '2': {
+              input0: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+              output: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      expect(inactiveCount).toBe(2);
+    });
+
+    it('handles missing channel data correctly', () => {
+      // Create a custom Stages instance where some workers have missing channels
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 2,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 2,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              input0: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+            },
+            '1': {
+              // Missing input0 channel - should be counted as inactive
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      expect(inactiveCount).toBe(1);
+    });
+
+    it('counts all workers as inactive when all have zero rows', () => {
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 2,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 2,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              input0: {
+                type: 'channel',
+                rows: [],
+                bytes: [],
+              },
+            },
+            '1': {
+              input0: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      expect(inactiveCount).toBe(2);
+    });
+
+    it('counts no inactive workers when all have non-zero rows', () => {
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 3,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 3,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              input0: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+            },
+            '1': {
+              input0: {
+                type: 'channel',
+                rows: [50],
+                bytes: [500],
+              },
+            },
+            '2': {
+              input0: {
+                type: 'channel',
+                rows: [75],
+                bytes: [750],
+              },
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      expect(inactiveCount).toBe(0);
+    });
+
+    it('counts worker as active if it has output but no input yet', () => {
+      // Tests the fix: input is reported in batches, so a worker might have output
+      // before input counters are updated. Such workers should be considered active.
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              shuffleSpec: {
+                type: 'targetSize',
+                clusterBy: { columns: [] },
+                targetSize: 3000000,
+              },
+              maxWorkerCount: 3,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 3,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              input0: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+              output: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+              shuffle: {
+                type: 'channel',
+                rows: [100],
+                bytes: [1000],
+              },
+            },
+            '1': {
+              // Worker 1 has output and shuffle but input is not reported yet (still zero)
+              // This can happen because input is reported in batches
+              input0: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+              output: {
+                type: 'channel',
+                rows: [50],
+                bytes: [500],
+              },
+              shuffle: {
+                type: 'channel',
+                rows: [50],
+                bytes: [500],
+              },
+            },
+            '2': {
+              // Worker 2 is truly inactive - zero across all channels
+              input0: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+              output: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+              shuffle: {
+                type: 'channel',
+                rows: [0],
+                bytes: [0],
+              },
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      // Only worker 2 should be counted as inactive
+      // Worker 1 has output/shuffle data, so it's active even though input is zero
+      expect(inactiveCount).toBe(1);
+    });
+  });
+
   describe('#getByPartitionCountersForStage', () => {
     it('works for input', () => {
       expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'in')).toMatchInlineSnapshot(`
@@ -79,6 +434,10 @@ describe('Stages', () => {
               "bytes": 10943622,
               "files": 0,
               "frames": 21,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 39742,
               "totalFiles": 0,
             },
@@ -96,6 +455,10 @@ describe('Stages', () => {
               "bytes": 257524,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 888,
               "totalFiles": 0,
             },
@@ -106,6 +469,10 @@ describe('Stages', () => {
               "bytes": 289731,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 995,
               "totalFiles": 0,
             },
@@ -116,6 +483,10 @@ describe('Stages', () => {
               "bytes": 412396,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 1419,
               "totalFiles": 0,
             },
@@ -126,6 +497,10 @@ describe('Stages', () => {
               "bytes": 262388,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 905,
               "totalFiles": 0,
             },
@@ -136,6 +511,10 @@ describe('Stages', () => {
               "bytes": 170554,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 590,
               "totalFiles": 0,
             },
@@ -146,6 +525,10 @@ describe('Stages', () => {
               "bytes": 188324,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 652,
               "totalFiles": 0,
             },
@@ -156,6 +539,10 @@ describe('Stages', () => {
               "bytes": 92275,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 322,
               "totalFiles": 0,
             },
@@ -166,6 +553,10 @@ describe('Stages', () => {
               "bytes": 69531,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 247,
               "totalFiles": 0,
             },
@@ -176,6 +567,10 @@ describe('Stages', () => {
               "bytes": 65844,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 236,
               "totalFiles": 0,
             },
@@ -186,6 +581,10 @@ describe('Stages', () => {
               "bytes": 85875,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 309,
               "totalFiles": 0,
             },
@@ -196,6 +595,10 @@ describe('Stages', () => {
               "bytes": 71852,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 256,
               "totalFiles": 0,
             },
@@ -206,6 +609,10 @@ describe('Stages', () => {
               "bytes": 72512,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 260,
               "totalFiles": 0,
             },
@@ -216,6 +623,10 @@ describe('Stages', () => {
               "bytes": 123204,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 440,
               "totalFiles": 0,
             },
@@ -226,6 +637,10 @@ describe('Stages', () => {
               "bytes": 249217,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 876,
               "totalFiles": 0,
             },
@@ -236,6 +651,10 @@ describe('Stages', () => {
               "bytes": 399583,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 1394,
               "totalFiles": 0,
             },
@@ -246,6 +665,10 @@ describe('Stages', () => {
               "bytes": 256916,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 892,
               "totalFiles": 0,
             },
@@ -256,6 +679,10 @@ describe('Stages', () => {
               "bytes": 1039927,
               "files": 0,
               "frames": 2,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 3595,
               "totalFiles": 0,
             },
@@ -266,6 +693,10 @@ describe('Stages', () => {
               "bytes": 1887893,
               "files": 0,
               "frames": 4,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 6522,
               "totalFiles": 0,
             },
@@ -276,6 +707,10 @@ describe('Stages', () => {
               "bytes": 1307287,
               "files": 0,
               "frames": 3,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 4525,
               "totalFiles": 0,
             },
@@ -286,6 +721,10 @@ describe('Stages', () => {
               "bytes": 1248166,
               "files": 0,
               "frames": 3,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 4326,
               "totalFiles": 0,
             },
@@ -296,6 +735,10 @@ describe('Stages', () => {
               "bytes": 1195593,
               "files": 0,
               "frames": 3,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 4149,
               "totalFiles": 0,
             },
@@ -306,6 +749,10 @@ describe('Stages', () => {
               "bytes": 738804,
               "files": 0,
               "frames": 2,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 2561,
               "totalFiles": 0,
             },
@@ -316,6 +763,10 @@ describe('Stages', () => {
               "bytes": 552485,
               "files": 0,
               "frames": 2,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 1914,
               "totalFiles": 0,
             },
@@ -326,6 +777,10 @@ describe('Stages', () => {
               "bytes": 418062,
               "files": 0,
               "frames": 1,
+              "loadBytes": 0,
+              "loadFiles": 0,
+              "loadTime": 0,
+              "loadWait": 0,
               "rows": 1452,
               "totalFiles": 0,
             },

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.druid.frame.processor.OutputChannelFactory;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ConcurrencyLimitedProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
@@ -36,20 +36,20 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
-import org.apache.druid.msq.exec.std.StandardStageProcessor;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -74,11 +74,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
-public class SegmentGeneratorStageProcessor
-    extends StandardStageProcessor<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
+public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSegment>, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
@@ -115,19 +113,16 @@ public class SegmentGeneratorStageProcessor
   }
 
   @Override
-  public ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable List<SegmentIdWithShardSpec> extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  )
+  public ListenableFuture<Set<DataSegment>> execute(final ExecutionContext context)
   {
+    final StandardStageRunner<DataSegment, Set<DataSegment>> stageRunner = new StandardStageRunner<>(context);
+    return stageRunner.run(makeProcessors(context));
+  }
+
+  private ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(final ExecutionContext context)
+  {
+    @SuppressWarnings("unchecked")
+    final List<SegmentIdWithShardSpec> extra = (List<SegmentIdWithShardSpec>) context.workOrder().getExtraInfo();
     if (extra == null || extra.isEmpty()) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
@@ -136,6 +131,7 @@ public class SegmentGeneratorStageProcessor
       );
     }
 
+    final FrameContext frameContext = context.frameContext();
     final RowIngestionMeters meters = frameContext.rowIngestionMeters();
 
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -146,22 +142,23 @@ public class SegmentGeneratorStageProcessor
     );
 
     // Expect a single input slice.
-    final InputSlice slice = Iterables.getOnlyElement(inputSlices);
+    final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(context.workOrder().getInputs());
     final Sequence<Pair<Integer, ReadableInput>> inputSequence =
-        Sequences.simple(Iterables.transform(
-            inputSliceReader.attach(0, slice, counters, warningPublisher),
-            new Function<>()
-            {
-              int i = 0;
+        QueryKitUtils.readPartitions(context, slice.getPartitions())
+                     .map(
+                         new Function<>()
+                         {
+                           int i = 0;
 
-              @Override
-              public Pair<Integer, ReadableInput> apply(ReadableInput readableInput)
-              {
-                return Pair.of(i++, readableInput);
-              }
-            }
-        ));
-    final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
+                           @Override
+                           public Pair<Integer, ReadableInput> apply(ReadableInput readableInput)
+                           {
+                             return Pair.of(i++, readableInput);
+                           }
+                         }
+                     );
+    final SegmentGenerationProgressCounter segmentGenerationProgressCounter =
+        context.counters().segmentGenerationProgress();
     final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper =
         new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
@@ -169,7 +166,7 @@ public class SegmentGeneratorStageProcessor
         readableInputPair -> {
           final StagePartition stagePartition = Preconditions.checkNotNull(readableInputPair.rhs.getStagePartition());
           final SegmentIdWithShardSpec segmentIdWithShardSpec = extra.get(readableInputPair.lhs);
-          final String idString = StringUtils.format("%s:%s", stagePartition, workerNumber);
+          final String idString = StringUtils.format("%s:%s", stagePartition, context.workOrder().getWorkerNumber());
           final File persistDirectory = new File(
               frameContext.persistDir(),
               segmentIdWithShardSpec.asSegmentId().toString()

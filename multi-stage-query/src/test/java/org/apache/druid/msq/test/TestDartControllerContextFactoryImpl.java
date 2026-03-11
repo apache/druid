@@ -40,7 +40,7 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerImpl;
@@ -104,7 +104,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       }
 
       @Override
-      public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+      public void emitMetric(MSQMetricEventBuilder metricBuilder)
       {
         serviceEmitter.emit(metricBuilder.build("controller", queryId()));
       }
@@ -116,7 +116,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
     public DartTestWorkerClient()
     {
-      super(workerMap);
+      super(workerMap, jsonMapper);
     }
 
     @Override
@@ -132,7 +132,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               injector,
               MSQTestBase.makeTestWorkerMemoryParameters(),
               WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE),
-              serviceEmitter
+              serviceEmitter,
+              null // No CoordinatorClient needed for Dart
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();

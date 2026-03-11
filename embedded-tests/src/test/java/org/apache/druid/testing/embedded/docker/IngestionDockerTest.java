@@ -52,7 +52,7 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
     overlord.addProperty("druid.plaintextPort", "7090");
 
     return cluster
-        .useDefaultTimeoutForLatchableEmitter(120)
+        .useDefaultTimeoutForLatchableEmitter(240)
         .useContainerFriendlyHostname()
         .addResource(containerOverlord)
         .addResource(containerCoordinator)

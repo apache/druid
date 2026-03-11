@@ -49,6 +49,7 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
+    bitmapIndexType = columnFormatSpec.getDoubleFieldBitmapIndexType();
   }
 
   @Override
@@ -93,6 +94,8 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
   @Override
   long getSerializedColumnSize() throws IOException
   {
-    return super.getSerializedColumnSize() + doublesSerializer.getSerializedSize();
+    return Integer.BYTES + Integer.BYTES
+           + doublesSerializer.getSerializedSize()
+           + encodedValueSerializer.getSerializedSize();
   }
 }

@@ -49,6 +49,7 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
+    bitmapIndexType = columnFormatSpec.getLongFieldBitmapIndexType();
   }
 
   @Override
@@ -94,6 +95,8 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   @Override
   long getSerializedColumnSize() throws IOException
   {
-    return super.getSerializedColumnSize() + longsSerializer.getSerializedSize();
+    return Integer.BYTES + Integer.BYTES
+           + longsSerializer.getSerializedSize()
+           + encodedValueSerializer.getSerializedSize();
   }
 }

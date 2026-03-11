@@ -50,6 +50,17 @@ public interface SegmentFileMapper extends Closeable
   @Nullable
   ByteBuffer mapFile(String name) throws IOException;
 
+  /**
+   * Loads a file from an 'external' segment container file, in the same directory as this {@link SegmentFileMapper}.
+   * Legacy implementations do not support this concept, and so just map these files directly, which allows column
+   * implementations to use these methods but also still work with older segment formats.
+   */
+  @Nullable
+  default ByteBuffer mapExternalFile(String filename, String name) throws IOException
+  {
+    return mapFile(name);
+  }
+
   @Override
   void close();
 }

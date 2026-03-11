@@ -19,13 +19,14 @@
 
 package org.apache.druid.server.compaction;
 
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
@@ -46,13 +47,30 @@ public class CompactionCandidate
 
   private final CompactionStatus currentStatus;
 
-  public static CompactionCandidate from(
+  public static Interval getCompactionInterval(
       List<DataSegment> segments,
       @Nullable Granularity targetSegmentGranularity
   )
   {
+    final Set<Interval> segmentIntervals =
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
+    final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
+    return targetSegmentGranularity == null
+           ? umbrellaInterval
+           : JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
+  }
+
+  public static CompactionCandidate from(
+      List<DataSegment> segments,
+      @Nullable Granularity targetSegmentGranularity,
+      CompactionStatus currentStatus
+  )
+  {
     if (segments == null || segments.isEmpty()) {
-      throw InvalidInput.exception("Segments to compact must be non-empty");
+      throw DruidException.defensive("Segments to compact must be non-empty");
+    }
+    if (currentStatus == null) {
+      throw DruidException.defensive("CompactionCandidate must have a non-null currentStatus");
     }
 
     final Set<Interval> segmentIntervals =
@@ -68,7 +86,7 @@ public class CompactionCandidate
         umbrellaInterval,
         compactionInterval,
         segmentIntervals.size(),
-        null
+        currentStatus
     );
   }
 
@@ -77,7 +95,7 @@ public class CompactionCandidate
       Interval umbrellaInterval,
       Interval compactionInterval,
       int numDistinctSegmentIntervals,
-      @Nullable CompactionStatus currentStatus
+      CompactionStatus currentStatus
   )
   {
     this.segments = segments;
@@ -137,10 +155,22 @@ public class CompactionCandidate
     return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
-  /**
-   * Current compaction status of the time chunk corresponding to this candidate.
-   */
   @Nullable
+  public CompactionStatistics getCompactedStats()
+  {
+    return currentStatus.getCompactedStats();
+  }
+
+  @Nullable
+  public CompactionStatistics getUncompactedStats()
+  {
+    return currentStatus.getUncompactedStats();
+  }
+
+  /**
+   * Non-null current compaction status of the time chunk corresponding to this candidate.
+   */
+  @Nonnull
   public CompactionStatus getCurrentStatus()
   {
     return currentStatus;

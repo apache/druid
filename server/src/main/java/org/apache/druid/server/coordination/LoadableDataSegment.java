@@ -53,7 +53,9 @@ public class LoadableDataSegment extends DataSegment
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
-      @JsonProperty("size") long size
+      @JsonProperty("size") long size,
+      @JsonProperty("totalRows") Integer totalRows,
+      @JsonProperty("indexingStateFingerprint") String indexingStateFingerprint
   )
   {
     super(
@@ -68,6 +70,8 @@ public class LoadableDataSegment extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
+        totalRows,
+        indexingStateFingerprint,
         PruneSpecsHolder.DEFAULT
     );
   }

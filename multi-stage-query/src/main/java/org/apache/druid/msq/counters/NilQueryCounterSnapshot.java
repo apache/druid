@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.counters;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
 /**
@@ -29,9 +30,17 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 @JsonTypeName("nil")
 public class NilQueryCounterSnapshot implements QueryCounterSnapshot
 {
+  private static final NilQueryCounterSnapshot INSTANCE = new NilQueryCounterSnapshot();
+
   private NilQueryCounterSnapshot()
   {
     // Singleton
+  }
+
+  @JsonCreator
+  public static NilQueryCounterSnapshot instance()
+  {
+    return INSTANCE;
   }
 
   @Override

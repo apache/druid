@@ -31,7 +31,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "autoScalerStrategy", defaultImpl = LagBasedAutoScalerConfig.class)
 @JsonSubTypes(value = {
-        @Type(name = "lagBased", value = LagBasedAutoScalerConfig.class)
+    @Type(name = "lagBased", value = LagBasedAutoScalerConfig.class),
+    @Type(name = "costBased", value = CostBasedAutoScalerConfig.class)
 })
 public interface AutoScalerConfig
 {

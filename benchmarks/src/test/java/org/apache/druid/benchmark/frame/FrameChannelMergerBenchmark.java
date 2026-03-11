@@ -367,7 +367,7 @@ public class FrameChannelMergerBenchmark
     while (!outputChannel.readable().isFinished()) {
       FutureUtils.getUnchecked(outputChannel.readable().readabilityFuture(), false);
       if (outputChannel.readable().canRead()) {
-        final Frame frame = outputChannel.readable().read();
+        final Frame frame = outputChannel.readable().readFrame();
         blackhole.consume(frame);
       }
     }

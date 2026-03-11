@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 public class UseIndexesStrategy extends SearchStrategy
@@ -305,9 +306,12 @@ public class UseIndexesStrategy extends SearchStrategy
             // these were checked to be non-null in partitionDimensionList
             final DictionaryEncodedStringValueIndex bitmapIndex =
                 indexSupplier.as(DictionaryEncodedStringValueIndex.class);
-            for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-              String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
+            final Iterator<String> iterator = bitmapIndex.getValueIterator();
+            int i = 0;
+            while (iterator.hasNext()) {
+              final String dimVal = extractionFn.apply(iterator.next());
               if (!searchQuerySpec.accept(dimVal)) {
+                i++;
                 continue;
               }
               ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
@@ -320,6 +324,7 @@ public class UseIndexesStrategy extends SearchStrategy
                   return retVal;
                 }
               }
+              i++;
             }
           }
         }

@@ -80,8 +80,8 @@ Parameters:
 the test group for a given test as an annotation in the respective test class. A list of test groups can be found at
 `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`. The annotation uses a string
 constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example,
-if your test has the annotation: `@Test(groups = TestNGGroup.QUERY)` then use the argument
-`-Dgroups=query`.
+if your test has the annotation: `@Test(groups = TestNGGroup.SECURITY)` then use the argument
+`-Dgroups=security`.
 
 * Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.query.ITSqlQueryTest`.
 

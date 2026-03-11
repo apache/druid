@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
@@ -81,7 +80,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
       try {
         final SegmentFileMapper mapper = columnBuilder.getFileMapper();
         final ComplexColumnMetadata metadata;
-        final GenericIndexed<ByteBuffer> fields;
+        final Supplier<? extends Indexed<ByteBuffer>> fields;
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
         final ImmutableBitmap nullValues;
@@ -96,16 +95,23 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
             IndexMerger.SERIALIZER_UTILS.readString(bb),
             ComplexColumnMetadata.class
         );
-        fields = GenericIndexed.read(bb, GenericIndexed.UTF8_STRATEGY, mapper);
-        fieldInfo = FieldTypeInfo.read(bb, fields.size());
+        if (version < 0x04) {
+          // older than v4 uses jq paths
+          fields = GenericIndexed.read(bb, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
+        } else {
+          fields = NestedDataColumnSupplier.getAndFixFieldsSupplier(bb, metadata.getByteOrder(), mapper);
+        }
+        Indexed<ByteBuffer> fieldsDict = fields.get();
+        fieldInfo = FieldTypeInfo.read(bb, fieldsDict.size());
 
-        if (fields.size() == 0) {
+        if (fieldsDict.size() == 0) {
           // all nulls, in the future we'll deal with this better... but for now lets just call it a string because
           // it is the most permissive (besides json)
           simpleType = ColumnType.STRING;
-        } else if (fields.size() == 1 &&
-                   ((version == 0x03 && NestedPathFinder.JQ_PATH_ROOT.equals(StringUtils.fromUtf8(fields.get(0)))) ||
-                    ((version == 0x04 || version == 0x05) && NestedPathFinder.JSON_PATH_ROOT.equals(StringUtils.fromUtf8(fields.get(0)))))
+        } else if (fieldsDict.size() == 1 &&
+                   ((version == 0x03 && NestedPathFinder.JQ_PATH_ROOT.equals(StringUtils.fromUtf8(fieldsDict.get(0)))) ||
+                    ((version == 0x04 || version == 0x05)
+                     && NestedPathFinder.JSON_PATH_ROOT.equals(StringUtils.fromUtf8(fieldsDict.get(0)))))
         ) {
           simpleType = fieldInfo.getTypes(0).getSingleType();
         } else {
@@ -158,7 +164,11 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         } else {
           arrayDictionarySupplier = null;
         }
-        final ByteBuffer rawBuffer = loadInternalFile(mapper, metadata, NestedCommonFormatColumnSerializer.RAW_FILE_NAME);
+        final ByteBuffer rawBuffer = loadInternalFile(
+            mapper,
+            metadata,
+            NestedCommonFormatColumnSerializer.RAW_FILE_NAME
+        );
         compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
             ColumnSerializerUtils.getInternalFileName(
                 metadata.getFileNameBase(), NestedCommonFormatColumnSerializer.RAW_FILE_NAME
@@ -193,7 +203,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
             doubleDictionarySupplier,
             arrayDictionarySupplier,
             mapper,
-            metadata.getBitmapSerdeFactory(),
+            NestedCommonFormatColumnFormatSpec.builder().setBitmapEncoding(metadata.getBitmapSerdeFactory()).build(),
             metadata.getByteOrder(),
             simpleType
         );
@@ -209,7 +219,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   private final byte version;
   private final String columnName;
   private final ColumnConfig columnConfig;
-  private final GenericIndexed<ByteBuffer> fields;
+  private final Supplier<? extends Indexed<ByteBuffer>> fieldsSupplier;
   private final FieldTypeInfo fieldInfo;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
@@ -222,14 +232,14 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   @Nullable
   private final ColumnType simpleType;
   private final ColumnType logicalType;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
+  private final NestedCommonFormatColumnFormatSpec formatSpec;
   private final ByteOrder byteOrder;
 
   private NestedDataColumnSupplierV4(
       byte version,
       String columnName,
       ColumnConfig columnConfig,
-      GenericIndexed<ByteBuffer> fields,
+      Supplier<? extends Indexed<ByteBuffer>> fieldsSupplier,
       FieldTypeInfo fieldInfo,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
@@ -238,7 +248,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SegmentFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
+      NestedCommonFormatColumnFormatSpec formatSpec,
       ByteOrder byteOrder,
       @Nullable ColumnType simpleType
   )
@@ -246,7 +256,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
     this.version = version;
     this.columnName = columnName;
     this.columnConfig = columnConfig;
-    this.fields = fields;
+    this.fieldsSupplier = fieldsSupplier;
     this.fieldInfo = fieldInfo;
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
     this.nullValues = nullValues;
@@ -255,7 +265,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
     this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.arrayDictionarySupplier = arrayDictionarySupplier;
     this.fileMapper = fileMapper;
-    this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.formatSpec = formatSpec;
     this.byteOrder = byteOrder;
     this.simpleType = simpleType;
     this.logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
@@ -287,13 +297,13 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fieldsSupplier,
         fieldInfo,
         stringDictionarySupplier,
         longDictionarySupplier,
         doubleDictionarySupplier,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder
     );
   }
@@ -306,13 +316,13 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fieldsSupplier,
         fieldInfo,
         stringDictionarySupplier,
         longDictionarySupplier,
         doubleDictionarySupplier,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder
     );
   }
@@ -325,14 +335,14 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields::singleThreaded,
+        fieldsSupplier,
         fieldInfo,
         stringDictionarySupplier,
         longDictionarySupplier,
         doubleDictionarySupplier,
         arrayDictionarySupplier,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder
     );
   }

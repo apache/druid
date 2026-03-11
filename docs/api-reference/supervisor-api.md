@@ -1363,6 +1363,62 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters. See [Row stats](../ingestion/tasks.md#row-stats) for more information.
 
+#### Response schema
+
+The response is a nested map of task group IDs to task IDs to row stats:
+
+```json
+{
+  "<taskGroupId>": {
+    "<taskId>": {
+      "movingAverages": { ... },
+      "totals": { ... }
+    }
+  }
+}
+```
+
+- **taskGroupId** (string): Supervisor task group identifier
+- **taskId** (string): Druid indexing task identifier within that group
+- **movingAverages** / **totals**: Per-task row stats; see [Row stats](../ingestion/tasks.md#row-stats) for field definitions
+
+For example, a supervisor with two task groups:
+
+```json
+{
+  "0": {
+    "index_kafka_my_datasource_abc123": {
+      "movingAverages": {
+        "buildSegments": {
+          "5m": { "processed": 10.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "15m": { "processed": 5.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "1m": { "processed": 12.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 }
+        }
+      },
+      "totals": {
+        "buildSegments": { "processed": 2000, "processedWithError": 0, "thrownAway": 0, "unparseable": 0 }
+      }
+    }
+  },
+  "1": {
+    "index_kafka_my_datasource_def456": {
+      "movingAverages": {
+        "buildSegments": {
+          "5m": { "processed": 8.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "15m": { "processed": 4.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 },
+          "1m": { "processed": 9.0, "unparseable": 0.0, "thrownAway": 0.0, "processedWithError": 0.0 }
+        }
+      },
+      "totals": {
+        "buildSegments": { "processed": 1500, "processedWithError": 0, "thrownAway": 0, "unparseable": 0 }
+      }
+    }
+  }
+}
+```
+
+In this example, `"0"` and `"1"` are task group IDs, and `index_kafka_my_datasource_abc123` and `index_kafka_my_datasource_def456` are task IDs.
+
 #### URL
 
 `GET` `/druid/indexer/v1/supervisor/{supervisorId}/stats`
@@ -1414,6 +1470,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
+In the example below, the outer key (`"0"`) is a **task group ID**; the inner key (e.g., `index_kafka_custom_data_881d621078f6b7c_ccplchbi`) is a **task ID**.
+
 <details>
   <summary>View the response</summary>
 
@@ -1460,6 +1518,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
     }
   ```
 </details>
+
+**For automation clients:** If you need to map task IDs to group IDs (for handoff, draining, or observability), use the `/stats` response keys directly instead of re-deriving group IDs from partition data. This avoids coupling to internal supervisor assignment logic.
 
 ## Audit history
 
@@ -3598,11 +3658,32 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Handoff task groups for a supervisor early
 
-Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution.
 
 #### URL
 
 `POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="202 ACCEPTED">
+
+*Request has been accepted and handoff will be initiated in the background.*
+
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
+*Invalid supervisor ID or the supervisor is not running.*
+
+</TabItem>
+<TabItem value="3" label="400 BAD REQUEST">
+
+*Supervisor does not support early handoff.*
+
+</TabItem>
+</Tabs>
 
 #### Sample request
 
@@ -3639,8 +3720,10 @@ Content-Type: application/json
 #### Sample response
 
 <details>
-  <summary>View the response</summary>
-(empty response)
+  <summary>202 Accepted</summary>
+
+*Empty response*
+
 </details>
 
 ### Shut down a supervisor

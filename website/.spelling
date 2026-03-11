@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -224,6 +225,7 @@ ROUTINE_SCHEMA
 ROUTINE_TYPE
 Rackspace
 Redis
+residualFilterMode
 S3
 SAS
 SDK
@@ -527,6 +529,7 @@ reindexing
 reingest
 reingesting
 reingestion
+resync
 repo
 requireSSL
 rollup
@@ -560,6 +563,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -719,6 +723,8 @@ is_realtime
 java.sql.Types
 last_compaction_state
 max_size
+available_processors
+total_memory
 num_replicas
 num_rows
 num_segments
@@ -755,6 +761,8 @@ granularity_string
 QueryKit
 # MSQ report fields
 taskId
+taskGroupId
+movingAverages
 multiStageQuery.taskId
 multiStageQuery.payload.status
 multiStageQuery.payload.status.status
@@ -1879,6 +1887,7 @@ minTopNThreshold
 parallelMergeInitialYieldRows
 parallelMergeParallelism
 parallelMergeSmallBatchRows
+parallelPoolInit
 populateCache
 populateResultLevelCache
 queryId
@@ -2442,12 +2451,15 @@ ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
+SPECTATOR_PERCENTILE
+SPECTATOR_COUNT
 PercentileBuckets
 spectatorHistogram
 spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+countSpectatorHistogram
 
 - ../docs/development/extensions-contrib/ddsketch-quantiles.md
 quantilesFromDDSketch

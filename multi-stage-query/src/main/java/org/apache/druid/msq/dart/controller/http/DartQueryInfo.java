@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
@@ -79,7 +80,7 @@ public class DartQueryInfo implements QueryInfo
         holder.getAuthenticationResult().getAuthenticatedBy(),
         holder.getAuthenticationResult().getIdentity(),
         holder.getStartTime(),
-        holder.getState().toString()
+        holder.getState().getStatusString()
     );
   }
 
@@ -151,10 +152,23 @@ public class DartQueryInfo implements QueryInfo
     return startTime;
   }
 
+  @Override
   @JsonProperty
-  public String getState()
+  public String state()
   {
     return state;
+  }
+
+  @Override
+  public String engine()
+  {
+    return DartSqlEngine.NAME;
+  }
+
+  @Override
+  public String executionId()
+  {
+    return dartQueryId;
   }
 
   /**

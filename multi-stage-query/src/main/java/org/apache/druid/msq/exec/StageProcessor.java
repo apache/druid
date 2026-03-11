@@ -23,9 +23,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.processor.OutputChannelFactory;
-import org.apache.druid.msq.exec.std.StandardStageProcessor;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -44,8 +45,6 @@ import javax.annotation.Nullable;
  * align with the input partitioning. If output channels are unbuffered (see {@link OutputChannelFactory#isBuffered()}),
  * they are ready for reading prior to stage work being complete, i.e., prior to the future from
  * {@link #execute(ExecutionContext)} resolving.
- *
- * @see StandardStageProcessor for an implementation that handles shuffle partitioning generically
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface StageProcessor<R, ExtraInfoType>
@@ -71,7 +70,7 @@ public interface StageProcessor<R, ExtraInfoType>
 
   /**
    * Merges two accumulated results. May modify the left-hand side {@code accumulated}. Does not modify the right-hand
-   * side {@code current}.
+   * side {@code otherAccumulated}.
    */
   R mergeAccumulatedResult(R accumulated, R otherAccumulated);
 
@@ -80,4 +79,14 @@ public interface StageProcessor<R, ExtraInfoType>
    */
   @SuppressWarnings("rawtypes")
   ExtraInfoHolder makeExtraInfoHolder(@Nullable ExtraInfoType extra);
+
+  /**
+   * Produces an optional {@link SegmentPruner}, which can used for best-effort pruning of {@link DataSegment} objects
+   * by processors which deal with them
+   */
+  @Nullable
+  default SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
+  }
 }

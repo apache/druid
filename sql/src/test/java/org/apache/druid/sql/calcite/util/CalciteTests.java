@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -89,6 +90,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
@@ -98,6 +100,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -410,7 +413,8 @@ public class CalciteTests
         new MetadataSegmentView(
             coordinatorClient,
             new BrokerSegmentWatcherConfig(),
-            BrokerSegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create(),
+            new StubServiceEmitter()
         ),
         timelineServerView,
         new FakeServerInventoryView(),
@@ -419,7 +423,9 @@ public class CalciteTests
         overlordClient,
         provider,
         getJsonMapper(),
-        new FakeHttpClient()
+        new FakeHttpClient(),
+        () -> new SqlEngineRegistry(Collections.emptySet()),
+        new PlannerConfig()
     );
   }
 

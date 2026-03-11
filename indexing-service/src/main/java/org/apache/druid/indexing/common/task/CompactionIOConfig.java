@@ -45,7 +45,7 @@ public class CompactionIOConfig implements IOConfig
   @JsonCreator
   public CompactionIOConfig(
       @JsonProperty("inputSpec") CompactionInputSpec inputSpec,
-      @JsonProperty("allowNonAlignedInterval") boolean allowNonAlignedInterval,
+      @Deprecated @JsonProperty("allowNonAlignedInterval") boolean allowNonAlignedInterval,
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
@@ -60,6 +60,10 @@ public class CompactionIOConfig implements IOConfig
     return inputSpec;
   }
 
+  /**
+   * @deprecated Provided for backwards compatibility. Can lead to data being accidentally overshadowed.
+   */
+  @Deprecated
   @JsonProperty("allowNonAlignedInterval")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isAllowNonAlignedInterval()

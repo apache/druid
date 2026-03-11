@@ -28,7 +28,6 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -54,12 +53,13 @@ public class JettyServerModuleTest
     Mockito.when(jettyServerThreadPool.getMaxThreads()).thenReturn(100);
     Mockito.when(jettyServerThreadPool.getQueueSize()).thenReturn(50);
     Mockito.when(jettyServerThreadPool.getBusyThreads()).thenReturn(60);
+    Mockito.when(jettyServerThreadPool.getReadyThreads()).thenReturn(20);
+    Mockito.when(jettyServerThreadPool.getUtilizedThreads()).thenReturn(5);
+    Mockito.when(jettyServerThreadPool.getUtilizationRate()).thenReturn(0.45);
 
-    JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor(
-        MonitorsConfig.mapOfDatasourceAndTaskID("ds", "t0")
-    );
+    JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor();
 
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     jettyMonitor.doMonitor(serviceEmitter);
 
     serviceEmitter.verifyValue("jetty/numOpenConnections", 0);
@@ -70,6 +70,9 @@ public class JettyServerModuleTest
     serviceEmitter.verifyValue("jetty/threadPool/max", 100);
     serviceEmitter.verifyValue("jetty/threadPool/queueSize", 50);
     serviceEmitter.verifyValue("jetty/threadPool/busy", 60);
+    serviceEmitter.verifyValue("jetty/threadPool/ready", 20);
+    serviceEmitter.verifyValue("jetty/threadPool/utilized", 5);
+    serviceEmitter.verifyValue("jetty/threadPool/utilizationRate", 0.45);
   }
 
   @Test

@@ -407,6 +407,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
         {
           query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
           resultFormat: 'array',
+          context: { engine: 'native' },
         },
         signal,
       );

@@ -19,7 +19,7 @@ exports[`ShowJsonOrStages matches snapshot 1`] = `
         <span
           class="bp5-button-text"
         >
-          Refesh
+          Refresh
         </span>
       </button>
       <button

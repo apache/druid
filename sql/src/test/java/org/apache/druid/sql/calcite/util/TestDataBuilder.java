@@ -714,7 +714,8 @@ public class TestDataBuilder
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
       final QueryScheduler scheduler,
-      final JoinableFactoryWrapper joinableFactoryWrapper)
+      final JoinableFactoryWrapper joinableFactoryWrapper
+  )
   {
     SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
@@ -723,17 +724,18 @@ public class TestDataBuilder
         joinableFactoryWrapper,
         scheduler
     );
-    return addDataSetsToWalker(tmpDir, walker);
+    return addDataSetsToWalker(tmpDir, walker, injector.getInstance(ObjectMapper.class));
   }
 
   @SuppressWarnings("resource")
   public static SpecificSegmentsQuerySegmentWalker addDataSetsToWalker(
       final File tmpDir,
-      SpecificSegmentsQuerySegmentWalker walker
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
   )
   {
     final QueryableIndex index1 = IndexBuilder
-        .create()
+        .create(jsonMapper)
         .tmpDir(new File(tmpDir, "1"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(INDEX_SCHEMA)

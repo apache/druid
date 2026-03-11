@@ -22,6 +22,8 @@ package org.apache.druid.segment.incremental;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class SimpleRowIngestionMetersTest
 {
   @Test
@@ -32,16 +34,49 @@ public class SimpleRowIngestionMetersTest
     rowIngestionMeters.incrementProcessedBytes(5);
     rowIngestionMeters.incrementProcessedWithError();
     rowIngestionMeters.incrementUnparseable();
-    rowIngestionMeters.incrementThrownAway();
-    Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1));
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    final Map<String, Long> expected = Map.of(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1L);
+    Assert.assertEquals(new RowIngestionMetersTotals(1, 5, 1, expected, 1), rowIngestionMeters.getTotals());
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
+    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 1, 1);
     rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
-    Assert.assertEquals(rowIngestionMeters.getTotals(), rowIngestionMetersTotals);
+    Assert.assertEquals(rowIngestionMetersTotals, rowIngestionMeters.getTotals());
+  }
+
+  @Test
+  public void testIncrementThrownAwayWithReason()
+  {
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+
+    Assert.assertEquals(7, rowIngestionMeters.getThrownAway());
+
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+  }
+
+  @Test
+  public void testGetThrownAwayByReasonReturnsNoRejectedReasons()
+  {
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+
+    // With no increments, no rejected reasons should be present
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertTrue(byReason.isEmpty());
   }
 }
