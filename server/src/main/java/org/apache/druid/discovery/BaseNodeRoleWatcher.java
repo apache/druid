@@ -175,12 +175,32 @@ public class BaseNodeRoleWatcher
 
   public void childRemoved(DiscoveryDruidNode druidNode)
   {
+    childRemoved(druidNode, true);
+  }
+
+  /**
+   * Remove a node from the discovery cache. If {@code warnIfUnknown} is true, logs at ERROR
+   * level when the node was not in the cache (appropriate for real K8s DELETED events). If false,
+   * silently skips unknown nodes (appropriate for readiness-based removals where repeated
+   * NOT_READY events are expected during CrashLoopBackOff).
+   */
+  public void childRemoved(DiscoveryDruidNode druidNode, boolean warnIfUnknown)
+  {
     synchronized (lock) {
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         LOGGER.error(
             "Node [%s] of role [%s] removal ignored due to mismatched role (expected role [%s]).",
             druidNode.getDruidNode().getUriToUse(),
             druidNode.getNodeRole().getJsonName(),
+            nodeRole.getJsonName()
+        );
+        return;
+      }
+
+      if (!warnIfUnknown && !nodes.containsKey(druidNode.getDruidNode().getHostAndPortToUse())) {
+        LOGGER.debug(
+            "Ignoring removal of node [%s] of role [%s] that is not in the cache (pod may still be not ready).",
+            druidNode.getDruidNode().getUriToUse(),
             nodeRole.getJsonName()
         );
         return;
