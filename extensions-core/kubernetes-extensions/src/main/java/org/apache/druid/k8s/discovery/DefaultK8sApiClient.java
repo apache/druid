@@ -118,7 +118,7 @@ public class DefaultK8sApiClient implements K8sApiClient
       for (V1Pod podDef : podList.getItems()) {
         if (!isPodReady(podDef)) {
           LOGGER.info(
-              "Ignoring pod [%s] for role [%s] during list: pod has discovery label but is not yet reporting as ready.",
+              "Ignoring pod[%s] for role[%s] during list: pod has discovery label but is not yet reporting as ready.",
               podDef.getMetadata().getName(),
               nodeRole
           );
@@ -206,30 +206,28 @@ public class DefaultK8sApiClient implements K8sApiClient
                 if (item.object != null) {
                   if (!isPodReady(item.object)) {
                     if (WatchResult.MODIFIED.equals(item.type)) {
-                      // Pod was previously ready but is now unready (e.g., OOM-killed
-                      // container). Convert to NOT_READY to ensure the host is removed from discovery cache if it exists there.
+                      // Pod was previously ready but is now unready (e.g., OOM-killed container).
+                      // Remap to NOT_READY to ensure the host is removed from discovery cache if is cached
                       LOGGER.info(
-                          "Pod [%s] for role [%s] notified that it was modified and is now showing as not ready, "
+                          "Pod[%s] for role[%s] notified that it was modified and is now showing as not ready, "
                           + "treating as removed for discovery purposes.",
                           item.object.getMetadata().getName(),
                           nodeRole
                       );
                       effectiveType = WatchResult.NOT_READY;
                     } else if (WatchResult.ADDED.equals(item.type)) {
-                      // Pod is not ready yet (e.g., still starting up). Skip this event
-                      // entirely — it will appear via a MODIFIED event once it becomes ready.
+                      // Pod is not ready yet (e.g., still starting up). Skip this event entirely.
+                      // It will appear via a MODIFIED event that remaps to ADDED for dicovery, once it becomes ready.
                       LOGGER.debug(
-                          "Pod [%s] for role [%s] is not ready on ADDED event, skipping until it becomes ready.",
+                          "Pod[%s] for role[%s] is not ready on ADDED event, skipping until it becomes ready.",
                           item.object.getMetadata().getName(),
                           nodeRole
                       );
                       continue;
                     }
                   } else if (WatchResult.MODIFIED.equals(item.type)) {
-                    // Pod is ready on a MODIFIED event — it may have just become ready
-                    // (e.g., container restarted after OOM). Treat as ADDED so it gets
-                    // (re-)added to the discovery cache. This is safe even if the node
-                    // is already in the cache — BaseNodeRoleWatcher.childAdded() uses
+                    // Remap MODIFIED (pod ready) events to ADDED for discovery cache purposes.
+                    // This is safe even if the node is already in the cache because BaseNodeRoleWatcher.childAdded() uses
                     // putIfAbsent, so duplicates are silently ignored.
                     effectiveType = WatchResult.ADDED;
                   }
@@ -243,7 +241,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                   catch (Exception ex) {
                     LOGGER.warn(
                         ex,
-                        "Failed to deserialize node info from pod [%s] for role [%s] on [%s] event. "
+                        "Failed to deserialize node info from pod[%s] for role[%s] on [%s] event. "
                         + "Passing null to trigger watch restart and full resync.",
                         item.object.getMetadata() != null ? item.object.getMetadata().getName() : "unknown",
                         nodeRole,
