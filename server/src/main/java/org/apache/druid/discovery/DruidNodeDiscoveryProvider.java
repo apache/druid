@@ -22,6 +22,7 @@ package org.apache.druid.discovery;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
@@ -63,13 +64,23 @@ public abstract class DruidNodeDiscoveryProvider
    */
   public DruidNodeDiscovery getForService(String serviceName)
   {
+    return getForServiceAndRoles(
+        serviceName,
+        DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName)
+    );
+  }
+
+  /**
+   * Get DruidNodeDiscovery instance to discover nodes of a specific role that
+   * announce the given service in their metadata.
+   */
+  public DruidNodeDiscovery getForServiceAndRoles(String serviceName, Set<NodeRole> nodeRolesToWatch)
+  {
     return serviceDiscoveryMap.computeIfAbsent(
         serviceName,
         service -> {
-
-          Set<NodeRole> nodeRolesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(service);
-          if (nodeRolesToWatch == null) {
-            throw new IAE("Unknown service [%s].", service);
+          if (nodeRolesToWatch == null || nodeRolesToWatch.isEmpty()) {
+            throw InvalidInput.exception("No node role specified to watch for service[%s].", service);
           }
           ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(service, nodeRolesToWatch.size());
           DruidNodeDiscovery.Listener filteringGatheringUpstreamListener =

@@ -30,9 +30,12 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class ServletResourceUtils
@@ -111,5 +114,35 @@ public class ServletResourceUtils
     }
 
     throw new RuntimeException(e);
+  }
+
+  public static AsyncListener createAsyncTimeoutListener(Consumer<AsyncEvent> onTimeoutHandler)
+  {
+    return new AsyncListener()
+    {
+      @Override
+      public void onComplete(AsyncEvent asyncEvent)
+      {
+        // do nothing
+      }
+
+      @Override
+      public void onTimeout(AsyncEvent asyncEvent)
+      {
+        onTimeoutHandler.accept(asyncEvent);
+      }
+
+      @Override
+      public void onError(AsyncEvent asyncEvent)
+      {
+        // do nothing
+      }
+
+      @Override
+      public void onStartAsync(AsyncEvent asyncEvent)
+      {
+        // do nothing
+      }
+    };
   }
 }
