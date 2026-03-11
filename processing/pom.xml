@@ -533,6 +533,9 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
+        <includes>
+          <include>defaultMetrics.json</include>
+        </includes>
       </resource>
       <resource>
         <directory>
