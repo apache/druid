@@ -53,7 +53,7 @@ jobs:
 
       - name: Tar Druid container logs
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: tar cvzf ./druid-container-logs.tgz ./druid-container-logs
+        run: tar cvzf ./druid-container-logs.tgz ./embedded-tests/druid-container-logs
 
       - name: Upload Druid container logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}

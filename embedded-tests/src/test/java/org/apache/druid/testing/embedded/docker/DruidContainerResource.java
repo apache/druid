@@ -179,7 +179,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     log.info(
         "Starting Druid container[%s] with image[%s], exposed ports[%s] and mounted directory[%s].",
-        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory
+        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory.getAbsolutePath()
     );
 
     setCommonProperties(container);
