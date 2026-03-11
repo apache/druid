@@ -117,7 +117,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
             Period.millis(10),
             Period.millis(10),
             true,
-            Period.seconds(5),
+            Period.seconds(30),
             null, null, null, null, null, null, null, null,
             false,
             null
@@ -138,6 +138,14 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expectedRowCount)
     );
+
+    final int totalEventsProcessed = indexer
+        .latchableEmitter()
+        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
+        .stream()
+        .mapToInt(Number::intValue)
+        .sum();
+    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
   }
 
   protected void verifySupervisorIsRunningHealthy(String supervisorId)
