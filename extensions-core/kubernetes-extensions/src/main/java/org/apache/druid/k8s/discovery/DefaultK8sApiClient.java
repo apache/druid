@@ -228,7 +228,9 @@ public class DefaultK8sApiClient implements K8sApiClient
                   } else if (WatchResult.MODIFIED.equals(item.type)) {
                     // Pod is ready on a MODIFIED event — it may have just become ready
                     // (e.g., container restarted after OOM). Treat as ADDED so it gets
-                    // (re-)added to the discovery cache.
+                    // (re-)added to the discovery cache. This is safe even if the node
+                    // is already in the cache — BaseNodeRoleWatcher.childAdded() uses
+                    // putIfAbsent, so duplicates are silently ignored.
                     effectiveType = WatchResult.ADDED;
                   }
 
