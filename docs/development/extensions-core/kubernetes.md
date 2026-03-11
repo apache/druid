@@ -54,9 +54,29 @@ Additionally, this extension has following configuration.
 
 ### Gotchas
 
-- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. 
+- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already.
 - All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
 - All Druid Pods need permissions to be able to add labels to self-pod, List and Watch other Pods, create and read ConfigMap for leader election. Assuming, "default" service account is used by Druid pods, you might need to add following or something similar Kubernetes Role and Role Binding.
+
+### Readiness probes and discovery
+
+This extension uses Kubernetes container readiness to decide whether a pod is available for service discovery. When a container becomes not-ready (for example, after an OOM kill or crash), the pod is automatically removed from discovery until it becomes ready again. This prevents routing requests to pods that are unable to serve them.
+
+Because of this, you should configure [readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) on all Druid pods. Without a readiness probe, Kubernetes marks a container as ready the moment the process starts, which may be before the Druid service is fully initialized and able to handle requests.
+
+**Important:** Readiness probe configuration directly affects discovery behavior. If a probe is too aggressive (low timeout, low failure threshold), a pod under heavy load could temporarily fail its probe, be removed from discovery, and shift its load onto other pods — potentially causing a cascade. To avoid this, tune your probes to tolerate brief periods of high load:
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /status/health
+    port: 8088
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 10
+```
+
+With this configuration, a pod must fail its readiness check 3 times in a row (30 seconds) before it is removed from discovery. Adjust these values based on your workload and tolerance for routing to temporarily unhealthy pods.
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
