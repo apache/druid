@@ -67,11 +67,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   public static String getTableNamesAsString(Set<String> tableNames)
   {
+    if (tableNames.isEmpty()) {
+      return "";
+    }
     if (tableNames.size() == 1) {
       return Iterables.getOnlyElement(tableNames);
-    } else {
-      return tableNames.stream().sorted().collect(Collectors.toList()).toString();
     }
+    return tableNames.stream().sorted().collect(Collectors.toList()).toString();
   }
 
   public static String[] getIntervalsAsStringArray(Collection<Interval> intervals)
