@@ -58,7 +58,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -390,7 +389,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertEquals("id1", stat.getSupervisorId());
     Assert.assertEquals("TestSupervisorSpec", stat.getType());
     Assert.assertEquals("RUNNING", stat.getState());
-    Assert.assertEquals("[]", stat.getDataSource());
+    Assert.assertEquals("id1", stat.getDataSource());
     Assert.assertNull(stat.getStream());
     Assert.assertEquals("RUNNING", stat.getDetailedState());
 
@@ -1084,7 +1083,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     @Override
     public List<String> getDataSources()
     {
-      return new ArrayList<>();
+      return Collections.singletonList(id);
     }
   }
 }
