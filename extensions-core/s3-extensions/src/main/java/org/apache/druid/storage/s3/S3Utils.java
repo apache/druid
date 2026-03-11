@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.aws.AWSClientConfig;
@@ -376,7 +377,8 @@ public class S3Utils
   )
       throws Exception
   {
-    if (keysToDelete != null && log.isDebugEnabled()) {
+    Preconditions.checkNotNull(keysToDelete, "keysToDelete");
+    if (log.isDebugEnabled()) {
       List<String> keys = keysToDelete.stream()
                                       .map(ObjectIdentifier::key)
                                       .collect(Collectors.toList());

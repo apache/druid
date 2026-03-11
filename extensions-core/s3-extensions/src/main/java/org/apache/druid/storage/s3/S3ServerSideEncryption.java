@@ -24,15 +24,18 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class S3ServerSideEncryption implements ServerSideEncryption
 {
+  private static final software.amazon.awssdk.services.s3.model.ServerSideEncryption SSE_AES256 =
+      software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256;
+
   @Override
   public PutObjectRequest.Builder decorate(PutObjectRequest.Builder builder)
   {
-    return builder.serverSideEncryption(software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256);
+    return builder.serverSideEncryption(SSE_AES256);
   }
 
   @Override
   public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
   {
-    return builder.serverSideEncryption(software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256);
+    return builder.serverSideEncryption(SSE_AES256);
   }
 }

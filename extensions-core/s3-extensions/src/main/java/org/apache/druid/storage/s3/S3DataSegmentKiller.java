@@ -25,18 +25,13 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
-import software.amazon.awssdk.services.s3.model.Delete;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -58,7 +53,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   private static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
 
   private static final int NUM_RETRIES = 3;
-  private static final String MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT = "message: [%s], code: [%s]";
 
   /**
    * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
@@ -108,7 +102,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       );
       if (path.endsWith("/")) {
         // segment is not compressed, list objects and add them all to delete list
-        ListObjectsV2Request request = ListObjectsV2Request.builder()
+        ListObjectsV2Request request = ListObjectsV2Request
+            .builder()
             .bucket(s3Bucket)
             .prefix(path)
             .build();
@@ -157,68 +152,15 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   )
   {
     boolean hadException = false;
-    List<List<ObjectIdentifier>> keysChunks = Lists.partition(
-        keysToDelete,
-        MAX_MULTI_OBJECT_DELETE_SIZE
-    );
-    for (List<ObjectIdentifier> chunkOfKeys : keysChunks) {
+    for (List<ObjectIdentifier> chunkOfKeys : Lists.partition(keysToDelete, MAX_MULTI_OBJECT_DELETE_SIZE)) {
       try {
-        log.info(
-            "Deleting the following segment files from S3 bucket[%s]: [%s]",
-            s3Bucket,
-            chunkOfKeys.stream().map(ObjectIdentifier::key).collect(Collectors.toList())
-        );
-        List<ObjectIdentifier> remaining = chunkOfKeys;
-        for (int attempt = 0; attempt <= NUM_RETRIES; attempt++) {
-          DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
-              .bucket(s3Bucket)
-              .delete(Delete.builder()
-                  .objects(remaining)
-                  .quiet(true)
-                  .build())
-              .build();
-          DeleteObjectsResponse response = S3Utils.retryS3Operation(
-              () -> s3Client.deleteObjects(deleteObjectsRequest)
-          );
-          if (!response.hasErrors()) {
-            break;
-          }
-          List<S3Error> errors = response.errors();
-          Map<String, List<String>> errorToKeys = new HashMap<>();
-          for (S3Error error : errors) {
-            errorToKeys.computeIfAbsent(StringUtils.format(
-                MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT,
-                error.message(),
-                error.code()
-            ), k -> new ArrayList<>()).add(error.key());
-          }
-          errorToKeys.forEach((key, value) -> log.error(
-              "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
-              s3Bucket,
-              String.join(", ", value),
-              key
-          ));
-          remaining = errors.stream()
-                            .map(e -> ObjectIdentifier.builder().key(e.key()).build())
-                            .collect(Collectors.toList());
-          if (attempt == NUM_RETRIES) {
-            throw new S3MultiObjectDeleteException(errors);
-          }
-          log.warn("Retrying %d failed key(s), attempt %d/%d", remaining.size(), attempt + 2, NUM_RETRIES + 1);
-        }
-      }
-      catch (S3Exception e) {
-        hadException = true;
-        log.noStackTrace().warn(e,
-            "Unable to delete from bucket [%s], the following keys [%s]",
-            s3Bucket,
-            chunkOfKeys.stream().map(ObjectIdentifier::key).collect(Collectors.joining(", "))
-        );
+        log.info("Deleting %d segment files from S3 bucket[%s]", chunkOfKeys.size(), s3Bucket);
+        S3Utils.deleteBucketKeys(s3Client, s3Bucket, chunkOfKeys, NUM_RETRIES);
       }
       catch (Exception e) {
         hadException = true;
         log.noStackTrace().warn(e,
-            "Unexpected exception occurred when deleting from bucket [%s], the following keys [%s]",
+            "Unable to delete from bucket [%s], keys [%s]",
             s3Bucket,
             chunkOfKeys.stream().map(ObjectIdentifier::key).collect(Collectors.joining(", "))
         );
@@ -238,7 +180,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
       if (s3Path.endsWith("/")) {
         // segment is not compressed, list objects and delete them all
-        ListObjectsV2Request request = ListObjectsV2Request.builder()
+        ListObjectsV2Request request = ListObjectsV2Request
+            .builder()
             .bucket(s3Bucket)
             .prefix(s3Path)
             .build();
