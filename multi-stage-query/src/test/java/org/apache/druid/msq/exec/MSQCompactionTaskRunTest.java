@@ -592,7 +592,13 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
 
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair1 = runTask(compactionTask1);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair1, TOTAL_TEST_ROWS);
-    verifyCompactedSegment(List.copyOf(resultPair1.rhs.getSegments()), segmentGranularity, DEFAULT_QUERY_GRAN, false);
+    verifyCompactedSegment(
+        compactionTask1.getCompactionRunner(),
+        List.copyOf(resultPair1.rhs.getSegments()),
+        segmentGranularity,
+        DEFAULT_QUERY_GRAN,
+        false
+    );
     Assert.assertEquals(1, resultPair1.rhs.getSegments().size());
     final DataSegment compactedSegment1 = Iterables.getOnlyElement(resultPair1.rhs.getSegments());
 
