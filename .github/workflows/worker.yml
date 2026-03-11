@@ -89,6 +89,27 @@ jobs:
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
+      - name: Summarize flaky tests
+        if: always()
+        run: |
+          # Find all flaky failures
+          flaky_count=$(find . -name "TEST-*.xml" -exec grep -c "<flakyFailure" {} \; | awk '{sum+=$1} END {print sum}')
+          
+          # Write count to GitHub Actions summary
+          echo "### Flaky Tests: $flaky_count found" >> $GITHUB_STEP_SUMMARY
+          
+          # If there are any, list them as bullets
+          if [ "$flaky_count" -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Flaky Test Details" >> $GITHUB_STEP_SUMMARY
+            find . -name "TEST-*.xml" -exec grep -H "<flakyFailure" {} \; | \
+              sed -E 's#.*/TEST-(.*)\.xml.*message="([^"]*)".*#- \1: \2#' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Normalize flaky failures
+        if: always()
+        run: |
+          find . -name "TEST-*.xml" -exec sed -i 's/flakyFailure/failure/g' {} +
 
       - name: Publish Test Report
         if: ${{ hashFiles('**/TEST-*.xml') != '' }}
