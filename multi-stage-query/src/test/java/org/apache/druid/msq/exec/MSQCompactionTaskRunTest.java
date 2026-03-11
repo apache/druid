@@ -135,7 +135,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   private final ConcurrentHashMap<String, TaskActionClient> taskActionClients = new ConcurrentHashMap<>();
   private Injector injector;
 
-  @Parameterized.Parameters(name = "name: {0}, inputInterval={5}, segmentGran={6}")
+  @Parameterized.Parameters(name = "name: {0}, inputInterval={6}, segmentGran={7}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -593,6 +593,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair1 = runTask(compactionTask1);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair1, TOTAL_TEST_ROWS);
     verifyCompactedSegment(
+        compactionTask1.getCompactionRunner(),
         List.copyOf(resultPair1.rhs.getSegments()),
         segmentGranularity,
         DEFAULT_QUERY_GRAN,
