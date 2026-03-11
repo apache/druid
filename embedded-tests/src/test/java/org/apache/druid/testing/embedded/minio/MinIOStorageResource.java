@@ -95,6 +95,8 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     // Configure S3 connection properties
     cluster.addCommonProperty("druid.s3.endpoint.url", cluster.getEmbeddedHostname().useInUri(getEndpointUrl()));
+    // AWS SDK v2 requires a region; use a fixed value since MinIO doesn't validate it
+    cluster.addCommonProperty("druid.s3.endpoint.signingRegion", "us-east-1");
     cluster.addCommonProperty("druid.s3.accessKey", getAccessKey());
     cluster.addCommonProperty("druid.s3.secretKey", getSecretKey());
     cluster.addCommonProperty("druid.s3.enablePathStyleAccess", "true");

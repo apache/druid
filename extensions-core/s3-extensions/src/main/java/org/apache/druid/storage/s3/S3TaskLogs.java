@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -44,14 +45,14 @@ public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
-  private final ServerSideEncryptingAmazonS3 service;
+  private final Supplier<ServerSideEncryptingAmazonS3> service;
   private final S3TaskLogsConfig config;
   private final S3InputDataConfig inputDataConfig;
   private final CurrentTimeMillisSupplier timeSupplier;
 
   @Inject
   public S3TaskLogs(
-      ServerSideEncryptingAmazonS3 service,
+      Supplier<ServerSideEncryptingAmazonS3> service,
       S3TaskLogsConfig config,
       S3InputDataConfig inputDataConfig,
       CurrentTimeMillisSupplier timeSupplier
@@ -115,7 +116,7 @@ public class S3TaskLogs implements TaskLogs
   private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
   {
     try {
-      final HeadObjectResponse objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
+      final HeadObjectResponse objectMetadata = service.get().getObjectMetadata(config.getS3Bucket(), taskKey);
 
       final long start;
       final long end = objectMetadata.contentLength() - 1;
@@ -135,7 +136,7 @@ public class S3TaskLogs implements TaskLogs
           .ifMatch(ensureQuotated(objectMetadata.eTag()))
           .range(AwsBytesRange.of(start, end).getBytesRange());
 
-      return Optional.of(service.getObject(requestBuilder));
+      return Optional.of(service.get().getObject(requestBuilder));
     }
     catch (S3Exception e) {
       if (404 == e.statusCode()
@@ -187,7 +188,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.retryS3Operation(
           () -> {
-            S3Utils.uploadFileIfPossible(service, config.getDisableAcl(), config.getS3Bucket(), taskKey, logFile);
+            S3Utils.uploadFileIfPossible(service.get(), config.getDisableAcl(), config.getS3Bucket(), taskKey, logFile);
             return null;
           }
       );
@@ -227,7 +228,7 @@ public class S3TaskLogs implements TaskLogs
     );
     try {
       S3Utils.deleteObjectsInPath(
-          service,
+          service.get(),
           inputDataConfig.getMaxListingLength(),
           config.getS3Bucket(),
           config.getS3Prefix(),

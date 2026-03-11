@@ -137,7 +137,7 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
-    S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
+    S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
     File logFile = tempFolder.newFile("status.json");
@@ -165,7 +165,7 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
-    S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
+    S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     File payloadFile = tempFolder.newFile("task.json");
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
@@ -206,7 +206,7 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
-    S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
+    S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
     Optional<InputStream> payloadResponse = s3TaskLogs.streamTaskPayload(taskId);
@@ -626,7 +626,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     config.setS3Prefix(TEST_PREFIX);
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_KEYS);
-    S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
+    S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
     return s3TaskLogs;
   }
 
@@ -666,7 +666,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     config.setS3Bucket(TEST_BUCKET);
     CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
-    S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
+    S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
     File logFile = tempFolder.newFile("test_log_file");

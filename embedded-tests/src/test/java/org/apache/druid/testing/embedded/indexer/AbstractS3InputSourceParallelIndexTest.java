@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexer;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.apache.druid.data.input.s3.S3InputSourceDruidModule;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -37,6 +36,7 @@ import org.junit.jupiter.api.BeforeAll;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -114,11 +114,11 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
     final String indexDatasource = dataSource;
     try (final Closeable ignored = unloader(indexDatasource)) {
       final String endpointConfigJson = jsonMapper.writeValueAsString(
-          ImmutableMap.of("url", endpointUrl, "signingRegion", "us-east-1")
+          Map.of("url", endpointUrl, "signingRegion", "us-east-1")
       );
       // Path-style access is required for MinIO running at a local IP address
       final String clientConfigJson = jsonMapper.writeValueAsString(
-          ImmutableMap.of("enablePathStyleAccess", true)
+          Map.of("enablePathStyleAccess", true)
       );
       final Function<String, String> transform = spec -> {
         try {
@@ -127,16 +127,28 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
           inputSourceValue = StringUtils.replace(inputSourceValue, "%%BUCKET%%", getCloudBucket("s3"));
           inputSourceValue = StringUtils.replace(inputSourceValue, "%%PATH%%", getCloudPath("s3"));
           spec = StringUtils.replace(spec, "%%INPUT_FORMAT_TYPE%%", InputFormatDetails.JSON.getInputFormatType());
-          spec = StringUtils.replace(spec, "%%PARTITIONS_SPEC%%", jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null)));
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
+          );
           spec = StringUtils.replace(spec, "%%INPUT_SOURCE_TYPE%%", "s3");
-          spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTIES%%", jsonMapper.writeValueAsString(s3InputSourceConfig));
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_SOURCE_PROPERTIES%%",
+              jsonMapper.writeValueAsString(s3InputSourceConfig)
+          );
           spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_KEY%%", inputSource.lhs);
           spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_VALUE%%", inputSourceValue);
           // Inject endpointConfig and clientConfig so the custom S3 client points at MinIO with path-style access
           spec = StringUtils.replace(
               spec,
               "\"type\": \"s3\",",
-              "\"type\": \"s3\", \"endpointConfig\": " + endpointConfigJson + ", \"clientConfig\": " + clientConfigJson + ","
+              "\"type\": \"s3\", \"endpointConfig\": "
+              + endpointConfigJson
+              + ", \"clientConfig\": "
+              + clientConfigJson
+              + ","
           );
           return spec;
         }
@@ -144,7 +156,16 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
           throw new RuntimeException(e);
         }
       };
-      doIndexTest(indexDatasource, INDEX_TASK, transform, INDEX_QUERIES_RESOURCE, false, true, true, segmentAvailabilityConfirmationPair);
+      doIndexTest(
+          indexDatasource,
+          INDEX_TASK,
+          transform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          segmentAvailabilityConfirmationPair
+      );
     }
   }
 }

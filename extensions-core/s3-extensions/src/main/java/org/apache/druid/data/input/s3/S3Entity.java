@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.storage.s3.AwsBytesRange;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -68,7 +69,7 @@ public class S3Entity extends RetryingInputEntity
     GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
         .bucket(object.getBucket())
         .key(object.getPath())
-        .range("bytes=" + offset + "-"); // AWS SDK V2 move to explicit byte range, bytes=300- means byte 300 to EOF
+        .range(AwsBytesRange.from(offset).getBytesRange());
     try {
       final ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(requestBuilder);
       if (s3Object == null) {
