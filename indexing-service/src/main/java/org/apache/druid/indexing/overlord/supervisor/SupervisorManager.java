@@ -97,15 +97,21 @@ public class SupervisorManager implements SupervisorStatsProvider
   {
     List<SupervisorStatsProvider.SupervisorStats> stats = new ArrayList<>();
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
-      final SupervisorSpec spec = entry.getValue().rhs;
-      final SupervisorStateManager.State state = entry.getValue().lhs.getState();
+
+      final Pair<Supervisor, SupervisorSpec> pair = entry.getValue();
+      if (pair == null || pair.lhs == null) {
+        continue;
+      }
+      final Supervisor supervisor = pair.lhs;
+      final SupervisorSpec supervisorSpec = pair.rhs;
+      final SupervisorStateManager.State state = supervisor.getState();
 
       stats.add(new SupervisorStatsProvider.SupervisorStats(
-          spec.getId(),
-          spec.getType(),
+          supervisorSpec.getId(),
+          supervisorSpec.getType(),
           state == null ? "UNKNOWN" : state.getBasicState().toString(),
-          DefaultQueryMetrics.getTableNamesAsString(new HashSet<>(spec.getDataSources())),
-          spec.getSource(),
+          DefaultQueryMetrics.getTableNamesAsString(new HashSet<>(supervisorSpec.getDataSources())),
+          supervisorSpec.getSource() == null ? "" : supervisorSpec.getSource(),
           state == null ? "UNKNOWN" : state.toString()
       ));
     }
