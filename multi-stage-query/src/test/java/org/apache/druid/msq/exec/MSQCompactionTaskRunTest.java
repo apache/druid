@@ -135,7 +135,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   private final ConcurrentHashMap<String, TaskActionClient> taskActionClients = new ConcurrentHashMap<>();
   private Injector injector;
 
-  @Parameterized.Parameters(name = "name: {0}, inputInterval={5}, segmentGran={6}")
+  @Parameterized.Parameters(name = "name: {0}, inputInterval={6}, segmentGran={7}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();

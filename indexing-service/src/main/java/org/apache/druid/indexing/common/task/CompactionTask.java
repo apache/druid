@@ -702,7 +702,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          umbrellaInterval(timelineSegments, segmentProvider),
+          JodaUtils.umbrellaInterval(Iterables.transform(timelineSegments, DataSegment::getInterval)),
           lazyFetchSegments(
               segmentsToCompact,
               toolbox.getSegmentCacheManager()
