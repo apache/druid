@@ -128,7 +128,7 @@
         <okhttp.version>5.3.2</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.8.4</zookeeper.version>
+        <zookeeper.version>3.8.6</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
