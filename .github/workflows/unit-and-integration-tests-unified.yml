@@ -60,7 +60,7 @@ jobs:
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [unit-tets, docker-tests]
+    needs: [unit-tests, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
