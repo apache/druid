@@ -117,7 +117,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
             Period.millis(10),
             Period.millis(10),
             true,
-            Period.seconds(5),
+            Period.seconds(60),
             null, null, null, null, null, null, null, null,
             false,
             null
