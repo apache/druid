@@ -37,6 +37,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -51,6 +52,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   @Nullable
   private final CompactionEngine engine;
   private final Period skipOffsetFromLatest;
+  private final List<Interval> skipIntervals;
   private final int taskPriority;
   @Nullable
   private final Map<String, Object> taskContext;
@@ -63,6 +65,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipIntervals") @Nullable List<Interval> skipIntervals,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
@@ -72,6 +75,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.engine = engine;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
+    this.skipIntervals = skipIntervals == null ? List.of() : skipIntervals;
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
@@ -101,6 +105,13 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @JsonProperty
+  @Override
+  public List<Interval> getSkipIntervals()
+  {
+    return skipIntervals;
   }
 
   @JsonProperty
@@ -241,12 +252,13 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
            && Objects.equals(dataSource, that.dataSource)
            && engine == that.engine
            && Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest)
+           && Objects.equals(skipIntervals, that.skipIntervals)
            && Objects.equals(taskContext, that.taskContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, engine, skipOffsetFromLatest, taskPriority, taskContext, inputSegmentSizeBytes);
+    return Objects.hash(dataSource, engine, skipOffsetFromLatest, skipIntervals, taskPriority, taskContext, inputSegmentSizeBytes);
   }
 }

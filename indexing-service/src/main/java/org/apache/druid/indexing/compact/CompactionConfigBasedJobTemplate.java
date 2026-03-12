@@ -25,8 +25,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
@@ -42,6 +43,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeSet;
 
 /**
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate}.
@@ -171,12 +173,25 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     validateInput(source);
 
     final Interval searchInterval = Objects.requireNonNull(source.getInterval());
+    final TreeSet<Interval> skipIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+
+    if (searchInterval.getStartMillis() > Long.MIN_VALUE) {
+      skipIntervals.add(new Interval(Long.MIN_VALUE, searchInterval.getStartMillis()));
+    }
+    config.getSkipIntervals()
+          .stream()
+          .filter(i -> i.overlaps(searchInterval))
+          .map(i -> i.overlap(searchInterval))
+          .forEach(skipIntervals::add);
+    if (searchInterval.getEndMillis() < Long.MAX_VALUE) {
+      skipIntervals.add(new Interval(searchInterval.getEndMillis(), Long.MAX_VALUE));
+    }
 
     final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
     final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
         config,
         timeline,
-        Intervals.complementOf(searchInterval),
+        JodaUtils.condenseIntervals(skipIntervals),
         // This policy is used only while creating jobs
         // The actual order of jobs is determined by the policy used in CompactionJobQueue
         new NewestSegmentFirstPolicy(null),
