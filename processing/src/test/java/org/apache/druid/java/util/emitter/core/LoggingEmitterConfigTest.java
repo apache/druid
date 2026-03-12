@@ -38,8 +38,8 @@ public class LoggingEmitterConfigTest
     );
     Assert.assertEquals("getLoggerClass", LoggingEmitter.class.getName(), config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "info", config.getLogLevel());
-    Assert.assertFalse("shouldFilterMetrics", config.shouldFilterMetrics());
-    Assert.assertNull("getAllowedMetricsPath", config.getAllowedMetricsPath());
+    Assert.assertFalse("isShouldFilterMetrics", config.isShouldFilterMetrics());
+    Assert.assertFalse("getMetricSpecPath", config.getMetricSpecPath().isPresent());
   }
 
   @Test
@@ -54,8 +54,8 @@ public class LoggingEmitterConfigTest
 
     Assert.assertEquals("getLoggerClass", LoggingEmitter.class.getName(), config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "debug", config.getLogLevel());
-    Assert.assertFalse("shouldFilterMetrics", config.shouldFilterMetrics());
-    Assert.assertNull("getAllowedMetricsPath", config.getAllowedMetricsPath());
+    Assert.assertFalse("isShouldFilterMetrics", config.isShouldFilterMetrics());
+    Assert.assertFalse("getMetricSpecPath", config.getMetricSpecPath().isPresent());
   }
 
   @Test
@@ -65,7 +65,7 @@ public class LoggingEmitterConfigTest
     props.setProperty("org.apache.druid.java.util.emitter.loggerClass", "Foo");
     props.setProperty("org.apache.druid.java.util.emitter.logLevel", "INFO");
     props.setProperty("org.apache.druid.java.util.emitter.shouldFilterMetrics", "true");
-    props.setProperty("org.apache.druid.java.util.emitter.allowedMetricsPath", "/tmp/allowedMetrics.json");
+    props.setProperty("org.apache.druid.java.util.emitter.metricSpecPath", "/tmp/logging-metrics.json");
 
     final ObjectMapper objectMapper = new ObjectMapper();
     final LoggingEmitterConfig config = objectMapper.convertValue(
@@ -75,8 +75,8 @@ public class LoggingEmitterConfigTest
 
     Assert.assertEquals("getLoggerClass", "Foo", config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "INFO", config.getLogLevel());
-    Assert.assertTrue("shouldFilterMetrics", config.shouldFilterMetrics());
-    Assert.assertEquals("getAllowedMetricsPath", "/tmp/allowedMetrics.json", config.getAllowedMetricsPath());
+    Assert.assertTrue("isShouldFilterMetrics", config.isShouldFilterMetrics());
+    Assert.assertEquals("getMetricSpecPath", "/tmp/logging-metrics.json", config.getMetricSpecPath().orElse(null));
   }
 
   @Test
@@ -86,7 +86,7 @@ public class LoggingEmitterConfigTest
     props.setProperty("org.apache.druid.java.util.emitter.logging.class", "Foo");
     props.setProperty("org.apache.druid.java.util.emitter.logging.level", "INFO");
     props.setProperty("org.apache.druid.java.util.emitter.logging.shouldFilterMetrics", "true");
-    props.setProperty("org.apache.druid.java.util.emitter.logging.allowedMetricsPath", "/custom/path.json");
+    props.setProperty("org.apache.druid.java.util.emitter.logging.metricSpecPath", "/tmp/logging-metrics.json");
 
     final ObjectMapper objectMapper = new ObjectMapper();
     final LoggingEmitterConfig config = objectMapper.convertValue(
@@ -96,7 +96,7 @@ public class LoggingEmitterConfigTest
 
     Assert.assertEquals("getLoggerClass", "Foo", config.getLoggerClass());
     Assert.assertEquals("getLogLevel", "INFO", config.getLogLevel());
-    Assert.assertTrue("shouldFilterMetrics", config.shouldFilterMetrics());
-    Assert.assertEquals("getAllowedMetricsPath", "/custom/path.json", config.getAllowedMetricsPath());
+    Assert.assertTrue("isShouldFilterMetrics", config.isShouldFilterMetrics());
+    Assert.assertEquals("getMetricSpecPath", "/tmp/logging-metrics.json", config.getMetricSpecPath().orElse(null));
   }
 }

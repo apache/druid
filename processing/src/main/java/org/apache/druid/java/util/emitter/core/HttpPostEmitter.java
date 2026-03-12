@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.RequestBuilder;
@@ -59,7 +60,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.zip.GZIPOutputStream;
 
-public class HttpPostEmitter implements Flushable, Closeable, Emitter
+public class HttpPostEmitter extends AbstractFilteringEmitter implements Flushable, Closeable
 {
   private static final int MAX_EVENT_SIZE = 1023 * 1024; // Set max size slightly less than 1M to allow for metadata
 
@@ -152,6 +153,16 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
   public HttpPostEmitter(HttpEmitterConfig config, AsyncHttpClient client, ObjectMapper jsonMapper)
   {
+    super(
+        config.isShouldFilterMetrics(),
+        loadAllowedMetricNames(
+            config.isShouldFilterMetrics(),
+            jsonMapper,
+            config.getMetricSpecPath(),
+            BaseHttpEmittingConfig.DEFAULT_METRIC_SPEC_PATH,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+    );
     batchingStrategy = config.getBatchingStrategy();
     final int batchOverhead = batchingStrategy.batchStartLength() + batchingStrategy.batchEndLength();
     Preconditions.checkArgument(
@@ -221,7 +232,14 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
+  {
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void emitFilteredEvent(final Event event)
   {
     emitAndReturnBatch(event);
   }
@@ -277,6 +295,12 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
   }
 
   private void writeLargeEvent(byte[] eventBytes)

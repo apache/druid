@@ -21,10 +21,10 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -47,7 +47,6 @@ public class LoggingEmitterTest
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;
-  private LoggingEmitter emitter;
 
   @Before
   public void setUp()
@@ -71,7 +70,7 @@ public class LoggingEmitterTest
 
   private LoggingEmitter createEmitter(boolean shouldFilterMetrics, String allowedMetricsPath)
   {
-    emitter = new LoggingEmitter(
+    final LoggingEmitter emitter = new LoggingEmitter(
         new Logger(LoggingEmitter.class),
         LoggingEmitter.Level.WARN,
         trackingMapper,
@@ -82,28 +81,19 @@ public class LoggingEmitterTest
     return emitter;
   }
 
-  @After
-  public void tearDown()
-  {
-    if (emitter != null) {
-      emitter.close();
-      emitter = null;
-    }
-  }
-
   /**
    * Without filtering enabled, the emitter should log all events (backward compatibility).
    */
   @Test
   public void testEmitAllWhenFilteringDisabled()
   {
-    createEmitter(false, null);
+    try (LoggingEmitter emitter = createEmitter(false, null)) {
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("some/random/metric", 1).build("test", "localhost"));
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("some/random/metric", 1).build("test", "localhost"));
-
-    Assert.assertEquals("All events should be serialized (logged)", 3, serializedObjects.size());
+      Assert.assertEquals("All events should be serialized (logged)", 3, serializedObjects.size());
+    }
   }
 
   /**
@@ -114,14 +104,12 @@ public class LoggingEmitterTest
   @Test
   public void testFilterWithDefaultResource()
   {
-    createEmitter(true, null);
+    try (LoggingEmitter emitter = createEmitter(true, null)) {
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
 
-    // "query/time" is in the default allowed metrics list
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    // "some/unlisted/metric" is NOT in the default list
-    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
-
-    Assert.assertEquals("Only the allowed metric should be serialized", 1, serializedObjects.size());
+      Assert.assertEquals("Only the allowed metric should be serialized", 1, serializedObjects.size());
+    }
   }
 
   /**
@@ -131,13 +119,13 @@ public class LoggingEmitterTest
   public void testFilterWithCustomFilePath() throws IOException
   {
     final File allowFile = createAllowlistFile("{\"query/time\": [], \"query/bytes\": []}");
-    createEmitter(true, allowFile.getAbsolutePath());
+    try (LoggingEmitter emitter = createEmitter(true, allowFile.getAbsolutePath())) {
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/bytes", 2048).build("test", "localhost"));
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/bytes", 2048).build("test", "localhost"));
-
-    Assert.assertEquals("Only allowed metrics should be serialized", 2, serializedObjects.size());
+      Assert.assertEquals("Only allowed metrics should be serialized", 2, serializedObjects.size());
+    }
   }
 
   /**
@@ -148,12 +136,11 @@ public class LoggingEmitterTest
   public void testNonMetricEventsAlwaysPassThrough() throws IOException
   {
     final File allowFile = createAllowlistFile("{\"query/time\": []}");
-    createEmitter(true, allowFile.getAbsolutePath());
+    try (LoggingEmitter emitter = createEmitter(true, allowFile.getAbsolutePath())) {
+      emitter.emit(new UnitEvent("alerts", 42));
 
-    // This is NOT a ServiceMetricEvent, so it should bypass the allowlist filter
-    emitter.emit(new UnitEvent("alerts", 42));
-
-    Assert.assertEquals("Non-metric events should bypass the allowlist filter", 1, serializedObjects.size());
+      Assert.assertEquals("Non-metric events should bypass the allowlist filter", 1, serializedObjects.size());
+    }
   }
 
   /**
@@ -161,15 +148,9 @@ public class LoggingEmitterTest
    * to the default classpath resource and emits successfully.
    */
   @Test
-  public void testMissingCustomPathFallsBackToDefault()
+  public void testMissingCustomPathThrows()
   {
-    createEmitter(true, "/nonexistent/path/to/allowedMetrics.json");
-
-    // Fallback to default should allow "query/time" (in default list) and drop unlisted metrics
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
-
-    Assert.assertEquals("Fallback to default should allow listed metrics only", 1, serializedObjects.size());
+    Assert.assertThrows(DruidException.class, () -> createEmitter(true, "/nonexistent/path/to/allowedMetrics.json"));
   }
 
   /**
@@ -179,12 +160,12 @@ public class LoggingEmitterTest
   public void testEmptyAllowlistBlocksAllMetrics() throws IOException
   {
     final File allowFile = createAllowlistFile("{}");
-    createEmitter(true, allowFile.getAbsolutePath());
+    try (LoggingEmitter emitter = createEmitter(true, allowFile.getAbsolutePath())) {
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+      emitter.emit(new UnitEvent("alerts", 42));
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    emitter.emit(new UnitEvent("alerts", 42));
-
-    Assert.assertEquals("Only non-metric event should pass through", 1, serializedObjects.size());
+      Assert.assertEquals("Only non-metric event should pass through", 1, serializedObjects.size());
+    }
   }
 
   /**
@@ -194,12 +175,12 @@ public class LoggingEmitterTest
   public void testFilterDisabledIgnoresPath() throws IOException
   {
     final File allowFile = createAllowlistFile("{\"query/time\": []}");
-    createEmitter(false, allowFile.getAbsolutePath());
+    try (LoggingEmitter emitter = createEmitter(false, allowFile.getAbsolutePath())) {
+      emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+      emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
-
-    Assert.assertEquals("All events should pass when filtering is disabled", 2, serializedObjects.size());
+      Assert.assertEquals("All events should pass when filtering is disabled", 2, serializedObjects.size());
+    }
   }
 
   private File createAllowlistFile(String jsonContent) throws IOException
