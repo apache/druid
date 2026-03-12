@@ -29,6 +29,11 @@ export const BROKER_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         documentation:
           'List of rules to block queries on brokers. Each rule can match by datasource, query type, and/or context parameters.',
       },
+      {
+        value: 'blacklistedDataNodes',
+        documentation:
+          'List of data node host:port strings to exclude from query planning (e.g. "historical1:8083").',
+      },
     ],
   },
   // Query blocklist rule properties

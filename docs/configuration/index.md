@@ -1871,6 +1871,46 @@ queries in order to avoid running as a default priority of 0.
 The Broker has dynamic configurations to tune certain behavior dynamically, without requiring a service restart.
 You can configure these parameters using the [web console](../operations/web-console.md) (recommended) or through the [Broker dynamic configuration API](../api-reference/dynamic-configuration-api.md#broker-dynamic-configuration).
 
+|Property|Description|Default|
+|--------|-----------|-------|
+|`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](../api-reference/dynamic-configuration-api.md#query-blocklist-rules) for details.|none|
+|`blacklistedDataNodes`| Set of data node addresses (`host:port`) that should be excluded from query routing. Applies to all data node types (Historicals, Indexers, and other peons). Useful for removing unhealthy or maintenance nodes from queries without fully decommissioning them. See [Blacklisted data nodes](#blacklisted-data-nodes) for details.|none|
+
+###### Blacklisted data nodes
+
+The `blacklistedDataNodes` property allows you to exclude specific data nodes from query routing without fully decommissioning them.
+
+**Format:**
+
+Each entry in `blacklistedDataNodes` is a string in the format `host:port`, matching the node's address as reported in discovery:
+
+```json
+{
+  "blacklistedDataNodes": [
+    "historical1.example.com:8083",
+    "indexer2.example.com:8091",
+    "peon3:8091"
+  ]
+}
+```
+
+**Behavior:**
+
+- When a data node is blacklisted, the Broker excludes it from query routing decisions
+- Segments served by blacklisted nodes are not used to fulfill queries
+- If all segments for a given time interval are only available on blacklisted nodes, the Broker will not return results for that interval (similar to when a node is down)
+- For aggregation queries where partial results are acceptable, queries complete with results from available (non-blacklisted) nodes only
+
+**Matching:**
+
+- Node addresses must match exactly (case-sensitive). Verify the format by checking your Broker logs or the coordinator UI
+- The format is typically `hostname:port` or `ip:port` depending on your network configuration
+
+**Primary use case:**
+
+Re-route user queries to different segment replicas to ensure no user impact when nodes experience exogenous issues such as hardware failures, maintenance events, or unexpected problems.
+This allows you to gracefully remove nodes from the query path without affecting end users, as long as segments are replicated across multiple nodes. When a blacklisted node is removed from routing, queries automatically use available replicas on other nodes instead.
+
 #### SQL
 
 The Druid SQL server is configured through the following properties on the Broker.

@@ -21,10 +21,13 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -33,6 +36,9 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ServerSelectorTest
 {
@@ -166,6 +172,69 @@ public class ServerSelectorTest
         HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertTrue(selector.hasData());
+  }
+
+  @Test
+  public void testFilterAppliedToRealtimeServers()
+  {
+    final DataSegment segment = DataSegment.builder()
+                                           .dataSource("test_filter_realtime")
+                                           .interval(Intervals.of("2012/2013"))
+                                           .loadSpec(ImmutableMap.of("type", "local", "path", "somewhere"))
+                                           .version("v1")
+                                           .dimensions(ImmutableList.of())
+                                           .metrics(ImmutableList.of())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(9)
+                                           .size(0)
+                                           .build();
+
+    final Set<String> blacklisted = ImmutableSet.of("peon1:8091");
+    // Filter that excludes blacklisted hosts regardless of mode
+    final HistoricalFilter filter = (servers, mode) -> {
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filtered = new Int2ObjectRBTreeMap<>();
+      for (int priority : servers.keySet()) {
+        filtered.put(
+            priority,
+            servers.get(priority).stream()
+                   .filter(s -> !blacklisted.contains(s.getServer().getHost()))
+                   .collect(Collectors.toSet())
+        );
+      }
+      return filtered;
+    };
+
+    final ServerSelector selector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        filter
+    );
+
+    QueryableDruidServer blacklistedPeon = new QueryableDruidServer(
+        new DruidServer("peon1:8091", "peon1:8091", null, 0, null, ServerType.INDEXER_EXECUTOR, DruidServer.DEFAULT_TIER, 0),
+        EasyMock.createMock(DirectDruidClient.class)
+    );
+    QueryableDruidServer allowedPeon = new QueryableDruidServer(
+        new DruidServer("peon2:8091", "peon2:8091", null, 0, null, ServerType.INDEXER_EXECUTOR, DruidServer.DEFAULT_TIER, 0),
+        EasyMock.createMock(DirectDruidClient.class)
+    );
+
+    selector.addServerAndUpdateSegment(blacklistedPeon, segment);
+    selector.addServerAndUpdateSegment(allowedPeon, segment);
+
+    // pick() should only return allowedPeon since blacklistedPeon is filtered
+    QueryableDruidServer picked = selector.pick(null, CloneQueryMode.INCLUDECLONES);
+    Assert.assertNotNull(picked);
+    Assert.assertEquals("peon2:8091", picked.getServer().getHost());
+
+    // getAllServers() should only contain allowedPeon
+    Assert.assertEquals(
+        ImmutableSet.of("peon2:8091"),
+        selector.getAllServers(CloneQueryMode.INCLUDECLONES)
+                .stream()
+                .map(m -> m.getHost())
+                .collect(Collectors.toSet())
+    );
   }
 
 }

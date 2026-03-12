@@ -280,6 +280,16 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<Void> updateBrokerDynamicConfig(BrokerDynamicConfig dynamicConfig)
+  {
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/broker/config")
+            .jsonContent(jsonMapper, dynamicConfig),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
   public ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
     return client.asyncRequest(

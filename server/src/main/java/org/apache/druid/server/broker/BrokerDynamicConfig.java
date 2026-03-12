@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Dynamic configuration for brokers that can be changed at runtime.
@@ -46,12 +47,20 @@ public class BrokerDynamicConfig
    */
   private final List<QueryBlocklistRule> queryBlocklist;
 
+  /**
+   * Set of data node host:port strings (e.g., "historical1:8083") that should not be
+   * considered when planning a query. Applies to all data node types (historicals, peons, indexers).
+   */
+  private final Set<String> blacklistedDataNodes;
+
   @JsonCreator
   public BrokerDynamicConfig(
-      @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
+      @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
+      @JsonProperty("blacklistedDataNodes") @Nullable Set<String> blacklistedDataNodes
   )
   {
     this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Collections.emptyList());
+    this.blacklistedDataNodes = Configs.valueOrDefault(blacklistedDataNodes, Collections.emptySet());
   }
 
   @JsonProperty
@@ -59,6 +68,13 @@ public class BrokerDynamicConfig
   public List<QueryBlocklistRule> getQueryBlocklist()
   {
     return queryBlocklist;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Set<String> getBlacklistedDataNodes()
+  {
+    return blacklistedDataNodes;
   }
 
   @Override
@@ -71,13 +87,14 @@ public class BrokerDynamicConfig
       return false;
     }
     BrokerDynamicConfig that = (BrokerDynamicConfig) o;
-    return Objects.equals(queryBlocklist, that.queryBlocklist);
+    return Objects.equals(queryBlocklist, that.queryBlocklist)
+           && Objects.equals(blacklistedDataNodes, that.blacklistedDataNodes);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryBlocklist);
+    return Objects.hash(queryBlocklist, blacklistedDataNodes);
   }
 
   @Override
@@ -85,6 +102,7 @@ public class BrokerDynamicConfig
   {
     return "BrokerDynamicConfig{" +
            "queryBlocklist=" + queryBlocklist +
+           ", blacklistedDataNodes=" + blacklistedDataNodes +
            '}';
   }
 
@@ -96,6 +114,7 @@ public class BrokerDynamicConfig
   public static class Builder
   {
     private List<QueryBlocklistRule> queryBlocklist;
+    private Set<String> blacklistedDataNodes;
 
     public Builder()
     {
@@ -103,10 +122,12 @@ public class BrokerDynamicConfig
 
     @JsonCreator
     public Builder(
-        @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
+        @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
+        @JsonProperty("blacklistedDataNodes") @Nullable Set<String> blacklistedDataNodes
     )
     {
       this.queryBlocklist = queryBlocklist;
+      this.blacklistedDataNodes = blacklistedDataNodes;
     }
 
     public Builder withQueryBlocklist(List<QueryBlocklistRule> queryBlocklist)
@@ -115,9 +136,15 @@ public class BrokerDynamicConfig
       return this;
     }
 
+    public Builder withBlacklistedDataNodes(Set<String> blacklistedDataNodes)
+    {
+      this.blacklistedDataNodes = blacklistedDataNodes;
+      return this;
+    }
+
     public BrokerDynamicConfig build()
     {
-      return new BrokerDynamicConfig(queryBlocklist);
+      return new BrokerDynamicConfig(queryBlocklist, blacklistedDataNodes);
     }
 
     /**
@@ -127,7 +154,8 @@ public class BrokerDynamicConfig
     public BrokerDynamicConfig build(@Nullable BrokerDynamicConfig defaults)
     {
       return new BrokerDynamicConfig(
-        Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null)
+          Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null),
+          Configs.valueOrDefault(blacklistedDataNodes, defaults != null ? defaults.getBlacklistedDataNodes() : null)
       );
     }
   }

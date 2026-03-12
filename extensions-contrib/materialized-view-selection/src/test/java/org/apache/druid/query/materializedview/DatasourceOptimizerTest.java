@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
@@ -324,8 +325,11 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         EasyMock.createMock(HttpClient.class)
     );
 
-    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    TestCoordinatorClient testCoordinatorClient = new TestCoordinatorClient();
+    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(testCoordinatorClient);
     filter.start();
+    BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = new BrokerViewOfBrokerConfig(testCoordinatorClient);
+    brokerViewOfBrokerConfig.start();
     brokerServerView = new BrokerServerView(
         druidClientFactory,
         baseView,
@@ -333,7 +337,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        filter
+        filter,
+        brokerViewOfBrokerConfig
     );
     baseView.start();
   }

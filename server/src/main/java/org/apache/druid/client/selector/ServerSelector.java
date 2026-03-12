@@ -155,7 +155,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
                               .forEach(candidates::add);
 
         if (candidates.size() < numCandidates) { //-V6007: false alarm due to a bug in PVS-Studio
-          realtimeTierStrategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
+          realtimeTierStrategy.pick(filter.getQueryableServers(realtimeServers, cloneQueryMode), segment.get(), numCandidates - candidates.size())
                               .stream()
                               .map(server -> server.getServer().getMetadata())
                               .forEach(candidates::add);
@@ -179,11 +179,12 @@ public class ServerSelector implements Overshadowable<ServerSelector>
             .map(server -> server.getServer().getMetadata())
             .forEach(servers::add);
 
-      realtimeServers.values()
-                     .stream()
-                     .flatMap(Collection::stream)
-                     .map(server -> server.getServer().getMetadata())
-                     .forEach(servers::add);
+      filter.getQueryableServers(realtimeServers, cloneQueryMode)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(server -> server.getServer().getMetadata())
+            .forEach(servers::add);
     }
 
     return servers;
@@ -196,7 +197,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
       if (!historicalServers.isEmpty()) {
         return historicalTierStrategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
       }
-      return realtimeTierStrategy.pick(query, realtimeServers, segment.get());
+      return realtimeTierStrategy.pick(query, filter.getQueryableServers(realtimeServers, cloneQueryMode), segment.get());
     }
   }
 

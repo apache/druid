@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 
@@ -63,5 +64,11 @@ public class TestCoordinatorClient extends NoopCoordinatorClient
   public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
   {
     return Futures.immediateFuture(config);
+  }
+
+  @Override
+  public ListenableFuture<BrokerDynamicConfig> getBrokerDynamicConfig()
+  {
+    return Futures.immediateFuture(BrokerDynamicConfig.builder().build());
   }
 }

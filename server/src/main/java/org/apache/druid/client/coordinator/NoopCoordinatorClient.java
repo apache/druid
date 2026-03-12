@@ -111,6 +111,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<Void> updateBrokerDynamicConfig(BrokerDynamicConfig dynamicConfig)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
     throw new UnsupportedOperationException();

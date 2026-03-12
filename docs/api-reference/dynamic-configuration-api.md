@@ -38,6 +38,10 @@ For example, use `http://localhost:8888` for quickstart deployments.
 The Coordinator has dynamic configurations to tune certain behavior on the fly, without requiring a service restart.
 For information on the supported properties, see [Coordinator dynamic configuration](../configuration/index.md#dynamic-configuration).
 
+### Consistency Model
+
+Brokers' view of the coordinator dynamic config is eventually consistent with read-after-write guarantees local to a specific broker, meaning changes to the config may take time (by default 60 seconds) to propagate to all nodes.  
+
 ### Get dynamic configuration
 
 Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties.
@@ -308,6 +312,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Broker dynamic configuration is managed through the Coordinator but consumed by Brokers.
 These settings control broker behavior such as query blocking rules.
 
+### Consistency Model
+
+Brokers' view of the broker dynamic config is eventually consistent with read-after-write guarantees local to a specific broker, meaning changes to the config may take time (by default 60 seconds) to propagate to all nodes.
+
 ### Get broker dynamic configuration
 
 Retrieves the current Broker dynamic configuration. Returns a JSON object with the dynamic configuration properties.
@@ -366,7 +374,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "dataSources": ["large_table"],
       "queryTypes": ["scan"]
     }
-  ]
+  ],
+  "blacklistedDataNodes": []
 }
 ```
 
@@ -417,7 +426,7 @@ The endpoint supports a set of optional header parameters to populate the audit 
 curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
 -H "Content-Type: application/json" \
 -H "X-Druid-Author: admin" \
--H "X-Druid-Comment: Add query blocklist rules" \
+-H "X-Druid-Comment: Add query blocklist and blacklist data nodes" \
 -d '{
   "queryBlocklist": [
     {
@@ -431,6 +440,10 @@ curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
         "debug": "true"
       }
     }
+  ],
+  "blacklistedDataNodes": [
+    "historical1.example.com:8083",
+    "indexer2.example.com:8091"
   ]
 }'
 ```
@@ -444,7 +457,7 @@ POST /druid/coordinator/v1/broker/config HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 X-Druid-Author: admin
-X-Druid-Comment: Add query blocklist rules
+X-Druid-Comment: Add query blocklist and blacklist data nodes
 
 {
   "queryBlocklist": [
@@ -459,6 +472,10 @@ X-Druid-Comment: Add query blocklist rules
         "debug": "true"
       }
     }
+  ],
+  "blacklistedDataNodes": [
+    "historical1.example.com:8083",
+    "indexer2.example.com:8091"
   ]
 }
 ```
@@ -477,6 +494,7 @@ The following table shows the dynamic configuration properties for the Broker.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
+|`blacklistedDataNodes`| Set of data node addresses (`host:port`) that should be excluded from query routing. Applies to all data node types (Historicals, Indexers, and other peons). Useful for removing unhealthy or maintenance nodes from queries without fully decommissioning them.|none|
 
 #### Query blocklist rules
 
@@ -583,10 +601,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "type": "broker.config",
     "auditInfo": {
       "author": "admin",
-      "comment": "Add query blocklist rules",
+      "comment": "Add query blocklist and blacklist data nodes",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}]}",
+    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"blacklistedDataNodes\":[\"historical1.example.com:8083\",\"indexer2.example.com:8091\"]}",
     "auditTime": "2024-03-06T12:00:00.000Z"
   }
 ]

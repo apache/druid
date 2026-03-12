@@ -112,6 +112,13 @@ public interface CoordinatorClient
   ListenableFuture<BrokerDynamicConfig> getBrokerDynamicConfig();
 
   /**
+   * Updates the broker dynamic config.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/broker/config}
+   */
+  ListenableFuture<Void> updateBrokerDynamicConfig(BrokerDynamicConfig dynamicConfig);
+
+  /**
    * Updates the Coordinator dynamic config.
    * <p>
    * API: {@code POST /druid/coordinator/v1/config}

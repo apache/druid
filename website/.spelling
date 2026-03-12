@@ -520,6 +520,7 @@ quantiles
 queryable
 quickstart
 realtime
+read-after-write
 rebalance
 redis
 regexes

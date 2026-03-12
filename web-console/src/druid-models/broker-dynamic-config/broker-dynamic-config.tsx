@@ -16,10 +16,13 @@
  * limitations under the License.
  */
 
+import { Code } from '@blueprintjs/core';
+
 import type { Field } from '../../components';
 
 export interface BrokerDynamicConfig {
   queryBlocklist?: QueryBlocklistRule[];
+  blacklistedDataNodes?: string[];
 }
 
 export interface QueryBlocklistRule {
@@ -29,4 +32,28 @@ export interface QueryBlocklistRule {
   contextMatches?: Record<string, string>;
 }
 
-export const BROKER_DYNAMIC_CONFIG_FIELDS: Field<BrokerDynamicConfig>[] = [];
+export const BROKER_DYNAMIC_CONFIG_FIELDS: Field<BrokerDynamicConfig>[] = [
+  {
+    name: 'blacklistedDataNodes',
+    type: 'string-array',
+    emptyValue: [],
+    info: (
+      <>
+        List of data node host:port strings (e.g. <Code>historical1:8083</Code>) to exclude from
+        query planning. Applies to all data node types (historicals, peons, indexers).
+      </>
+    ),
+  },
+  {
+    name: 'queryBlocklist',
+    type: 'json',
+    height: '30vh',
+    info: (
+      <>
+        List of rules to block queries on brokers. Each rule must have a <Code>ruleName</Code> and
+        at least one of: <Code>dataSources</Code>, <Code>queryTypes</Code>, or{' '}
+        <Code>contextMatches</Code>.
+      </>
+    ),
+  },
+];

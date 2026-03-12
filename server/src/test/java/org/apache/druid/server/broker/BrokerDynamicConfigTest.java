@@ -62,6 +62,25 @@ public class BrokerDynamicConfigTest
     );
 
     Assert.assertEquals(expectedBlocklist, actual.getQueryBlocklist());
+    Assert.assertTrue(actual.getBlacklistedDataNodes().isEmpty());
+  }
+
+  @Test
+  public void testSerdeWithBlacklistedDataNodes() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"blacklistedDataNodes\": [\"historical1:8083\", \"peon1:8091\"]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(jsonStr, BrokerDynamicConfig.class)
+        ),
+        BrokerDynamicConfig.class
+    );
+
+    Assert.assertEquals(ImmutableSet.of("historical1:8083", "peon1:8091"), actual.getBlacklistedDataNodes());
+    Assert.assertTrue(actual.getQueryBlocklist().isEmpty());
   }
 
   @Test
@@ -70,9 +89,10 @@ public class BrokerDynamicConfigTest
     String jsonStr = "{}";
 
     BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
-    // When no blocklist is provided, it defaults to an empty list
     Assert.assertNotNull(actual.getQueryBlocklist());
     Assert.assertTrue(actual.getQueryBlocklist().isEmpty());
+    Assert.assertNotNull(actual.getBlacklistedDataNodes());
+    Assert.assertTrue(actual.getBlacklistedDataNodes().isEmpty());
   }
 
   @Test

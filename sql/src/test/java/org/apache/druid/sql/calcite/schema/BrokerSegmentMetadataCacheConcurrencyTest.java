@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -391,8 +392,11 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
             .anyTimes();
 
     EasyMock.replay(druidClientFactory);
-    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    TestCoordinatorClient testCoordinatorClient = new TestCoordinatorClient();
+    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(testCoordinatorClient);
     filter.start();
+    BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = new BrokerViewOfBrokerConfig(testCoordinatorClient);
+    brokerViewOfBrokerConfig.start();
     return new BrokerServerView(
         druidClientFactory,
         baseView,
@@ -400,7 +404,8 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        filter
+        filter,
+        brokerViewOfBrokerConfig
     );
   }
 

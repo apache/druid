@@ -22,6 +22,8 @@ package org.apache.druid.client;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.ManageLifecycle;
@@ -35,6 +37,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -48,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -79,6 +83,7 @@ public class BrokerServerView implements TimelineServerView
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final HistoricalFilter compositeFilter;
 
   @Inject
   public BrokerServerView(
@@ -88,7 +93,8 @@ public class BrokerServerView implements TimelineServerView
       @Named(REALTIME_SELECTOR) final TierSelectorStrategy realtimeTierSelectorStrategy, // Injected from bindings set up in BrokerRealtimeSelectorModule
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig
+      final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
+      final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
     this.druidClientFactory = directDruidClientFactory;
@@ -99,6 +105,28 @@ public class BrokerServerView implements TimelineServerView
 
     this.emitter = emitter;
     this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
+    // Compose coordinator filter (clone semantics) with broker blacklist filter.
+    // Coordinator filter is applied first, then blacklisted nodes are excluded from the result.
+    this.compositeFilter = (servers, mode) -> {
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> afterCoordFilter =
+          brokerViewOfCoordinatorConfig.getQueryableServers(servers, mode);
+      final BrokerDynamicConfig brokerConfig = brokerViewOfBrokerConfig.getDynamicConfig();
+      if (brokerConfig == null || brokerConfig.getBlacklistedDataNodes().isEmpty()) {
+        return afterCoordFilter;
+      }
+      final Set<String> blacklisted = brokerConfig.getBlacklistedDataNodes();
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result = new Int2ObjectRBTreeMap<>();
+      for (int priority : afterCoordFilter.keySet()) {
+        result.put(
+            priority,
+            afterCoordFilter.get(priority)
+                            .stream()
+                            .filter(s -> !blacklisted.contains(s.getServer().getHost()))
+                            .collect(Collectors.toSet())
+        );
+      }
+      return result;
+    };
 
     // Validate and set the segment watcher config
     validateSegmentWatcherConfig(segmentWatcherConfig);
@@ -278,7 +306,7 @@ public class BrokerServerView implements TimelineServerView
         log.debug("Adding segment[%s] for server[%s]", segment, server);
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
-          selector = new ServerSelector(segment, historicalTierSelectorStrategy, realtimeTierSelectorStrategy, brokerViewOfCoordinatorConfig);
+          selector = new ServerSelector(segment, historicalTierSelectorStrategy, realtimeTierSelectorStrategy, compositeFilter);
 
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           if (timeline == null) {

@@ -85,12 +85,15 @@ public class BrokerServerViewTest extends CuratorTestBase
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
   private BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
 
   public BrokerServerViewTest()
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
-    brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    TestCoordinatorClient testCoordinatorClient = new TestCoordinatorClient();
+    brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(testCoordinatorClient);
+    brokerViewOfBrokerConfig = new BrokerViewOfBrokerConfig(testCoordinatorClient);
   }
 
   @Before
@@ -98,6 +101,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     setupServerAndCurator();
     brokerViewOfCoordinatorConfig.start();
+    brokerViewOfBrokerConfig.start();
     curator.start();
     curator.blockUntilConnected();
   }
@@ -823,7 +827,8 @@ public class BrokerServerViewTest extends CuratorTestBase
         realtimeStrategy,
         new NoopServiceEmitter(),
         brokerSegmentWatcherConfig,
-        brokerViewOfCoordinatorConfig
+        brokerViewOfCoordinatorConfig,
+        brokerViewOfBrokerConfig
     );
 
     baseView.start();

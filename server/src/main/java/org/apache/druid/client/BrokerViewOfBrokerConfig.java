@@ -33,8 +33,6 @@ import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 
-import javax.validation.constraints.NotNull;
-
 /**
  * Broker view of broker dynamic configuration.
  */
@@ -76,14 +74,5 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   protected String getConfigTypeName()
   {
     return "broker";
-  }
-
-  /**
-   * Update the config view with a new broker dynamic config snapshot.
-   */
-  @Override
-  public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
-  {
-    super.setDynamicConfig(updatedConfig);
   }
 }
