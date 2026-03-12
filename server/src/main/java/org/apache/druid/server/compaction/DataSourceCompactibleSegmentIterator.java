@@ -351,9 +351,11 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   /**
-   * Returns the initial searchInterval which is {@code (timeline.first().start, timeline.last().end - skipOffset)}.
+   * Returns the initial search intervals for compaction, excluding both the provided skipIntervals
+   * and the computed skip interval from {@code config.getSkipOffsetFromLatest()}.
    */
-  private List<Interval> findInitialSearchInterval(SegmentTimeline timeline, List<Interval> skipIntervals)
+  @VisibleForTesting
+  List<Interval> findInitialSearchInterval(SegmentTimeline timeline, List<Interval> skipIntervals)
   {
     final Period skipOffset = config.getSkipOffsetFromLatest();
     Preconditions.checkArgument(timeline != null && !timeline.isEmpty(), "timeline should not be null or empty");

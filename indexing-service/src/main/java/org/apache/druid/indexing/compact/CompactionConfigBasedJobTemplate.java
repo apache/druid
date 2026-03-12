@@ -176,16 +176,16 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     final Interval searchInterval = Objects.requireNonNull(source.getInterval());
     final TreeSet<Interval> skipIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
 
-    if (searchInterval.getStartMillis() > Long.MIN_VALUE) {
-      skipIntervals.add(Intervals.utc(Long.MIN_VALUE, searchInterval.getStartMillis()));
+    if (searchInterval.getStartMillis() > JodaUtils.MIN_INSTANT) {
+      skipIntervals.add(Intervals.utc(JodaUtils.MIN_INSTANT, searchInterval.getStartMillis()));
     }
     config.getSkipIntervals()
           .stream()
-          .filter(i -> i.overlaps(searchInterval))
           .map(i -> i.overlap(searchInterval))
+          .filter(Objects::nonNull)
           .forEach(skipIntervals::add);
-    if (searchInterval.getEndMillis() < Long.MAX_VALUE) {
-      skipIntervals.add(Intervals.utc(searchInterval.getEndMillis(), Long.MAX_VALUE));
+    if (searchInterval.getEndMillis() < JodaUtils.MAX_INSTANT) {
+      skipIntervals.add(Intervals.utc(searchInterval.getEndMillis(), JodaUtils.MAX_INSTANT));
     }
 
     final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
