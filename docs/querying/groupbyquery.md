@@ -256,7 +256,7 @@ any string expression. There is at most one dictionary per concurrently-running 
 `druid.server.http.numThreads` of these. Note that the size is based on a rough estimate of the dictionary footprint.
 - `druid.query.groupBy.maxSpillFileCount`: maximum number of spill files allowed per GroupBy query. When the limit is 
 reached, the query fails with a ResourceLimitExceededException. This property can be used to prevent historical nodes 
-from OOMing due to an excessive number of spill files being opened simultaneously during the merge phase. 
+from OOMs due to an excessive number of spill files being opened simultaneously during the merge phase. 
 Defaults to Integer.MAX_VALUE (unlimited).
 - `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.

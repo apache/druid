@@ -74,7 +74,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(true, config2.isSingleThreaded());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
-    Assert.assertEquals(123, config.getMaxSpillFileCount());
+    Assert.assertEquals(123, config2.getMaxSpillFileCount());
     Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);

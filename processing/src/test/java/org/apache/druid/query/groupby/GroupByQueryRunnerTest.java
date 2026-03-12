@@ -2948,6 +2948,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testMaxSpillFileCountLimitThroughContextOverride()
   {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+    
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
