@@ -29,6 +29,8 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+    <!-- Must match iceberg.core.version in extensions-contrib/druid-iceberg-extensions/pom.xml -->
+    <iceberg.version>1.6.1</iceberg.version>
   </properties>
 
   <parent>
@@ -146,6 +148,25 @@
         <exclusion>
           <groupId>com.googlecode.json-simple</groupId>
           <artifactId>json-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-iceberg-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-parquet</artifactId>
+      <version>${iceberg.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <!-- Let parquet version be driven by druid-parquet-extensions (1.15.2) -->
+        <exclusion>
+          <groupId>org.apache.parquet</groupId>
+          <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
