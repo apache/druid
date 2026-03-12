@@ -111,6 +111,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                 LatchableEmitterModule.class,
                 PostgreSQLMetadataStorageModule.class
             )
+            .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
             .addResource(kafkaServer)
