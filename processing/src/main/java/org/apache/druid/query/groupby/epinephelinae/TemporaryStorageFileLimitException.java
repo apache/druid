@@ -27,6 +27,6 @@ public class TemporaryStorageFileLimitException extends IOException
 {
   public TemporaryStorageFileLimitException(final int fileCount)
   {
-    super(StringUtils.format("Cannot write to disk, hit file count limit of %,d.", fileCount));
+    super(StringUtils.format("Cannot write to disk, hit spill file count limit of %,d.", fileCount));
   }
 }
