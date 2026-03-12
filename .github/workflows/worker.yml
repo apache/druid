@@ -91,7 +91,7 @@ jobs:
         timeout-minutes: 60
 
       - name: Summarize flaky tests
-        if: always()
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
         shell: bash
         run: |
           # Count flaky failures recursively
@@ -105,7 +105,7 @@ jobs:
           fi
 
       - name: Normalize flaky failures
-        if: always()
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
         run: |
           find . -name "TEST-*.xml" -exec sed -i 's/flakyFailure/failure/g' {} +
 
