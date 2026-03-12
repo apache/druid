@@ -68,7 +68,10 @@ public class IcebergRestCatalogResource extends TestcontainerResource<GenericCon
     if (warehouseDir == null) {
       throw new IllegalStateException("warehouseDir has not been initialized; beforeStart() must be called first");
     }
+    // Run as root so the container can write to the bind-mounted warehouse directory
+    // regardless of host directory ownership (the default image user is iceberg:iceberg).
     return new GenericContainer<>(ICEBERG_REST_IMAGE)
+        .withCreateContainerCmdModifier(cmd -> cmd.withUser("root"))
         .withExposedPorts(REST_CATALOG_PORT)
         .withFileSystemBind(warehouseDir.getAbsolutePath(), CONTAINER_WAREHOUSE_PATH, BindMode.READ_WRITE)
         .withEnv("CATALOG_WAREHOUSE", CONTAINER_WAREHOUSE_PATH)
