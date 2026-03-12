@@ -40,6 +40,7 @@ public class GroupByQueryConfigTest
       .put("maxSelectorDictionarySize", "5")
       .put("maxMergingDictionarySize", "6M")
       .put("bufferGrouperMaxLoadFactor", "7")
+      .put("maxSpillFileCount", "123")
       .build();
 
   @Test
@@ -50,6 +51,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(true, config.isSingleThreaded());
     Assert.assertEquals(1, config.getBufferGrouperInitialBuckets());
     Assert.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(123, config.getMaxSpillFileCount());
     Assert.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
     Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
@@ -72,6 +74,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(true, config2.isSingleThreaded());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(123, config.getMaxSpillFileCount());
     Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
@@ -94,6 +97,7 @@ public class GroupByQueryConfigTest
                                     .put("maxResults", 2)
                                     .put("maxSelectorDictionarySize", 3)
                                     .put("maxMergingDictionarySize", 4)
+                                    .put("maxSpillFileCount", 333)
                                     .put("applyLimitPushDownToSegment", true)
                                     .put(
                                         GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS,
@@ -107,6 +111,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(true, config2.isSingleThreaded());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(333, config2.getMaxSpillFileCount());
     Assert.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(4, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);

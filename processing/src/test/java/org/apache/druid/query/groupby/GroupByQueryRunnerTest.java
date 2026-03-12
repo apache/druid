@@ -2946,6 +2946,31 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMaxSpillFileCountLimitThroughContextOverride()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .overrideContext(ImmutableMap.of("maxSpillFileCount", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
+        .build();
+
+    List<ResultRow> expectedResults = null;
+    expectedException.expect(ResourceLimitExceededException.class);
+    if (config.getMaxOnDiskStorage().getBytes() > 0) {
+      // The error message always mentions disk if you have spilling enabled (maxOnDiskStorage > 0)
+      expectedException.expectMessage("Maximum number of spill files reached for this query. Try raising druid.query.groupBy.maxSpillFileCount.");
+    } else {
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "disk-space");
+  }
+
+  @Test
   public void testNotEnoughDiskSpaceThroughContextOverride()
   {
     // Granularity != ALL requires time-ordering.
