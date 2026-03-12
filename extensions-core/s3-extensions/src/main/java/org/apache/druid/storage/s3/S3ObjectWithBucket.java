@@ -19,23 +19,40 @@
 
 package org.apache.druid.storage.s3;
 
-import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
-class S3ServerSideEncryption implements ServerSideEncryption
+/**
+ * Pairs an {@link S3Object} with its bucket name.
+ * In AWS SDK v2, {@link S3Object} does not carry the bucket name, so callers that need it must track it separately.
+ */
+public class S3ObjectWithBucket
 {
-  private static final software.amazon.awssdk.services.s3.model.ServerSideEncryption SSE_AES256 =
-      software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256;
+  private final String bucket;
+  private final S3Object s3Object;
 
-  @Override
-  public PutObjectRequest.Builder decorate(PutObjectRequest.Builder builder)
+  public S3ObjectWithBucket(String bucket, S3Object s3Object)
   {
-    return builder.serverSideEncryption(SSE_AES256);
+    this.bucket = bucket;
+    this.s3Object = s3Object;
   }
 
-  @Override
-  public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
+  public String getBucket()
   {
-    return builder.serverSideEncryption(SSE_AES256);
+    return bucket;
+  }
+
+  public String getKey()
+  {
+    return s3Object.key();
+  }
+
+  public long getSize()
+  {
+    return s3Object.size();
+  }
+
+  public S3Object getS3Object()
+  {
+    return s3Object;
   }
 }

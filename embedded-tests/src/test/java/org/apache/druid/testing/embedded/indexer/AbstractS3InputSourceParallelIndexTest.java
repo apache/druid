@@ -19,7 +19,11 @@
 
 package org.apache.druid.testing.embedded.indexer;
 
+import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.apache.druid.data.input.s3.S3InputSourceDruidModule;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
@@ -29,8 +33,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
@@ -41,6 +48,8 @@ import java.util.List;
 public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
   private static final Logger LOG = new Logger(AbstractS3InputSourceParallelIndexTest.class);
+  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   protected final MinIOStorageResource minIOStorageResource = new MinIOStorageResource();
   private S3TestUtil s3;
 
@@ -87,5 +96,76 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
   {
     // Deleting uploaded data files
     s3.deleteFilesFromS3(fileList());
+  }
+
+  /**
+   * Variant of {@link #doTest} that injects an {@code endpointConfig} into the S3 input source spec.
+   * Required when using per-input-source credentials: S3InputSource builds a new S3 client in that
+   * case and must be told the MinIO endpoint explicitly, since it cannot inherit it from Druid's
+   * global S3 config.
+   */
+  protected void doTestWithEndpointConfig(
+      Pair<String, List<?>> inputSource,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
+      S3InputSourceConfig s3InputSourceConfig,
+      String endpointUrl
+  ) throws Exception
+  {
+    final String indexDatasource = dataSource;
+    try (final Closeable ignored = unloader(indexDatasource)) {
+      final String endpointConfigJson = jsonMapper.writeValueAsString(
+          Map.of("url", endpointUrl, "signingRegion", "us-east-1")
+      );
+      // Path-style access is required for MinIO running at a local IP address
+      final String clientConfigJson = jsonMapper.writeValueAsString(
+          Map.of("enablePathStyleAccess", true)
+      );
+      final Function<String, String> transform = spec -> {
+        try {
+          String inputSourceValue = jsonMapper.writeValueAsString(inputSource.rhs);
+          inputSourceValue = setInputSourceInPath("s3", inputSourceValue);
+          inputSourceValue = StringUtils.replace(inputSourceValue, "%%BUCKET%%", getCloudBucket("s3"));
+          inputSourceValue = StringUtils.replace(inputSourceValue, "%%PATH%%", getCloudPath("s3"));
+          spec = StringUtils.replace(spec, "%%INPUT_FORMAT_TYPE%%", InputFormatDetails.JSON.getInputFormatType());
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
+          );
+          spec = StringUtils.replace(spec, "%%INPUT_SOURCE_TYPE%%", "s3");
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_SOURCE_PROPERTIES%%",
+              jsonMapper.writeValueAsString(s3InputSourceConfig)
+          );
+          spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_KEY%%", inputSource.lhs);
+          spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_VALUE%%", inputSourceValue);
+          // Inject endpointConfig and clientConfig so the custom S3 client points at MinIO with path-style access
+          spec = StringUtils.replace(
+              spec,
+              "\"type\": \"s3\",",
+              "\"type\": \"s3\", \"endpointConfig\": "
+              + endpointConfigJson
+              + ", \"clientConfig\": "
+              + clientConfigJson
+              + ","
+          );
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+      doIndexTest(
+          indexDatasource,
+          INDEX_TASK,
+          transform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          segmentAvailabilityConfirmationPair
+      );
+    }
   }
 }

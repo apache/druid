@@ -19,14 +19,13 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.services.ec2.Ec2Client;
 
 public class AWSModule implements DruidModule
 {
@@ -41,15 +40,17 @@ public class AWSModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
+  public AwsCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
     return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config);
   }
 
   @Provides
   @LazySingleton
-  public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
+  public Ec2Client getEc2Client(AwsCredentialsProvider credentials)
   {
-    return new AmazonEC2Client(credentials);
+    return Ec2Client.builder()
+        .credentialsProvider(credentials)
+        .build();
   }
 }

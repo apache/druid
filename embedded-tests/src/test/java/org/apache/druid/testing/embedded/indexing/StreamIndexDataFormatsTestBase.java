@@ -88,7 +88,6 @@ import java.util.Map;
  * <li>Thrift</li>
  * <li>TSV</li>
  * </ul>
- *
  * This tests both InputFormat and Parser. Parser is deprecated for Streaming Ingestion,
  * and those tests will be removed in the future.
  */
