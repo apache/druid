@@ -79,12 +79,16 @@ public class QueryLifecycleFactory
 
   public QueryLifecycle factorize()
   {
-    // Extract query blocklist from broker config, or use empty list if not on broker
     final List<QueryBlocklistRule> queryBlocklist;
+    final DefaultQueryConfig effectiveDefaultQueryConfig;
     if (brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null) {
       queryBlocklist = brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist();
+      effectiveDefaultQueryConfig = new DefaultQueryConfig(
+          brokerViewOfBrokerConfig.getResolvedDefaultQueryContext()
+      );
     } else {
       queryBlocklist = Collections.emptyList();
+      effectiveDefaultQueryConfig = defaultQueryConfig;
     }
 
     return new QueryLifecycle(
@@ -94,7 +98,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
-        defaultQueryConfig,
+        effectiveDefaultQueryConfig,
         authConfig,
         policyEnforcer,
         queryBlocklist,

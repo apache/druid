@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -28,12 +29,15 @@ import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 /**
  * Broker view of broker dynamic configuration.
@@ -41,14 +45,26 @@ import javax.validation.constraints.NotNull;
 public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
 {
   private final CoordinatorClient coordinatorClient;
+  private final DefaultQueryConfig defaultQueryConfig;
+
+  /**
+   * Pre-computed merge of {@link DefaultQueryConfig#getContext()} and
+   * {@link BrokerDynamicConfig#getQueryContext()}, recomputed on each config sync.
+   * Dynamic config values override static defaults.
+   */
+  @GuardedBy("this")
+  private Map<String, Object> resolvedDefaultQueryContext;
 
   @Inject
   public BrokerViewOfBrokerConfig(
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
-      @Coordinator final ServiceLocator serviceLocator
+      @Coordinator final ServiceLocator serviceLocator,
+      final DefaultQueryConfig defaultQueryConfig
   )
   {
+    this.defaultQueryConfig = defaultQueryConfig;
+    this.resolvedDefaultQueryContext = defaultQueryConfig.getContext();
     this.coordinatorClient =
         new CoordinatorClientImpl(
             clientFactory.makeClient(
@@ -61,9 +77,14 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   }
 
   @VisibleForTesting
-  public BrokerViewOfBrokerConfig(CoordinatorClient coordinatorClient)
+  public BrokerViewOfBrokerConfig(
+      final CoordinatorClient coordinatorClient,
+      final DefaultQueryConfig defaultQueryConfig
+  )
   {
     this.coordinatorClient = coordinatorClient;
+    this.defaultQueryConfig = defaultQueryConfig;
+    this.resolvedDefaultQueryContext = defaultQueryConfig.getContext();
   }
 
   @Override
@@ -79,11 +100,25 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   }
 
   /**
-   * Update the config view with a new broker dynamic config snapshot.
+   * Update the config view with a new broker dynamic config snapshot, and recompute the
+   * resolved default query context by merging static defaults with dynamic overrides.
    */
   @Override
   public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
   {
     super.setDynamicConfig(updatedConfig);
+    resolvedDefaultQueryContext = QueryContexts.override(
+        defaultQueryConfig.getContext(),
+        updatedConfig.getQueryContext()
+    );
+  }
+
+  /**
+   * Returns the pre-computed merge of static {@link DefaultQueryConfig} context and dynamic
+   * {@link BrokerDynamicConfig#getQueryContext()}. Dynamic values take precedence over static defaults.
+   */
+  public synchronized Map<String, Object> getResolvedDefaultQueryContext()
+  {
+    return resolvedDefaultQueryContext;
   }
 }
