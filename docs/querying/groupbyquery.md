@@ -242,7 +242,7 @@ The response for the query above would look something like:
 
 ### Memory tuning and resource limits
 
-When using groupBy, four parameters control resource usage and limits:
+When using groupBy, the following parameters control resource usage and limits:
 
 - `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
 most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
@@ -254,6 +254,10 @@ rough estimate of the dictionary footprint.
 - `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap query-level dictionary used when grouping on
 any string expression. There is at most one dictionary per concurrently-running query; therefore there are up to
 `druid.server.http.numThreads` of these. Note that the size is based on a rough estimate of the dictionary footprint.
+- `druid.query.groupBy.maxSpillFileCount`: maximum number of spill files allowed per GroupBy query. When the limit is 
+reached, the query fails with a ResourceLimitExceededException. This property can be used to prevent historical nodes 
+from OOMing due to an excessive number of spill files being opened simultaneously during the merge phase. 
+Defaults to Integer.MAX_VALUE (unlimited).
 - `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.
 
@@ -346,12 +350,14 @@ Supported runtime properties:
 |`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries.  If set to `0` (automatic), each query's dictionary can use 10% of the Java heap divided by `druid.processing.numMergeBuffers`, or 1GB, whichever is smaller.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|0 (automatic)|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. If set to `0` (automatic), each query's dictionary uses 30% of the Java heap divided by `druid.processing.numMergeBuffers`, or 1GB, whichever is smaller.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|0 (automatic)|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
+|`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail.|Integer.MAX_VALUE (unlimited)|
 
 Supported query contexts:
 
 |Key|Description|
 |---|-----------|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
+|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
 
 ### Advanced configurations
 
