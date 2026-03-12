@@ -40,6 +40,15 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     );
   }
 
+  public static DruidExceptionMatcher notFound()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.USER,
+        DruidException.Category.NOT_FOUND,
+        "notFound"
+    );
+  }
+
   public static DruidExceptionMatcher unsupported()
   {
     return new DruidExceptionMatcher(

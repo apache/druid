@@ -65,6 +65,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
@@ -135,8 +137,8 @@ public class MSQCompactionRunnerTest
                                  new LongSumAggregatorFactory(LONG_DIMENSION.getName(), LONG_DIMENSION.getName())
                              )
                              .build();
-  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
-      COMPACTION_INTERVAL,
+  private static final Map<QuerySegmentSpec, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
+      new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)),
       new CombinedDataSchema(
           DATA_SOURCE,
           new TimestampSpec(TIMESTAMP_COLUMN, null, null),
@@ -166,8 +168,8 @@ public class MSQCompactionRunnerTest
   @Test
   public void testMultipleDisjointCompactionIntervalsAreInvalid()
   {
-    Map<Interval, DataSchema> intervalDataschemas = new HashMap<>(INTERVAL_DATASCHEMAS);
-    intervalDataschemas.put(Intervals.of("2017-07-01/2018-01-01"), null);
+    Map<QuerySegmentSpec, DataSchema> intervalDataschemas = new HashMap<>(INTERVAL_DATASCHEMAS);
+    intervalDataschemas.put(new MultipleIntervalSegmentSpec(List.of(Intervals.of("2017-07-01/2018-01-01"))), null);
     CompactionTask compactionTask = createCompactionTask(
         new HashedPartitionsSpec(3, null, ImmutableList.of("dummy")),
         null,
@@ -387,7 +389,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
@@ -471,7 +473,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     LegacyMSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
@@ -520,7 +522,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
@@ -606,7 +608,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);

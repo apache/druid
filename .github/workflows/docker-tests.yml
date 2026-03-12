@@ -51,6 +51,16 @@ jobs:
         run: .github/scripts/run_docker-tests
         timeout-minutes: 60
 
+      - name: Tar Druid container logs
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: tar cvzf ./druid-container-logs.tgz ./embedded-tests/druid-container-logs
+
+      - name: Upload Druid container logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-druid-container-logs
+          path: druid-container-logs.tgz
       - name: Collect docker logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |

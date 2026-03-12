@@ -114,6 +114,18 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
     return numCorePartitions;
   }
 
+  @Override
+  public ShardSpec withPartitionNum(int partitionNum)
+  {
+    return new DimensionRangeShardSpec(dimensions, virtualColumns, start, end, partitionNum, numCorePartitions);
+  }
+
+  @Override
+  public ShardSpec withCorePartitions(int partitions)
+  {
+    return new DimensionRangeShardSpec(dimensions, virtualColumns, start, end, partitionNum, partitions);
+  }
+
   public boolean isNumCorePartitionsUnknown()
   {
     return numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS;
@@ -256,6 +268,12 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean canCreateNumberedPartitionChunk()
+  {
+    return !isNumCorePartitionsUnknown();
   }
 
   @Override

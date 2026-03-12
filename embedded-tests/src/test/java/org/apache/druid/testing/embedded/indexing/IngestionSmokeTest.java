@@ -114,6 +114,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
             .addResource(kafkaServer)
+            .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
             .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())
             .addCommonProperty("druid.emitter.http.flushMillis", "500")
@@ -407,6 +408,19 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+    waitForNextCoordinatorCacheSync();
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
+    );
+  }
+
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/coordinator")
     );
   }
 

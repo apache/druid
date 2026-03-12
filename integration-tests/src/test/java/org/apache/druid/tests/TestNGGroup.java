@@ -72,11 +72,4 @@ public class TestNGGroup
 
   public static final String HADOOP_GCS_TO_GCS = "hadoop-gcs-to-gcs-deep-storage";
   public static final String HADOOP_GCS_TO_HDFS = "hadoop-gcs-to-hdfs-deep-storage";
-
-  /**
-   * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
-   */
-  public static final String S3_INGESTION = "s3-ingestion";
 }

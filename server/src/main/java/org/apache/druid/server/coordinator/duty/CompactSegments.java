@@ -34,15 +34,18 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionMode;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
@@ -262,6 +265,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
           entry,
+          CompactionMode.ALL_SEGMENTS,
           config,
           defaultEngine,
           null,
@@ -291,6 +295,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    */
   public static ClientCompactionTaskQuery createCompactionTask(
       CompactionCandidate candidate,
+      CompactionMode compactionMode,
       DataSourceCompactionConfig config,
       CompactionEngine defaultEngine,
       String indexingStateFingerprint,
@@ -380,6 +385,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     return compactSegments(
         candidate,
+        compactionMode,
         config.getTaskPriority(),
         ClientCompactionTaskQueryTuningConfig.from(
             config.getTuningConfig(),
@@ -439,6 +445,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private static ClientCompactionTaskQuery compactSegments(
       CompactionCandidate entry,
+      CompactionMode compactionMode,
       int compactionTaskPriority,
       ClientCompactionTaskQueryTuningConfig tuningConfig,
       ClientCompactionTaskGranularitySpec granularitySpec,
@@ -463,14 +470,26 @@ public class CompactSegments implements CoordinatorCustomDuty
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientCompactionIntervalSpec inputSpec;
+    switch (compactionMode) {
+      case ALL_SEGMENTS:
+        inputSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
+        break;
+      case UNCOMPACTED_SEGMENTS_ONLY:
+        List<SegmentDescriptor> uncompacted = entry.getUncompactedSegments()
+                                                   .stream()
+                                                   .map(DataSegment::toDescriptor)
+                                                   .toList();
+        inputSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), uncompacted, null);
+        break;
+      default:
+        throw DruidException.defensive("unexpected compaction mode[%s]", compactionMode);
+    }
 
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null),
-            dropExisting
-        ),
+        new ClientCompactionIOConfig(inputSpec, dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

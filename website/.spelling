@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -562,6 +563,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet

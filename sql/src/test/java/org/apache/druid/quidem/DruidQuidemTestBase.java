@@ -185,7 +185,7 @@ public abstract class DruidQuidemTestBase
       final FileSystem fileSystem = FileSystems.getDefault();
       for (String filterGlob : filterStr.split(",")) {
         if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
-          filterGlob = filterStr + IQ_SUFFIX;
+          filterGlob = filterGlob + IQ_SUFFIX;
         }
         filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
       }
