@@ -2061,6 +2061,7 @@ public class RangeFilterTests
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                     .usingGetClass()
+                    .set(nl.jqno.equalsverifier.Mode.skipMockito())
                     .verify();
     }
   }
