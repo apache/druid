@@ -140,6 +140,43 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testTruncation()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        5
+    );
+
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent("abcdefghij", false);
+    Assert.assertEquals(
+        "abcde",
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
+  }
+
+  @Test
+  public void testMultiValueNotTruncated()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        5
+    );
+
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(
+        Arrays.asList("abcdefghij", "klmnopqrst"),
+        false
+    );
+    Assert.assertEquals(
+        Arrays.asList("abcdefghij", "klmnopqrst"),
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
+  }
+
   private long verifyEncodedValues(
       StringDimensionIndexer indexer,
       Object dimensionValues,
