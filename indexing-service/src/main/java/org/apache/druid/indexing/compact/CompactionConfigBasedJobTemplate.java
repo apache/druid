@@ -25,6 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -176,7 +177,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     final TreeSet<Interval> skipIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
 
     if (searchInterval.getStartMillis() > Long.MIN_VALUE) {
-      skipIntervals.add(new Interval(Long.MIN_VALUE, searchInterval.getStartMillis()));
+      skipIntervals.add(Intervals.utc(Long.MIN_VALUE, searchInterval.getStartMillis()));
     }
     config.getSkipIntervals()
           .stream()
@@ -184,7 +185,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           .map(i -> i.overlap(searchInterval))
           .forEach(skipIntervals::add);
     if (searchInterval.getEndMillis() < Long.MAX_VALUE) {
-      skipIntervals.add(new Interval(searchInterval.getEndMillis(), Long.MAX_VALUE));
+      skipIntervals.add(Intervals.utc(searchInterval.getEndMillis(), Long.MAX_VALUE));
     }
 
     final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
