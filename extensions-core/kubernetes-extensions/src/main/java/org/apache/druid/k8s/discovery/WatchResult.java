@@ -26,8 +26,17 @@ import java.net.SocketTimeoutException;
 public interface WatchResult
 {
   String ADDED = "ADDED";
+  String MODIFIED = "MODIFIED";
   String DELETED = "DELETED";
   String BOOKMARK = "BOOKMARK";
+
+  /**
+   * Synthetic event type: pod's container became not-ready (e.g., OOM-killed) but the pod
+   * still exists. Should be treated as a removal from discovery, but without error-level
+   * logging for nodes that aren't in the cache (repeated events are expected during
+   * CrashLoopBackOff).
+   */
+  String NOT_READY = "NOT_READY";
 
   boolean hasNext() throws SocketTimeoutException;
 

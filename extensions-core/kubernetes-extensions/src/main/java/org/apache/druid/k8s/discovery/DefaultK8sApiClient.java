@@ -28,6 +28,7 @@ import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.PatchUtils;
@@ -41,6 +42,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -114,6 +116,14 @@ public class DefaultK8sApiClient implements K8sApiClient
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
       for (V1Pod podDef : podList.getItems()) {
+        if (!isPodReady(podDef)) {
+          LOGGER.info(
+              "Ignoring pod[%s] for role[%s] during list: pod has discovery label but is not yet reporting as ready.",
+              podDef.getMetadata().getName(),
+              nodeRole
+          );
+          continue;
+        }
         DiscoveryDruidNode node = getDiscoveryDruidNodeFromPodDef(nodeRole, podDef);
         allNodes.put(node.getDruidNode().getHostAndPortToUse(), node);
       }
@@ -122,6 +132,23 @@ public class DefaultK8sApiClient implements K8sApiClient
     catch (ApiException ex) {
       throw new RE(ex, "Expection in listing pods, code[%d] and error[%s].", ex.getCode(), ex.getResponseBody());
     }
+  }
+
+  /**
+   * Check whether a pod's containers are all running and ready. This is used to filter out pods
+   * whose containers have been OOM-killed or are otherwise not serving traffic, even though the
+   * pod itself still exists and retains its Druid announcement labels.
+   */
+  static boolean isPodReady(V1Pod pod)
+  {
+    if (pod.getStatus() == null) {
+      return false;
+    }
+    List<V1ContainerStatus> containerStatuses = pod.getStatus().getContainerStatuses();
+    if (containerStatuses == null || containerStatuses.isEmpty()) {
+      return false;
+    }
+    return containerStatuses.stream().allMatch(cs -> Boolean.TRUE.equals(cs.getReady()));
   }
 
   private DiscoveryDruidNode getDiscoveryDruidNodeFromPodDef(NodeRole nodeRole, V1Pod podDef)
@@ -174,11 +201,54 @@ public class DefaultK8sApiClient implements K8sApiClient
               Watch.Response<V1Pod> item = watch.next();
               if (item != null && item.type != null && !item.type.equals(WatchResult.BOOKMARK)) {
                 DiscoveryDruidNodeAndResourceVersion result = null;
+                String effectiveType = item.type;
+
                 if (item.object != null) {
-                  result = new DiscoveryDruidNodeAndResourceVersion(
-                    item.object.getMetadata().getResourceVersion(),
-                    getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
-                  );
+                  if (!isPodReady(item.object)) {
+                    if (WatchResult.MODIFIED.equals(item.type)) {
+                      // Pod was previously ready but is now unready (e.g., OOM-killed container).
+                      // Remap to NOT_READY to ensure the host is removed from discovery cache if is cached
+                      LOGGER.info(
+                          "Pod[%s] for role[%s] notified that it was modified and is now showing as not ready, "
+                          + "treating as removed for discovery purposes.",
+                          item.object.getMetadata().getName(),
+                          nodeRole
+                      );
+                      effectiveType = WatchResult.NOT_READY;
+                    } else if (WatchResult.ADDED.equals(item.type)) {
+                      // Pod is not ready yet (e.g., still starting up). Skip this event entirely.
+                      // It will appear via a MODIFIED event that remaps to ADDED for dicovery, once it becomes ready.
+                      LOGGER.debug(
+                          "Pod[%s] for role[%s] is not ready on ADDED event, skipping until it becomes ready.",
+                          item.object.getMetadata().getName(),
+                          nodeRole
+                      );
+                      continue;
+                    }
+                  } else if (WatchResult.MODIFIED.equals(item.type)) {
+                    // Remap MODIFIED (pod ready) events to ADDED for discovery cache purposes.
+                    // This is safe even if the node is already in the cache because BaseNodeRoleWatcher.childAdded() uses
+                    // putIfAbsent, so duplicates are silently ignored.
+                    effectiveType = WatchResult.ADDED;
+                  }
+
+                  try {
+                    result = new DiscoveryDruidNodeAndResourceVersion(
+                        item.object.getMetadata().getResourceVersion(),
+                        getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
+                    );
+                  }
+                  catch (Exception ex) {
+                    LOGGER.warn(
+                        ex,
+                        "Failed to deserialize node info from pod[%s] for role[%s] on [%s] event. "
+                        + "Passing null to trigger watch restart and full resync.",
+                        item.object.getMetadata() != null ? item.object.getMetadata().getName() : "unknown",
+                        nodeRole,
+                        item.type
+                    );
+                    // result stays null, caller will restart the watch and do a full listPods resync
+                  }
                 } else {
                   // The item's object can be null in some cases -- likely due to a blip
                   // in the k8s watch. Handle that by passing the null upwards. The caller
@@ -187,7 +257,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                 }
 
                 obj = new Watch.Response<>(
-                    item.type,
+                    effectiveType,
                     result
                 );
                 return true;
