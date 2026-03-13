@@ -42,7 +42,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -162,7 +161,7 @@ public class PodTemplateTaskAdapterTest
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
 
-    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -225,7 +224,7 @@ public class PodTemplateTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -246,7 +245,7 @@ public class PodTemplateTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -274,7 +273,7 @@ public class PodTemplateTaskAdapterTest
         .endTemplate()
         .endSpec()
         .build();
-    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -378,7 +377,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
         .andReturn(Optional.absent());
 
-    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+    Assertions.assertThrows(DruidException.class, () -> adapter.fromTask(task));
   }
 
   @Test
@@ -407,7 +406,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
         .andReturn(null);
 
-    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+    Assertions.assertThrows(DruidException.class, () -> adapter.fromTask(task));
   }
 
   @Test

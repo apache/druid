@@ -64,7 +64,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -347,7 +346,7 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -370,7 +369,7 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
   @Test
   void testGrabbingTheLastXmxValueFromACommand()
