@@ -36,6 +36,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -54,7 +55,10 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -113,7 +117,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
-           .useDefaultTimeoutForLatchableEmitter(600)
+           .useDefaultTimeoutForLatchableEmitter(60)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
@@ -131,6 +135,14 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addServer(new EmbeddedRouter());
 
     return cluster;
+  }
+
+  public static List<CompactionCandidateSearchPolicy> getSearchPolicies()
+  {
+    return List.of(
+        new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null),
+        new NewestSegmentFirstPolicy(null)
+    );
   }
 
   @Test
@@ -181,9 +193,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
-  @Test
+  @MethodSource("getSearchPolicies")
+  @ParameterizedTest(name = "policy={0}")
   @Timeout(120)
-  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments()
+  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments(
+      CompactionCandidateSearchPolicy policy
+  )
   {
     final int maxRowsPerSegment = 500;
     final int compactedMaxRowsPerSegment = 5000;
@@ -217,8 +232,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         OverlordClient::getClusterCompactionConfig
     );
 
-    final CompactionCandidateSearchPolicy policy =
-        new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null);
     final ClusterCompactionConfig updatedCompactionConfig
         = new ClusterCompactionConfig(1.0, 10, policy, true, CompactionEngine.MSQ, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
