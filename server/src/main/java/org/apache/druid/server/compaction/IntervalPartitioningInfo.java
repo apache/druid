@@ -19,31 +19,44 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Associates a time interval with its segment granularity and optional source rule.
+ * Associates a time interval with its partitioning information.
  * Used to pass synthetic timeline information from timeline generation to config building.
  */
-public class IntervalGranularityInfo
+public class IntervalPartitioningInfo
 {
   private final Interval interval;
-  private final Granularity granularity;
-  private final ReindexingSegmentGranularityRule sourceRule;
+  private final ReindexingPartitioningRule sourceRule;
+  // Whether this info was generated from a synthetic rule (i.e. not directly from a user-defined rule).
+  private final boolean isRuleSynthetic;
 
-  public IntervalGranularityInfo(
+  public IntervalPartitioningInfo(
       Interval interval,
-      Granularity granularity,
-      @Nullable ReindexingSegmentGranularityRule sourceRule
+      ReindexingPartitioningRule sourceRule
+  )
+  {
+    this(interval, sourceRule, false);
+  }
+
+  public IntervalPartitioningInfo(
+      Interval interval,
+      ReindexingPartitioningRule sourceRule,
+      boolean isRuleSynthetic
   )
   {
     this.interval = interval;
-    this.granularity = granularity;
+    InvalidInput.conditionalException(sourceRule != null, "sourceRule cannot be null");
     this.sourceRule = sourceRule;
+    this.isRuleSynthetic = isRuleSynthetic;
   }
 
   public Interval getInterval()
@@ -53,13 +66,28 @@ public class IntervalGranularityInfo
 
   public Granularity getGranularity()
   {
-    return granularity;
+    return sourceRule.getSegmentGranularity();
+  }
+
+  public boolean isRuleSynthetic()
+  {
+    return isRuleSynthetic;
+  }
+
+  public ReindexingPartitioningRule getSourceRule()
+  {
+    return sourceRule;
+  }
+
+  public PartitionsSpec getPartitionsSpec()
+  {
+    return sourceRule.getPartitionsSpec();
   }
 
   @Nullable
-  public ReindexingSegmentGranularityRule getSourceRule()
+  public VirtualColumns getVirtualColumns()
   {
-    return sourceRule;
+    return sourceRule.getVirtualColumns();
   }
 
   @Override
@@ -71,24 +99,24 @@ public class IntervalGranularityInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    IntervalGranularityInfo that = (IntervalGranularityInfo) o;
+    IntervalPartitioningInfo that = (IntervalPartitioningInfo) o;
     return Objects.equals(interval, that.interval)
-           && Objects.equals(granularity, that.granularity)
+           && isRuleSynthetic == that.isRuleSynthetic
            && Objects.equals(sourceRule, that.sourceRule);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, granularity, sourceRule);
+    return Objects.hash(interval, sourceRule, isRuleSynthetic);
   }
 
   @Override
   public String toString()
   {
-    return "IntervalGranularityInfo{"
+    return "IntervalPartitioningInfo{"
            + "interval=" + interval
-           + ", granularity=" + granularity
+           + ", isRuleSynthetic=" + isRuleSynthetic
            + ", sourceRule=" + (sourceRule != null ? sourceRule.getId() : "null")
            + '}';
   }
