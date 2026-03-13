@@ -69,7 +69,7 @@ public class BrokerViewOfBrokerConfigTest
                                                                  .build();
     target.setDynamicConfig(dynamicConfig);
 
-    final Map<String, Object> resolved = target.getResolvedDefaultQueryContext();
+    final Map<String, Object> resolved = target.getContext();
     Assert.assertEquals(30000, resolved.get("timeout"));
     Assert.assertEquals(false, resolved.get("useCache"));
     Assert.assertEquals(5, resolved.get("priority"));
@@ -79,6 +79,6 @@ public class BrokerViewOfBrokerConfigTest
   public void testResolvedContextEqualsStaticDefaultsWhenDynamicContextIsEmpty()
   {
     target.setDynamicConfig(BrokerDynamicConfig.builder().build());
-    Assert.assertEquals(defaultQueryConfig.getContext(), target.getResolvedDefaultQueryContext());
+    Assert.assertEquals(defaultQueryConfig.getContext(), target.getContext());
   }
 }

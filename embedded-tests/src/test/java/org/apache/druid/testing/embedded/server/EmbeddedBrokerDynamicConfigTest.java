@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.server;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.utils.IdUtils;
@@ -44,6 +43,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Integration test for broker dynamic configuration
@@ -103,7 +103,7 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
     // Apply blocklist rule that matches all queries on this datasource
     QueryBlocklistRule blockRule = new QueryBlocklistRule(
         "block-test-datasource",
-        ImmutableSet.of(dataSource),
+        Set.of(dataSource),
         null,
         null
     );
@@ -127,7 +127,7 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void testDynamicQueryContext_timeoutCausesQueryToFail()
+  public void testDynamicQueryContextTimeoutCausesQueryToFail()
   {
     // Baseline: query succeeds before a timeout context is applied
     String initialResult = cluster.callApi().runSql("SELECT COUNT(*) FROM %s", dataSource);
@@ -136,7 +136,7 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
     // Apply a 1ms timeout via dynamic query context — any real query will expire before responding
     updateBrokerDynamicConfig(
         BrokerDynamicConfig.builder()
-                           .withQueryContext(Map.<String, Object>of("timeout", 1))
+                           .withQueryContext(Map.of("timeout", 1))
                            .build()
     );
 

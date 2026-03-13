@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -30,6 +29,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.DefaultQueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -41,8 +41,13 @@ import java.util.Map;
 
 /**
  * Broker view of broker dynamic configuration.
+ *
+ * <p>Also implements {@link DefaultQueryContext} to expose the effective default query context: the
+ * merge of static defaults (from {@link DefaultQueryConfig}) and operator-supplied overrides
+ * (from {@link BrokerDynamicConfig#getQueryContext()}). Dynamic values take precedence.
  */
 public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
+    implements DefaultQueryContext
 {
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;
@@ -52,8 +57,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
    * {@link BrokerDynamicConfig#getQueryContext()}, recomputed on each config sync.
    * Dynamic config values override static defaults.
    */
-  @GuardedBy("this")
-  private Map<String, Object> resolvedDefaultQueryContext;
+  private volatile Map<String, Object> resolvedDefaultQueryContext;
 
   @Inject
   public BrokerViewOfBrokerConfig(
@@ -117,7 +121,8 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
    * Returns the pre-computed merge of static {@link DefaultQueryConfig} context and dynamic
    * {@link BrokerDynamicConfig#getQueryContext()}. Dynamic values take precedence over static defaults.
    */
-  public synchronized Map<String, Object> getResolvedDefaultQueryContext()
+  @Override
+  public Map<String, Object> getContext()
   {
     return resolvedDefaultQueryContext;
   }

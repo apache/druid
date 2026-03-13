@@ -308,6 +308,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Broker dynamic configuration is managed through the Coordinator but consumed by Brokers.
 These settings control broker behavior such as query blocking rules and default query context values.
 
+> **Note:** Broker dynamic configuration is best-effort. Settings may not be applied in certain
+> cases, such as when a Broker has recently started and hasn't received the config yet, or if the
+> Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every
+> 1 minute) and also receive push updates from the Coordinator for immediate propagation. If a
+> setting is critical and must always be applied, use the equivalent static runtime property instead.
+
 ### Get broker dynamic configuration
 
 Retrieves the current Broker dynamic configuration. Returns a JSON object with the dynamic configuration properties.
@@ -511,8 +517,6 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
 - For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
 - At least one criterion must be specified per rule to prevent accidentally blocking all queries
 - A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
-
-> **Note:** Query blocking is best-effort. Queries may not be blocked in certain cases, such as when a Broker has recently started and hasn't received the config yet, or if the Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every 1 minute) and also receive push updates from the Coordinator for immediate propagation.
 
 **Error response:**
 
