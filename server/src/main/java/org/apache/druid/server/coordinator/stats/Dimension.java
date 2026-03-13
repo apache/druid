@@ -32,7 +32,6 @@ public enum Dimension
   DESCRIPTION("description"),
   SERVER("server"),
   SUPERVISOR_ID("supervisorId"),
-  TYPE("type"),
   CONFIG_TYPE("configType");
 
   private final String reportedName;
