@@ -19,12 +19,11 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.DefaultQueryContext;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -46,7 +45,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final DefaultQueryContext defaultQueryContext;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
@@ -61,7 +60,7 @@ public class QueryLifecycleFactory
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<DefaultQueryConfig> queryConfigSupplier,
+      final DefaultQueryContext defaultQueryContext,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -71,7 +70,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = queryConfigSupplier.get();
+    this.defaultQueryContext = defaultQueryContext;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -79,17 +78,10 @@ public class QueryLifecycleFactory
 
   public QueryLifecycle factorize()
   {
-    final List<QueryBlocklistRule> queryBlocklist;
-    final DefaultQueryConfig effectiveDefaultQueryConfig;
-    if (brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null) {
-      queryBlocklist = brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist();
-      effectiveDefaultQueryConfig = new DefaultQueryConfig(
-          brokerViewOfBrokerConfig.getResolvedDefaultQueryContext()
-      );
-    } else {
-      queryBlocklist = Collections.emptyList();
-      effectiveDefaultQueryConfig = defaultQueryConfig;
-    }
+    final List<QueryBlocklistRule> queryBlocklist =
+        brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null
+        ? brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist()
+        : Collections.emptyList();
 
     return new QueryLifecycle(
         conglomerate,
@@ -98,7 +90,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
-        effectiveDefaultQueryConfig,
+        defaultQueryContext,
         authConfig,
         policyEnforcer,
         queryBlocklist,
