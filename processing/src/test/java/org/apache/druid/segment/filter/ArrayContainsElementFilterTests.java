@@ -1086,11 +1086,7 @@ public class ArrayContainsElementFilterTests
                     .withNonnullFields(
                         "column",
                         "elementMatchValueType",
-                        "elementMatchValueEval",
-                        "elementMatchValue",
-                        "predicateFactory",
-                        "optimizedFilterIncludeUnknown",
-                        "optimizedFilterNoIncludeUnknown"
+                        "elementMatchValueEval"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                     .withIgnoredFields(
@@ -1099,6 +1095,7 @@ public class ArrayContainsElementFilterTests
                         "optimizedFilterNoIncludeUnknown",
                         "elementMatchValue"
                     )
+                    .set(nl.jqno.equalsverifier.Mode.skipMockito())
                     .verify();
     }
   }
