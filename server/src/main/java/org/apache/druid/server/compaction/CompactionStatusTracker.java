@@ -98,7 +98,7 @@ public class CompactionStatusTracker
     }
 
     // Skip intervals that have been filtered out by the policy
-    final CompactionCandidateSearchPolicy.Eligibility eligibility
+    final Eligibility eligibility
         = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
     if (eligibility.isEligible()) {
       return CompactionStatus.pending("Not compacted yet");

@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Iterates over all eligible compaction jobs in order of their priority.
@@ -198,7 +197,7 @@ public class CompactionJobQueue
     final List<CompactionJob> jobsToRemove = queue
         .stream()
         .filter(job -> job.getDataSource().equals(dataSource))
-        .collect(Collectors.toList());
+        .toList();
 
     queue.removeAll(jobsToRemove);
     log.info("Removed [%d] jobs for datasource[%s] from queue.", jobsToRemove.size(), dataSource);
@@ -221,7 +220,10 @@ public class CompactionJobQueue
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
       if (startJobIfPendingAndReady(job, pendingJobs, slotManager)) {
-        runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
+        final RowKey rowKey = RowKey
+            .with(Dimension.DATASOURCE, job.getDataSource())
+            .and(Dimension.DESCRIPTION, job.getEligibility().getMode().name());
+        runStats.add(Stats.Compaction.SUBMITTED_TASKS, rowKey, 1);
       }
     }
 

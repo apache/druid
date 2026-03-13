@@ -191,7 +191,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   {
     final CompactionStatistics uncompacted = candidate.getUncompactedStats();
     if (uncompacted == null) {
-      return Eligibility.OK;
+      return Eligibility.FULL;
     } else if (uncompacted.getNumSegments() < 1) {
       return Eligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
@@ -218,13 +218,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
                                          (uncompacted.getTotalBytes() + candidate.getCompactedStats().getTotalBytes())
                                          * 100;
     if (uncompactedBytesRatio < minUncompactedBytesPercentForFullCompaction) {
-      return Eligibility.incremental(
+      return Eligibility.minor(
           "Uncompacted bytes ratio[%.2f] is below threshold[%d]",
           uncompactedBytesRatio,
           minUncompactedBytesPercentForFullCompaction
       );
     } else {
-      return Eligibility.OK;
+      return Eligibility.FULL;
     }
   }
 
