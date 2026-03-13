@@ -54,8 +54,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 public class PodTemplateTaskAdapterTest
 {
   private KubernetesTaskRunnerStaticConfig taskRunnerConfig;
@@ -182,7 +180,7 @@ public class PodTemplateTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
+    Assertions.assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
   }
 
   @Test
@@ -204,7 +202,7 @@ public class PodTemplateTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId("k8sTaskPodNamePrefix", "ID"), adapter.getTaskId(job));
+    Assertions.assertEquals(new K8sTaskId("k8sTaskPodNamePrefix", "ID"), adapter.getTaskId(job));
   }
 
   @Test

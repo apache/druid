@@ -69,10 +69,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 @ExtendWith(EasyMockExtension.class)
 @SuppressWarnings("DoNotMock")
 public class KubernetesTaskRunnerTest extends EasyMockSupport
@@ -272,7 +268,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   public void test_streamTaskLog_withoutExistingTask_returnsEmptyOptional()
   {
     Optional<InputStream> maybeInputStream = runner.streamTaskLog(task.getId(), 0L);
-    assertFalse(maybeInputStream.isPresent());
+    Assertions.assertFalse(maybeInputStream.isPresent());
   }
 
   @Test
@@ -291,8 +287,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Optional<InputStream> maybeInputStream = runner.streamTaskLog(task.getId(), 0L);
 
-    assertTrue(maybeInputStream.isPresent());
-    assertEquals("", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
+    Assertions.assertTrue(maybeInputStream.isPresent());
+    Assertions.assertEquals("", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -331,7 +327,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    assertEquals(workItem.getResult(), future);
+    Assertions.assertEquals(workItem.getResult(), future);
   }
 
   @Test
@@ -385,7 +381,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    assertEquals(workItem.getResult(), future);
+    Assertions.assertEquals(workItem.getResult(), future);
   }
 
   @Test
@@ -476,8 +472,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getKnownTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(workItem), runner.getKnownTasks());
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(workItem), runner.getKnownTasks());
   }
 
   @Test
@@ -505,8 +501,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getRunningTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(runningWorkItem), tasks);
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(runningWorkItem), tasks);
   }
 
   @Test
@@ -534,8 +530,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getPendingTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(pendingWorkItem), tasks);
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(pendingWorkItem), tasks);
   }
 
   @Test

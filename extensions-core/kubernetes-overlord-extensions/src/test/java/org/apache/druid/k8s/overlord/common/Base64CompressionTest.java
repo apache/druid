@@ -19,14 +19,12 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Base64CompressionTest
 {
@@ -38,11 +36,11 @@ public class Base64CompressionTest
     String compressed = Base64Compression.compressBase64(lotsOfRepeatingCharacters);
     String uncompressed = Base64.getEncoder()
                                 .encodeToString(lotsOfRepeatingCharacters.getBytes(StandardCharsets.UTF_8));
-    assertTrue(compressed.length() < uncompressed.length());
+    Assertions.assertTrue(compressed.length() < uncompressed.length());
 
     // now decompres this
     String result = Base64Compression.decompressBase64(compressed);
-    assertEquals(lotsOfRepeatingCharacters, result);
+    Assertions.assertEquals(lotsOfRepeatingCharacters, result);
   }
 
 }
