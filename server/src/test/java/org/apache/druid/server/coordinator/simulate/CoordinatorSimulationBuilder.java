@@ -64,6 +64,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -225,6 +226,7 @@ public class CoordinatorSimulationBuilder
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         env.configSyncer,
+        env.brokerConfigSyncer,
         env.cloneStatusManager
     );
 
@@ -451,6 +453,7 @@ public class CoordinatorSimulationBuilder
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
     private final CoordinatorDynamicConfigSyncer configSyncer;
+    private final BrokerDynamicConfigSyncer brokerConfigSyncer;
     private final CloneStatusManager cloneStatusManager;
 
     private final boolean loadImmediately;
@@ -518,9 +521,11 @@ public class CoordinatorSimulationBuilder
       );
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
+      this.brokerConfigSyncer = EasyMock.niceMock(BrokerDynamicConfigSyncer.class);
       this.cloneStatusManager = EasyMock.niceMock(CloneStatusManager.class);
 
       mocks.add(configSyncer);
+      mocks.add(brokerConfigSyncer);
       mocks.add(cloneStatusManager);
     }
 

@@ -103,8 +103,21 @@ public class ScheduledExecutors
   }
 
   /**
-   * Run runnable once every period, after the given initial delay. Exceptions
-   * are caught and logged as errors.
+   * Schedules a runnable to execute repeatedly at a fixed rate. The first execution occurs after the initial delay,
+   * and subsequent executions are scheduled at fixed intervals measured from the start of each execution.
+   * <p>
+   * This differs from {@link #scheduleWithFixedDelay} in that the period is measured from the start of each
+   * execution rather than from the completion. If an execution takes longer than the period, the next execution
+   * will begin immediately after the current one starts.
+   * <p>
+   * This also differs from {@link ScheduledExecutorService#scheduleAtFixedRate} in that it prevents task pileup:
+   * only one future execution is scheduled at a time rather than scheduling all future executions upfront.
+   * This prevents a backlog of pending tasks from building up if the executor is delayed or tasks run slowly.
+   *
+   * @param exec         the ScheduledExecutorService to use for scheduling
+   * @param initialDelay the duration to wait before the first execution
+   * @param period       the target duration between the start of consecutive executions
+   * @param runnable     the task to execute repeatedly
    */
   public static void scheduleAtFixedRate(
       final ScheduledExecutorService exec,

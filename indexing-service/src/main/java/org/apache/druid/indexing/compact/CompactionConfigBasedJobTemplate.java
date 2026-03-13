@@ -20,12 +20,15 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -91,21 +94,48 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
+      final CompactionCandidateSearchPolicy.Eligibility eligibility =
+          params.getClusterCompactionConfig()
+                .getCompactionPolicy()
+                .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
+      if (!eligibility.isEligible()) {
+        continue;
+      }
+      final CompactionCandidate finalCandidate;
+      switch (eligibility.getMode()) {
+        case ALL_SEGMENTS:
+          finalCandidate = candidate;
+          break;
+        case UNCOMPACTED_SEGMENTS_ONLY:
+          finalCandidate = CompactionCandidate.from(
+              candidate.getUncompactedSegments(),
+              null,
+              candidate.getCurrentStatus()
+          );
+          break;
+        default:
+          throw DruidException.defensive("unexpected compaction mode[%s]", eligibility.getMode());
+      }
 
       // Allow template-specific customization of the config per candidate
       DataSourceCompactionConfig finalConfig = configOptimizer.optimizeConfig(config, candidate, params);
 
+      final CompactionEngine engine = Configs.valueOrDefault(
+          finalConfig.getEngine(),
+          params.getClusterCompactionConfig().getEngine()
+      );
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
-          candidate,
+          finalCandidate,
+          eligibility.getMode(),
           finalConfig,
-          params.getClusterCompactionConfig().getEngine(),
+          engine,
           indexingStateFingerprint,
           params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
       );
       jobs.add(
           new CompactionJob(
               taskPayload,
-              candidate,
+              finalCandidate,
               CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
               indexingStateFingerprint,
               compactionState

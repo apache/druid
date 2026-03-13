@@ -76,6 +76,7 @@ import java.util.Set;
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
     // for backward compatibility
     @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
+    @Type(name = HadoopIndexTaskStub.TYPE, value = HadoopIndexTaskStub.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
     @Type(name = PartialDimensionCardinalityTask.TYPE, value = PartialDimensionCardinalityTask.class),
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
