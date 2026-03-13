@@ -90,6 +90,25 @@ jobs:
         run: ${{ inputs.script }}
         timeout-minutes: 60
 
+      - name: Summarize flaky tests
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        shell: bash
+        run: |
+          # Count flaky failures recursively
+          flaky_count=$(grep -R "<flakyFailure" . | wc -l)
+          
+          echo "### Flaky Tests: $flaky_count found"
+          
+          if [ "$flaky_count" -gt 0 ]; then
+            echo "#### Flaky Test Details"
+            grep -R "<flakyFailure" . | sed -E 's#.*/TEST-(.*)\.xml.*message="([^"]*)".*#- \1: \2#'
+          fi
+
+      - name: Normalize flaky failures
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        run: |
+          find . -name "TEST-*.xml" -exec sed -i 's/flakyFailure/failure/g' {} +
+
       - name: Publish Test Report
         if: ${{ hashFiles('**/TEST-*.xml') != '' }}
         uses: mikepenz/action-junit-report@v6
