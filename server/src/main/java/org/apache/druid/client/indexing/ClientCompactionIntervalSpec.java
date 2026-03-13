@@ -59,6 +59,7 @@ public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
     return TYPE;
   }
 
+  @Override
   @JsonProperty
   public Interval getInterval()
   {

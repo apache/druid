@@ -56,12 +56,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
@@ -137,11 +138,17 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     return cluster;
   }
 
-  public static List<CompactionCandidateSearchPolicy> getSearchPolicies()
+  public static Stream<Arguments> getCompactionSupervisorTestParams()
   {
-    return List.of(
-        new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null),
-        new NewestSegmentFirstPolicy(null)
+    return Stream.of(
+        Arguments.of(
+            CompactionEngine.MSQ,
+            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null)
+        ),
+        Arguments.of(
+            CompactionEngine.NATIVE,
+            new NewestSegmentFirstPolicy(null)
+        )
     );
   }
 
@@ -193,10 +200,11 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
-  @MethodSource("getSearchPolicies")
-  @ParameterizedTest(name = "policy={0}")
+  @MethodSource("getCompactionSupervisorTestParams")
+  @ParameterizedTest(name = "engine={0}, policy={1}")
   @Timeout(120)
   public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments(
+      CompactionEngine engine,
       CompactionCandidateSearchPolicy policy
   )
   {
@@ -233,7 +241,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, policy, true, CompactionEngine.MSQ, null);
+        = new ClusterCompactionConfig(1.0, 10, policy, true, engine, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );
