@@ -59,6 +59,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
   private static final Logger log = new Logger(QueryJettyServerInitializer.class);
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/status/health",
+      "/status/ready",
       "/druid/historical/v1/readiness",
       "/druid/broker/v1/readiness"
   );
