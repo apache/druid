@@ -60,7 +60,7 @@
     "@fontsource/open-sans": "^5.0.30",
     "@internationalized/date": "^3.5.6",
     "ace-builds": "~1.5.3",
-    "axios": "^1.12.0",
+    "axios": "^1.13.5",
     "chronoshift": "^1.2.3",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.3",
