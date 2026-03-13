@@ -44,7 +44,7 @@
     "tutorials/tutorial-sketches-theta",
     "tutorials/tutorial-jdbc",
     {"type": "category",
-    "label": "Hadoop tutorials",
+    "label": "Other tutorials",
     "items": ["tutorials/tutorial-kerberos-hadoop"]
     }]
 }

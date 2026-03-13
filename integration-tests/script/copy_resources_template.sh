@@ -46,7 +46,6 @@ fi
 
 # Make directoriess if they dont exist
 mkdir -p $SHARED_DIR/hadoop_xml
-mkdir -p $SHARED_DIR/hadoop-dependencies
 mkdir -p $SHARED_DIR/logs
 mkdir -p $SHARED_DIR/tasklogs
 mkdir -p $SHARED_DIR/docker/credentials
