@@ -259,9 +259,9 @@ reached, the query fails with a ResourceLimitExceededException. This property ca
 from OOMs due to an excessive number of spill files being opened simultaneously during the merge phase. This config is 
 complementary to maxOnDiskStorage. maxOnDiskStorage limits total bytes across all spill files, but cannot prevent a large 
 number of tiny files — a query can create hundreds of thousands of spill files while staying well under the byte limit. 
-maxSpillFileCount fills this gap by limiting file count directly, which bounds the number of simultaneously open file handles 
+`maxSpillFileCount` fills this gap by limiting file count directly, which bounds the number of simultaneously open file handles 
 during the merge phase. This situation arises on queries that group on high-cardinality dimensions and contain many aggregators 
-and/or aggregators with large memory footprints. When aggregators like ThetaSketch pre-allocate a large fixed buffer per row in 
+and/or aggregators with large memory footprints. When aggregators like thetaSketch pre-allocate a large fixed buffer per row in 
 memory, causing the buffer to flush frequently with only a small number of rows; since each row corresponds to a unique 
 grouping key in a high-cardinality dimension, each sketch has seen very few values at flush time and serializes to only 
 a few bytes on disk using the sketch's compact format. Defaults to Integer.MAX_VALUE (unlimited).
