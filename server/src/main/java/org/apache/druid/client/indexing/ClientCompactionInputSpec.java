@@ -17,42 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.client.indexing;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.joda.time.Interval;
 
 /**
- * Dimensions used while collecting or reporting coordinator run stats.
+ * Client side equivalent of {@code CompactionInputSpec}. Required since the
+ * {@code CompactionInputSpec} resides in {@code indexing-service} module.
  */
-public enum Dimension
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = ClientCompactionIntervalSpec.TYPE, value = ClientCompactionIntervalSpec.class),
+    @JsonSubTypes.Type(name = ClientMinorCompactionInputSpec.TYPE, value = ClientMinorCompactionInputSpec.class)
+})
+public interface ClientCompactionInputSpec
 {
-  TIER("tier"),
-  TASK_TYPE("taskType"),
-  DATASOURCE("dataSource"),
-  DUTY("duty"),
-  DUTY_GROUP("dutyGroup"),
-  DESCRIPTION("description"),
-  SERVER("server"),
-  SUPERVISOR_ID("supervisorId"),
-  TYPE("type"),
-  CONFIG_TYPE("configType");
-
-  private final String reportedName;
-
-  Dimension(String name)
-  {
-    this.reportedName = name;
-  }
-
   /**
-   * The name of this dimension used while emitting metrics.
+   * @return non-null Interval that this input spec operates on.
    */
-  public String reportedName()
-  {
-    return reportedName;
-  }
-
-  @Override
-  public String toString()
-  {
-    return reportedName;
-  }
+  Interval getInterval();
 }
