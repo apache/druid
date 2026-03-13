@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
@@ -333,7 +334,13 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   {
     Set<ResourceAction> ret = new HashSet<>();
     for (SqlNode operand : call.getOperandList()) {
-      Resource resource = new Resource(operand.toString(), ResourceType.DATASOURCE);
+      if (operand.getKind() != SqlKind.LITERAL) {
+        throw DruidSqlValidator.buildCalciteContextException(
+            "All arguments to APPEND should be literal strings.",
+            operand
+        );
+      }
+      Resource resource = new Resource(((SqlLiteral) operand).getValueAs(String.class), ResourceType.DATASOURCE);
       ret.add(new ResourceAction(resource, Action.READ));
     }
     return ret;

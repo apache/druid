@@ -40,7 +40,6 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -59,7 +58,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     this.authConfig = authConfig;
   }
 
-  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
+  private static final List<String> UNSECURED_PATHS = List.of("/status/health", "/status/ready");
 
   @Override
   public void initialize(Server server, Injector injector)
