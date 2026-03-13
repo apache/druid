@@ -240,8 +240,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .get()
         .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null))
                                         .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build()))
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
-        .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(kafkaServer.consumerProperties()).withTaskCount(2));
+        .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(kafkaServer.consumerProperties()));
 
     // Set up first topic and supervisor
     final String topic1 = IdUtils.getRandomId();
@@ -249,11 +248,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec supervisor1 = kafkaSupervisorSpecBuilder.withId(topic1).build(dataSource, topic1);
     cluster.callApi().postSupervisor(supervisor1);
 
-    final int totalRowCount = publish1kRecords(topic1, true) + publish1kRecords(topic1, false);
-    waitUntilPublishedRecordsAreIngested(totalRowCount);
+    int totalRows = publish1kRecords(topic1);
+    waitUntilPublishedRecordsAreIngested(totalRows);
 
-    // Before compaction
-    Assertions.assertEquals(4, getNumSegmentsWith(Granularities.HOUR));
+    totalRows += publish1kRecords(topic1);
+    waitUntilPublishedRecordsAreIngested(totalRows);
+
+    // Before compaction, ingestion generates 2 segments, sometimes 3 if ingestion happens cross hourly boundary
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.HOUR) >= 2);
+    Assertions.assertEquals(totalRows, getTotalRowCount());
 
     // Create a compaction config with DAY granularity
     InlineSchemaDataSourceCompactionConfig dayGranularityConfig =
@@ -278,18 +281,16 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     pauseCompaction(dayGranularityConfig);
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals(2000, getTotalRowCount());
+    Assertions.assertEquals(totalRows, getTotalRowCount());
 
     verifyCompactedSegmentsHaveFingerprints(dayGranularityConfig);
 
-    // published another 1k
-    final int appendedRowCount = publish1kRecords(topic1, true);
-    indexer.latchableEmitter().flush();
-    waitUntilPublishedRecordsAreIngested(appendedRowCount);
+    // published another 2k
+    totalRows += publish1kRecords(topic1);
+    waitUntilPublishedRecordsAreIngested(totalRows);
 
-    // Tear down both topics and supervisors
-    kafkaServer.deleteTopic(topic1);
-    cluster.callApi().postSupervisor(supervisor1.createSuspendedSpec());
+    totalRows += publish1kRecords(topic1);
+    waitUntilPublishedRecordsAreIngested(totalRows);
 
     long totalUsed = overlord.latchableEmitter().getMetricValues(
         "segment/metadataCache/used/count",
@@ -297,9 +298,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ).stream().reduce((first, second) -> second).orElse(0).longValue();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    // 1 compacted segment + 2 appended segment
-    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals(3000, getTotalRowCount());
+    // 1 compacted segment + 2 appended segments (sometimes 3 appended segments if ingestion happens cross hourly boundary)
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 3);
+    Assertions.assertEquals(totalRows, getTotalRowCount());
 
     runCompactionWithSpec(dayGranularityConfig);
     waitForAllCompactionTasksToFinish();
@@ -310,9 +311,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasValueMatching(Matchers.greaterThan(totalUsed)));
 
-    // performed minor compaction: 1 previously compacted segment + 1 incrementally compacted segment
+    // performed minor compaction: 1 previously compacted segment + 1 recently compacted segment from minor compaction
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
-    Assertions.assertEquals(3000, getTotalRowCount());
+    Assertions.assertEquals(totalRows, getTotalRowCount());
+
+    // Tear down kafka
+    kafkaServer.deleteTopic(topic1);
+    cluster.callApi().postSupervisor(supervisor1.createSuspendedSpec());
   }
 
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
@@ -332,22 +337,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
   }
 
-  protected int publish1kRecords(String topic, boolean useTransactions)
+  protected int publish1kRecords(String topic)
   {
     final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
-    List<byte[]> records = streamGenerator.generateEvents(10);
+    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 500, 100);
+    List<byte[]> records = streamGenerator.generateEvents(2);
 
     ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
     for (byte[] record : records) {
       producerRecords.add(new ProducerRecord<>(topic, record));
     }
-
-    if (useTransactions) {
-      kafkaServer.produceRecordsToTopic(producerRecords);
-    } else {
-      kafkaServer.produceRecordsWithoutTransaction(producerRecords);
-    }
+    kafkaServer.produceRecordsToTopic(producerRecords);
     return producerRecords.size();
   }
 
@@ -859,7 +859,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   public static List<PartitionsSpec> getPartitionsSpec()
   {
     return List.of(
-        new DimensionRangePartitionsSpec(null, 5000, List.of("page"), false),
+        new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false),
         new DynamicPartitionsSpec(null, null)
     );
   }
