@@ -67,7 +67,7 @@ public class KubernetesTaskRunnerFactoryTest
     Config config = new ConfigBuilder().build();
 
     druidKubernetesClient =
-        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
+        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig(), new ObjectMapper()), config);
     druidKubernetesCachingClient = null;
     taskAdapter = new TestTaskAdapter();
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerEffectiveConfig(kubernetesTaskRunnerStaticConfig, () -> null);

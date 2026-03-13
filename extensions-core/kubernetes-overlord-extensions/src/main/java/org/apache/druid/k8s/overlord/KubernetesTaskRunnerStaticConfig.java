@@ -76,6 +76,7 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   // has completed
   private String kubexitImage = "karlkfi/kubexit:v0.3.2";
 
+  @JsonProperty
   // how much time to wait for preStop hooks to execute
   // lower number speeds up pod termination time to release locks
   // faster, defaults to your k8s setup, usually 30 seconds.

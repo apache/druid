@@ -89,11 +89,6 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
     throw new UnsupportedOperationException();
   }
 
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
   public Builder toBuilder()
   {
     return new Builder()
@@ -116,6 +111,11 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
         .maxNumSegmentsToMerge(getMaxNumSegmentsToMerge())
         .totalNumMergeTasks(getTotalNumMergeTasks())
         .maxColumnsToMerge(getMaxColumnsToMerge());
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
   }
 
   public static class Builder

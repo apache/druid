@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.AmazonServiceException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -31,6 +30,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 import java.io.IOException;
@@ -116,7 +116,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
           }
       );
     }
-    catch (AmazonServiceException e) {
+    catch (S3Exception e) {
       throw handlePushServiceException(e, indexSize);
     }
     catch (Exception e) {
@@ -148,7 +148,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               }
           );
         }
-        catch (AmazonServiceException e) {
+        catch (S3Exception e) {
           throw handlePushServiceException(e, file.length());
         }
         catch (Exception e) {
@@ -190,7 +190,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private static IOException handlePushServiceException(AmazonServiceException e, long indexSize)
+  private static IOException handlePushServiceException(S3Exception e, long indexSize)
   {
     if (S3Utils.ERROR_ENTITY_TOO_LARGE.equals(S3Utils.getS3ErrorCode(e))) {
       throw DruidException
