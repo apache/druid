@@ -432,8 +432,8 @@ public class ServerManager implements QuerySegmentWalker
       }
       throw CloseableUtils.closeInCatch(toThrow, safetyNet);
     }
-    final long loadTime = System.nanoTime() - startLoadTime;
     final long count = actions.size();
+    final long loadTime = count == 0 ? 0 : System.nanoTime() - startLoadTime;
     return new LoadSegmentsResult(
         segmentReferences,
         loadTime,

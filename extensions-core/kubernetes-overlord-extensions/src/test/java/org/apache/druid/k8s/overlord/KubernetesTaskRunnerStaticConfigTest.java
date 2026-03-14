@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -40,21 +40,21 @@ public class KubernetesTaskRunnerStaticConfigTest
         KubernetesTaskRunnerStaticConfig.class
     );
 
-    Assert.assertEquals("namespace", config.getNamespace());
-    Assert.assertFalse(config.isDebugJobs());
-    Assert.assertEquals("name", config.getPrimaryContainerName());
-    Assert.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
-    Assert.assertNull(config.getGraceTerminationPeriodSeconds());
-    Assert.assertTrue(config.isDisableClientProxy());
-    Assert.assertEquals(new Period("PT4H"), config.getTaskTimeout());
-    Assert.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
-    Assert.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
-    Assert.assertEquals(ImmutableList.of(), config.getPeonMonitors());
-    Assert.assertEquals(ImmutableList.of(), config.getJavaOptsArray());
-    Assert.assertEquals(ImmutableMap.of(), config.getLabels());
-    Assert.assertEquals(ImmutableMap.of(), config.getAnnotations());
-    Assert.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
+    Assertions.assertEquals("namespace", config.getNamespace());
+    Assertions.assertFalse(config.isDebugJobs());
+    Assertions.assertEquals("name", config.getPrimaryContainerName());
+    Assertions.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
+    Assertions.assertNull(config.getGraceTerminationPeriodSeconds());
+    Assertions.assertTrue(config.isDisableClientProxy());
+    Assertions.assertEquals(new Period("PT4H"), config.getTaskTimeout());
+    Assertions.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
+    Assertions.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
+    Assertions.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
+    Assertions.assertEquals(ImmutableList.of(), config.getPeonMonitors());
+    Assertions.assertEquals(ImmutableList.of(), config.getJavaOptsArray());
+    Assertions.assertEquals(ImmutableMap.of(), config.getLabels());
+    Assertions.assertEquals(ImmutableMap.of(), config.getAnnotations());
+    Assertions.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
   }
 
   @Test
@@ -65,21 +65,21 @@ public class KubernetesTaskRunnerStaticConfigTest
         .withDisableClientProxy(true)
         .build();
 
-    Assert.assertEquals("namespace", config.getNamespace());
-    Assert.assertFalse(config.isDebugJobs());
-    Assert.assertNull(config.getPrimaryContainerName());
-    Assert.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
-    Assert.assertNull(config.getGraceTerminationPeriodSeconds());
-    Assert.assertTrue(config.isDisableClientProxy());
-    Assert.assertEquals(new Period("PT4H"), config.getTaskTimeout());
-    Assert.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
-    Assert.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
-    Assert.assertEquals(ImmutableList.of(), config.getPeonMonitors());
-    Assert.assertEquals(ImmutableList.of(), config.getJavaOptsArray());
-    Assert.assertEquals(ImmutableMap.of(), config.getLabels());
-    Assert.assertEquals(ImmutableMap.of(), config.getAnnotations());
-    Assert.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
+    Assertions.assertEquals("namespace", config.getNamespace());
+    Assertions.assertFalse(config.isDebugJobs());
+    Assertions.assertNull(config.getPrimaryContainerName());
+    Assertions.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
+    Assertions.assertNull(config.getGraceTerminationPeriodSeconds());
+    Assertions.assertTrue(config.isDisableClientProxy());
+    Assertions.assertEquals(new Period("PT4H"), config.getTaskTimeout());
+    Assertions.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
+    Assertions.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
+    Assertions.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
+    Assertions.assertEquals(ImmutableList.of(), config.getPeonMonitors());
+    Assertions.assertEquals(ImmutableList.of(), config.getJavaOptsArray());
+    Assertions.assertEquals(ImmutableMap.of(), config.getLabels());
+    Assertions.assertEquals(ImmutableMap.of(), config.getAnnotations());
+    Assertions.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
   }
 
   @Test
@@ -104,20 +104,20 @@ public class KubernetesTaskRunnerStaticConfigTest
         .withCapacity(1)
         .build();
 
-    Assert.assertEquals("namespace", config.getNamespace());
-    Assert.assertTrue(config.isDebugJobs());
-    Assert.assertEquals("primary", config.getPrimaryContainerName());
-    Assert.assertEquals("image", config.getKubexitImage());
-    Assert.assertEquals(Long.valueOf(0), config.getGraceTerminationPeriodSeconds());
-    Assert.assertTrue(config.isDisableClientProxy());
-    Assert.assertEquals(new Period("PT2H"), config.getTaskTimeout());
-    Assert.assertEquals(new Period("P1D"), config.getTaskCleanupDelay());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskCleanupInterval());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
-    Assert.assertEquals(ImmutableList.of("monitor"), config.getPeonMonitors());
-    Assert.assertEquals(ImmutableList.of("option"), config.getJavaOptsArray());
-    Assert.assertEquals(ImmutableMap.of("key", "value"), config.getLabels());
-    Assert.assertEquals(ImmutableMap.of("key", "value"), config.getAnnotations());
-    Assert.assertEquals(Integer.valueOf(1), config.getCapacity());
+    Assertions.assertEquals("namespace", config.getNamespace());
+    Assertions.assertTrue(config.isDebugJobs());
+    Assertions.assertEquals("primary", config.getPrimaryContainerName());
+    Assertions.assertEquals("image", config.getKubexitImage());
+    Assertions.assertEquals(Long.valueOf(0), config.getGraceTerminationPeriodSeconds());
+    Assertions.assertTrue(config.isDisableClientProxy());
+    Assertions.assertEquals(new Period("PT2H"), config.getTaskTimeout());
+    Assertions.assertEquals(new Period("P1D"), config.getTaskCleanupDelay());
+    Assertions.assertEquals(new Period("PT1H"), config.getTaskCleanupInterval());
+    Assertions.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
+    Assertions.assertEquals(ImmutableList.of("monitor"), config.getPeonMonitors());
+    Assertions.assertEquals(ImmutableList.of("option"), config.getJavaOptsArray());
+    Assertions.assertEquals(ImmutableMap.of("key", "value"), config.getLabels());
+    Assertions.assertEquals(ImmutableMap.of("key", "value"), config.getAnnotations());
+    Assertions.assertEquals(Integer.valueOf(1), config.getCapacity());
   }
 }

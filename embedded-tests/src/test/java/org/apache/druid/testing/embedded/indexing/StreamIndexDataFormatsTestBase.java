@@ -42,6 +42,8 @@ import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
 import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
+import org.apache.druid.data.input.thrift.ThriftExtensionsModule;
+import org.apache.druid.data.input.thrift.ThriftInputFormat;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
@@ -54,6 +56,8 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.tools.ThriftEventSerializer;
+import org.apache.druid.testing.embedded.tools.WikipediaThriftEvent;
 import org.apache.druid.testing.tools.AvroEventSerializer;
 import org.apache.druid.testing.tools.AvroSchemaRegistryEventSerializer;
 import org.apache.druid.testing.tools.CsvEventSerializer;
@@ -81,8 +85,9 @@ import java.util.Map;
  * <li>CSV</li>
  * <li>JSON</li>
  * <li>Protobuf (with and without schema registry)</li>
+ * <li>Thrift</li>
+ * <li>TSV</li>
  * </ul>
- *
  * This tests both InputFormat and Parser. Parser is deprecated for Streaming Ingestion,
  * and those tests will be removed in the future.
  */
@@ -138,6 +143,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
     cluster.addExtension(ProtobufExtensionsModule.class)
            .addExtension(AvroExtensionsModule.class)
+           .addExtension(ThriftExtensionsModule.class)
            .useLatchableEmitter()
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addResource(streamResource)
@@ -536,6 +542,28 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
+
+    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(supervisorSpec);
+  }
+
+  @Test
+  @Timeout(30)
+  public void test_thriftDataFormat()
+  {
+    streamResource.createTopicWithPartitions(dataSource, 3);
+    EventSerializer serializer = new ThriftEventSerializer();
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
+
+    ThriftInputFormat inputFormat = new ThriftInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        WikipediaThriftEvent.class.getName()
+    );
+
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 

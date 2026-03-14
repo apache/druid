@@ -82,7 +82,7 @@ public class DataSegmentPlus
     this.upgradedFromSegmentId = upgradedFromSegmentId;
     this.indexingStateFingerprint = indexingStateFingerprint;
   }
-
+  
   @Nullable
   @JsonProperty
   public DateTime getCreatedDate()

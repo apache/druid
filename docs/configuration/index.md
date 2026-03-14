@@ -1725,7 +1725,7 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 |`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentRangeThreshold`|ISO duration threshold for maximum segment range a query can span before the priority is automatically adjusted.|none|
-|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
+|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|5|
 
 ##### Laning strategies
 
@@ -1866,6 +1866,11 @@ queries in order to avoid running as a default priority of 0.
 |--------|-----------|-------|
 |`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
 
+#### Dynamic configuration
+
+The Broker has dynamic configurations to tune certain behavior dynamically, without requiring a service restart.
+You can configure these parameters using the [web console](../operations/web-console.md) (recommended) or through the [Broker dynamic configuration API](../api-reference/dynamic-configuration-api.md#broker-dynamic-configuration).
+
 #### SQL
 
 The Druid SQL server is configured through the following properties on the Broker.
@@ -1978,6 +1983,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|Any|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|Overlord|
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|Overlord|
+|`org.apache.druid.server.metrics.SupervisorStatsMonitor`|Reports supervisor count and state, per supervisor per emission period.|Overlord|
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
@@ -1992,10 +1998,10 @@ All the services in your Druid deployment would have these two monitors.
 
 If you want any service specific monitors though, you need to add all the monitors you want to run for that service to the service's `runtime.properties` file even if they are listed in the common file. The service specific properties take precedence.
 
-The following example adds the `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
+The following example adds the `TaskCountStatsMonitor`, `TaskSlotCountStatsMonitor`, and `SupervisorStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
 
 ```properties
-druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.server.metrics.SupervisorStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
 If you don't include `OshiSysMonitor` and `JvmMonitor` in the Overlord's `runtime.properties` file, the monitors don't get loaded onto the Overlord despite being specified in the common file.
@@ -2260,6 +2266,7 @@ Supported runtime properties:
 |`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
+|`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|Integer.MAX_VALUE (unlimited)|
 |`druid.query.groupBy.defaultOnDiskStorage`|Default amount of disk space to use, per-query, for spilling the result sets to disk when either the merging buffer or the dictionary fills up. Set to zero to disable disk spilling for queries which don't override `maxOnDiskStorage` in their context.|`druid.query.groupBy.maxOnDiskStorage`|
 
 Supported query contexts:
@@ -2269,6 +2276,7 @@ Supported query contexts:
 |`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to set `maxOnDiskStorage` to a value between 0 and `druid.query.groupBy.maxOnDiskStorage` for this query. If this query context override exceeds `druid.query.groupBy.maxOnDiskStorage`, the query will use `druid.query.groupBy.maxOnDiskStorage`. Omitting this from the query context will cause the query to use `druid.query.groupBy.defaultOnDiskStorage` for `maxOnDiskStorage`|
+|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
 
 ### Advanced configurations
 

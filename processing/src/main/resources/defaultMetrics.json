@@ -180,6 +180,7 @@
     "segment/usedPercent": [],
     "segment/waitCompact/bytes": [],
     "segment/waitCompact/count": [],
+    "supervisor/count": [],
     "serverview/init/time": [],
     "serverview/sync/healthy": [],
     "serverview/sync/unstableTime": [],

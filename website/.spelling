@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -562,6 +563,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -1822,6 +1824,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1839,6 +1842,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs

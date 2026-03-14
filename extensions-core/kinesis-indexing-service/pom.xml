@@ -53,16 +53,24 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <version>${aws.sdk.version}</version>
-            <exclusions>
-                <!-- aws-java-sdk-core is provided by Druid core. -->
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesis</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>regions</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -84,11 +92,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
@@ -102,40 +105,44 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-aws-common</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-sts</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                    <groupId>com.amazonaws</groupId>
-                </exclusion>
-            </exclusions>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
 
+        <!-- KCL v2 for deaggregation support -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>software.amazon.kinesis</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.14.4</version>
+            <version>2.6.0</version>
             <exclusions>
+                <!-- Exclude transitive dependencies we don't need for deaggregation -->
                 <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-cloudwatch</artifactId>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>cloudwatch</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-dynamodb</artifactId>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>dynamodb</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.reactivex.rxjava3</groupId>
+                    <artifactId>rxjava</artifactId>
+                </exclusion>
+                <!-- Exclude Glue Schema Registry - brings in Scala, Kotlin, Wire, Kafka etc. -->
+                <exclusion>
+                    <groupId>software.amazon.glue</groupId>
+                    <artifactId>schema-registry-serde</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>software.amazon.glue</groupId>
+                    <artifactId>schema-registry-common</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -178,16 +185,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.github.stefanbirkner</groupId>
             <artifactId>system-rules</artifactId>
             <scope>test</scope>
@@ -197,6 +194,26 @@
             <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- Used by parent test class SeekableStreamIndexTaskTestBase -->
+                        <ignoredUnusedDeclaredDependency>org.assertj:assertj-core</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

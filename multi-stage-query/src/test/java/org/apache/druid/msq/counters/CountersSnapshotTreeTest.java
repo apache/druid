@@ -44,7 +44,7 @@ public class CountersSnapshotTreeTest
 
     final ChannelCounters channelCounters = new ChannelCounters();
     channelCounters.addFile(10, 13);
-    channelCounters.setTotalFiles(14);
+    channelCounters.addTotalFiles(14);
     // fake load to set some counters
     channelCounters.addLoad(new AcquireSegmentResult(null, 1234L, 1L, 1L));
 

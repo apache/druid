@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -41,6 +42,8 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.util.List;
 
 public class SegmentTransactionalInsertActionTest
 {
@@ -190,6 +193,9 @@ public class SegmentTransactionalInsertActionTest
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
+    final NoopSupervisorSpec supervisorSpec = new NoopSupervisorSpec(SUPERVISOR_ID, List.of(DATA_SOURCE));
+    actionTestKit.getSupervisorManager().createOrUpdateAndStartSupervisor(supervisorSpec);
+
     SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
         SUPERVISOR_ID,
@@ -203,7 +209,7 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.retryableFailure(
+        SegmentPublishResult.fail(
             "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
             + " ahead of the last committed end state[null]. Try resetting the supervisor."
         ),
