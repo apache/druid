@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.hdfs;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedResource;
@@ -68,7 +69,7 @@ public class HdfsStorageResource implements EmbeddedResource
   public void start()
   {
     try {
-      final File tempDir = Files.createTempDirectory("mini-dfs-").toFile();
+      final File tempDir = FileUtils.createTempDir("mini-dfs-");
       tempDir.deleteOnExit();
 
       final Configuration conf = new Configuration();
