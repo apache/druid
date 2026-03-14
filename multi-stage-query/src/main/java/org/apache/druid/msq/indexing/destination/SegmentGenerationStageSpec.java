@@ -36,7 +36,6 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -152,10 +151,10 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
         }
       }
     } else if (query instanceof ScanQuery scanQuery) {
-      for (OrderBy orderBy : scanQuery.getOrderBys()) {
-        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(orderBy.getColumnName());
+      for (KeyColumn column : queryClusterBy.getColumns()) {
+        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(column.columnName());
         if (vc != null) {
-          clusterByVirtualColumns.put(orderBy.getColumnName(), vc);
+          clusterByVirtualColumns.put(column.columnName(), vc);
         }
       }
     }

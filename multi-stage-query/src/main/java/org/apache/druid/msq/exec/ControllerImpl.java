@@ -61,6 +61,7 @@ import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -1837,9 +1838,10 @@ public class ControllerImpl implements Controller
     CompactionTransformSpec transformSpec;
     // this is true if we are in here
 
-    final Map<String, VirtualColumn> clusterByVirtualColumnMappings = segmentProcessor.getClusterByVirtualColumnMappings();
+    final Map<String, VirtualColumn> clusterByVirtualColumnMappings =
+        segmentProcessor.getClusterByVirtualColumnMappings();
 
-    if (clusterBy == null || clusterByVirtualColumnMappings.isEmpty()) {
+    if (clusterByVirtualColumnMappings.isEmpty() || !SecondaryPartitionType.RANGE.equals(partitionSpec.getType())) {
       transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                       ? null
                       : CompactionTransformSpec.of(dataSchema.getTransformSpec());
