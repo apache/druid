@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 
 /**
  * An {@link EmbeddedResource} that starts an in-process HDFS cluster using {@link MiniDFSCluster}.
