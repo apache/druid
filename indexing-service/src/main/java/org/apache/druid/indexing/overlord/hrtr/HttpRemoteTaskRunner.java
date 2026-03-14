@@ -129,8 +129,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   private static final EmittingLogger log = new EmittingLogger(HttpRemoteTaskRunner.class);
 
   public static final String TASK_DISCOVERED_COUNT = "task/discovered/count";
-  private static final int FIND_WORKER_BACKOFF_DELAY_MILLIS = 10_000;
-  private static final int FIND_WORKER_BACKOFF_RETRIES = 4;
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -498,6 +496,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        break;
       }
     }
     log.info("Workers have synced state successfully");
@@ -550,24 +549,21 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               // It might be a worker that existed before, temporarily went away and came back. We might have a set of
               // tasks that we think are running on this worker. Provide that information to WorkerHolder that
               // manages the task syncing with that worker.
-              for (String taskId : tasks.keySet()) {
-                tasks.compute(taskId, (tKey, taskEntry) -> {
-                  if (taskEntry != null && taskEntry.isRunningOnWorker(worker)) {
-                    // This announcement is only used to notify when a task has disappeared on the worker
-                    // So it is okay to set the dataSource and taskResource to null as they will not be used
-                    expectedAnnouncements.add(
-                        TaskAnnouncement.create(
-                            taskEntry.getTaskId(),
-                            taskEntry.getTaskType(),
-                            null,
-                            TaskStatus.running(taskEntry.getTaskId()),
-                            taskEntry.getLocation(),
-                            null
-                        )
-                    );
-                  }
-                  return taskEntry;
-                });
+              for (HttpRemoteTaskRunnerWorkItem taskEntry : tasks.values()) {
+                if (taskEntry.isRunningOnWorker(worker)) {
+                  // This announcement is only used to notify when a task has disappeared on the worker
+                  // So it is okay to set the dataSource and taskResource to null as they will not be used
+                  expectedAnnouncements.add(
+                      TaskAnnouncement.create(
+                          taskEntry.getTaskId(),
+                          taskEntry.getTaskType(),
+                          null,
+                          TaskStatus.running(taskEntry.getTaskId()),
+                          taskEntry.getLocation(),
+                          null
+                      )
+                  );
+                }
               }
 
               workerEntry = createWorkerHolder(
@@ -610,9 +606,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   {
     // Acquire workerLock to ensure atomicity between worker removal and competing scheduling routines
     final WorkerHolder workerEntry;
+    final boolean wasBlacklisted;
     synchronized (workerStateLock) {
       workerEntry = workers.remove(worker.getHost());
-      if (workerEntry != null && workerEntry.getState() == WorkerHolder.State.BLACKLISTED) {
+      wasBlacklisted = workerEntry != null && workerEntry.getState() == WorkerHolder.State.BLACKLISTED;
+      if (wasBlacklisted) {
         blackListedWorkersCount.decrementAndGet();
       }
     }
@@ -626,6 +624,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       }
       catch (Exception e) {
         throw new RuntimeException(e);
+      }
+      // Removing a blacklisted worker may allow more workers to stay on the blacklist; re-evaluate thresholds.
+      if (wasBlacklisted) {
+        checkAndRemoveWorkersFromBlackList();
       }
     } else {
       log.warn("Asked to remove a non-existent worker[%s]", worker.getHost());
@@ -650,15 +652,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           log.info("Running scheduled cleanup for worker[%s]", workerHostAndPort);
           try {
             final Set<HttpRemoteTaskRunnerWorkItem> tasksToFail = new HashSet<>();
-            for (String taskId : tasks.keySet()) {
-              tasks.compute(taskId, (tKey, taskEntry) -> {
-                if (taskEntry != null && taskEntry.getState().inProgress()) {
-                  if (taskEntry.getWorker() != null && taskEntry.getWorker().getHost().equals(workerHostAndPort)) {
-                    tasksToFail.add(taskEntry);
-                  }
-                }
-                return taskEntry;
-              });
+            for (HttpRemoteTaskRunnerWorkItem taskEntry : tasks.values()) {
+              if (taskEntry.getState().inProgress()
+                  && taskEntry.getWorker() != null
+                  && taskEntry.getWorker().getHost().equals(workerHostAndPort)) {
+                tasksToFail.add(taskEntry);
+              }
             }
 
             for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
@@ -943,20 +942,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     }
 
     // Check that worker has no in-flight/running tasks associated with it
-    final AtomicBoolean inProgress = new AtomicBoolean(false);
-    for (String taskId : tasks.keySet()) {
-      tasks.compute(taskId, (key, taskEntry) -> {
-        if (taskEntry != null && taskEntry.getState().inProgress()) {
-          if (taskEntry.getWorker() != null && taskEntry.getWorker()
-                                                        .getHost()
-                                                        .equals(workerHolder.getWorker().getHost())) {
-            inProgress.set(true);
-          }
-        }
-        return taskEntry;
-      });
+    final String workerHost = workerHolder.getWorker().getHost();
+    for (HttpRemoteTaskRunnerWorkItem taskEntry : tasks.values()) {
+      if (taskEntry.getState().inProgress()
+          && taskEntry.getWorker() != null
+          && taskEntry.getWorker().getHost().equals(workerHost)) {
+        return false;
+      }
     }
-    return !inProgress.get();
+    return true;
   }
 
   @Override
@@ -1078,17 +1072,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
-    for (String taskId : tasks.keySet()) {
-      tasks.compute(taskId, (key, taskEntry) -> {
-        if (taskEntry != null && taskEntry.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-          TaskRunnerUtils.notifyLocationChanged(
-              ImmutableList.of(listenerPair),
-              key,
-              taskEntry.getLocation()
-          );
-        }
-        return taskEntry;
-      });
+    for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> entry : tasks.entrySet()) {
+      if (entry.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+        TaskRunnerUtils.notifyLocationChanged(
+            ImmutableList.of(listenerPair),
+            entry.getKey(),
+            entry.getValue().getLocation()
+        );
+      }
     }
 
     log.info("Registered listener[%s]", listener.getListenerId());
@@ -1182,21 +1173,20 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         final String taskId = taskItem.getTask().getId();
 
         ImmutableWorkerInfo workerToAssign;
-        int workerFetchRetries = 0;
+        // Set to false inside tasks.compute() if the task is no longer PENDING when we attempt
+        // to transition it to PENDING_WORKER_ASSIGN. A task can complete concurrently (e.g. via
+        // cancellation) without holding workerStateLock, so we cannot rely on a pre-check.
+        final AtomicBoolean taskWasPending = new AtomicBoolean(true);
 
         synchronized (workerStateLock) {
-          do {
-            workerToAssign = findWorkerToRunTask(taskItem.getTask());
-            if (workerToAssign == null) {
-              log.warn("No workers available to run task[%s]. Waiting", taskId);
-              workerStateLock.wait(FIND_WORKER_BACKOFF_DELAY_MILLIS); // yield the lock and wait a bit
-            }
-          } while (workerToAssign == null && workerFetchRetries++ < FIND_WORKER_BACKOFF_RETRIES);
+          workerToAssign = findWorkerToRunTask(taskItem.getTask());
 
-          // Exhausted worker assignment retries, let's backoff a bit
           if (workerToAssign == null) {
-            log.warn("Failed to find workers available to run task[%s]. Sending to back of queue", taskId);
-            pendingTasks.put(taskItem.withFreshSequenceNumber());
+            // Park until a worker signals capacity change (task complete, new worker, state → READY).
+            // Bounded wait avoids missed wakeups from spurious interrupts.
+            log.warn("No workers available to run task[%s], waiting for capacity", taskId);
+            workerStateLock.wait(TimeUnit.MINUTES.toMillis(1));
+            pendingTasks.put(taskItem.requeue());
             continue;
           }
 
@@ -1221,19 +1211,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               }
           );
 
-          // Mark this task as pending worker assign
+          // Mark this task as pending worker assign. A task can complete concurrently (e.g. via
+          // cancellation) without holding workerStateLock, so we handle the non-PENDING case
+          // gracefully instead of asserting. The worker will be reset to READY in the finally block.
           tasks.compute(
               taskId,
               (key, entry) -> {
                 Preconditions.checkState(entry != null, "Expected task[%s] to be in tasks set", taskId);
-                Preconditions.checkState(
-                    entry.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING,
-                    "Expected task[%s] state to be PENDING, got state[%s]",
-                    taskId,
-                    entry.getState()
-                );
-
-                entry.setState(HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN);
+                if (entry.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING) {
+                  entry.setState(HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN);
+                } else {
+                  taskWasPending.set(false);
+                }
                 return entry;
               }
           );
@@ -1241,9 +1230,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
         final String workerHost = workerToAssign.getWorker().getHost();
         try {
-          if (!runTaskOnWorker(taskId, workerHost)) {
+          if (!taskWasPending.get()) {
+            // Task completed (e.g. cancelled) while we were setting up assignment.
+            // Worker state will be reset to READY in the finally block.
+            log.info(
+                "Task[%s] completed concurrently before assignment to worker[%s], skipping",
+                taskId,
+                workerHost
+            );
+          } else if (!runTaskOnWorker(taskId, workerHost)) {
             log.warn("Failed to assign task[%s] to worker[%s]. Sending to back of queue", taskId, workerHost);
-            pendingTasks.put(taskItem.withFreshSequenceNumber());
+            pendingTasks.put(taskItem.requeue());
           } else {
             log.info("Assigned task[%s] to worker[%s]", taskId, workerHost);
           }
@@ -1287,6 +1284,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                 }
             );
           }
+
+          // Reset task state from PENDING_WORKER_ASSIGN -> PENDING if assignment did not complete.
+          // This allows the task to be picked up again from the queue without hitting a precondition failure.
+          tasks.compute(taskId, (key, entry) -> {
+            if (entry != null) {
+              entry.revertToPending();
+            }
+            return entry;
+          });
 
           notifyWatchers();
         }
@@ -1931,6 +1937,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       setStateUnconditionally(state);
     }
 
+    /**
+     * Reverts state from PENDING_WORKER_ASSIGN back to PENDING when a worker assignment attempt fails
+     * and the task must be requeued. This is the only allowed backward transition.
+     */
+    void revertToPending()
+    {
+      if (this.state == State.PENDING_WORKER_ASSIGN) {
+        setStateUnconditionally(State.PENDING);
+      }
+    }
+
     private void setStateUnconditionally(State state)
     {
       this.state = state;
@@ -1959,33 +1976,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       return task;
     }
 
-    /**
-     * Creates a new PendingTaskQueueItem for the same task.
-     * This is used when requeueing a task to place it at the back of the queue.
-     */
-    public PendingTaskQueueItem withFreshSequenceNumber()
+    /** Returns a new item for the same task, placing it at the back of the queue. */
+    public PendingTaskQueueItem requeue()
     {
       return new PendingTaskQueueItem(task);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      PendingTaskQueueItem that = (PendingTaskQueueItem) o;
-      return task.equals(that.task);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hashCode(task);
     }
   }
 }

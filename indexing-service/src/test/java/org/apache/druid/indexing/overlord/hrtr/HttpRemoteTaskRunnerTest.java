@@ -1199,6 +1199,10 @@ public class HttpRemoteTaskRunnerTest
             .anyTimes();
     workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
     workerHolder.setState(EasyMock.anyObject());
+    // Scheduling thread resets worker from PENDING_ASSIGN → READY in the finally block after assignment.
+    EasyMock.expect(workerHolder.compareAndExchangeState(WorkerHolder.State.PENDING_ASSIGN, WorkerHolder.State.READY))
+            .andReturn(WorkerHolder.State.PENDING_ASSIGN)
+            .anyTimes();
     workerHolder.resetContinuouslyFailedTasksCount();
     EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
     workerHolder.start();
@@ -1361,6 +1365,10 @@ public class HttpRemoteTaskRunnerTest
             .anyTimes();
     workerHolder.setState(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
+    // Scheduling thread resets worker from PENDING_ASSIGN → READY in the finally block after assignment.
+    EasyMock.expect(workerHolder.compareAndExchangeState(WorkerHolder.State.PENDING_ASSIGN, WorkerHolder.State.READY))
+            .andReturn(WorkerHolder.State.PENDING_ASSIGN)
+            .anyTimes();
     workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
     workerHolder.resetContinuouslyFailedTasksCount();
     EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
