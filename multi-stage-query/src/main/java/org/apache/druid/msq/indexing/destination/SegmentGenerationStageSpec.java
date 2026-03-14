@@ -78,32 +78,19 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
     final ClusterBy queryClusterBy = queryDef.getFinalStageDefinition().getClusterBy();
 
     // Add a segment-generation stage.
-    final DataSchema dataSchema =
-        SegmentGenerationUtils.makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper, query);
+    final DataSchema dataSchema = SegmentGenerationUtils.makeDataSchemaForIngestion(
+        querySpec,
+        querySignature,
+        queryClusterBy,
+        columnMappings,
+        jsonMapper,
+        query
+    );
 
-    final Map<String, VirtualColumn> clusterByVirtualColumns = new LinkedHashMap<>();
-    if (query instanceof GroupByQuery groupByQuery) {
-      final Map<String, VirtualColumn> outputToVc = new LinkedHashMap<>();
-      for (DimensionSpec spec : groupByQuery.getDimensions()) {
-        final VirtualColumn vc = groupByQuery.getVirtualColumns().getVirtualColumn(spec.getDimension());
-        if (vc != null) {
-          outputToVc.put(spec.getOutputName(), vc);
-        }
-      }
-      for (KeyColumn column : queryClusterBy.getColumns()) {
-        final VirtualColumn vc = outputToVc.get(column.columnName());
-        if (vc != null) {
-          clusterByVirtualColumns.put(column.columnName(), vc);
-        }
-      }
-    } else if (query instanceof ScanQuery scanQuery) {
-      for (OrderBy orderBy : scanQuery.getOrderBys()) {
-        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(orderBy.getColumnName());
-        if (vc != null) {
-          clusterByVirtualColumns.put(orderBy.getColumnName(), vc);
-        }
-      }
-    }
+    final Map<String, VirtualColumn> clusterByVirtualColumnMappings = getClusterByVirtualColumnMappings(
+        query,
+        queryClusterBy
+    );
 
     return StageDefinition.builder(queryDef.getNextStageNumber())
                           .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -112,7 +99,7 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
                               new SegmentGeneratorStageProcessor(
                                   dataSchema,
                                   columnMappings,
-                                  clusterByVirtualColumns,
+                                  clusterByVirtualColumnMappings,
                                   tuningConfig
                               )
                           );
@@ -145,5 +132,33 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
     }
 
     return retVal;
+  }
+
+  private static Map<String, VirtualColumn> getClusterByVirtualColumnMappings(Query<?> query, ClusterBy queryClusterBy)
+  {
+    final Map<String, VirtualColumn> clusterByVirtualColumns = new LinkedHashMap<>();
+    if (query instanceof GroupByQuery groupByQuery) {
+      final Map<String, VirtualColumn> outputToVc = new LinkedHashMap<>();
+      for (DimensionSpec spec : groupByQuery.getDimensions()) {
+        final VirtualColumn vc = groupByQuery.getVirtualColumns().getVirtualColumn(spec.getDimension());
+        if (vc != null) {
+          outputToVc.put(spec.getOutputName(), vc);
+        }
+      }
+      for (KeyColumn column : queryClusterBy.getColumns()) {
+        final VirtualColumn vc = outputToVc.get(column.columnName());
+        if (vc != null) {
+          clusterByVirtualColumns.put(column.columnName(), vc);
+        }
+      }
+    } else if (query instanceof ScanQuery scanQuery) {
+      for (OrderBy orderBy : scanQuery.getOrderBys()) {
+        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(orderBy.getColumnName());
+        if (vc != null) {
+          clusterByVirtualColumns.put(orderBy.getColumnName(), vc);
+        }
+      }
+    }
+    return clusterByVirtualColumns;
   }
 }
