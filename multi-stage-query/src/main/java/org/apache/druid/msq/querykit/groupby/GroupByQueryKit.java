@@ -49,14 +49,11 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public class GroupByQueryKit implements QueryKit<GroupByQuery>
@@ -270,7 +267,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     ));
     return new ClusterBy(
         resultClusterByWithPartitionBoostColumns,
-        resultClusterByWithoutPartitionBoost.getVirtualColumnMap(),
         resultClusterByWithoutPartitionBoost.getBucketByCount()
     );
   }
@@ -338,8 +334,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       if (!defaultLimitSpec.getColumns().isEmpty()) {
         final List<KeyColumn> clusterByColumns = new ArrayList<>();
-        final Map<String, VirtualColumn> clusterByVirtualColumnMap = new LinkedHashMap<>();
-
         for (final OrderByColumnSpec orderBy : defaultLimitSpec.getColumns()) {
           clusterByColumns.add(
               new KeyColumn(
@@ -349,20 +343,9 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                   : KeyOrder.ASCENDING
               )
           );
-
-          // check for virtual columns
-          final DimensionSpec dim = query.getDimensions()
-                                         .stream()
-                                         .filter(x -> x.getOutputName().equals(orderBy.getDimension()))
-                                         .findFirst()
-                                         .orElse(null);
-          final VirtualColumn vc = dim == null ? null : query.getVirtualColumns().getVirtualColumn(dim.getDimension());
-          if (vc != null) {
-            clusterByVirtualColumnMap.put(orderBy.getDimension(), vc);
-          }
         }
 
-        return new ClusterBy(clusterByColumns, clusterByVirtualColumnMap, 0);
+        return new ClusterBy(clusterByColumns, 0);
       }
     }
 

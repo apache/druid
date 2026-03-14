@@ -27,16 +27,13 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -48,27 +45,16 @@ import java.util.Objects;
 public class ClusterBy
 {
   private final List<KeyColumn> columns;
-  private final Map<String, VirtualColumn> virtualColumnMap;
   private final int bucketByCount;
   private final boolean sortable;
-
-  public ClusterBy(
-      List<KeyColumn> keyColumns,
-      int bucketByCount
-  )
-  {
-    this(keyColumns, Map.of(), bucketByCount);
-  }
 
   @JsonCreator
   public ClusterBy(
       @JsonProperty("columns") List<KeyColumn> columns,
-      @JsonProperty("virtualColumnMap") @Nullable Map<String, VirtualColumn> virtualColumnMap,
       @JsonProperty("bucketByCount") int bucketByCount
   )
   {
     this.columns = Preconditions.checkNotNull(columns, "columns");
-    this.virtualColumnMap = virtualColumnMap == null ? Map.of() : virtualColumnMap;
     this.bucketByCount = bucketByCount;
 
     if (bucketByCount < 0 || bucketByCount > columns.size()) {
@@ -103,13 +89,6 @@ public class ClusterBy
   public List<KeyColumn> getColumns()
   {
     return columns;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  public Map<String, VirtualColumn> getVirtualColumnMap()
-  {
-    return virtualColumnMap;
   }
 
   /**
@@ -208,14 +187,13 @@ public class ClusterBy
     }
     ClusterBy clusterBy = (ClusterBy) o;
     return bucketByCount == clusterBy.bucketByCount &&
-           Objects.equals(columns, clusterBy.columns) &&
-           Objects.equals(virtualColumnMap, clusterBy.virtualColumnMap);
+           Objects.equals(columns, clusterBy.columns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columns, virtualColumnMap, bucketByCount);
+    return Objects.hash(columns, bucketByCount);
   }
 
   @Override
@@ -223,7 +201,6 @@ public class ClusterBy
   {
     return "ClusterBy{" +
            "columns=" + columns +
-           ", virtualColumns=" + virtualColumnMap +
            ", bucketByCount=" + bucketByCount +
            '}';
   }

@@ -67,9 +67,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -740,6 +739,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .setDimensions(getAggregateDimensions(dataSchema, inputColToVirtualCol, orderBy))
         .setAggregatorSpecs(dataSchema.getAggregators())
         .setPostAggregatorSpecs(postAggregators)
+        .setOrderByColumns(orderBy)
         .setContext(buildQueryContext(compactionTask.getContext(), dataSchema));
 
     return builder.build();

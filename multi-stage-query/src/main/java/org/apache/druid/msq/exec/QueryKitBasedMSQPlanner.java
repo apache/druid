@@ -161,7 +161,6 @@ public class QueryKitBasedMSQPlanner
       // Add all query stages.
       // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
       final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
-
       for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
         if (stageDef.equals(finalShuffleStageDef)) {
           builder.add(StageDefinition.builder(stageDef).shuffleCheckHasMultipleValues(true));
@@ -169,7 +168,6 @@ public class QueryKitBasedMSQPlanner
           builder.add(StageDefinition.builder(stageDef));
         }
       }
-
       final DataSourceMSQDestination destination1 = (DataSourceMSQDestination) destination;
       return builder.add(
                         destination1.getTerminalStageSpec()

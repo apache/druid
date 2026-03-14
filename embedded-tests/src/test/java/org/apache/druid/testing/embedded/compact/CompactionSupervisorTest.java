@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -670,6 +671,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .inlineInputSourceWithData(jsonDataWithNestedColumn)
         .isoTimestampColumn("timestamp")
         .schemaDiscovery()
+        .dataSchema(builder -> builder.withAggregators(new CountAggregatorFactory("count")))
         .granularitySpec("DAY", "MINUTE", true);
 
     cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
@@ -726,7 +728,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     waitForAllCompactionTasksToFinish();
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
 
     List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
     Assertions.assertEquals(2, segments.size());
@@ -888,7 +889,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
-  
+
   private void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
   {
     indexer.latchableEmitter().waitForEventAggregate(

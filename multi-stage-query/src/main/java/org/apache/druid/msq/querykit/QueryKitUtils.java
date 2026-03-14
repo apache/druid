@@ -122,7 +122,7 @@ public class QueryKitUtils
       final List<KeyColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
       newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
       newColumns.addAll(clusterBy.getColumns());
-      return new ClusterBy(newColumns, clusterBy.getVirtualColumnMap(), 1);
+      return new ClusterBy(newColumns, 1);
     }
   }
 

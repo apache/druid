@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing.processor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -51,6 +52,7 @@ import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -72,6 +74,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -80,17 +83,20 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
+  private final Map<String, VirtualColumn> clusterByVirtualColumnMappings;
   private final MSQTuningConfig tuningConfig;
 
   @JsonCreator
   public SegmentGeneratorStageProcessor(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
+      @JsonProperty("clusterByVirtualColumnsMappings") @Nullable final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
       @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
+    this.clusterByVirtualColumnMappings = clusterByVirtualColumnMappings == null ? Map.of() : clusterByVirtualColumnMappings;
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
   }
 
@@ -104,6 +110,13 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
   public ColumnMappings getColumnMappings()
   {
     return columnMappings;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Map<String, VirtualColumn> getClusterByVirtualColumnMappings()
+  {
+    return clusterByVirtualColumnMappings;
   }
 
   @JsonProperty

@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
@@ -35,7 +36,12 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -43,7 +49,9 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SegmentGenerationStageSpec implements TerminalStageSpec
 {
@@ -73,16 +81,41 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
     final DataSchema dataSchema =
         SegmentGenerationUtils.makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper, query);
 
+    final Map<String, VirtualColumn> clusterByVirtualColumns = new LinkedHashMap<>();
+    if (query instanceof GroupByQuery groupByQuery) {
+      final Map<String, VirtualColumn> outputToVc = new LinkedHashMap<>();
+      for (DimensionSpec spec : groupByQuery.getDimensions()) {
+        final VirtualColumn vc = groupByQuery.getVirtualColumns().getVirtualColumn(spec.getDimension());
+        if (vc != null) {
+          outputToVc.put(spec.getOutputName(), vc);
+        }
+      }
+      for (KeyColumn column : queryClusterBy.getColumns()) {
+        final VirtualColumn vc = outputToVc.get(column.columnName());
+        if (vc != null) {
+          clusterByVirtualColumns.put(column.columnName(), vc);
+        }
+      }
+    } else if (query instanceof ScanQuery scanQuery) {
+      for (OrderBy orderBy : scanQuery.getOrderBys()) {
+        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(orderBy.getColumnName());
+        if (vc != null) {
+          clusterByVirtualColumns.put(orderBy.getColumnName(), vc);
+        }
+      }
+    }
+
     return StageDefinition.builder(queryDef.getNextStageNumber())
-                       .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
-                       .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                       .processor(
-                           new SegmentGeneratorStageProcessor(
-                               dataSchema,
-                               columnMappings,
-                               tuningConfig
-                           )
-    );
+                          .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
+                          .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                          .processor(
+                              new SegmentGeneratorStageProcessor(
+                                  dataSchema,
+                                  columnMappings,
+                                  clusterByVirtualColumns,
+                                  tuningConfig
+                              )
+                          );
   }
 
   public Int2ObjectMap<List<SegmentIdWithShardSpec>> getWorkerInfo(
