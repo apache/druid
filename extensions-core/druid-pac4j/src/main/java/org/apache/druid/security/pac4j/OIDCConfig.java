@@ -42,6 +42,9 @@ public class OIDCConfig
   private final String oidcClaim;
 
   @JsonProperty
+  private final String roleClaimPath;
+
+  @JsonProperty
   private final String scope;
 
   @JsonCreator
@@ -50,6 +53,7 @@ public class OIDCConfig
       @JsonProperty("clientSecret") PasswordProvider clientSecret,
       @JsonProperty("discoveryURI") String discoveryURI,
       @JsonProperty("oidcClaim") String oidcClaim,
+      @JsonProperty("roleClaimPath") String roleClaimPath,
       @JsonProperty("scope") @Nullable String scope
   )
   {
@@ -57,6 +61,7 @@ public class OIDCConfig
     this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
     this.oidcClaim = oidcClaim == null ? DEFAULT_SCOPE : oidcClaim;
+    this.roleClaimPath = roleClaimPath;
     this.scope = scope;
   }
 
@@ -82,6 +87,12 @@ public class OIDCConfig
   public String getOidcClaim()
   {
     return oidcClaim;
+  }
+
+  @JsonProperty
+  public String getRoleClaimPath()
+  {
+    return roleClaimPath;
   }
 
   @JsonProperty
