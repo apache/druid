@@ -45,11 +45,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.Manifest;
 
 /**
  *
@@ -92,6 +95,9 @@ public class EmitterModule implements Module
     extraServiceDimensions
         .addBinding("version")
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
+    extraServiceDimensions
+        .addBinding("buildRevision")
+        .toInstance(StringUtils.nullToEmptyNonDruidDataString(getBuildRevision()));
   }
 
   @Provides
@@ -176,5 +182,29 @@ public class EmitterModule implements Module
       }
       return emitter;
     }
+  }
+
+  /**
+   * Returns the {@code Build-Revision} attribute from {@code META-INF/MANIFEST.MF}, or {@code null}
+   * if the manifest is absent or the attribute is not set. This value is null during {@code mvn test}.
+   */
+  protected String getBuildRevision()
+  {
+    try (InputStream is = EmitterModule.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
+      return parseBuildRevision(is);
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to read Build-Revision from manifest");
+      return null;
+    }
+  }
+
+  static String parseBuildRevision(InputStream is) throws IOException
+  {
+    if (is == null) {
+      return null;
+    }
+    String revision = new Manifest(is).getMainAttributes().getValue("Build-Revision");
+    return (revision != null && !revision.trim().isEmpty()) ? revision.trim() : null;
   }
 }

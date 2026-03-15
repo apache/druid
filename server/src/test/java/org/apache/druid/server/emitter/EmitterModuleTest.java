@@ -61,6 +61,8 @@ import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -203,6 +205,99 @@ public class EmitterModuleTest
             },
             emitterModule
         )
+    );
+  }
+
+  @Test
+  public void testBuildRevisionDimensionEmitsKnownValue()
+  {
+    // EmitterModule with a known revision verifies that getBuildRevision() is wired into the buildRevision dimension.
+    EmitterModule emitterModule = new EmitterModule()
+    {
+      @Override
+      protected String getBuildRevision()
+      {
+        return "abc1234def567890";
+      }
+    };
+    Injector injector = makeInjectorForEmitterModule(emitterModule);
+    ServiceEmitter serviceEmitter = injector.getInstance(ServiceEmitter.class);
+    serviceEmitter.start();
+    serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric("test", 1));
+
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) injector.getInstance(Emitter.class);
+    EventMap map = ((ServiceMetricEvent) stubEmitter.getEvents().get(0)).toMap();
+    Assert.assertEquals("abc1234def567890", map.get("buildRevision"));
+  }
+
+  @Test
+  public void testBuildRevisionDimensionFallsBackToEmptyStringWhenUnavailable()
+  {
+    // When getBuildRevision() returns null (e.g. manifest absent), buildRevision dimension is an empty string,
+    // consistent with how the "version" dimension behaves during `mvn test`.
+    EmitterModule emitterModule = new EmitterModule()
+    {
+      @Override
+      protected String getBuildRevision()
+      {
+        return null;
+      }
+    };
+    Injector injector = makeInjectorForEmitterModule(emitterModule);
+    ServiceEmitter serviceEmitter = injector.getInstance(ServiceEmitter.class);
+    serviceEmitter.start();
+    serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric("test", 1));
+
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) injector.getInstance(Emitter.class);
+    EventMap map = ((ServiceMetricEvent) stubEmitter.getEvents().get(0)).toMap();
+    Assert.assertEquals("", map.get("buildRevision"));
+  }
+
+  @Test
+  public void testParseBuildRevisionExtractsAttribute() throws Exception
+  {
+    String manifest = "Manifest-Version: 1.0\nBuild-Revision: abc1234def567890\n\n";
+    ByteArrayInputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
+    Assert.assertEquals("abc1234def567890", EmitterModule.parseBuildRevision(is));
+  }
+
+  @Test
+  public void testParseBuildRevisionWithNullStream() throws Exception
+  {
+    Assert.assertNull(EmitterModule.parseBuildRevision(null));
+  }
+
+  @Test
+  public void testParseBuildRevisionWithMissingAttribute() throws Exception
+  {
+    String manifest = "Manifest-Version: 1.0\n\n";
+    ByteArrayInputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
+    Assert.assertNull(EmitterModule.parseBuildRevision(is));
+  }
+
+  private Injector makeInjectorForEmitterModule(EmitterModule emitterModule)
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.emitter", "stub");
+    emitterModule.setProps(props);
+    return Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          JsonConfigProvider.bindInstance(
+              binder,
+              Key.get(DruidNode.class, Self.class),
+              new DruidNode("test-service", "localhost", false, 8080, null, true, false)
+          );
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(TaskHolder.class).toInstance(new TestTaskHolder("test", "id1", "type1", "group1"));
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+        },
+        ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of()),
+        emitterModule,
+        new StubServiceEmitterModule()
     );
   }
 }
