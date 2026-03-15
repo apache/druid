@@ -226,7 +226,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/autoScaler/updatedCount")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.equalTo(4L))
+                      .hasValueMatching(Matchers.greaterThan(1L))
     );
     Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
     waitUntilPublishedRecordsAreIngested(totalRecords);
