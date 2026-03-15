@@ -631,6 +631,12 @@
       <artifactId>aliyun-sdk-oss</artifactId>
       <version>3.11.3</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
