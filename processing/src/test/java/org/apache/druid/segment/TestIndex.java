@@ -73,7 +73,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -172,9 +171,7 @@ public class TestIndex
   public static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final Logger log = new Logger(TestIndex.class);
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
-      Collections.singletonList(
-          new ExpressionVirtualColumn("expr", "index + 10", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
-      )
+      new ExpressionVirtualColumn("expr", "index + 10", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
   );
   public static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(DOUBLE_METRICS[0], "index"),

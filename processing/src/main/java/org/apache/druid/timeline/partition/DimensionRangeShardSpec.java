@@ -20,12 +20,14 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -53,13 +55,14 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   @JsonCreator
   public DimensionRangeShardSpec(
       @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
       @JsonProperty("start") @Nullable StringTuple start,
       @JsonProperty("end") @Nullable StringTuple end,
       @JsonProperty("partitionNum") int partitionNum,
       @JsonProperty("numCorePartitions") @Nullable Integer numCorePartitions // nullable for backward compatibility
   )
   {
-    super(dimensions, start, end);
+    super(dimensions, virtualColumns, start, end);
     Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
     Preconditions.checkArgument(
         dimensions != null && !dimensions.isEmpty(),
@@ -74,6 +77,13 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  @JsonProperty("virtualColumns")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   @Nullable
@@ -107,13 +117,13 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   @Override
   public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, numCorePartitions);
+    return new DimensionRangeShardSpec(dimensions, virtualColumns, start, end, partitionNum, numCorePartitions);
   }
 
   @Override
   public ShardSpec withCorePartitions(int partitions)
   {
-    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, partitions);
+    return new DimensionRangeShardSpec(dimensions, virtualColumns, start, end, partitionNum, partitions);
   }
 
   public boolean isNumCorePartitionsUnknown()
@@ -125,6 +135,12 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   public List<String> getDomainDimensions()
   {
     return Collections.unmodifiableList(dimensions);
+  }
+
+  @Override
+  public VirtualColumns getDomainVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   /**
@@ -289,6 +305,7 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
     return partitionNum == shardSpec.partitionNum &&
            numCorePartitions == shardSpec.numCorePartitions &&
            Objects.equals(dimensions, shardSpec.dimensions) &&
+           Objects.equals(virtualColumns, shardSpec.virtualColumns) &&
            Objects.equals(start, shardSpec.start) &&
            Objects.equals(end, shardSpec.end);
   }
@@ -296,7 +313,7 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   @Override
   public int hashCode()
   {
-    return Objects.hash(dimensions, start, end, partitionNum, numCorePartitions);
+    return Objects.hash(dimensions, virtualColumns, start, end, partitionNum, numCorePartitions);
   }
 
   @Override
@@ -304,6 +321,7 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   {
     return "DimensionRangeShardSpec{" +
            "dimensions='" + dimensions + '\'' +
+           ", virtualColumns=" + virtualColumns +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +
            ", partitionNum=" + partitionNum +

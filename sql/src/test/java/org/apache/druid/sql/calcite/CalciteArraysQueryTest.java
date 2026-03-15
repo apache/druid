@@ -1555,10 +1555,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     VirtualColumns.create(
-                        ImmutableList.of(
-                            expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
-                            expressionVirtualColumn("v1", "(\"cnt\" * 2)", ColumnType.LONG)
-                        )
+                        expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+                        expressionVirtualColumn("v1", "(\"cnt\" * 2)", ColumnType.LONG)
                     )
                 )
                 .filters(

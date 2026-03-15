@@ -134,7 +134,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         null,
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params", "params")),
@@ -160,7 +160,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         null,
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
@@ -190,7 +190,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         new EqualityFilter("params.key3", ColumnType.STRING, "value3", null),
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
@@ -219,7 +219,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         new InDimFilter("params.key3", ImmutableList.of("value1", "value3"), null),
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
@@ -248,7 +248,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         NotDimFilter.of(new EqualityFilter("params.key3", ColumnType.STRING, "value3", null)),
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
@@ -272,7 +272,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        VirtualColumns.create(new MapVirtualColumn("keys", "values", "params")),
         NotDimFilter.of(new InDimFilter("params.key3", ImmutableList.of("value1", "value3"), null)),
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),

@@ -334,7 +334,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       if (!defaultLimitSpec.getColumns().isEmpty()) {
         final List<KeyColumn> clusterByColumns = new ArrayList<>();
-
         for (final OrderByColumnSpec orderBy : defaultLimitSpec.getColumns()) {
           clusterByColumns.add(
               new KeyColumn(

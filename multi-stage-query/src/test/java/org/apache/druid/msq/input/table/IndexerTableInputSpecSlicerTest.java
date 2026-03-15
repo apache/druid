@@ -32,6 +32,7 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -60,6 +61,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
       Collections.emptyList(),
       new DimensionRangeShardSpec(
           ImmutableList.of("dim"),
+          VirtualColumns.EMPTY,
           null,
           new StringTuple(new String[]{"foo"}),
           0,
@@ -79,6 +81,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
       Collections.emptyList(),
       new DimensionRangeShardSpec(
           ImmutableList.of("dim"),
+          VirtualColumns.EMPTY,
           new StringTuple(new String[]{"foo"}),
           null,
           1,
@@ -276,6 +279,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
     );
     final FilterSegmentPruner pruner = new FilterSegmentPruner(
         new EqualityFilter("dim", ColumnType.STRING, "bar", null),
+        null,
         null
     );
 
@@ -309,7 +313,8 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
     );
     final FilterSegmentPruner segmentPruner = new FilterSegmentPruner(
         new EqualityFilter("dim", ColumnType.STRING, "bar", null),
-        Collections.emptySet()
+        Collections.emptySet(),
+        null
     );
 
     Assert.assertEquals(
@@ -350,6 +355,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
     );
     final FilterSegmentPruner segmentPruner = new FilterSegmentPruner(
         new EqualityFilter("dim", ColumnType.STRING, "bar", null),
+        null,
         null
     );
 

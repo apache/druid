@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.compact;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -49,6 +50,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -89,6 +91,7 @@ import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -150,15 +153,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
-  }
-
-
-  private void configureCompaction(CompactionEngine compactionEngine, @Nullable CompactionCandidateSearchPolicy policy)
-  {
-    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, policy, true, compactionEngine, true))
-    );
-    Assertions.assertTrue(updateResponse.isSuccess());
   }
 
   @MethodSource("getEngine")
@@ -313,42 +307,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // performed minor compaction: 1 previously compacted segment + 1 incrementally compacted segment
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(3000, getTotalRowCount());
-  }
-
-  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
-  {
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(expectedRowCount)
-    );
-
-    final int totalEventsProcessed = indexer
-        .latchableEmitter()
-        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
-        .stream()
-        .mapToInt(Number::intValue)
-        .sum();
-    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
-  }
-
-  protected int publish1kRecords(String topic, boolean useTransactions)
-  {
-    final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
-    List<byte[]> records = streamGenerator.generateEvents(10);
-
-    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
-    for (byte[] record : records) {
-      producerRecords.add(new ProducerRecord<>(topic, record));
-    }
-
-    if (useTransactions) {
-      kafkaServer.produceRecordsToTopic(producerRecords);
-    } else {
-      kafkaServer.produceRecordsWithoutTransaction(producerRecords);
-    }
-    return producerRecords.size();
   }
 
   @MethodSource("getEngine")
@@ -584,6 +542,219 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(count > 0);
   }
 
+
+  @Test
+  public void test_compaction_cluster_by_virtualcolumn()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine, null);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "ll"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "mm"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "nn"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "oo"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "pp"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "qq"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "rr"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .granularitySpec("DAY", null, false);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "json_value(obj, '$.a')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
+  }
+
+  @Test
+  public void test_compaction_cluster_by_virtualcolumn_rollup()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine, null);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "ll"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "mm"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "nn"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "oo"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "pp"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "qq"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "rr"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .dataSchema(builder -> builder.withAggregators(new CountAggregatorFactory("count")))
+        .granularitySpec("DAY", "MINUTE", true);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "v0",
+            "json_value(obj, '$.a')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        )
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v0"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
+  }
+
   /**
    * Tests that when a compaction task filters out all rows using a transform spec,
    * tombstones are created to properly drop the old segments. This test covers both
@@ -709,6 +880,50 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
     Assertions.assertEquals(1, segments.size());
     Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+  }
+
+  private void configureCompaction(CompactionEngine compactionEngine, @Nullable CompactionCandidateSearchPolicy policy)
+  {
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, policy, true, compactionEngine, true))
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+  }
+
+  private void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
+  {
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(expectedRowCount)
+    );
+
+    final int totalEventsProcessed = indexer
+        .latchableEmitter()
+        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
+        .stream()
+        .mapToInt(Number::intValue)
+        .sum();
+    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
+  }
+
+  private int publish1kRecords(String topic, boolean useTransactions)
+  {
+    final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
+    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
+    List<byte[]> records = streamGenerator.generateEvents(10);
+
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+
+    if (useTransactions) {
+      kafkaServer.produceRecordsToTopic(producerRecords);
+    } else {
+      kafkaServer.produceRecordsWithoutTransaction(producerRecords);
+    }
+    return producerRecords.size();
   }
 
   private int getTotalRowCount()
