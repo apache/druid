@@ -322,19 +322,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
   {
+    // sometimes processed events could be greater than expectedRowCount,
+    // because some events can be processed twice but only persisted once.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expectedRowCount)
     );
-
-    final int totalEventsProcessed = indexer
-        .latchableEmitter()
-        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
-        .stream()
-        .mapToInt(Number::intValue)
-        .sum();
-    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
   }
 
   protected int publish1kRecords(String topic)
