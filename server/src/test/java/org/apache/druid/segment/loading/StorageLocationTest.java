@@ -369,6 +369,33 @@ class StorageLocationTest
     Assertions.assertEquals(0, loc.getActiveWeakHolds());
   }
 
+  @Test
+  public void testReclaimRestoreDoesNotCreateZombieEntries()
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 10);
+    CacheEntry entry2 = new TestCacheEntry("2", 90);
+    CacheEntry entry3 = new TestCacheEntry("3", 20);
+
+    location.reserveWeak(entry1);
+    // hold entry2 so it cannot be evicted by reclaim
+    StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
+        entry2.getId(),
+        () -> entry2
+    );
+
+    // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
+    // where the bug was a mistmatch caused by creating a new entry in the list but re-using the old entry for the map.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    // the hand pointer reaches the zombie new entry1, removes the old entry1 from the map, then wraps around to the
+    // same zombie entry1 again — at which point the map no longer contains the ID and the defensive exception was
+    // thrown.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    hold2.close();
+  }
+
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
