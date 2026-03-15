@@ -37,7 +37,7 @@ import java.util.Map;
  * @see org.apache.druid.query.scan.ScanQueryConfig
  *
  */
-public class DefaultQueryConfig
+public class DefaultQueryConfig implements DefaultQueryContext
 {
   /**
    * Config that does nothing.
@@ -54,6 +54,7 @@ public class DefaultQueryConfig
   @JsonProperty
   private final Map<String, Object> context;
 
+  @Override
   @Nonnull
   public Map<String, Object> getContext()
   {

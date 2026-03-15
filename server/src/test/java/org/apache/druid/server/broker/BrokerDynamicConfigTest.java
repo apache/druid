@@ -116,6 +116,32 @@ public class BrokerDynamicConfigTest
   }
 
   @Test
+  public void testSerdeWithQueryContext() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryContext\": {\n"
+                     + "    \"priority\": 10,\n"
+                     + "    \"useCache\": false\n"
+                     + "  }\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, BrokerDynamicConfig.class)),
+        BrokerDynamicConfig.class
+    );
+
+    Assert.assertEquals(ImmutableMap.of("priority", 10, "useCache", false), actual.getQueryContext());
+  }
+
+  @Test
+  public void testNullQueryContextDefaultsToEmptyMap() throws Exception
+  {
+    BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
+    Assert.assertNotNull(actual.getQueryContext());
+    Assert.assertTrue(actual.getQueryContext().isEmpty());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(BrokerDynamicConfig.class)
