@@ -46,7 +46,6 @@ fi
 
 # Make directoriess if they dont exist
 mkdir -p $SHARED_DIR/hadoop_xml
-mkdir -p $SHARED_DIR/hadoop-dependencies
 mkdir -p $SHARED_DIR/logs
 mkdir -p $SHARED_DIR/tasklogs
 mkdir -p $SHARED_DIR/docker/credentials
@@ -57,26 +56,6 @@ cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
 # Extensions for testing are pulled while creating a binary.
 # See the 'integration-test' profile in $ROOT/distribution/pom.xml.
 
-# Pull Hadoop dependency if needed
-if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
-then
-  # HdfsStorageDruidModule loads all implementations of org.apache.hadoop.fs.FileSystem using an extension class loader.
-  # This requires for all FileSystem implementations to be installed in druid-hdfs-storage.
-  DRUID_HDFS_EXT=$SHARED_DIR/docker/extensions/druid-hdfs-storage
-  HADOOP_AWS_DIR=$SHARED_DIR/hadoop-dependencies/hadoop-aws/${hadoop.compile.version}
-  HADOOP_GCS_DIR=$SHARED_DIR/hadoop-dependencies/hadoop-gcs/${hadoop.compile.version}
-  HADOOP_AZURE_DIR=$SHARED_DIR/hadoop-dependencies/hadoop-azure/${hadoop.compile.version}
-  mkdir -p $DRUID_HDFS_EXT
-  mkdir -p $HADOOP_GCS_DIR
-  ## We put same version in both commands but as we have an if, correct code path will always be executed as this is generated script.
-  ## <TODO> Remove if
-  "$SHARED_DIR/docker/bin/run-java" -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client-api:${hadoop.compile.version} -h org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version} -h org.apache.hadoop:hadoop-aws:${hadoop.compile.version} -h org.apache.hadoop:hadoop-azure:${hadoop.compile.version}
-  curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar --output $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar
-  cp $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar $DRUID_HDFS_EXT
-
-  cp $HADOOP_AWS_DIR/hadoop-aws-${hadoop.compile.version}.jar $DRUID_HDFS_EXT
-  cp $HADOOP_AZURE_DIR/hadoop-azure-${hadoop.compile.version}.jar $DRUID_HDFS_EXT
-fi
 
 # one of the integration tests needs the wikiticker sample data
 mkdir -p $SHARED_DIR/wikiticker-it

@@ -29,8 +29,6 @@ import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,11 +36,6 @@ import java.util.UUID;
 public interface DataSegmentPusher
 {
   Joiner JOINER = Joiner.on("/").skipNulls();
-
-  @Deprecated
-  String getPathForHadoop(String dataSource);
-
-  String getPathForHadoop();
 
   /**
    * Pushes index files and segment descriptor to deep storage. Expected to perform its own retries, if appropriate.
@@ -89,21 +82,6 @@ public interface DataSegmentPusher
   default String getStorageDir(DataSegment dataSegment, boolean useUniquePath)
   {
     return getDefaultStorageDir(dataSegment, useUniquePath);
-  }
-
-  default String makeIndexPathName(DataSegment dataSegment, String indexName)
-  {
-    // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
-    return StringUtils.format("./%s/%s", getStorageDir(dataSegment, false), indexName);
-  }
-
-  /**
-   * Property prefixes that should be added to the "allowedHadoopPrefix" config for passing down to Hadoop jobs. These
-   * should be property prefixes like "druid.xxx", which means to include "druid.xxx" and "druid.xxx.*".
-   */
-  default List<String> getAllowedPropertyPrefixesForHadoop()
-  {
-    return Collections.emptyList();
   }
 
   // Note: storage directory structure format = .../dataSource/interval/version/partitionNumber/

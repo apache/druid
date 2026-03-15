@@ -64,12 +64,4 @@ public class TestNGGroup
    */
   public static final String HDFS_DEEP_STORAGE = "hdfs-deep-storage";
 
-  public static final String HADOOP_S3_TO_S3 = "hadoop-s3-to-s3-deep-storage";
-  public static final String HADOOP_S3_TO_HDFS = "hadoop-s3-to-hdfs-deep-storage";
-
-  public static final String HADOOP_AZURE_TO_AZURE = "hadoop-azure-to-azure-deep-storage";
-  public static final String HADOOP_AZURE_TO_HDFS = "hadoop-azure-to-hdfs-deep-storage";
-
-  public static final String HADOOP_GCS_TO_GCS = "hadoop-gcs-to-gcs-deep-storage";
-  public static final String HADOOP_GCS_TO_HDFS = "hadoop-gcs-to-hdfs-deep-storage";
 }
