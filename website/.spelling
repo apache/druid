@@ -59,6 +59,7 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -102,6 +103,7 @@ ECS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -192,6 +194,7 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
@@ -207,6 +210,8 @@ OLAP
 OOMs
 OpenJDK
 OpenLDAP
+openlineage
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
@@ -328,6 +333,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
@@ -411,6 +417,7 @@ kubexit
 k8s
 laning
 lifecycle
+lineage
 localhost
 log4j
 log4j2
