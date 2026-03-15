@@ -385,11 +385,11 @@ class StorageLocationTest
     );
 
     // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
-    // where the bug was a mistmatch caused by creating a new entry in the list but re-using the old entry for the map.
+    // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
     Assertions.assertFalse(location.reserveWeak(entry3));
 
-    // the hand pointer reaches the zombie new entry1, removes the old entry1 from the map, then wraps around to the
-    // same zombie entry1 again — at which point the map no longer contains the ID and the defensive exception was
+    // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
+    // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
     // thrown.
     Assertions.assertFalse(location.reserveWeak(entry3));
 
