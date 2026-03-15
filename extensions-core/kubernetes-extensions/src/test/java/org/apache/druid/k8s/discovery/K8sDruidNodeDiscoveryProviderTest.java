@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -302,6 +303,70 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
+  @Test(timeout = 10_000)
+  public void testNodeRoleWatcherHandlesChannelResetException() throws Exception
+  {
+    String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
+    K8sApiClient mockK8sApiClient = EasyMock.createMock(K8sApiClient.class);
+
+    EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER)).andReturn(
+        new DiscoveryDruidNodeList(
+          "v1",
+          ImmutableMap.of(
+            testNode1.getDruidNode().getHostAndPortToUse(), testNode1,
+            testNode2.getDruidNode().getHostAndPortToUse(), testNode2
+          )
+        )
+    );
+
+    EasyMock.expect(mockK8sApiClient.watchPods(
+        podInfo.getPodNamespace(), labelSelector, "v1", NodeRole.ROUTER)).andReturn(
+        new MockWatchResult(Collections.emptyList(), false, false, true)
+    );
+
+    EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER)).andReturn(
+        new DiscoveryDruidNodeList(
+          "v2",
+          ImmutableMap.of(
+            testNode2.getDruidNode().getHostAndPortToUse(), testNode2,
+            testNode3.getDruidNode().getHostAndPortToUse(), testNode3
+          )
+        )
+    );
+
+    EasyMock.expect(mockK8sApiClient.watchPods(
+        podInfo.getPodNamespace(), labelSelector, "v2", NodeRole.ROUTER)).andReturn(
+        new MockWatchResult(Collections.emptyList(), false, false)
+    );
+
+    EasyMock.replay(mockK8sApiClient);
+
+    K8sDruidNodeDiscoveryProvider discoveryProvider = new K8sDruidNodeDiscoveryProvider(
+        podInfo,
+        discoveryConfig,
+        mockK8sApiClient,
+        1
+    );
+    discoveryProvider.start();
+
+    K8sDruidNodeDiscoveryProvider.NodeRoleWatcher nodeDiscovery =
+        discoveryProvider.getForNodeRole(NodeRole.ROUTER, false);
+
+    MockListener testListener = new MockListener(
+        ImmutableList.of(
+          MockListener.Event.added(testNode1),
+          MockListener.Event.added(testNode2),
+          MockListener.Event.inited(),
+          MockListener.Event.added(testNode3),
+          MockListener.Event.deleted(testNode1)
+        )
+    );
+    nodeDiscovery.registerListener(testListener);
+    nodeDiscovery.start();
+    testListener.assertSuccess();
+    discoveryProvider.stop();
+  }
+
   private static class MockListener implements DruidNodeDiscovery.Listener
   {
     List<Event> events;
@@ -432,6 +497,7 @@ public class K8sDruidNodeDiscoveryProviderTest
 
     private volatile boolean timeoutOnStart;
     private volatile boolean timeooutOnEmptyResults;
+    private volatile boolean channelResetOnStart;
     private volatile boolean closeCalled = false;
 
     public MockWatchResult(
@@ -445,11 +511,26 @@ public class K8sDruidNodeDiscoveryProviderTest
       this.timeooutOnEmptyResults = timeooutOnEmptyResults;
     }
 
+    public MockWatchResult(
+        List<Watch.Response<DiscoveryDruidNodeAndResourceVersion>> results,
+        boolean timeoutOnStart,
+        boolean timeooutOnEmptyResults,
+        boolean channelResetOnStart
+    )
+    {
+      this(results, timeoutOnStart, timeooutOnEmptyResults);
+      this.channelResetOnStart = channelResetOnStart;
+    }
+
     @Override
-    public boolean hasNext() throws SocketTimeoutException
+    public boolean hasNext() throws IOException
     {
       if (timeoutOnStart) {
         throw new SocketTimeoutException("testing timeout on start!!!");
+      }
+
+      if (channelResetOnStart) {                  // ADD THIS BLOCK
+        throw new ChannelResetException(new RuntimeException("simulated StreamResetException"));
       }
 
       if (results.isEmpty()) {
