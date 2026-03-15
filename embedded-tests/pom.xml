@@ -632,6 +632,17 @@
       <version>0.13.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.api</groupId>
+      <artifactId>gax</artifactId>
+      <version>2.37.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+      <version>${hadoop.compile.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
