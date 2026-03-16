@@ -22,8 +22,8 @@ package org.apache.druid.k8s.discovery;
 import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodStatus;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +34,7 @@ public class DefaultK8sApiClientTest
   public void testIsPodReady_nullStatus()
   {
     V1Pod pod = new V1Pod();
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -42,7 +42,7 @@ public class DefaultK8sApiClientTest
   {
     V1Pod pod = new V1Pod();
     pod.setStatus(new V1PodStatus());
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -52,7 +52,7 @@ public class DefaultK8sApiClientTest
     V1PodStatus status = new V1PodStatus();
     status.setContainerStatuses(Collections.emptyList());
     pod.setStatus(status);
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -64,7 +64,7 @@ public class DefaultK8sApiClientTest
     cs.setReady(true);
     status.setContainerStatuses(Collections.singletonList(cs));
     pod.setStatus(status);
-    Assert.assertTrue(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertTrue(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -76,7 +76,7 @@ public class DefaultK8sApiClientTest
     cs.setReady(false);
     status.setContainerStatuses(Collections.singletonList(cs));
     pod.setStatus(status);
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -90,7 +90,7 @@ public class DefaultK8sApiClientTest
     cs2.setReady(false);
     status.setContainerStatuses(Arrays.asList(cs1, cs2));
     pod.setStatus(status);
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 
   @Test
@@ -102,6 +102,6 @@ public class DefaultK8sApiClientTest
     // ready is null (not set)
     status.setContainerStatuses(Collections.singletonList(cs));
     pod.setStatus(status);
-    Assert.assertFalse(DefaultK8sApiClient.isPodReady(pod));
+    Assertions.assertFalse(DefaultK8sApiClient.isPodReady(pod));
   }
 }
