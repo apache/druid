@@ -38,9 +38,9 @@ public class KinesisFaultToleranceTest extends StreamIndexFaultToleranceTest
     public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
     {
       if (publishToSingleShard.get()) {
-        super.publishRecordsToTopicWithoutTransaction(topic, records);
-      } else {
         super.publishRecordsToTopicPartition(topic, "O", records);
+      } else {
+        super.publishRecordsToTopicWithoutTransaction(topic, records);
       }
     }
   };

@@ -17,27 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.runnerstrategy;
+package org.apache.druid.server;
 
-
-import org.apache.druid.indexing.common.task.Task;
-import org.easymock.EasyMockExtension;
-import org.easymock.EasyMockSupport;
-import org.easymock.Mock;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-@ExtendWith(EasyMockExtension.class)
-public class WorkerRunnerStrategyTest extends EasyMockSupport
+/**
+ * Tracks whether this service has announced itself to service discovery and is ready to receive traffic.
+ * Used by the {@code /status/ready} endpoint to report readiness to load balancers.
+ */
+public class ServiceAnnouncementState
 {
-  @Mock
-  Task task;
+  private volatile boolean ready = false;
 
-  @Test
-  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
+  public void markReady()
   {
-    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy();
-    Assertions.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    ready = true;
+  }
+
+  public void markNotReady()
+  {
+    ready = false;
+  }
+
+  public boolean isReady()
+  {
+    return ready;
   }
 }

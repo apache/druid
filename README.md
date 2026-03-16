@@ -58,7 +58,7 @@ Druid is designed for workflows where fast queries and ingest really matter. Dru
 
 ### Getting started
 
-You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
+You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart. For Kubernetes deployments, the [druid-operator](https://github.com/apache/druid-operator) is maintained in a separate repository.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
 You can also interact with Druid via the built-in [web console](https://druid.apache.org/docs/latest/operations/web-console.html) (shown below).

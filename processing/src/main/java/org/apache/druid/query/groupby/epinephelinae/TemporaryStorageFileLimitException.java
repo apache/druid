@@ -17,27 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.runnerstrategy;
+package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.java.util.common.StringUtils;
 
-import org.apache.druid.indexing.common.task.Task;
-import org.easymock.EasyMockExtension;
-import org.easymock.EasyMockSupport;
-import org.easymock.Mock;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import java.io.IOException;
 
-@ExtendWith(EasyMockExtension.class)
-public class WorkerRunnerStrategyTest extends EasyMockSupport
+public class TemporaryStorageFileLimitException extends IOException
 {
-  @Mock
-  Task task;
-
-  @Test
-  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
+  public TemporaryStorageFileLimitException(final int fileCount)
   {
-    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy();
-    Assertions.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    super(StringUtils.format("Cannot write to disk, hit spill file count limit of %,d.", fileCount));
   }
 }
