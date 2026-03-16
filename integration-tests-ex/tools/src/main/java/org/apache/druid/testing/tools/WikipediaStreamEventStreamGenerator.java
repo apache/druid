@@ -68,4 +68,22 @@ public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerato
     event.add(Pair.of("delta", i));
     return Collections.unmodifiableList(event);
   }
+
+  public static List<String> dimensions()
+  {
+    return List.of(
+        "page",
+        "language",
+        "user",
+        "unpatrolled",
+        "newPage",
+        "robot",
+        "anonymous",
+        COL_UNIQUE_NAMESPACE,
+        "continent",
+        "country",
+        "region",
+        "city"
+    );
+  }
 }

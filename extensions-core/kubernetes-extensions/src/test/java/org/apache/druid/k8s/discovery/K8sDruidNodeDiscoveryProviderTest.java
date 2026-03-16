@@ -30,8 +30,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public class K8sDruidNodeDiscoveryProviderTest
 {
@@ -78,7 +80,8 @@ public class K8sDruidNodeDiscoveryProviderTest
 
   private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null);
 
-  @Test(timeout = 60_000)
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
   public void testGetForNodeRole() throws Exception
   {
     String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
@@ -163,7 +166,8 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testNodeRoleWatcherHandlesNullFromAPIByRestarting() throws Exception
   {
     String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
@@ -226,7 +230,8 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testNodeRoleWatcherLoopOnNullItems() throws Exception
   {
     String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
@@ -356,12 +361,12 @@ public class K8sDruidNodeDiscoveryProviderTest
     public void assertSuccess() throws Exception
     {
       while (!events.isEmpty()) {
-        Assert.assertFalse(failReason, failed);
+        Assertions.assertFalse(failed, failReason);
         LOGGER.info("Waiting  for events to finish.");
         Thread.sleep(1000);
       }
 
-      Assert.assertFalse(failReason, failed);
+      Assertions.assertFalse(failed, failReason);
     }
 
     static class Event
@@ -478,7 +483,7 @@ public class K8sDruidNodeDiscoveryProviderTest
 
     public void assertSuccess()
     {
-      Assert.assertTrue("close() not called", closeCalled);
+      Assertions.assertTrue(closeCalled, "close() not called");
     }
   }
 }
