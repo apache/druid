@@ -111,12 +111,25 @@ public class DataSchema
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
+    this.objectMapper = objectMapper;
+    this.parserMap = parserMap;
+
+    if (granularitySpec == null) {
+      log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
+      this.granularitySpec = new UniformGranularitySpec(null, null, null);
+    } else {
+      this.granularitySpec = granularitySpec;
+    }
+    this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+    this.projections = projections;
+
+    // do these 2 last to populate stuff
     if (timestampSpec == null) {
       this.timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
     } else {
       this.timestampSpec = timestampSpec;
     }
-    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
     if (dimensionsSpec == null) {
       this.dimensionsSpec = computeDimensionsSpec(
           this.timestampSpec,
@@ -126,17 +139,6 @@ public class DataSchema
     } else {
       this.dimensionsSpec = computeDimensionsSpec(this.timestampSpec, dimensionsSpec, this.aggregators);
     }
-
-    if (granularitySpec == null) {
-      log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
-      this.granularitySpec = new UniformGranularitySpec(null, null, null);
-    } else {
-      this.granularitySpec = granularitySpec;
-    }
-    this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
-    this.projections = projections;
-    this.parserMap = parserMap;
-    this.objectMapper = objectMapper;
 
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
@@ -153,7 +155,6 @@ public class DataSchema
           dataSource
       );
     }
-
   }
 
   @JsonProperty

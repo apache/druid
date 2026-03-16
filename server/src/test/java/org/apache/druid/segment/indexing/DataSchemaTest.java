@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.indexing;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
@@ -244,19 +243,18 @@ class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = DataSchema.builder()
-                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withParserMap(parser)
-                                  .withAggregators(
-                                      new DoubleSumAggregatorFactory("metric1", "col1"),
-                                      new DoubleSumAggregatorFactory("metric2", "col2")
-                                  )
-                                  .withGranularity(ARBITRARY_GRANULARITY)
-                                  .withObjectMapper(jsonMapper)
-                                  .build();
     Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> schema.getParser()
+        () -> DataSchema.builder()
+                        .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                        .withParserMap(parser)
+                        .withAggregators(
+                            new DoubleSumAggregatorFactory("metric1", "col1"),
+                            new DoubleSumAggregatorFactory("metric2", "col2")
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build()
     );
 
     Assertions.assertEquals(
@@ -420,16 +418,14 @@ class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = DataSchema.builder()
-                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withParserMap(parser)
-                                  .withGranularity(ARBITRARY_GRANULARITY)
-                                  .withObjectMapper(jsonMapper)
-                                  .build();
-
     Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> schema.getParser()
+        () -> DataSchema.builder()
+                        .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                        .withParserMap(parser)
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build()
     );
 
     Assertions.assertEquals(
@@ -494,25 +490,18 @@ class DataSchemaTest extends InitializedNullHandlingTest
                      + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
 
 
-    //no error on serde as parser is converted to InputRowParser lazily when really needed
-    DataSchema schema = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(
-            jsonMapper.readValue(jsonStr, DataSchema.class)
-        ),
-        DataSchema.class
-    );
-
     Throwable t = Assertions.assertThrows(
-        IllegalArgumentException.class,
-        () -> schema.getParser()
+        ValueInstantiationException.class,
+        () -> jsonMapper.readValue(
+            jsonMapper.writeValueAsString(
+                jsonMapper.readValue(jsonStr, DataSchema.class)
+            ),
+            DataSchema.class
+        )
     );
     MatcherAssert.assertThat(
         t.getMessage(),
-        Matchers.startsWith("Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec")
-    );
-    MatcherAssert.assertThat(
-        t.getCause(),
-        Matchers.instanceOf(JsonMappingException.class)
+        Matchers.startsWith("Cannot construct instance of `org.apache.druid.segment.indexing.DataSchema`")
     );
   }
 
@@ -868,6 +857,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(new TimestampSpec(null, null, null))
+                        .withDimensions(DimensionsSpec.builder().build())
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -913,6 +904,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(new TimestampSpec(null, null, null))
+                        .withDimensions(DimensionsSpec.builder().build())
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -956,6 +949,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(new TimestampSpec(null, null, null))
+                        .withDimensions(DimensionsSpec.builder().build())
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -991,6 +986,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(new TimestampSpec(null, null, null))
+                        .withDimensions(DimensionsSpec.builder().build())
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
