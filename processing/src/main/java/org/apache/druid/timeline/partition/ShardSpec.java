@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 
 import java.util.List;
@@ -137,13 +138,22 @@ public interface ShardSpec
   ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs);
 
   /**
-   * Get dimensions who have possible range for the rows this shard contains.
+   * Get dimensions who have possible range for the rows this shard contains. These columns might be physical columns
+   * stored in the shard, or computed expressions, in which case the manner in which they were computed is available in
+   * {@link #getDomainVirtualColumns()}.
    *
-   * @return list of dimensions who has its possible range. Dimensions with unknown possible range are not listed
+   * @return list of dimensions who has its possible range. Dimensions with unknown possible range are not listed.
    */
   @JsonIgnore
   List<String> getDomainDimensions();
 
+  /**
+   * If any of the columns in {@link #getDomainDimensions()} was computed with an expression and was not stored, the
+   * {@link org.apache.druid.segment.VirtualColumn} which computes it is stored here. This allows matching ranges even
+   * when the value is not stored in the shard so long as {@link VirtualColumns#findEquivalent(VirtualColumn)} exists.
+   *
+   * @return {@link VirtualColumns} associated with columns listed in {@link #getDomainDimensions()}.
+   */
   @JsonIgnore
   default VirtualColumns getDomainVirtualColumns()
   {

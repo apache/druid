@@ -579,9 +579,6 @@ public class MSQCompactionRunner implements CompactionRunner
 
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
         .dataSource(getInputDataSource(dataSchema.getDataSource()))
-        .columns(columns)
-        .virtualColumns(VirtualColumns.create(inputColToVirtualCol.values()))
-        .columnTypes(rowSignatureWithOrderByBuilder.build().getColumnTypes())
         .intervals(segmentSpec)
         .filters(dataSchema.getTransformSpec().getFilter())
         .virtualColumns(VirtualColumns.create(inputColToVirtualCol.values()))

@@ -84,30 +84,54 @@ class FilterSegmentPrunerTest
   @Test
   void testPruneVirtualColumn()
   {
-    VirtualColumns virtualColumns = VirtualColumns.create(
+    VirtualColumns shardVirtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
     );
-    DimFilter range_a = new RangeFilter("vdim1", ColumnType.STRING, null, "aaa", null, null, null);
-
     String interval1 = "2026-02-18T00:00:00Z/2026-02-19T00:00:00Z";
 
     DataSegment seg1 = makeDataSegment(
         interval1,
-        makeRange(List.of("vdim1"), virtualColumns, 0, null, StringTuple.create("abcfoo"))
+        makeRange(List.of("vdim1"), shardVirtualColumns, 0, null, StringTuple.create("abcfoo"))
     );
     DataSegment seg2 = makeDataSegment(
         interval1,
-        makeRange(List.of("vdim1"), virtualColumns, 1, StringTuple.create("abcfoo"), StringTuple.create("lmnfoo"))
+        makeRange(List.of("vdim1"), shardVirtualColumns, 1, StringTuple.create("abcfoo"), StringTuple.create("lmnfoo"))
     );
     DataSegment seg3 = makeDataSegment(
         interval1,
-        makeRange(List.of("vdim1"), virtualColumns, 2, StringTuple.create("lmnfoo"), null)
+        makeRange(List.of("vdim1"), shardVirtualColumns, 2, StringTuple.create("lmnfoo"), null)
     );
 
     List<DataSegment> segs = List.of(seg1, seg2, seg3);
 
-    FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null, virtualColumns);
-    FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), virtualColumns);
+    // same expression, same name
+    VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    DimFilter range_a = new RangeFilter("vdim1", ColumnType.STRING, null, "aaa", null, null, null);
+    FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
+    FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+
+    // same expression, different name
+    queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    range_a = new RangeFilter("v0", ColumnType.STRING, null, "aaa", null, null, null);
+    prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
+    prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
+
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+
+    // same expression, different name
+    queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v10", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    range_a = new RangeFilter("v10", ColumnType.STRING, null, "aaa", null, null, null);
+    prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
+    prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
 
     Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));

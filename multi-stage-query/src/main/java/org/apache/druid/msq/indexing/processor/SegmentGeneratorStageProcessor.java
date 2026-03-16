@@ -90,7 +90,7 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
   public SegmentGeneratorStageProcessor(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("clusterByVirtualColumnsMappings") @Nullable final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
+      @JsonProperty("clusterByVirtualColumnMappings") @Nullable final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
       @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
   )
   {
@@ -268,13 +268,14 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
     SegmentGeneratorStageProcessor that = (SegmentGeneratorStageProcessor) o;
     return Objects.equals(dataSchema, that.dataSchema)
            && Objects.equals(columnMappings, that.columnMappings)
+           && Objects.equals(clusterByVirtualColumnMappings, that.clusterByVirtualColumnMappings)
            && Objects.equals(tuningConfig, that.tuningConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSchema, columnMappings, tuningConfig);
+    return Objects.hash(dataSchema, columnMappings, clusterByVirtualColumnMappings, tuningConfig);
   }
 
   @Override

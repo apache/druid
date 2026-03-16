@@ -1836,11 +1836,10 @@ public class ControllerImpl implements Controller
 
     // if the clustered by requires virtual columns, preserve them here so that we can rebuild during compaction
     CompactionTransformSpec transformSpec;
-    // this is true if we are in here
-
     final Map<String, VirtualColumn> clusterByVirtualColumnMappings =
         segmentProcessor.getClusterByVirtualColumnMappings();
 
+    // only range partitioning can have virtual columns
     if (clusterByVirtualColumnMappings.isEmpty() || !SecondaryPartitionType.RANGE.equals(partitionSpec.getType())) {
       transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                       ? null

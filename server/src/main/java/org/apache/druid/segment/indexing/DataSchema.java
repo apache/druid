@@ -57,6 +57,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -86,14 +87,13 @@ public class DataSchema
   private final Map<String, Object> parserMap;
   private final ObjectMapper objectMapper;
 
-  // The below fields can be initialized lazily from parser for backward compatibility.
-  private TimestampSpec timestampSpec;
-  private DimensionsSpec dimensionsSpec;
+  private final TimestampSpec timestampSpec;
+  private final DimensionsSpec dimensionsSpec;
 
   // This is used for backward compatibility
   private InputRowParser inputRowParser;
   @Nullable
-  private List<AggregateProjectionSpec> projections;
+  private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public DataSchema(
@@ -111,15 +111,21 @@ public class DataSchema
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
-    this.timestampSpec = timestampSpec;
+    if (timestampSpec == null) {
+      this.timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
+    } else {
+      this.timestampSpec = timestampSpec;
+    }
     this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
-    this.dimensionsSpec = dimensionsSpec == null
-                          ? null
-                          : computeDimensionsSpec(
-                              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
-                              dimensionsSpec,
-                              this.aggregators
-                          );
+    if (dimensionsSpec == null) {
+      this.dimensionsSpec = computeDimensionsSpec(
+          this.timestampSpec,
+          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
+          this.aggregators
+      );
+    } else {
+      this.dimensionsSpec = computeDimensionsSpec(this.timestampSpec, dimensionsSpec, this.aggregators);
+    }
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -165,9 +171,6 @@ public class DataSchema
 
   public TimestampSpec getTimestampSpec()
   {
-    if (timestampSpec == null) {
-      timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
-    }
     return timestampSpec;
   }
 
@@ -180,13 +183,6 @@ public class DataSchema
 
   public DimensionsSpec getDimensionsSpec()
   {
-    if (dimensionsSpec == null) {
-      dimensionsSpec = computeDimensionsSpec(
-          getTimestampSpec(),
-          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
-          aggregators
-      );
-    }
     return dimensionsSpec;
   }
 
@@ -525,6 +521,38 @@ public class DataSchema
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("Cannot specify a column more than once: %s", String.join("; ", errors));
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DataSchema that = (DataSchema) o;
+    return Objects.equals(dataSource, that.dataSource) &&
+           Objects.deepEquals(aggregators, that.aggregators) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
+           Objects.equals(parserMap, that.parserMap) &&
+           Objects.equals(timestampSpec, that.timestampSpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Objects.equals(projections, that.projections);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        dataSource,
+        Arrays.hashCode(aggregators),
+        granularitySpec,
+        transformSpec,
+        parserMap,
+        timestampSpec,
+        dimensionsSpec,
+        projections
+    );
   }
 
   public static class Builder

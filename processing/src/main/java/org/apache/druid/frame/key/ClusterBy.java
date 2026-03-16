@@ -63,14 +63,17 @@ public class ClusterBy
 
     // Key must be 100% sortable or 100% nonsortable. If empty, call it sortable.
     boolean sortable = true;
+
     for (int i = 0; i < columns.size(); i++) {
       final KeyColumn column = columns.get(i);
+
       if (i == 0) {
         sortable = column.order().sortable();
       } else if (sortable != column.order().sortable()) {
         throw new IAE("Cannot mix sortable and unsortable key columns");
       }
     }
+
     this.sortable = sortable;
   }
 
@@ -186,8 +189,7 @@ public class ClusterBy
       return false;
     }
     ClusterBy clusterBy = (ClusterBy) o;
-    return bucketByCount == clusterBy.bucketByCount &&
-           Objects.equals(columns, clusterBy.columns);
+    return bucketByCount == clusterBy.bucketByCount && Objects.equals(columns, clusterBy.columns);
   }
 
   @Override

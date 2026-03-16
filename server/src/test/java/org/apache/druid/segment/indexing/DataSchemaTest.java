@@ -25,10 +25,12 @@ import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -40,6 +42,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -1017,5 +1020,16 @@ class DataSchemaTest extends InitializedNullHandlingTest
         "Cannot specify a column more than once: [a0] seen in projection[some projection] aggregators list (2 occurrences)",
         t.getMessage()
     );
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(DataSchema.class)
+                  .usingGetClass()
+                  .withIgnoredFields("objectMapper", "inputRowParser")
+                  .withPrefabValues(ObjectMapper.class, jsonMapper, new DefaultObjectMapper())
+                  .withPrefabValues(DimensionSchema.class, new StringDimensionSchema("foo"), new LongDimensionSchema("bar"))
+                  .verify();
   }
 }
