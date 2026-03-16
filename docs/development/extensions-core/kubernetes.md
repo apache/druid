@@ -69,7 +69,7 @@ Because of this, you should configure [readiness probes](https://kubernetes.io/d
 ```yaml
 readinessProbe:
   httpGet:
-    path: /status/health
+    path: /status/ready
     port: 8088
   periodSeconds: 10
   failureThreshold: 3
