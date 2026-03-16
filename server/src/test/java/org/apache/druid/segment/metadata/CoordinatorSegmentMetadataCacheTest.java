@@ -1190,6 +1190,50 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
   }
 
+  /**
+   * Verifies that columns with analysis errors are included in the row signature with {@link ColumnType#UNKNOWN_COMPLEX}
+   * rather than skipped. Skipping error columns can cause invalid query plans and results as seen in
+   * <a href="https://github.com/apache/druid/issues/18437">issue 18437</a> and <a href="https://github.com/apache/druid/pull/18966">pr 18966</a>.
+   */
+  @Test
+  public void testAnalysisToRowSignatureDoesNotSkipColumnsWhenAnalysisHasErrors()
+  {
+    final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+    columns.put("a", new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 26, "a", "z", null));
+    columns.put("error_col", ColumnAnalysis.error("unknown_type"));
+    columns.put("b", new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), false, true, 1234, 26, null, null, null));
+    columns.put("c", new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null));
+    columns.put("d", new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 10, "x", "y", null));
+    columns.put("error_col2", ColumnAnalysis.error("multi_value"));
+
+    final RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            columns,
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("a", ColumnType.STRING)
+                    .add("error_col", ColumnType.STRING)
+                    .add("b", ColumnType.LONG)
+                    .add("c", ColumnType.DOUBLE)
+                    .add("d", ColumnType.STRING)
+                    .add("error_col2", ColumnType.STRING)
+                    .build(),
+        signature
+    );
+  }
+
   @Test
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
