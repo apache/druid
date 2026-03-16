@@ -142,12 +142,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   {
     return Stream.of(
         Arguments.of(
-            CompactionEngine.MSQ,
-            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null)
-        ),
-        Arguments.of(
             CompactionEngine.NATIVE,
             new NewestSegmentFirstPolicy(null)
+        ),
+        Arguments.of(
+            CompactionEngine.MSQ,
+            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null)
         )
     );
   }
@@ -265,6 +265,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.TASK_TYPE, "compact")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasDimension(DruidMetrics.TASK_STATUS, "SUCCESS"),
         agg -> agg.hasCountAtLeast(10)
     );

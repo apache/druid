@@ -53,12 +53,6 @@ public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
     this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
   }
 
-  @JsonProperty
-  public String getType()
-  {
-    return TYPE;
-  }
-
   @Override
   @JsonProperty
   public Interval getInterval()

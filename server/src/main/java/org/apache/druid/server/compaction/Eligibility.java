@@ -82,7 +82,7 @@ public class Eligibility
 
   /**
    * @return {@code Eligibility} denoting that the candidate interval is
-   * eligibile for a {@link CompactionMode#UNCOMPACTED_SEGMENTS_ONLY minor}
+   * eligible for a {@link CompactionMode#UNCOMPACTED_SEGMENTS_ONLY minor}
    * compaction.
    */
   public static Eligibility minor(String messageFormat, Object... args)
