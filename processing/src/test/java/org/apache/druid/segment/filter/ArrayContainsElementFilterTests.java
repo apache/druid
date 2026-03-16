@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Mode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -1095,7 +1096,7 @@ public class ArrayContainsElementFilterTests
                         "optimizedFilterNoIncludeUnknown",
                         "elementMatchValue"
                     )
-                    .set(nl.jqno.equalsverifier.Mode.skipMockito())
+                    .set(Mode.skipMockito())
                     .verify();
     }
   }
