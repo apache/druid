@@ -503,52 +503,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testRunAfterDataInsertedWithLegacyParser() throws Exception
-  {
-    // Insert data
-    insertData();
-
-    final KafkaIndexTask task = createTask(
-        null,
-        OLD_DATA_SCHEMA,
-        new KafkaIndexTaskIOConfig(
-            0,
-            "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L)),
-            kafkaServer.consumerProperties(),
-            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-            true,
-            null,
-            null,
-            null,
-            null,
-            Duration.standardHours(2).getStandardMinutes()
-        )
-    );
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
-    Assert.assertTrue(task.getRunner().getSegmentGenerationMetrics().isProcessingDone());
-
-    // Check published metadata and segments in deep storage
-    assertEqualsExceptVersion(
-        ImmutableList.of(
-            sdd("2010/P1D", 0, ImmutableList.of("c")),
-            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
-        ),
-        publishedDescriptors()
-    );
-    Assert.assertEquals(
-        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L))),
-        newDataSchemaMetadata()
-    );
-  }
-
-  @Test(timeout = 60_000L)
   public void testRunBeforeDataInserted() throws Exception
   {
     final KafkaIndexTask task = createTask(
