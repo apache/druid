@@ -345,6 +345,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
       Assertions.assertEquals(sql, queryInfo.getSql());
       Assertions.assertNotNull(queryInfo.getDartQueryId());
+      Assertions.assertNotNull(queryInfo.getDurationMs());
       Assertions.assertInstanceOf(TaskReport.ReportMap.class, report.getReportMap());
       Assertions.assertInstanceOf(MSQTaskReport.class, report.getReportMap().get(MSQTaskReport.REPORT_KEY));
     }
