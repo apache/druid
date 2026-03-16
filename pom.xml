@@ -84,7 +84,7 @@
         <scala.library.version>2.13.14</scala.library.version>
         <avatica.version>1.27.0</avatica.version>
         <avro.version>1.11.5</avro.version>
-        <bytebuddy.version>1.18.3</bytebuddy.version>
+        <bytebuddy.version>1.18.5</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -118,7 +118,7 @@
         <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
-        <mockito.version>5.14.2</mockito.version>
+        <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
@@ -1224,7 +1224,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>5.2.0</version>
+                <version>5.6.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1446,8 +1446,14 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.15.8</version>
+                <version>4.4.1</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.objenesis</groupId>
+              <artifactId>objenesis</artifactId>
+              <version>3.5</version>
+              <scope>test</scope>
             </dependency>
             <dependency>
               <groupId>com.github.stefanbirkner</groupId>
@@ -2354,7 +2360,6 @@
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
                                 <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
-                                <exclude>**/*.sum</exclude> <!-- go.sum is excluded -->
                             </excludes>
                         </configuration>
                     </plugin>

@@ -173,7 +173,8 @@ public class CliOverlord extends ServerRunnable
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/druid/indexer/v1/isLeader",
-      "/status/health"
+      "/status/health",
+      "/status/ready"
   );
 
   private Properties properties;

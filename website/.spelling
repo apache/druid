@@ -1818,6 +1818,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1835,6 +1836,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs

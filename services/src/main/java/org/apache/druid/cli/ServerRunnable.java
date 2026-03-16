@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.ServiceAnnouncementState;
 
 import java.lang.annotation.Annotation;
 import java.util.Collections;
@@ -135,6 +136,9 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private Map<NodeRole, Set<Class<? extends DruidService>>> serviceClasses;
 
+    @Inject
+    private ServiceAnnouncementState serviceAnnouncementState;
+
     private final boolean useLegacyAnnouncer;
 
     public static DiscoverySideEffectsProvider create()
@@ -181,11 +185,15 @@ public abstract class ServerRunnable extends GuiceRunnable
                 if (useLegacyAnnouncer) {
                   legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
                 }
+
+                serviceAnnouncementState.markReady();
               }
 
               @Override
               public void stop()
               {
+                serviceAnnouncementState.markNotReady();
+
                 // Reverse order vs. start().
 
                 if (useLegacyAnnouncer) {

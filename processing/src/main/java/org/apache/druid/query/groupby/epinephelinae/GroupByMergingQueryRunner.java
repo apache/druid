@@ -192,6 +192,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
                   querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+                  querySpecificConfig.getMaxSpillFileCount(),
                   perQueryStats
               );
 
