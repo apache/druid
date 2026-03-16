@@ -241,6 +241,8 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(sql, queryInfo.getSql());
     Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
     Assertions.assertNotNull(queryInfo.getDartQueryId());
+    Assertions.assertNotNull(queryInfo.getDurationMs(), "durationMs should be set for completed query");
+    Assertions.assertTrue(queryInfo.getDurationMs() >= 0, "durationMs should be non-negative");
 
     // Verify the report is an MSQTaskReport
     Assertions.assertInstanceOf(TaskReport.ReportMap.class, reportResponse.getReportMap());
