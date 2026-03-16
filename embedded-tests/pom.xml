@@ -311,6 +311,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>aliyun-oss-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-parquet-extensions</artifactId>
       <version>${project.parent.version}</version>
@@ -619,6 +625,18 @@
       <artifactId>libthrift</artifactId>
       <version>0.13.0</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.aliyun.oss</groupId>
+      <artifactId>aliyun-sdk-oss</artifactId>
+      <version>3.11.3</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
