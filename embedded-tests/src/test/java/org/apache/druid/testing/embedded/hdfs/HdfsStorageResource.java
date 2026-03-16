@@ -45,14 +45,6 @@ public class HdfsStorageResource implements EmbeddedResource
   private MiniDFSCluster miniDFSCluster;
 
   /**
-   * Creates a resource that configures HDFS as both deep storage and input source.
-   */
-  public HdfsStorageResource()
-  {
-    this(true);
-  }
-
-  /**
    * Creates a resource with explicit control over whether HDFS is configured as deep storage.
    *
    * @param configureAsDeepStorage if {@code true}, sets {@code druid.storage.type=hdfs} and
