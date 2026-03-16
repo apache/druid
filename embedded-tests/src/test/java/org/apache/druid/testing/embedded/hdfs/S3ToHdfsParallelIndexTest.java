@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.hdfs;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.indexer.AbstractS3InputSourceParallelIndexTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
