@@ -70,18 +70,6 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
     }
   }
 
-  @AfterAll
-  public void deleteDataFilesFromAzure()
-  {
-    try {
-      // Deleting uploaded data files
-      azure.deleteStorageContainer();
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete container in azure");
-    }
-  }
-
   public void validateAzureSegmentFilesDeleted(String path)
   {
     List<URI> segmentFiles = ImmutableList.of();

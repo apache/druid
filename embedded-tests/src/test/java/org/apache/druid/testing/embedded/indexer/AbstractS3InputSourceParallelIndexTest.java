@@ -91,13 +91,6 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
     s3.deleteFolderFromS3(dataSource);
   }
 
-  @AfterAll
-  public void deleteDataFilesFromS3()
-  {
-    // Deleting uploaded data files
-    s3.deleteFilesFromS3(fileList());
-  }
-
   /**
    * Variant of {@link #doTest} that injects an {@code endpointConfig} into the S3 input source spec.
    * Required when using per-input-source credentials: S3InputSource builds a new S3 client in that

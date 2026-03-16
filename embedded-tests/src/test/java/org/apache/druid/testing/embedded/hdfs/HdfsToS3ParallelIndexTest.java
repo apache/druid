@@ -61,26 +61,7 @@ public class HdfsToS3ParallelIndexTest extends AbstractHdfsInputSourceParallelIn
 
     // MinIO resource: configures S3/MinIO as deep storage (druid.storage.type=s3, etc.).
     // Adding it after the HDFS resource ensures the S3 deep-storage settings win.
-    // MinIOStorageResource.onStarted() registers S3StorageDruidModule automatically.
     cluster.addResource(minIOResource);
-  }
-
-  @AfterAll
-  public void deleteSegmentsFromS3()
-  {
-    try {
-      final String bucket = minIOResource.getBucket();
-      // List and delete all objects in the deep-storage bucket (segments + task logs).
-      minIOResource.getS3Client()
-                   .listObjects(ListObjectsRequest.builder().bucket(bucket).build())
-                   .contents()
-                   .forEach(obj -> minIOResource.getS3Client().deleteObject(
-                       DeleteObjectRequest.builder().bucket(bucket).key(obj.key()).build()
-                   ));
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete S3 objects from MinIO after test");
-    }
   }
 
   @ParameterizedTest

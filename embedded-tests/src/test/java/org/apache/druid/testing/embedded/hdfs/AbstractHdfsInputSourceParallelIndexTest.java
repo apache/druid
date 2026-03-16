@@ -106,15 +106,6 @@ public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractI
     ));
   }
 
-  @AfterAll
-  public void deleteDataFilesFromHdfs()
-  {
-    if (hdfs != null) {
-      LOG.info("Deleting test data files from HDFS");
-      hdfs.deleteFilesFromHdfs(fileList());
-    }
-  }
-
   /**
    * Runs a parallel-index test reading from HDFS.
    *

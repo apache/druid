@@ -55,7 +55,6 @@ public class HdfsToAzureParallelIndexTest extends AbstractHdfsInputSourceParalle
     // Azure resource: configures Azure as deep storage (druid.storage.type=azure, etc.).
     // Adding it after the HDFS resource ensures Azure's deep-storage settings are not
     // overridden by anything the HDFS resource might set.
-    // AzureStorageResource.onStarted() registers AzureStorageDruidModule automatically.
     cluster.addResource(azureResource);
   }
 

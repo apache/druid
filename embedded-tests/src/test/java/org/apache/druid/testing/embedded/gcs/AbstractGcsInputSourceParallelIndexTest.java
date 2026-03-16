@@ -71,19 +71,4 @@ public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputS
       LOG.warn(e, "Unable to delete segments from GCS");
     }
   }
-
-  @AfterAll
-  public void deleteDataFilesFromGcs()
-  {
-    LOG.info("Deleting data files from GCS");
-    try {
-      for (String file : fileList()) {
-        // Deleting uploaded data files
-        gcs.deleteFileFromGcs(file);
-      }
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete files in GCS");
-    }
-  }
 }

@@ -60,19 +60,6 @@ public class HdfsToGcsParallelIndexTest extends AbstractHdfsInputSourceParallelI
     cluster.addResource(gcsResource);
   }
 
-  @AfterAll
-  public void deleteSegmentsFromGcs()
-  {
-    try (Storage storage = GoogleStorageTestModule.createStorageForTests(gcsResource.getUrl())) {
-      // Delete all blobs under the deep-storage prefix for this test run.
-      storage.list(gcsResource.getBucket()).iterateAll()
-             .forEach(blob -> blob.delete());
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete GCS blobs after test");
-    }
-  }
-
   @ParameterizedTest
   @MethodSource("resources")
   public void testHdfsIndexData(Pair<String, Object> hdfsInputSource) throws Exception
