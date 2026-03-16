@@ -51,8 +51,8 @@ public abstract class DruidNodeDiscoveryProvider
       ImmutableSet.of(NodeRole.MIDDLE_MANAGER, NodeRole.INDEXER)
   );
 
-  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
-      new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
+  private final ConcurrentHashMap<ServiceAndRoles, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
+      new ConcurrentHashMap<>(10);
 
   public abstract BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole);
 
@@ -77,12 +77,13 @@ public abstract class DruidNodeDiscoveryProvider
   public DruidNodeDiscovery getForServiceAndRoles(String serviceName, Set<NodeRole> nodeRolesToWatch)
   {
     return serviceDiscoveryMap.computeIfAbsent(
-        serviceName,
-        service -> {
+        new ServiceAndRoles(serviceName, nodeRolesToWatch),
+        serviceAndRoles -> {
           if (nodeRolesToWatch == null || nodeRolesToWatch.isEmpty()) {
-            throw InvalidInput.exception("No node role specified to watch for service[%s].", service);
+            throw InvalidInput.exception("No node role specified to watch for service[%s].", serviceName);
           }
-          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(service, nodeRolesToWatch.size());
+          ServiceDruidNodeDiscovery serviceDiscovery =
+              new ServiceDruidNodeDiscovery(serviceName, nodeRolesToWatch.size());
           DruidNodeDiscovery.Listener filteringGatheringUpstreamListener =
               serviceDiscovery.filteringUpstreamListener();
           for (NodeRole nodeRole : nodeRolesToWatch) {
@@ -91,6 +92,14 @@ public abstract class DruidNodeDiscoveryProvider
           return serviceDiscovery;
         }
     );
+  }
+
+  /**
+   * Record containing serviceName and nodeRoles, used as a key in {@link #serviceDiscoveryMap}.
+   */
+  private record ServiceAndRoles(String serviceName, Set<NodeRole> nodeRoles)
+  {
+
   }
 
   private static class ServiceDruidNodeDiscovery implements DruidNodeDiscovery
