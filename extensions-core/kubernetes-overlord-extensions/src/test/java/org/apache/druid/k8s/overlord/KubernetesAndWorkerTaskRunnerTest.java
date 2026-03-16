@@ -35,13 +35,13 @@ import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
 import org.apache.druid.k8s.overlord.runnerstrategy.TaskTypeRunnerStrategy;
 import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,7 +50,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
 {
 
@@ -63,7 +63,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
 
   private Task task;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     task = NoopTask.create();
@@ -86,7 +86,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
 
     replayAll();
-    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
+    Assertions.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
     verifyAll();
   }
 
@@ -102,7 +102,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
 
     replayAll();
-    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
+    Assertions.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
     verifyAll();
   }
 
@@ -122,14 +122,14 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(taskMock.getType()).andReturn("index_kafka").once();
     EasyMock.expect(workerTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
     EasyMock.replay(taskMock, workerTaskRunner);
-    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    Assertions.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
     EasyMock.verify(taskMock, workerTaskRunner);
     EasyMock.reset(taskMock, workerTaskRunner);
 
     EasyMock.expect(taskMock.getType()).andReturn("compact").once();
     EasyMock.expect(kubernetesTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
     EasyMock.replay(taskMock, kubernetesTaskRunner);
-    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    Assertions.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
     EasyMock.verify(taskMock, kubernetesTaskRunner);
   }
 
@@ -140,7 +140,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getUsedCapacity()).andReturn(1);
 
     replayAll();
-    Assert.assertEquals(2, runner.getUsedCapacity());
+    Assertions.assertEquals(2, runner.getUsedCapacity());
     verifyAll();
   }
 
@@ -151,7 +151,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getTotalCapacity()).andReturn(1);
 
     replayAll();
-    Assert.assertEquals(2, runner.getTotalCapacity());
+    Assertions.assertEquals(2, runner.getTotalCapacity());
     verifyAll();
   }
 
@@ -162,7 +162,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.getRunnerTaskState(ID)).andReturn(runnerTaskState);
 
     replayAll();
-    Assert.assertEquals(runnerTaskState, runner.getRunnerTaskState(ID));
+    Assertions.assertEquals(runnerTaskState, runner.getRunnerTaskState(ID));
     verifyAll();
   }
 
@@ -174,7 +174,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getRunnerTaskState(ID)).andReturn(runnerTaskState);
 
     replayAll();
-    Assert.assertEquals(runnerTaskState, runner.getRunnerTaskState(ID));
+    Assertions.assertEquals(runnerTaskState, runner.getRunnerTaskState(ID));
     verifyAll();
   }
 
@@ -185,7 +185,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.streamTaskLog(ID, 0)).andReturn(Optional.of(inputStream));
 
     replayAll();
-    Assert.assertEquals(inputStream, runner.streamTaskLog(ID, 0).get());
+    Assertions.assertEquals(inputStream, runner.streamTaskLog(ID, 0).get());
     verifyAll();
   }
 
@@ -197,7 +197,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.streamTaskLog(ID, 0)).andReturn(Optional.of(inputStream));
 
     replayAll();
-    Assert.assertEquals(inputStream, runner.streamTaskLog(ID, 0).get());
+    Assertions.assertEquals(inputStream, runner.streamTaskLog(ID, 0).get());
     verifyAll();
   }
 
@@ -208,7 +208,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.streamTaskReports(ID)).andReturn(Optional.of(inputStream));
 
     replayAll();
-    Assert.assertEquals(inputStream, runner.streamTaskReports(ID).get());
+    Assertions.assertEquals(inputStream, runner.streamTaskReports(ID).get());
     verifyAll();
   }
 
@@ -220,7 +220,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.streamTaskReports(ID)).andReturn(Optional.of(inputStream));
 
     replayAll();
-    Assert.assertEquals(inputStream, runner.streamTaskReports(ID).get());
+    Assertions.assertEquals(inputStream, runner.streamTaskReports(ID).get());
     verifyAll();
   }
 
@@ -234,7 +234,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getBlacklistedTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getBlacklistedTaskSlotCount()
     );
@@ -251,7 +251,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getLazyTaskSlotCount()
     );
@@ -268,7 +268,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getLazyTaskSlotCount()
     );
@@ -285,7 +285,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getLazyTaskSlotCount()
     );
@@ -299,7 +299,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getKnownTasks()).andReturn(ImmutableList.of());
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         runner.getKnownTasks().size()
     );
@@ -313,7 +313,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getPendingTasks()).andReturn(ImmutableList.of());
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         runner.getPendingTasks().size()
     );
@@ -327,7 +327,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getRunningTasks()).andReturn(ImmutableList.of());
 
     replayAll();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         runner.getRunningTasks().size()
     );
@@ -351,7 +351,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.restore()).andReturn(ImmutableList.of());
     EasyMock.expect(workerTaskRunner.restore()).andReturn(ImmutableList.of());
     replayAll();
-    Assert.assertEquals(0, runner.restore().size());
+    Assertions.assertEquals(0, runner.restore().size());
     verifyAll();
   }
 
@@ -361,7 +361,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     TaskLocation kubernetesTaskLocation = TaskLocation.create("host", 0, 0, false);
     EasyMock.expect(kubernetesTaskRunner.getTaskLocation(ID)).andReturn(kubernetesTaskLocation);
     replayAll();
-    Assert.assertEquals(kubernetesTaskLocation, runner.getTaskLocation(ID));
+    Assertions.assertEquals(kubernetesTaskLocation, runner.getTaskLocation(ID));
     verifyAll();
   }
 
@@ -373,7 +373,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.getTaskLocation(ID)).andReturn(workerTaskLocation);
 
     replayAll();
-    Assert.assertEquals(workerTaskLocation, runner.getTaskLocation(ID));
+    Assertions.assertEquals(workerTaskLocation, runner.getTaskLocation(ID));
     verifyAll();
   }
 
@@ -401,7 +401,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(kubernetesTaskRunner.getMaximumCapacityWithAutoscale()).andReturn(1);
     EasyMock.expect(workerTaskRunner.getMaximumCapacityWithAutoscale()).andReturn(1);
     replayAll();
-    Assert.assertEquals(2, runner.getMaximumCapacityWithAutoscale());
+    Assertions.assertEquals(2, runner.getMaximumCapacityWithAutoscale());
     verifyAll();
   }
 }

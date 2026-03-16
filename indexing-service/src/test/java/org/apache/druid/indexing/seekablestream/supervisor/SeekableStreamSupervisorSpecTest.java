@@ -1155,7 +1155,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
     };
 
-    // Mistmatched stream strings test
+    // Mismatched stream strings test
     MatcherAssert.assertThat(
         assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)),
         new DruidExceptionMatcher(

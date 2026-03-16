@@ -24,10 +24,12 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class K8sDruidLeaderSelectorTest
 {
@@ -42,7 +44,8 @@ public class K8sDruidLeaderSelectorTest
 
   private final String lockResourceName = "druid-leader-election";
 
-  @Test(timeout = 5_000)
+  @Test
+  @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
   public void testLeaderElection_HappyPath() throws Exception
   {
     K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(
@@ -79,7 +82,7 @@ public class K8sDruidLeaderSelectorTest
         }
     );
 
-    Assert.assertEquals(testNode1.getDruidNode().getHostAndPortToUse(), leaderSelector.getCurrentLeader());
+    Assertions.assertEquals(testNode1.getDruidNode().getHostAndPortToUse(), leaderSelector.getCurrentLeader());
 
     CountDownLatch becomeLeaderLatch = new CountDownLatch(1);
     CountDownLatch stopBeingLeaderLatch = new CountDownLatch(1);
@@ -106,7 +109,8 @@ public class K8sDruidLeaderSelectorTest
     stopBeingLeaderLatch.await();
   }
 
-  @Test(timeout = 5_000)
+  @Test
+  @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
   public void testLeaderElection_LeaderElectorExits() throws Exception
   {
     K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(
@@ -151,7 +155,7 @@ public class K8sDruidLeaderSelectorTest
         }
     );
 
-    Assert.assertEquals(testNode1.getDruidNode().getHostAndPortToUse(), leaderSelector.getCurrentLeader());
+    Assertions.assertEquals(testNode1.getDruidNode().getHostAndPortToUse(), leaderSelector.getCurrentLeader());
 
     CountDownLatch becomeLeaderLatch = new CountDownLatch(2);
     CountDownLatch stopBeingLeaderLatch = new CountDownLatch(2);
