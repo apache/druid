@@ -25,7 +25,6 @@ import org.apache.druid.storage.azure.output.AzureStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
 import org.junit.Assert;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 

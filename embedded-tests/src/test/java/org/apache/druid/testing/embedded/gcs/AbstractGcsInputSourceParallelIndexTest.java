@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.output.GoogleStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 

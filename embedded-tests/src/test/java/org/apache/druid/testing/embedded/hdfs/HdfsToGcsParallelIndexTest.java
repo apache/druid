@@ -19,13 +19,10 @@
 
 package org.apache.druid.testing.embedded.hdfs;
 
-import com.google.cloud.storage.Storage;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.gcs.GoogleCloudStorageResource;
-import org.apache.druid.testing.embedded.gcs.GoogleStorageTestModule;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 

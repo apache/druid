@@ -23,11 +23,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 
 /**
  * Embedded parallel index test that reads input data from HDFS (in-process MiniDFSCluster)
