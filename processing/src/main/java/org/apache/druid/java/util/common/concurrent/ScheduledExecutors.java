@@ -21,9 +21,8 @@ package org.apache.druid.java.util.common.concurrent;
 
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.joda.time.Duration;
-
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.joda.time.Duration;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
