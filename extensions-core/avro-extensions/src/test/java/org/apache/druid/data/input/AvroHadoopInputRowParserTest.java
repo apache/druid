@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
@@ -28,7 +29,13 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
+import org.apache.druid.data.input.avro.AvroParseSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +46,17 @@ import java.io.IOException;
 
 public class AvroHadoopInputRowParserTest
 {
+  static final AvroParseSpec PARSE_SPEC = new AvroParseSpec(
+      new TimestampSpec("nested", "millis", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(AvroStreamInputFormatTest.DIMENSIONS)),
+      new JSONPathSpec(
+          true,
+          ImmutableList.of(
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong"),
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nestedArrayVal", "someRecordArray[?(@.nestedString=='string in record')].nestedString")
+          )
+      )
+  );
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
   @Before
@@ -52,7 +70,7 @@ public class AvroHadoopInputRowParserTest
   @Test
   public void testSerde() throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, false, false, false);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC, false, false, false);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
@@ -63,7 +81,7 @@ public class AvroHadoopInputRowParserTest
   @Test
   public void testSerdeNonDefaults() throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, true, true, true);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC, true, true, true);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
@@ -74,7 +92,7 @@ public class AvroHadoopInputRowParserTest
   @Test
   public void testParseNotFromPigAvroStorage() throws IOException
   {
-    testParse(AvroStreamInputRowParserTest.buildSomeAvroDatum(), false);
+    testParse(AvroStreamInputFormatTest.buildSomeAvroDatum(), false);
   }
 
   @Test
@@ -85,20 +103,20 @@ public class AvroHadoopInputRowParserTest
 
   private void testParse(GenericRecord record, boolean fromPigAvroStorage) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, fromPigAvroStorage, false, false);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC, fromPigAvroStorage, false, false);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
     Assert.assertEquals(parser, parser2);
     InputRow inputRow = parser2.parseBatch(record).get(0);
-    AvroStreamInputRowParserTest.assertInputRowCorrect(inputRow, AvroStreamInputRowParserTest.DIMENSIONS, fromPigAvroStorage);
+    AvroStreamInputFormatTest.assertInputRowCorrect(inputRow, AvroStreamInputFormatTest.DIMENSIONS, fromPigAvroStorage);
   }
 
   private static GenericRecord buildAvroFromFile() throws IOException
   {
     return buildAvroFromFile(
-        AvroStreamInputRowParserTest.buildSomeAvroDatum()
+        AvroStreamInputFormatTest.buildSomeAvroDatum()
     );
   }
 

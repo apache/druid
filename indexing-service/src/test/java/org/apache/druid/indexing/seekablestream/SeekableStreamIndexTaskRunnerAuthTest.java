@@ -281,7 +281,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTask<String, String, ByteEntity> task
     )
     {
-      super(task, null, LockGranularity.SEGMENT);
+      super(task, LockGranularity.SEGMENT);
     }
 
     @Override

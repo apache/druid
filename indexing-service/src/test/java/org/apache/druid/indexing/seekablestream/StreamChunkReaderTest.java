@@ -28,14 +28,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -57,14 +54,13 @@ import org.mockito.junit.MockitoJUnitRunner;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @RunWith(MockitoJUnitRunner.class)
-public class StreamChunkParserTest
+public class StreamChunkReaderTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(null, null, null);
 
@@ -86,38 +82,10 @@ public class StreamChunkParserTest
   private SettableByteEntityReader mockedByteEntityReader;
 
   @Test
-  public void testWithParserAndNullInputformatParseProperly() throws IOException
-  {
-    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new JSONParseSpec(
-            TIMESTAMP_SPEC,
-            DimensionsSpec.EMPTY,
-            JSONPathSpec.DEFAULT,
-            Collections.emptyMap(),
-            false
-        ),
-        StringUtils.UTF8_STRING
-    );
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
-        // Set nulls for all parameters below since inputFormat will never be used.
-        null,
-        null,
-        null,
-        null,
-        InputRowFilter.allowAll(),
-        rowIngestionMeters,
-        parseExceptionHandler
-    );
-    parseAndAssertResult(chunkParser);
-  }
-
-  @Test
-  public void testWithNullParserAndInputformatParseProperly() throws IOException
+  public void testInputformatParseProperly() throws IOException
   {
     final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null, null, null);
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        null,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
@@ -132,51 +100,21 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndNullInputformatFailToCreateParser()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Either parser or inputFormat should be set");
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        null,
-        null,
-        null,
-        null,
-        null,
-        InputRowFilter.allowAll(),
-        rowIngestionMeters,
-        parseExceptionHandler
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> new StreamChunkReader<>(
+            null,
+            null,
+            null,
+            null,
+            InputRowFilter.allowAll(),
+            rowIngestionMeters,
+            parseExceptionHandler
+        )
     );
+    Assert.assertEquals("inputFormat must not be null", t.getMessage());
   }
 
-  @Test
-  public void testBothParserAndInputFormatParseProperlyUsingInputFormat() throws IOException
-  {
-    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new JSONParseSpec(
-            TIMESTAMP_SPEC,
-            DimensionsSpec.EMPTY,
-            JSONPathSpec.DEFAULT,
-            Collections.emptyMap(),
-            false
-        ),
-        StringUtils.UTF8_STRING
-    );
-
-    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
-        JSONPathSpec.DEFAULT,
-        Collections.emptyMap()
-    );
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
-        inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
-        TransformSpec.NONE,
-        temporaryFolder.newFolder(),
-        InputRowFilter.allowAll(),
-        rowIngestionMeters,
-        parseExceptionHandler
-    );
-    parseAndAssertResult(chunkParser);
-    Assert.assertTrue(inputFormat.props.used);
-  }
 
   @Test
   public void parseEmptyNotEndOfShard() throws IOException
@@ -185,8 +123,7 @@ public class StreamChunkParserTest
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
     );
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        null,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
@@ -208,8 +145,7 @@ public class StreamChunkParserTest
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
     );
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        null,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
@@ -227,20 +163,8 @@ public class StreamChunkParserTest
   @Test
   public void testParseMalformedDataWithAllowedParseExceptions_thenNoException() throws IOException
   {
-    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new JSONParseSpec(
-            TIMESTAMP_SPEC,
-            DimensionsSpec.EMPTY,
-            JSONPathSpec.DEFAULT,
-            Collections.emptyMap(),
-            false
-        ),
-        StringUtils.UTF8_STRING
-    );
-
     final int maxAllowedParseExceptions = 1;
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         mockedByteEntityReader,
         InputRowFilter.allowAll(),
         rowIngestionMeters,
@@ -266,19 +190,7 @@ public class StreamChunkParserTest
   @Test
   public void testParseMalformedDataException() throws IOException
   {
-    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new JSONParseSpec(
-            TIMESTAMP_SPEC,
-            DimensionsSpec.EMPTY,
-            JSONPathSpec.DEFAULT,
-            Collections.emptyMap(),
-            false
-        ),
-        StringUtils.UTF8_STRING
-    );
-
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         mockedByteEntityReader,
         InputRowFilter.allowAll(),
         rowIngestionMeters,
@@ -305,19 +217,7 @@ public class StreamChunkParserTest
   @Test
   public void testParseMalformedDataWithUnlimitedAllowedParseExceptions_thenNoException() throws IOException
   {
-    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new JSONParseSpec(
-            TIMESTAMP_SPEC,
-            DimensionsSpec.EMPTY,
-            JSONPathSpec.DEFAULT,
-            Collections.emptyMap(),
-            false
-        ),
-        StringUtils.UTF8_STRING
-    );
-
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         mockedByteEntityReader,
         InputRowFilter.allowAll(),
         rowIngestionMeters,
@@ -349,20 +249,19 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndNullByteEntityReaderFailToInstantiate()
   {
-    Assert.assertThrows(
-        "Either parser or byteEntityReader should be set",
-        IAE.class,
-        () -> new StreamChunkParser<>(
-            null,
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> new StreamChunkReader<>(
             null,
             InputRowFilter.allowAll(),
             rowIngestionMeters,
             parseExceptionHandler
         )
     );
+    Assert.assertEquals("byteEntityReader must not be null", t.getMessage());
   }
 
-  private void parseAndAssertResult(StreamChunkParser<ByteEntity> chunkParser) throws IOException
+  private void parseAndAssertResult(StreamChunkReader<ByteEntity> chunkParser) throws IOException
   {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
     List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false);

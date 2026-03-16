@@ -385,7 +385,7 @@ Note that it is essentially a map of integer schema ID to avro schema object. Th
 
 ##### SchemaRepo Based Avro Bytes Decoder
 
-This Avro bytes decoder first extracts `subject` and `id` from the input message bytes, and then uses them to look up the Avro schema used to decode the Avro record from bytes. For details, see the [schema repo](https://github.com/schema-repo/schema-repo). You need an HTTP service like schema repo to hold the Avro schema. For information on registering a schema on the message producer side, see `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
+This Avro bytes decoder first extracts `subject` and `id` from the input message bytes, and then uses them to look up the Avro schema used to decode the Avro record from bytes. For details, see the [schema repo](https://github.com/schema-repo/schema-repo). You need an HTTP service like schema repo to hold the Avro schema. For information on registering a schema on the message producer side, see `org.apache.druid.data.input.avro.AvroStreamInputFormatTest#testParse()`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -964,9 +964,7 @@ Each entry in the `fields` list can have the following components:
 ## Parser
 
 :::info
- The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
-and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
-Consider using the [input format](#input-format) instead for these types of ingestion.
+ The Parser is used for [Apache Hadoop batch tasks](./hadoop.md), which is deprecated.
 :::
 
 This section lists all default and core extension parsers.
@@ -1552,207 +1550,6 @@ an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/ti
 }
 ```
 
-### Avro Stream Parser
-
-:::info
- You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
-:::
-
-:::info
- See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
-:::
-
-This parser is for [stream ingestion](./index.md#streaming) and reads Avro data from a stream directly.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Set value to `avro_stream`. | no |
-| avroBytesDecoder | JSON Object | Specifies [`avroBytesDecoder`](#Avro Bytes Decoder) to decode bytes to Avro record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
-
-An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" and "tree" field type is not currently supported for Avro.
-
-For example, using Avro stream parser with schema repo Avro bytes decoder:
-
-```json
-"parser" : {
-  "type" : "avro_stream",
-  "avroBytesDecoder" : {
-    "type" : "schema_repo",
-    "subjectAndIdConverter" : {
-      "type" : "avro_1124",
-      "topic" : "${YOUR_TOPIC}"
-    },
-    "schemaRepository" : {
-      "type" : "avro_1124_rest_client",
-      "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
-    }
-  },
-  "parseSpec" : {
-    "format": "avro",
-    "timestampSpec": <standard timestampSpec>,
-    "dimensionsSpec": <standard dimensionsSpec>,
-    "flattenSpec": <optional>
-  }
-}
-```
-
-### Protobuf Parser
-
-:::info
- You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
-:::
-
-This parser is for [stream ingestion](./index.md#streaming) and reads Protocol buffer data from a stream directly.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Set value to `protobuf`. | yes |
-| `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options. Note that `timeAndDims` `parseSpec` is no longer supported. | yes |
-
-Sample spec:
-
-```json
-"parser": {
-  "type": "protobuf",
-  "protoBytesDecoder": {
-    "type": "file",
-    "descriptor": "file:///tmp/metrics.desc",
-    "protoMessageType": "Metrics"
-  },
-  "parseSpec": {
-    "format": "json",
-    "timestampSpec": {
-      "column": "timestamp",
-      "format": "auto"
-    },
-    "dimensionsSpec": {
-      "dimensions": [
-        "unit",
-        "http_method",
-        "http_code",
-        "page",
-        "metricType",
-        "server"
-      ],
-      "dimensionExclusions": [
-        "timestamp",
-        "value"
-      ]
-    }
-  }
-}
-```
-
-See the [extension description](../development/extensions-core/protobuf.md) for
-more details and examples.
-
-#### Protobuf Bytes Decoder
-
-If `type` is not included, the `protoBytesDecoder` defaults to `schema_registry`.
-
-##### File-based Protobuf Bytes Decoder
-
-This Protobuf bytes decoder first read a descriptor file, and then parse it to get schema used to decode the Protobuf record from bytes.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Set value to `file`. | yes |
-| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
-
-Sample spec:
-
-```json
-"protoBytesDecoder": {
-  "type": "file",
-  "descriptor": "file:///tmp/metrics.desc",
-  "protoMessageType": "Metrics"
-}
-```
-
-#### Inline Descriptor Protobuf Bytes Decoder
-
-This Protobuf bytes decoder allows the user to provide the contents of a Protobuf descriptor file inline, encoded as a Base64 string, and then parse it to get schema used to decode the Protobuf record from bytes.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Set value to `inline`. | yes |
-| descriptorString | String | A compiled Protobuf descriptor, encoded as a Base64 string. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
-
-Sample spec:
-
-```json
-"protoBytesDecoder": {
-  "type": "inline",
-  "descriptorString": <Contents of a Protobuf descriptor file encoded as Base64 string>,
-  "protoMessageType": "Metrics"
-}
-```
-
-##### Confluent Schema Registry-based Protobuf Bytes Decoder
-
-This Protobuf bytes decoder first extracts a unique `id` from input message bytes, and then uses it to look up the schema in the Schema Registry used to decode the Avro record from bytes.
-For details, see the Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Set value to `schema_registry`. | yes |
-| url | String | Specifies the URL endpoint of the Schema Registry. | yes |
-| capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
-| urls | ARRAY\<String\> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md).  | no |
-| headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
-
-For a single schema registry instance, use Field `url` or `urls` for multi instances.
-
-Single Instance:
-
-```json
-...
-"protoBytesDecoder": {
-  "url": <schema-registry-url>,
-  "type": "schema_registry"
-}
-...
-```
-
-Multiple Instances:
-
-```json
-...
-"protoBytesDecoder": {
-  "urls": [<schema-registry-url-1>, <schema-registry-url-2>, ...],
-  "type": "schema_registry",
-  "capacity": 100,
-  "config" : {
-       "basic.auth.credentials.source": "USER_INFO",
-       "basic.auth.user.info": "fred:letmein",
-       "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
-       "schema.registry.ssl.truststore.password": "<password>",
-       "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
-       "schema.registry.ssl.keystore.password": "<password>",
-       "schema.registry.ssl.key.password": "<password>",
-         ... 
-  },
-  "headers": {
-      "traceID" : "b29c5de2-0db4-490b-b421",
-      "timeStamp" : "1577191871865",
-      "druid.dynamic.config.provider":{
-           "type":"mapString", 
-           "config":{
-                "registry.header.prop.1":"value.1", 
-                "registry.header.prop.2":"value.2"
-                }
-           }
-      ...
-  }
-}
-...
-```
 
 ## ParseSpec
 

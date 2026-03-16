@@ -32,14 +32,10 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
-import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -117,27 +113,23 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   private List<Map<String, Object>> mapOfRows;
   private InputSourceSampler inputSourceSampler;
   private ParserType parserType;
-  private boolean useInputFormatApi;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Parameterized.Parameters(name = "parserType = {0}, useInputFormatApi={1}")
+  @Parameterized.Parameters(name = "parserType = {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     OBJECT_MAPPER.registerModules(new SamplerModule().getJacksonModules());
     return ImmutableList.of(
-        new Object[]{ParserType.STR_JSON, false},
-        new Object[]{ParserType.STR_JSON, true},
-        new Object[]{ParserType.STR_CSV, false},
-        new Object[]{ParserType.STR_CSV, true}
+        new Object[]{ParserType.STR_JSON},
+        new Object[]{ParserType.STR_CSV}
     );
   }
 
-  public InputSourceSamplerTest(ParserType parserType, boolean useInputFormatApi)
+  public InputSourceSamplerTest(ParserType parserType)
   {
     this.parserType = parserType;
-    this.useInputFormatApi = useInputFormatApi;
   }
 
   @Before
@@ -285,7 +277,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMissingValueTimestampSpec() throws IOException
+  public void testMissingValueTimestampSpec()
   {
     final TimestampSpec timestampSpec = new TimestampSpec(null, null, DateTimes.of("1970"));
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -394,7 +386,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithTimestampSpec() throws IOException
+  public void testWithTimestampSpec()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -492,7 +484,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithDimensionSpec() throws IOException
+  public void testWithDimensionSpec()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -587,7 +579,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithNoRollup() throws IOException
+  public void testWithNoRollup()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -698,7 +690,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithRollup() throws IOException
+  public void testWithRollup()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -781,7 +773,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithMoreRollup() throws IOException
+  public void testWithMoreRollup()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(ImmutableList.of(StringDimensionSchema.create("dim1")));
@@ -848,7 +840,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithTransformsAutoDimensions() throws IOException
+  public void testWithTransformsAutoDimensions()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -935,7 +927,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithTransformsDimensionsSpec() throws IOException
+  public void testWithTransformsDimensionsSpec()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1008,7 +1000,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithFilter() throws IOException
+  public void testWithFilter()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -1190,9 +1182,9 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
    *
    */
   @Test
-  public void testMultipleJsonStringInOneBlock() throws IOException
+  public void testMultipleJsonStringInOneBlock()
   {
-    if (!ParserType.STR_JSON.equals(parserType) || !useInputFormatApi) {
+    if (!ParserType.STR_JSON.equals(parserType)) {
       return;
     }
 
@@ -1328,7 +1320,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testRowLimiting() throws IOException
+  public void testRowLimiting()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -1363,7 +1355,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxBytesInMemoryLimiting() throws IOException
+  public void testMaxBytesInMemoryLimiting()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -1397,7 +1389,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxClientResponseBytesLimiting() throws IOException
+  public void testMaxClientResponseBytesLimiting()
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
@@ -1466,64 +1458,22 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
   }
 
-  private InputRowParser createInputRowParser(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
-  {
-    switch (parserType) {
-      case STR_JSON:
-        return new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null));
-      case STR_CSV:
-        return new StringInputRowParser(
-            new DelimitedParseSpec(
-                timestampSpec,
-                dimensionsSpec,
-                ",",
-                null,
-                ImmutableList.of("t", "dim1", "dim2", "met1"),
-                false,
-                0
-            )
-        );
-      default:
-        throw new IAE("Unknown parser type: %s", parserType);
-    }
-  }
-
   private DataSchema createDataSchema(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] aggregators,
       @Nullable GranularitySpec granularitySpec,
       @Nullable TransformSpec transformSpec
-  ) throws IOException
+  )
   {
-    if (useInputFormatApi) {
-      return DataSchema.builder()
-                       .withDataSource("sampler")
-                       .withTimestamp(timestampSpec)
-                       .withDimensions(dimensionsSpec)
-                       .withAggregators(aggregators)
-                       .withGranularity(granularitySpec)
-                       .withTransform(transformSpec)
-                       .build();
-    } else {
-      final Map<String, Object> parserMap = getParserMap(createInputRowParser(timestampSpec, dimensionsSpec));
-      return DataSchema.builder()
-                       .withDataSource("sampler")
-                       .withParserMap(parserMap)
-                       .withAggregators(aggregators)
-                       .withGranularity(granularitySpec)
-                       .withTransform(transformSpec)
-                       .withObjectMapper(OBJECT_MAPPER)
-                       .build();
-    }
-  }
-
-  private Map<String, Object> getParserMap(InputRowParser parser) throws IOException
-  {
-    if (useInputFormatApi) {
-      throw new RuntimeException("Don't call this if useInputFormatApi = true");
-    }
-    return OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsBytes(parser), Map.class);
+    return DataSchema.builder()
+                     .withDataSource("sampler")
+                     .withTimestamp(timestampSpec)
+                     .withDimensions(dimensionsSpec)
+                     .withAggregators(aggregators)
+                     .withGranularity(granularitySpec)
+                     .withTransform(transformSpec)
+                     .build();
   }
 
   private InputSource createInputSource(List<String> rows)

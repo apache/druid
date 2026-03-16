@@ -454,8 +454,8 @@ The legacy `dataSchema` spec has below two more components in addition to the on
 #### `parser` (Deprecated)
 
 In legacy `dataSchema`, the `parser` is located in the `dataSchema` → `parser` and is responsible for configuring a wide variety of
-items related to parsing input records. The `parser` is deprecated and it is highly recommended to use `inputFormat` instead.
-For details about `inputFormat` and supported `parser` types, see the ["Data formats" page](data-formats.md).
+items related to parsing input records. The `parser` is only supported by Hadoop ingestion, and is deprecated.
+For details about supported `parser` types, see the ["Data formats" page](data-formats.md).
 
 For details about major components of the `parseSpec`, refer to their subsections:
 
