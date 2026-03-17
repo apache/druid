@@ -116,16 +116,18 @@ On the ingestion side, Druid's primary [ingestion methods](../ingestion/index.md
 
 - Supervised "seekable-stream" ingestion methods like [Kafka](../ingestion/kafka-ingestion.md) and [Kinesis](../ingestion/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its [metadata store](metadata-storage.md) alongside segment metadata, in the same transaction. Note that ingestion of data that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
 discarded, and Druid will resume ingestion from the last committed set of stream offsets. This ensures exactly-once publishing behavior.
+- [SQL REPLACE](../multi-stage-query/reference.md#replace) statements. The controller task publishes all segment metadata when the statement is finished executing.
 - [Native batch ingestion](../ingestion/native-batch.md). In parallel mode, the supervisor task publishes all segment metadata in a single transaction after the subtasks are finished. In simple (single-task) mode, the single task publishes all segment metadata in a single transaction after it is complete.
 
 Additionally, some ingestion methods offer an _idempotency_ guarantee. This means that repeated executions of the same ingestion will not cause duplicate data to be ingested:
 
 - Supervised "seekable-stream" ingestion methods like [Kafka](../ingestion/kafka-ingestion.md) and [Kinesis](../ingestion/kinesis-ingestion.md) are idempotent due to the fact that stream offsets and segment metadata are stored together and updated in lock-step.
+- [SQL REPLACE](../multi-stage-query/reference.md#replace) statements are idempotent unless reading from the same Druid datasource that you are ingesting into. In this case, running the same task twice is non-idempotent, because you are adding to existing data instead of overwriting it.
 - [Native batch ingestion](../ingestion/native-batch.md) is idempotent unless
 [`appendToExisting`](../ingestion/native-batch.md) is true, or one of your input sources is the same Druid datasource that you are ingesting into. In either of these two cases, running the same task twice is non-idempotent, because you are adding to existing data instead of overwriting it.
 
 On the query side, the Druid Broker is responsible for ensuring that a consistent set of segments is involved in a given query. It selects the appropriate set of segment versions to use when the query starts based on what is currently available. This is supported by atomic replacement, a feature that ensures that from a user's perspective, queries flip instantaneously from an older version of data to a newer set of data, with no consistency or performance impact.
-This is used for native batch ingestion when `appendToExisting` is false and compaction.
+This is used for SQL REPLACE statements, native batch ingestion when `appendToExisting` is false, and compaction.
 
 Note that atomic replacement happens for each time chunk individually. If a batch ingestion task or compaction involves multiple time chunks, then each time chunk will undergo atomic replacement soon after the task finishes, but the replacements will not all happen simultaneously.
 
