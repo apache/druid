@@ -25,7 +25,7 @@ title: "Thrift"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-thrift-extensions` in the extensions load list.
 
-This extension enables Druid to ingest Thrift-encoded data from streaming sources such as Kafka and Kinesis, as well as from Hadoop batch jobs reading SequenceFile or LzoThriftBlock files. The binary, compact, and JSON Thrift wire protocols are all supported, with optional Base64 encoding.
+This extension enables Druid to ingest Thrift-encoded data from streaming sources such as Kafka and Kinesis.
 
 You may want to use another version of thrift, change the dependency in pom and compile yourself.
 
@@ -117,57 +117,3 @@ The following Kafka supervisor spec ingests compact-encoded `Book` messages, usi
 }
 ```
 
-## LZO Support
-
-If you plan to read LZO-compressed Thrift files, you will need to download version 0.4.19 of the [hadoop-lzo JAR](https://mvnrepository.com/artifact/com.hadoop.gplcompression/hadoop-lzo/0.4.19) and place it in your `extensions/druid-thrift-extensions` directory.
-
-## Thrift parser (deprecated)
-
-`ThriftInputRowParser` is the legacy parser-based approach to Thrift ingestion. It is deprecated in favor of `ThriftInputFormat` above and will be removed in a future release.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Must be `thrift` | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a JSON parseSpec. | yes |
-| thriftJar | String | Path to the Thrift JAR. If not provided, the class is looked up from the classpath. For Hadoop batch ingestion the JAR should be uploaded to HDFS first and `jobProperties` configured with `"tmpjars":"/path/to/your/thrift.jar"`. | no |
-| thriftClass | String | Fully qualified class name of the Thrift-generated class. | yes |
-
-Batch ingestion example using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` can be either `"org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat"` or `"com.twitter.elephantbird.mapreduce.input.LzoThriftBlockInputFormat"`. When using `LzoThriftBlockInputFormat`, the Thrift class must be provided twice.
-
-```json
-{
-  "type": "index_hadoop",
-  "spec": {
-    "dataSchema": {
-      "dataSource": "book",
-      "parser": {
-        "type": "thrift",
-        "jarPath": "book.jar",
-        "thriftClass": "org.apache.druid.data.input.thrift.Book",
-        "protocol": "compact",
-        "parseSpec": {
-          "format": "json",
-          "timestampSpec": {},
-          "dimensionsSpec": {}
-        }
-      },
-      "metricsSpec": [],
-      "granularitySpec": {}
-    },
-    "ioConfig": {
-      "type": "hadoop",
-      "inputSpec": {
-        "type": "static",
-        "inputFormat": "org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat",
-        "paths": "/user/to/some/book.seq"
-      }
-    },
-    "tuningConfig": {
-      "type": "hadoop",
-      "jobProperties": {
-        "tmpjars": "/user/h_user_profile/du00/druid/test/book.jar"
-      }
-    }
-  }
-}
-```

@@ -35,9 +35,6 @@ import java.util.Map;
 /**
  * The values here should be kept in sync with the values used in the docker-compose files used to bring up the
  * integration-test clusters.
- *
- * integration-tests/docker/docker-compose.base.yml defines most of the hostnames, ports, and addresses, but some
- * might live in the overrides as well.
  */
 public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {

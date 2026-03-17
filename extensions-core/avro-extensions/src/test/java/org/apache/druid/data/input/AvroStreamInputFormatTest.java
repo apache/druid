@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
@@ -46,6 +47,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -72,6 +74,7 @@ import org.schemarepo.api.converter.IntegerConverter;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.ZoneOffset;
@@ -191,6 +194,20 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private TimestampSpec timestampSpec;
   private DimensionsSpec dimensionsSpec;
   private JSONPathSpec flattenSpec;
+
+  public static File createAvroFile(GenericRecord datum)
+      throws IOException
+  {
+    final File tmpDir = FileUtils.createTempDir();
+    File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");
+    try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(
+        new SpecificDatumWriter<>()
+    )) {
+      dataFileWriter.create(SomeAvroDatum.getClassSchema(), someAvroDatumFile);
+      dataFileWriter.append(datum);
+    }
+    return someAvroDatumFile;
+  }
 
   @Before
   public void before()

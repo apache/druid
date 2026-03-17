@@ -87,10 +87,10 @@ public class HdfsInputSource
   // Although the javadocs for SplittableInputSource say to avoid caching splits to reduce memory, HdfsInputSource
   // *does* cache the splits for the following reasons:
   //
-  // 1) It will improve compatibility with the index_hadoop task, allowing people to easily migrate from Hadoop.
+  // 1) It improved compatibility with the now removed index_hadoop task, allowing people to easily migrate from Hadoop.
   //    For example, input paths with globs will be supported (lazily expanding the wildcard glob is tricky).
   //
-  // 2) The index_hadoop task allocates splits eagerly, so the memory usage should not be a problem for anyone
+  // 2) The index_hadoop task allocated splits eagerly, so the memory usage should not be a problem for anyone
   //    migrating from Hadoop.
   @Nullable
   private List<Path> cachedPaths = null;
