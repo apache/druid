@@ -88,6 +88,7 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
     cluster.addCommonProperty("druid.discovery.type", "consul")
            .addCommonProperty("druid.coordinator.selector.type", "consul")
            .addCommonProperty("druid.indexer.selector.type", "consul")
+           .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
            .addCommonProperty("druid.discovery.consul.watch.watchSeconds", "PT5S");
 
     cluster.addCommonProperty("druid.zk.service.enabled", "false")
