@@ -1922,14 +1922,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param startOffsets Starting offsets (last checkpointed)
    * @param endOffsets Ending offsets (latest from stream)
-   * @return Map of partition ID (as String) to offset range [start, end]
+   * @return Map of partition ID to offset range [start, end]
    */
-  public Map<String, Object> calculateSkippedOffsetRanges(
+  public Map<PartitionIdType, Object> calculateSkippedOffsetRanges(
       Map<PartitionIdType, SequenceOffsetType> startOffsets,
       Map<PartitionIdType, SequenceOffsetType> endOffsets
   )
   {
-    Map<String, Object> skippedRanges = new HashMap<>();
+    Map<PartitionIdType, Object> skippedRanges = new HashMap<>();
 
     for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
       PartitionIdType partition = entry.getKey();
@@ -1939,7 +1939,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (startOffset != null) {
         // Both start and end exist - calculate range
         skippedRanges.put(
-            partition.toString(),
+            partition,
             ImmutableMap.of(
                 "start", startOffset,
                 "end", endOffset
@@ -1948,7 +1948,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else {
         // No checkpoint exists for this partition
         skippedRanges.put(
-            partition.toString(),
+            partition,
             ImmutableMap.of(
                 "start", "none",
                 "end", endOffset,

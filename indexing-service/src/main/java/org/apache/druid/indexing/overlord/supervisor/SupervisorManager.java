@@ -424,7 +424,7 @@ public class SupervisorManager
       autoscaler.reset();
     }
 
-    Map<String, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
+    Map<?, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
 
     log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, skippedRanges);
 
