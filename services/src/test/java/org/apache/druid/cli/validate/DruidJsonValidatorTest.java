@@ -135,7 +135,6 @@ public class DruidJsonValidatorTest
             DataSchema.builder()
                       .withDataSource("foo")
                       .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
-                      .withObjectMapper(jsonMapper)
                       .build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),

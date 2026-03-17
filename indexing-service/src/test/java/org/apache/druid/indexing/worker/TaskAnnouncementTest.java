@@ -27,7 +27,6 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +49,7 @@ public class TaskAnnouncementTest
         "theid",
         new TaskResource("rofl", 2),
         new IndexTask.IndexIngestionSpec(
-            DataSchema.builder().withDataSource("foo").withObjectMapper(new DefaultObjectMapper()).build(),
+            DataSchema.builder().withDataSource("foo").build(),
             ioConfig,
             null
         ),

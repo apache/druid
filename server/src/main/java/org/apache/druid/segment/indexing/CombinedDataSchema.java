@@ -55,9 +55,7 @@ public class CombinedDataSchema extends DataSchema
         aggregators,
         granularitySpec,
         transformSpec,
-        projections,
-        null,
-        null
+        projections
     );
     this.multiValuedDimensions = multiValuedDimensions;
   }

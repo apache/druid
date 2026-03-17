@@ -61,7 +61,7 @@ public class TestIndexTask extends IndexTask
         id,
         taskResource,
         new IndexIngestionSpec(
-            DataSchema.builder().withDataSource(dataSource).withObjectMapper(mapper).build(),
+            DataSchema.builder().withDataSource(dataSource).build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),

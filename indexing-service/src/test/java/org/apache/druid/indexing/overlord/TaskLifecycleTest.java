@@ -741,7 +741,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                               ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                           )
                       )
-                      .withObjectMapper(mapper)
                       .build(),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()

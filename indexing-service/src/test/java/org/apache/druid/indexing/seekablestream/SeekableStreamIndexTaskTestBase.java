@@ -42,7 +42,6 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -149,7 +148,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -157,7 +155,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -219,37 +216,31 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
     OBJECT_MAPPER.registerSubtypes(new NamedType(JSONParseSpec.class, "json"));
     OLD_DATA_SCHEMA = DataSchema.builder()
-                                      .withDataSource("test_ds")
-                                      .withParserMap(
-                                          OBJECT_MAPPER.convertValue(
-                                              new StringInputRowParser(
-                                                  new JSONParseSpec(
-                                                      new TimestampSpec("timestamp", "iso", null),
-                                                      new DimensionsSpec(
-                                                          Arrays.asList(
-                                                              new StringDimensionSchema("dim1"),
-                                                              new StringDimensionSchema("dim1t"),
-                                                              new StringDimensionSchema("dim2"),
-                                                              new LongDimensionSchema("dimLong"),
-                                                              new FloatDimensionSchema("dimFloat")
-                                                          )
-                                                      ),
-                                                      new JSONPathSpec(true, ImmutableList.of()),
-                                                      ImmutableMap.of(),
-                                                      false
-                                                  ),
-                                                  StandardCharsets.UTF_8.name()
-                                              ),
-                                              Map.class
-                                          )
-                                      )
-                                      .withAggregators(
-                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
-                                          new CountAggregatorFactory("rows")
-                                      )
-                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                                      .withObjectMapper(OBJECT_MAPPER)
-                                      .build();
+                                .withDataSource("test_ds")
+                                .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                                .withDimensions(
+                                    new DimensionsSpec(
+                                        Arrays.asList(
+                                            new StringDimensionSchema("dim1"),
+                                            new StringDimensionSchema("dim1t"),
+                                            new StringDimensionSchema("dim2"),
+                                            new LongDimensionSchema("dimLong"),
+                                            new FloatDimensionSchema("dimFloat")
+                                        )
+                                    )
+                                )
+                                .withAggregators(
+                                    new DoubleSumAggregatorFactory("met1sum", "met1"),
+                                    new CountAggregatorFactory("rows")
+                                )
+                                .withGranularity(
+                                    new UniformGranularitySpec(
+                                        Granularities.DAY,
+                                        Granularities.NONE,
+                                        null
+                                    )
+                                )
+                                .build();
   }
 
   public SeekableStreamIndexTaskTestBase(

@@ -19,6 +19,8 @@
 
 package org.apache.druid.error;
 
+import javax.annotation.Nullable;
+
 /**
  * A failure type used to make {@link DruidException}s of category
  * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
@@ -47,6 +49,12 @@ public class InvalidInput extends BaseFailure
     if (!condition) {
       throw exception(msg, args);
     }
+  }
+
+  public static <T> T notNull(@Nullable T val, String name)
+  {
+    InvalidInput.conditionalException(val != null, "%s must not be null", name);
+    return val;
   }
 
   /**

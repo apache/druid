@@ -2945,7 +2945,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
+    return DataSchema.builder(dataSchema).build();
   }
 
   @Override
