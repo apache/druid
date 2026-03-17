@@ -57,7 +57,7 @@ You can perform manual compaction where you submit a one-time compaction task fo
 |`segmentGranularity`|Deprecated. Use `granularitySpec`.|No|
 |`tuningConfig`|[Tuning configuration](../ingestion/native-batch.md#tuningconfig) for parallel indexing. `awaitSegmentAvailabilityTimeoutMillis` value is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
 |`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one from existing segments. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
-|`context`|[Task context](../ingestion/tasks.md#context-parameters). For minor compaction (segments `inputSpec`), set `useConcurrentLocks: true`.|No|
+|`context`|[Task context](../ingestion/tasks.md#context-parameters)|No|
 
 :::info
  Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
@@ -123,14 +123,14 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
 The compaction task has two kinds of `inputSpec`:
 
-### Interval `inputSpec`
+### Interval `inputSpec` (Major Compaction)
 
 |Field|Description|Required|
 |-----|-----------|--------|
 |`type`|Task type. Set the value to `interval`.|Yes|
 |`interval`|Interval to compact.|Yes|
 
-### Segments `inputSpec` (native minor compaction)
+### Segments `inputSpec` (Native Minor Compaction)
 
 |Field|Description|Required|
 |-----|-----------|--------|
