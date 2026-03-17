@@ -36,13 +36,6 @@ def main():
     command = "cp -r {}/* {}".format(lib_path, tmp_lib_path)
     subprocess.check_output(command, shell=True).decode('UTF-8')
 
-    # copy hadoop deps to the staging dir
-    hdeps_path = druid_path + "/hadoop-dependencies"
-    tmp_hdeps_path = tmp_path + "/2-hdeps"
-    os.mkdir(tmp_hdeps_path)
-    command = "cp -r {}/* {}".format(hdeps_path, tmp_hdeps_path)
-    subprocess.check_output(command, shell=True).decode('UTF-8')
-
 
     # copy all extension folders to the staging dir
     ext_path = druid_path + "/extensions"

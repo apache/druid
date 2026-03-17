@@ -65,13 +65,6 @@ as data analysis and partitioning depending on the task specification. Segment g
 `SinglePhaseSubTask.java`, `PartialHashSegmentGenerateTask.java`, or `PartialRangeSegmentGenerateTask.java` through
 `BatchAppenderator`, and the persist and hand-off logic is in `BatchAppenderatorDriver.java`.
 
-## Hadoop-based Batch Ingestion
-
-The two main Hadoop indexing classes are `HadoopDruidDetermineConfigurationJob.java` for the job to determine how many Druid
-segments to create, and `HadoopDruidIndexerJob.java`, which creates Druid segments.
-
-At some point in the future, we may move the Hadoop ingestion code out of core Druid.
-
 ## Internal UIs
 
 Druid currently has two internal UIs. One is for the Coordinator and one is for the Overlord.

@@ -26,8 +26,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.joda.time.Period;
 
-import java.util.Map;
-
 public class KafkaIndexDataFormatsTest extends StreamIndexDataFormatsTestBase
 {
   private final KafkaResource kafka = new KafkaResource();
@@ -36,26 +34,6 @@ public class KafkaIndexDataFormatsTest extends StreamIndexDataFormatsTestBase
   protected StreamIngestResource<?> getStreamResource()
   {
     return kafka;
-  }
-
-  @Override
-  public SupervisorSpec createSupervisorWithParser(String dataSource, String topic, Map<String, Object> parserMap)
-  {
-    return MoreResources.Supervisor.KAFKA_JSON
-        .get()
-        .withDataSchema(
-            schema -> schema
-                .withTimestamp(new TimestampSpec("timestamp", null, null))
-                .withParserMap(parserMap)
-        )
-        .withIoConfig(
-            ioConfig -> ioConfig
-                .withInputFormat(null)
-                .withConsumerProperties(kafka.consumerProperties())
-                .withSupervisorRunPeriod(Period.millis(10))
-        )
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
-        .build(dataSource, topic);
   }
 
   @Override

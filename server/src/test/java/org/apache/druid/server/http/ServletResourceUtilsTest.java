@@ -32,9 +32,13 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
 import javax.ws.rs.core.Response;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServletResourceUtilsTest
 {
@@ -101,5 +105,30 @@ public class ServletResourceUtilsTest
         RuntimeException.class,
         () -> ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(new ISE(""), () -> "abc")
     );
+  }
+
+  @Test
+  public void test_createAsyncTimeoutListener() throws Exception
+  {
+    final AtomicInteger timeoutCount = new AtomicInteger(0);
+    final AsyncListener listener = ServletResourceUtils.createAsyncTimeoutListener(
+        event -> timeoutCount.incrementAndGet()
+    );
+
+    // Verify that onTimeout updates the count
+    final AsyncEvent event = Mockito.mock(AsyncEvent.class);
+    listener.onTimeout(event);
+    Assert.assertEquals(1, timeoutCount.get());
+    listener.onTimeout(event);
+    Assert.assertEquals(2, timeoutCount.get());
+
+    // Verify that other actions on the listener are noop
+    timeoutCount.set(0);
+    listener.onStartAsync(event);
+    listener.onComplete(event);
+    listener.onError(event);
+
+    Assert.assertEquals(0, timeoutCount.get());
+    Mockito.verifyNoInteractions(event);
   }
 }
