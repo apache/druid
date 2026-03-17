@@ -39,7 +39,7 @@ import java.util.Objects;
  * <p>
  * By publishing both maps together as a single atomic snapshot (using {@link java.util.concurrent.atomic.AtomicReference}),
  * readers (such as lag metrics and supervisor status) always observe a coherent and consistent view.
- * This produces stable and monotonic lag trends, avoiding artifacts like temporary negative lags.
+ * This produces stable, non-negative lag values over time, avoiding artifacts like temporary negative lags.
  *
  * <p>
  * This class is generic and can be reused by all seekable-stream supervisors (Kafka, Kinesis, etc.).

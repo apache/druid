@@ -38,9 +38,9 @@ public class OffsetSnapshotTest
     );
 
     Assert.assertTrue(snapshot.getHighestIngestedOffsets().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
     Assert.assertTrue(snapshot.getLatestOffsetsFromStream().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
   }
 
   @Test
@@ -49,9 +49,9 @@ public class OffsetSnapshotTest
     OffsetSnapshot<Integer, Long> snapshot = OffsetSnapshot.of(null, null);
 
     Assert.assertTrue(snapshot.getHighestIngestedOffsets().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
     Assert.assertTrue(snapshot.getLatestOffsetsFromStream().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
   }
 
   @Test
@@ -62,7 +62,7 @@ public class OffsetSnapshotTest
     OffsetSnapshot<Integer, Long> snapshot = OffsetSnapshot.of(null, endOffsets);
 
     Assert.assertTrue(snapshot.getHighestIngestedOffsets().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getHighestIngestedOffsets());
     Assert.assertEquals(endOffsets, snapshot.getLatestOffsetsFromStream());
   }
 
@@ -75,7 +75,7 @@ public class OffsetSnapshotTest
 
     Assert.assertEquals(currentOffsets, snapshot.getHighestIngestedOffsets());
     Assert.assertTrue(snapshot.getLatestOffsetsFromStream().isEmpty());
-    Assert.assertSame(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
+    Assert.assertEquals(ImmutableMap.of(), snapshot.getLatestOffsetsFromStream());
   }
 
   @Test

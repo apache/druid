@@ -506,9 +506,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   /**
-   * Fetches the latest offsets from the Kafka stream and updates the map
-   * {@link #latestSequenceFromStream}. The actual lag is computed lazily in
-   * {@link #getPartitionRecordLag}.
+   * Fetches latest stream offsets, combines with the highest ingested offsets into a snapshot,
+   * and atomically updates {@link #offsetSnapshotRef}.
+   * <p>
+   * Lag is computed consistently from the snapshot in downstream methods.
+   * </p>
    */
   @Override
   protected void updatePartitionLagFromStream()
