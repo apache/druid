@@ -154,7 +154,7 @@ public class DartWorkerRunnerTest
   public void test_getWorkersResponse_empty()
   {
     final GetWorkersResponse workersResponse = workerRunner.getWorkersResponse();
-    Assertions.assertEquals(new GetWorkersResponse(Collections.emptyList()), workersResponse);
+    Assertions.assertEquals(new GetWorkersResponse(Collections.emptyList(), 0L), workersResponse);
   }
 
   @Test
