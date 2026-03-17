@@ -21,8 +21,6 @@ package org.apache.druid.testing.embedded.compact;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
-import org.apache.druid.client.BrokerServerView;
-import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -53,7 +51,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -92,12 +89,10 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.tools.EventSerializer;
-import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
@@ -114,7 +109,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -252,7 +246,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingest1kRecords();
 
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
-    waitSegmentsAvailableInBroker();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(2000, getTotalRowCount());
 
@@ -279,7 +273,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     pauseCompaction(dayGranularityConfig);
 
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
-    waitSegmentsAvailableInBroker();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(2000, getTotalRowCount());
 
@@ -290,7 +284,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingest1kRecords();
 
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
-    waitSegmentsAvailableInBroker();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(4000, getTotalRowCount());
 
@@ -837,32 +831,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .filter(segment -> !segment.isTombstone())
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
-  }
-
-  private void waitSegmentsAvailableInBroker()
-  {
-    Set<SegmentId> segments = overlord
-        .bindings()
-        .segmentsMetadataStorage()
-        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
-        .stream()
-        .map(DataSegment::getId)
-        .collect(Collectors.toSet());
-
-    ITRetryUtil.retryUntilEquals(
-        () ->
-            broker.bindings()
-                  .getInstance(BrokerServerView.class)
-                  .getTimeline(TableDataSource.create(dataSource))
-                  .get()
-                  .iterateAllObjects()
-                  .stream()
-                  .map(ServerSelector::getSegment)
-                  .map(DataSegment::getId)
-                  .collect(Collectors.toSet()).containsAll(segments),
-        true,
-        "wait until segments are available in broker"
-    );
   }
 
   private void runIngestionAtGranularity(
