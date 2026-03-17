@@ -123,25 +123,27 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
 The compaction task has two kinds of `inputSpec`:
 
-### Interval `inputSpec` (Major Compaction)
+### Interval `inputSpec`
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `interval`.|Yes|
+|`type`|Task type. Set the value to `interval` to trigger native-engine major compaction.|Yes|
 |`interval`|Interval to compact.|Yes|
 
-### Segments `inputSpec` (Native Minor Compaction)
+### Segments `inputSpec`
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `segments`.|Yes|
+|`type`|Task type. Set the value to `segments` to trigger native-engine minor compaction.|Yes|
 |`segments`|A list of segment IDs.|Yes|
+
+Note: MSQ compaction does not support segments `inputSpec`. Use `MinorCompactionInputSpec` (type: uncompacted) for MSQ minor compaction.
 
 When using the segments `inputSpec`, the task compacts only the specified segments. Segments in the same interval that are not in the spec are upgraded in place rather than compacted. This allows compacting a subset of segments while preserving others.
 
+There are some requirements when triggering a native minor compaction:
 - Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE (TIME_CHUNK) locks over the entire interval.
 - `dropExisting: true` is allowed with segments `inputSpec`; the task replaces only the compacted segments.
-- MSQ compaction does not support segments `inputSpec`. Use `MinorCompactionInputSpec` (type: uncompacted) for MSQ minor compaction.
 
 ## Compaction dimensions spec
 
