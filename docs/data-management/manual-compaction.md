@@ -134,7 +134,7 @@ The compaction task has two kinds of `inputSpec`:
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `uncompacted` to trigger native-engine minor compaction.|Yes|
+|`type`|Task type. Set the value to `uncompacted` to trigger minor compaction.|Yes|
 |`interval`|Interval to compact.|Yes|
 |`uncompactedSegments`|A list of segment descriptors.|Yes|
 
