@@ -91,7 +91,7 @@ public class EmbeddedSSLAuthResource implements EmbeddedResource
   private void copyScriptsToDirectory(File targetDir)
   {
     try {
-      FileUtils.copyDirectory(new File("../integration-tests/docker/tls"), targetDir);
+      FileUtils.copyDirectory(new File("./tls"), targetDir);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

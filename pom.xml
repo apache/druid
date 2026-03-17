@@ -196,7 +196,6 @@
         <module>multi-stage-query</module>
         <module>services</module>
         <module>sql</module>
-        <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->

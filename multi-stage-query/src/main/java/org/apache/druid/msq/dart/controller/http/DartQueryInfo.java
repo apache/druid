@@ -32,6 +32,7 @@ import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.QueryInfo;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -48,6 +49,9 @@ public class DartQueryInfo implements QueryInfo
   private final DateTime startTime;
   private final String state;
 
+  @Nullable
+  private final Long durationMs;
+
   @JsonCreator
   public DartQueryInfo(
       @JsonProperty("sqlQueryId") final String sqlQueryId,
@@ -57,7 +61,8 @@ public class DartQueryInfo implements QueryInfo
       @JsonProperty("authenticator") final String authenticator,
       @JsonProperty("identity") final String identity,
       @JsonProperty("startTime") final DateTime startTime,
-      @JsonProperty("state") final String state
+      @JsonProperty("state") final String state,
+      @JsonProperty("durationMs") @Nullable final Long durationMs
   )
   {
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
@@ -68,6 +73,7 @@ public class DartQueryInfo implements QueryInfo
     this.identity = identity;
     this.startTime = startTime;
     this.state = state;
+    this.durationMs = durationMs;
   }
 
   public static DartQueryInfo fromControllerHolder(final ControllerHolder holder)
@@ -80,7 +86,8 @@ public class DartQueryInfo implements QueryInfo
         holder.getAuthenticationResult().getAuthenticatedBy(),
         holder.getAuthenticationResult().getIdentity(),
         holder.getStartTime(),
-        holder.getState().getStatusString()
+        holder.getState().getStatusString(),
+        null
     );
   }
 
@@ -152,6 +159,17 @@ public class DartQueryInfo implements QueryInfo
     return startTime;
   }
 
+  /**
+   * Duration of this query in milliseconds, or null if not yet known.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Long getDurationMs()
+  {
+    return durationMs;
+  }
+
   @Override
   @JsonProperty
   public String state()
@@ -172,11 +190,19 @@ public class DartQueryInfo implements QueryInfo
   }
 
   /**
+   * Returns a copy of this instance with the given durationMs.
+   */
+  public DartQueryInfo withDurationMs(@Nullable final Long durationMs)
+  {
+    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, authenticator, identity, startTime, state, durationMs);
+  }
+
+  /**
    * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
    */
   public DartQueryInfo withoutAuthenticationResult()
   {
-    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, null, null, startTime, state);
+    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, null, null, startTime, state, durationMs);
   }
 
   @Override
@@ -196,13 +222,14 @@ public class DartQueryInfo implements QueryInfo
            && Objects.equals(authenticator, that.authenticator)
            && Objects.equals(identity, that.identity)
            && Objects.equals(startTime, that.startTime)
-           && Objects.equals(state, that.state);
+           && Objects.equals(state, that.state)
+           && Objects.equals(durationMs, that.durationMs);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sqlQueryId, dartQueryId, sql, controllerHost, authenticator, identity, startTime, state);
+    return Objects.hash(sqlQueryId, dartQueryId, sql, controllerHost, authenticator, identity, startTime, state, durationMs);
   }
 
   @Override
@@ -217,6 +244,7 @@ public class DartQueryInfo implements QueryInfo
            ", identity='" + identity + '\'' +
            ", startTime=" + startTime +
            ", state='" + state + '\'' +
+           ", durationMs=" + durationMs +
            '}';
   }
 }

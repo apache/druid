@@ -363,7 +363,7 @@
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>simple-client-sslcontext</artifactId>
-      <version>${parent.version}</version>
+      <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <!-- Pin protobuf-java-util to the version from druid-protobuf-extensions to satisfy

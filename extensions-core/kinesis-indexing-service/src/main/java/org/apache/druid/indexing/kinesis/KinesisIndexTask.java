@@ -110,11 +110,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
   protected SeekableStreamIndexTaskRunner<String, String, KinesisRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new KinesisIndexTaskRunner(
-        this,
-        dataSchema.getParser(),
-        lockGranularityToUse
-    );
+    return new KinesisIndexTaskRunner(this, lockGranularityToUse);
   }
 
   @Override
