@@ -17,24 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.client.indexing;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.joda.time.Interval;
 
 /**
+ * Client side equivalent of {@code CompactionInputSpec}. Required since the
+ * {@code CompactionInputSpec} resides in {@code indexing-service} module.
  */
-public interface Monitor
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = ClientCompactionIntervalSpec.TYPE, value = ClientCompactionIntervalSpec.class),
+    @JsonSubTypes.Type(name = ClientMinorCompactionInputSpec.TYPE, value = ClientMinorCompactionInputSpec.class)
+})
+public interface ClientCompactionInputSpec
 {
-  void start();
-
-  void stop();
-
   /**
-   * Emit metrics using the given emitter. May be called from two separate threads: the scheduling thread and
-   * a lifecycle thread that is shutting down monitors. Therefore, this method must be thread-safe.
-   *
-   * @return true if this monitor needs to continue monitoring. False otherwise.
+   * @return non-null Interval that this input spec operates on.
    */
-  boolean monitor(ServiceEmitter emitter);
+  Interval getInterval();
 }
