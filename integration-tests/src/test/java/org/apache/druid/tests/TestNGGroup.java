@@ -27,29 +27,6 @@ public class TestNGGroup
 {
 
   /**
-   * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
-   */
-  public static final String S3_DEEP_STORAGE = "s3-deep-storage";
-
-  /**
-   * This group is not part of CI. To run this group, gcs configs/credentials for your gcs must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
-   * The path to the folder that contains your GOOGLE_APPLICATION_CREDENTIALS file must also be pass
-   * to mvn with -Dresource.file.dir.path=<PATH_TO_FOLDER>
-   */
-  public static final String GCS_DEEP_STORAGE = "gcs-deep-storage";
-
-  /**
-   * This group is not part of CI. To run this group, azure configs/credentials for your azure must be provided in a file.
-   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/azures for env vars to provide.
-   */
-  public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
-
-  /**
    * This group is not part of CI. To run this group, hadoop configs must be provided in a file. The path of the file
    * must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
    * See integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
