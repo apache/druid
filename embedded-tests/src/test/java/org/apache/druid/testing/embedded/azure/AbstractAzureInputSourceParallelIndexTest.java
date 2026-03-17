@@ -25,7 +25,6 @@ import org.apache.druid.storage.azure.output.AzureStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
 import org.junit.Assert;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -67,18 +66,6 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
       LOG.error(e, "Unable to upload files to azure");
       // Fail if exception
       Assertions.fail();
-    }
-  }
-
-  @AfterAll
-  public void deleteDataFilesFromAzure()
-  {
-    try {
-      // Deleting uploaded data files
-      azure.deleteStorageContainer();
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete container in azure");
     }
   }
 

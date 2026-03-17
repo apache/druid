@@ -25,11 +25,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
+import org.apache.druid.indexing.common.config.TaskConfig;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -38,15 +35,13 @@ import java.util.Map;
  * reasons in the event we come across any of these tasks.
  */
 @Deprecated
-public class HadoopIndexTaskStub extends AbstractBatchIndexTask
+public class HadoopIndexTaskStub extends AbstractTask
 {
   public static final String TYPE = "index_hadoop";
 
-  private final String id;
   private final Map<String, Object> spec;
   private final List<String> hadoopDependencyCoordinates;
   private final String classpathPrefix;
-  private final Map<String, Object> context;
 
   @JsonCreator
   public HadoopIndexTaskStub(
@@ -64,13 +59,11 @@ public class HadoopIndexTaskStub extends AbstractBatchIndexTask
         context,
         IngestionMode.NONE
     );
-    this.id = id;
     this.spec = spec;
     this.hadoopDependencyCoordinates = hadoopCoordinates != null
                                        ? List.of(hadoopCoordinates)
                                        : hadoopDependencyCoordinates;
     this.classpathPrefix = classpathPrefix;
-    this.context = context;
   }
 
   @JsonProperty("spec")
@@ -105,38 +98,13 @@ public class HadoopIndexTaskStub extends AbstractBatchIndexTask
   }
 
   @Override
-  public boolean requireLockExistingSegments()
-  {
-    throw noHadoop();
-  }
-
-  @Override
-  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    throw noHadoop();
-  }
-
-  @Override
-  public boolean isPerfectRollup()
-  {
-    throw noHadoop();
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity()
+  public void stopGracefully(TaskConfig taskConfig)
   {
     throw noHadoop();
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox)
-  {
-    throw noHadoop();
-  }
-
-  @Override
-  protected Map<String, Object> getTaskCompletionRowStats()
   {
     throw noHadoop();
   }

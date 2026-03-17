@@ -355,15 +355,15 @@ const Redirects=[
     "to": "/docs/latest/ingestion/hadoop"
   },
   {
-    "from": "/docs/development/extensions-contrib/materialized-view",
+    "from": "/docs/latest/development/extensions-contrib/materialized-view",
     "to": "/docs/latest/ingestion/hadoop"
   },
   {
-    "from": "/docs/tutorials/tutorial-batch-hadoop",
+    "from": "/docs/latest/tutorials/tutorial-batch-hadoop",
     "to": "/docs/latest/ingestion/hadoop"
   },
   {
-    "from": "/docs/operations/use_sbt_to_build_fat_jar",
+    "from": "/docs/latest/operations/use_sbt_to_build_fat_jar",
     "to": "/docs/latest/ingestion/hadoop"
   }
 ]

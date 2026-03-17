@@ -29,5 +29,5 @@ Support for Apache Hadoop-based ingestion was removed from Apache Druid 37.0.0. 
 The associated `materialized-view-selection` and `materialized-view-maintenance` contrib extensions were also removed
 as part of this since they only supported Hadoop based ingestion.
 
-Note that Druid still supports using `druid-hdfs-storage` as deep storage and other Hadoop ecosystem extensions and
+Note that Druid still supports using [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as deep storage and other Hadoop ecosystem extensions and
 functionality that was not specific to Hadoop-based ingestion.
