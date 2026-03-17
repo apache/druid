@@ -63,5 +63,4 @@ public class SpecificSegmentsSpecTest
         10
     );
   }
-
 }
