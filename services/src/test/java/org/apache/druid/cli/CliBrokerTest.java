@@ -22,6 +22,7 @@ package org.apache.druid.cli;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerServerView;
@@ -29,10 +30,12 @@ import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.CustomTierSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.LowestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.PooledTierSelectorStrategy;
 import org.apache.druid.client.selector.PreferredTierSelectorStrategy;
 import org.apache.druid.client.selector.PreferredTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
+import org.apache.druid.client.selector.StrictTierSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
@@ -267,6 +270,164 @@ public class CliBrokerTest
 
     Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
     Assert.assertSame(realtimeBalancer, historicalBalancer);
+  }
+
+  @Test
+  public void testRealtimeStrictStrategy()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.realtime.select.tier", "strict");
+    properties.setProperty("druid.broker.realtime.select.tier.strict.priorities", "[2,1,0]");
+    properties.setProperty("druid.broker.balancer.type", "random");
+
+    final Injector injector = makeBrokerInjector(properties);
+
+    final TierSelectorStrategy realtime = injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+
+    Assert.assertTrue(realtime instanceof StrictTierSelectorStrategy);
+    Assert.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
+
+    // Historical should use default (highest priority)
+    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
+
+    final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
+        Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+  }
+
+  @Test
+  public void testStrictStrategyForHistoricalAndRealtimeServers()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.select.tier", "strict");
+    properties.setProperty("druid.broker.select.tier.strict.priorities", "[0,1]");
+    properties.setProperty("druid.broker.balancer.type", "random");
+
+    properties.setProperty("druid.broker.realtime.select.tier", "strict");
+    properties.setProperty("druid.broker.realtime.select.tier.strict.priorities", "[2,1,0]");
+    properties.setProperty("druid.broker.realtime.balancer.type", "connectionCount");
+
+    final Injector injector = makeBrokerInjector(properties);
+    final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
+    final TierSelectorStrategy realtime = injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+
+    Assert.assertTrue(historical instanceof StrictTierSelectorStrategy);
+    Assert.assertEquals(List.of(0, 1), ((StrictTierSelectorStrategy) historical).getConfig().getPriorities());
+
+    Assert.assertTrue(realtime instanceof StrictTierSelectorStrategy);
+    Assert.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
+  }
+
+  @Test
+  public void testEmptyStrictPrioritiesThrowsException()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.select.tier", "strict");
+    properties.setProperty("druid.broker.realtime.select.tier", "strict");
+
+    final Injector injector = makeBrokerInjector(properties);
+    ProvisionException e1 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
+    Assert.assertTrue(e1.getMessage().contains(
+        "Problem parsing object at prefix[druid.broker.select.tier.strict]: Cannot construct instance of"
+        + " `StrictTierSelectorStrategyConfig`, problem: priorities must be non-empty when using strict tier selector on the Broker. Found priorities[null]."
+    ));
+
+    ProvisionException e2 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    ));
+    Assert.assertTrue(e2.getMessage().contains(
+        "Problem parsing object at prefix[druid.broker.realtime.select.tier.strict]: Cannot construct instance of"
+        + " `StrictTierSelectorStrategyConfig`, problem: priorities must be non-empty when using strict tier selector on the Broker. Found priorities[null]."
+    ));
+  }
+
+  @Test
+  public void testHistoricalAndRealtimePooledStrategies()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.select.tier", "pooled");
+    properties.setProperty("druid.broker.select.tier.pooled.priorities", "[0]");
+    properties.setProperty("druid.broker.balancer.type", "random");
+
+    properties.setProperty("druid.broker.realtime.select.tier", "pooled");
+    properties.setProperty("druid.broker.realtime.select.tier.pooled.priorities", "[2,1]");
+    properties.setProperty("druid.broker.realtime.balancer.type", "connectionCount");
+
+    final Injector injector = makeBrokerInjector(properties);
+    final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
+    final TierSelectorStrategy realtime = injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+
+    // Verify tier selector strategies with strategy-specific config paths
+    Assert.assertTrue(historical instanceof PooledTierSelectorStrategy);
+    Assert.assertEquals(Set.of(0), ((PooledTierSelectorStrategy) historical).getConfig().getPriorities());
+
+    Assert.assertTrue(realtime instanceof PooledTierSelectorStrategy);
+    Assert.assertEquals(Set.of(2, 1), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
+
+    // Verify different server selector strategies
+    final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
+    final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
+        Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+
+    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    Assert.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
+  }
+
+  @Test
+  public void testRealtimePooledStrategy()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.realtime.select.tier", "pooled");
+    properties.setProperty("druid.broker.realtime.select.tier.pooled.priorities", "[2,1,0]");
+    properties.setProperty("druid.broker.balancer.type", "random");
+
+    final Injector injector = makeBrokerInjector(properties);
+
+    final TierSelectorStrategy realtime = injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+
+    Assert.assertTrue(realtime instanceof PooledTierSelectorStrategy);
+    Assert.assertEquals(Set.of(2, 1, 0), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
+
+    // Historical should use default (highest priority)
+    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
+
+    final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
+        Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    );
+    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+  }
+
+  @Test
+  public void testEmptyPooledPrioritiesThrowsException()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.broker.select.tier", "pooled");
+    properties.setProperty("druid.broker.realtime.select.tier", "pooled");
+
+    final Injector injector = makeBrokerInjector(properties);
+    ProvisionException e1 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
+    Assert.assertTrue(e1.getMessage().contains(
+        "Problem parsing object at prefix[druid.broker.select.tier.pooled]: Cannot construct instance of"
+        + " `PooledTierSelectorStrategyConfig`, problem: priorities must be non-empty when using pooled tier selector on the Broker. Found priorities[null]."
+    ));
+
+    ProvisionException e2 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(
+        Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
+    ));
+    Assert.assertTrue(e2.getMessage().contains(
+        "Problem parsing object at prefix[druid.broker.realtime.select.tier.pooled]: Cannot construct instance of"
+        + " `PooledTierSelectorStrategyConfig`, problem: priorities must be non-empty when using pooled tier selector on the Broker. Found priorities[null]."
+    ));
   }
 
   private Injector makeBrokerInjector(final Properties props)

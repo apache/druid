@@ -95,15 +95,18 @@ public interface MetadataStorageActionHandler
   TaskInfo getTaskInfo(String entryId);
 
   /**
-   * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
-   * <p>
-   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
-   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
-   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
-   * All lookups should be processed atomically if there are more than one lookup is given.
+   * Returns tasks from the metadata store matching the given filters.
+   * <ul>
+   *   <li>{@link TaskLookupType#ACTIVE} returns all active tasks (not yet complete).</li>
+   *   <li>{@link TaskLookupType#COMPLETE} returns completed tasks sorted by creation time descending
+   *       (most recent first). For complete tasks, {@link TaskLookup.CompleteTaskLookup} provides
+   *       optional filters for maximum count and creation time cutoff.</li>
+   * </ul>
+   * Multiple lookups are processed atomically.
    *
-   * @param taskLookups task lookup type and filters.
-   * @param datasource  datasource filter
+   * @param taskLookups map of task lookup types to their filters
+   * @param datasource  optional datasource filter; if null, includes all datasources
+   * @return list of {@link TaskInfo} objects (task, status, and creation time) matching the criteria
    */
   List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,

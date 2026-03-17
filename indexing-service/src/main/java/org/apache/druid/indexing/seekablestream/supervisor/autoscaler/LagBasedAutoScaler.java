@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +44,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(LagBasedAutoScaler.class);
-  private final String dataSource;
   private final CircularFifoQueue<Long> lagMetricsQueue;
   private final ScheduledExecutorService lagComputationExec;
   private final ScheduledExecutorService allocationExec;
@@ -56,15 +57,17 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
   public LagBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
-      String dataSource,
       LagBasedAutoScalerConfig autoScalerConfig,
       SupervisorSpec spec,
       ServiceEmitter emitter
   )
   {
     this.lagBasedAutoScalerConfig = autoScalerConfig;
+    final String dataSource = CollectionUtils.getOnlyElement(
+        spec.getDataSources(),
+        xs -> DruidException.defensive("Expected one dataSource, got[%s]", xs)
+    );
     final String supervisorId = StringUtils.format("Supervisor-%s", dataSource);
-    this.dataSource = dataSource;
     final int slots = (int) (lagBasedAutoScalerConfig.getLagCollectionRangeMillis() / lagBasedAutoScalerConfig
         .getLagCollectionIntervalMillis()) + 1;
     this.lagMetricsQueue = new CircularFifoQueue<>(slots);
@@ -74,6 +77,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisor = supervisor;
     this.emitter = emitter;
     metricBuilder = ServiceMetricEvent.builder()
+                                      .setDimension(DruidMetrics.SUPERVISOR_ID, spec.getId())
                                       .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                       .setDimension(DruidMetrics.STREAM, this.supervisor.getIoConfig().getStream());
   }
@@ -88,7 +92,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         desiredTaskCount = computeDesiredTaskCount(new ArrayList<>(lagMetricsQueue));
       }
       catch (Exception ex) {
-        log.warn(ex, "Exception while computing desired task count for [%s]", dataSource);
+        log.warn(ex, "Exception while computing desired task count for supervisor[%s]", spec.getId());
       }
       finally {
         LOCK.unlock();
@@ -102,7 +106,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         lagMetricsQueue.clear();
       }
       catch (Exception ex) {
-        log.warn(ex, "Exception while clearing lags for [%s]", dataSource);
+        log.warn(ex, "Exception while clearing lags for supervisor[%s]", spec.getId());
       }
       finally {
         LOCK.unlock();
@@ -123,11 +127,11 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     log.info(
-        "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
+        "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for supervisor[%s]",
         lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(),
         lagMetricsQueue.maxSize(),
         lagBasedAutoScalerConfig.getLagCollectionRangeMillis(),
-        dataSource
+        spec.getId()
     );
   }
 
@@ -178,9 +182,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
           } else {
             lagMetricsQueue.offer(0L);
           }
-          log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
+          log.debug("Current lags for supervisor[%s] are [%s].", spec.getId(), lagMetricsQueue);
         } else {
-          log.debug("Supervisor[%s] is suspended, skipping lag collection", dataSource);
+          log.debug("Supervisor[%s] is suspended, skipping lag collection", spec.getId());
         }
       }
       catch (Exception e) {
@@ -212,7 +216,11 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     // if the supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
-    log.debug("Computing the desired task count for [%s], based on following lags : [%s]", dataSource, lags);
+    log.debug(
+        "Computing the desired task count for supervisor[%s], based on following lags : [%s]",
+        spec.getId(),
+        lags
+    );
     int beyond = 0;
     int within = 0;
     int metricsCount = lags.size();
@@ -227,15 +235,15 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     double beyondProportion = beyond * 1.0 / metricsCount;
     double withinProportion = within * 1.0 / metricsCount;
 
-    log.debug("Calculated beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion,
-        withinProportion, dataSource
+    log.debug("Calculated beyondProportion is [%s] and withinProportion is [%s] for supervisor[%s].", beyondProportion,
+        withinProportion, spec.getId()
     );
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
     int desiredActiveTaskCount;
     int partitionCount = supervisor.getPartitionCount();
     if (partitionCount <= 0) {
-      log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+      log.warn("Partition number for supervisor[%s] <= 0 ? how can it be?", spec.getId());
       return -1;
     }
 
@@ -245,8 +253,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
       int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMax) {
-        log.debug("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
-            dataSource
+        log.debug(
+            "CurrentActiveTaskCount reached task count Max limit, skipping scale out action for supervisor[%s].",
+            spec.getId()
         );
         emitter.emit(metricBuilder
                          .setDimension(
@@ -266,8 +275,10 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
       int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMin) {
-        log.debug("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource[%s].",
-            dataSource
+        log.debug(
+            "CurrentActiveTaskCount reached task count Min limit[%d], skipping scale in action for supervisor[%s].",
+            actualTaskCountMin,
+            spec.getId()
         );
         emitter.emit(metricBuilder
                          .setDimension(

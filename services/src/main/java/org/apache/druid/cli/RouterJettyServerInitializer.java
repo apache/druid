@@ -55,6 +55,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 {
   private static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/status/health",
+      "/status/ready",
       // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
       // performing the auth checks.

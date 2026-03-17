@@ -23,12 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Map;
-
-import static org.easymock.EasyMock.mock;
 
 public class MSQPartitionAssignmentTest
 {
@@ -42,7 +43,13 @@ public class MSQPartitionAssignmentTest
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidPartition()
   {
-    Map<Integer, SegmentIdWithShardSpec> allocations = ImmutableMap.of(-1, mock(SegmentIdWithShardSpec.class));
+    SegmentIdWithShardSpec segmentId = new SegmentIdWithShardSpec(
+        "ds",
+        new Interval(0, 1, ISOChronology.getInstanceUTC()),
+        "v1",
+        new NumberedShardSpec(0, 1)
+    );
+    Map<Integer, SegmentIdWithShardSpec> allocations = ImmutableMap.of(-1, segmentId);
     new MSQPartitionAssignment(ClusterByPartitions.oneUniversalPartition(), allocations);
   }
 

@@ -34,6 +34,7 @@ import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME;
@@ -56,6 +57,7 @@ public class CostBasedAutoScalerTest
     SeekableStreamSupervisorIOConfig mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSupervisorSpec.getId()).thenReturn("test-supervisor");
+    when(mockSupervisorSpec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
 
@@ -433,6 +435,7 @@ public class CostBasedAutoScalerTest
     SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(spec.getId()).thenReturn("s-up");
+    when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("stream");
 
@@ -477,9 +480,11 @@ public class CostBasedAutoScalerTest
     SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(spec.isSuspended()).thenReturn(false);
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
     when(supervisor.computeLagStats()).thenReturn(new LagStats(100, 100, 100));
     // No task stats means the moving average rate is unavailable
     when(supervisor.getStats()).thenReturn(Collections.emptyMap());

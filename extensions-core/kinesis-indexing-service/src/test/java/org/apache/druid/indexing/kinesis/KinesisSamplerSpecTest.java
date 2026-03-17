@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,14 +26,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -60,14 +55,13 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public class KinesisSamplerSpecTest extends EasyMockSupport
 {
@@ -111,9 +105,9 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             stream,
             "1",
             "6",
-            Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")))))
+            Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")))))
         ),
-        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))))
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))))
     );
   }
 
@@ -170,87 +164,6 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     );
 
     runSamplerAndCompareResponse(samplerSpec, true);
-  }
-
-  @Test
-  public void testSampleWithInputRowParser() throws IOException, InterruptedException
-  {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim1t"),
-            new StringDimensionSchema("dim2"),
-            new LongDimensionSchema("dimLong"),
-            new FloatDimensionSchema("dimFloat")
-        )
-    );
-    InputRowParser parser = new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, JSONPathSpec.DEFAULT, null, null), "UTF8");
-
-    DataSchema dataSchema = DataSchema.builder()
-                                      .withDataSource("test_ds")
-                                      .withParserMap(
-                                          objectMapper.readValue(objectMapper.writeValueAsBytes(parser), Map.class)
-                                      )
-                                      .withAggregators(
-                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
-                                          new CountAggregatorFactory("rows")
-                                      )
-                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                                      .withObjectMapper(objectMapper)
-                                      .build();
-
-    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
-        null,
-        null,
-        dataSchema,
-        null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
-    KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
-        supervisorSpec,
-        new SamplerConfig(5, null, null, null),
-        new InputSourceSampler(new DefaultObjectMapper()),
-        null
-    );
-
-    runSamplerAndCompareResponse(samplerSpec, false);
   }
 
   @Test
@@ -434,7 +347,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   private static List<KinesisRecordEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
-      return Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
+      return Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
           ImmutableMap.builder()
               .put("timestamp", ts)
               .put("dim1", dim1)
@@ -448,6 +361,16 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static KinesisClientRecord buildKinesisClientRecord(ByteBuffer data)
+  {
+    return KinesisClientRecord.builder()
+        .data(data)
+        .partitionKey("key")
+        .sequenceNumber("0")
+        .approximateArrivalTimestamp(Instant.now())
+        .build();
   }
 
   private class TestableKinesisSamplerSpec extends KinesisSamplerSpec

@@ -388,6 +388,16 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Inserts entries into the upgrade_segments table for segments that need to be upgraded
+   * to a new version when a REPLACE task finishes using {@link #commitReplaceSegments}.
+   *
+   * @param segmentToReplaceLock map from segment to its corresponding REPLACE lock, identifying
+   *                             which segments should be upgraded when the lock's task completes
+   * @return number of entries successfully inserted into the upgrade_segments table
+   */
+  int insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock);
+
+  /**
    * Commits segments and corresponding schema created by a REPLACE task.
    * This method also handles the segment upgrade scenarios that may result
    * from concurrent append and replace.

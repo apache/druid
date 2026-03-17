@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -88,10 +89,12 @@ public abstract class SeekableStreamSupervisorIOConfig
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
     this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
-    // if autoscaler is enabled, then taskCount will be ignored here and initial taskCount will equal to taskCountStart/taskCountMin
     if (autoScalerEnabled) {
-      final Integer startTaskCount = autoScalerConfig.getTaskCountStart();
-      this.taskCount = startTaskCount != null ? startTaskCount : autoScalerConfig.getTaskCountMin();
+      // Priority: taskCountStart > taskCount > taskCountMin
+      this.taskCount = Configs.valueOrDefault(
+          autoScalerConfig.getTaskCountStart(),
+          Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
+      );
     } else {
       this.taskCount = taskCount != null ? taskCount : 1;
     }

@@ -35,6 +35,8 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
@@ -169,4 +171,35 @@ public class BrokerClientImplTest
     );
   }
 
+  @Test
+  public void testUpdateCoordinatorDynamicConfig() throws Exception
+  {
+    final CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    assertEquals(true, brokerClient.updateCoordinatorDynamicConfig(config).get());
+  }
+
+  @Test
+  public void testUpdateBrokerDynamicConfig() throws Exception
+  {
+    final BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/broker")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    assertEquals(true, brokerClient.updateBrokerDynamicConfig(config).get());
+  }
 }
