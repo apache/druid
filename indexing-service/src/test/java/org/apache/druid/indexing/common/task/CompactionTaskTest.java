@@ -41,9 +41,9 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -72,7 +72,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.NativeCompactionRunner.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -102,6 +101,7 @@ import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFa
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexIO;
@@ -1207,9 +1207,7 @@ public class CompactionTaskTest
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
     // Spec includes a segment ID that does not exist in metadata - validation should fail
-    final List<String> segmentIds = new ArrayList<>(
-        SEGMENTS.stream().map(s -> s.getId().toString()).collect(Collectors.toList())
-    );
+    final List<String> segmentIds = SEGMENTS.stream().map(s -> s.getId().toString()).collect(Collectors.toList());
     segmentIds.add(DATA_SOURCE + "_2020-01-01T00:00:00.000Z_2020-02-01T00:00:00.000Z_x_0");
     final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
@@ -2040,15 +2038,6 @@ public class CompactionTaskTest
         .build();
   }
 
-  /**
-   * Scenario:
-   * - Multiple segments exist in the same interval with non-consecutive partition numbers (0, 2, 4, 6, 7, 8, 10, 12)
-   * - We want to compact only segments 6,7,8 (which ARE consecutive)
-   *
-   * Per minor compaction PRD: findSegmentsToLock() must return ALL segments in the interval (no filtering)
-   * so that we can lock the entire interval with TIME_CHUNK/REPLACE lock. Non-compacted segments are upgraded.
-   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
-   */
   @Test
   public void testFindSegmentsToLockReturnsAllSegmentsForSpecificSegmentsSpec() throws Exception
   {
@@ -2091,10 +2080,6 @@ public class CompactionTaskTest
     Assert.assertEquals(8, segmentsToLock.size());
   }
 
-  /**
-   * When SpecificSegmentsSpec + useConcurrentLocks: true, compaction uses REPLACE mode which forces TIME_CHUNK lock.
-   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
-   */
   @Test
   public void testSpecificSegmentsSpecUsesTimeChunkLockWithConcurrentLocks() throws Exception
   {
@@ -2119,7 +2104,7 @@ public class CompactionTaskTest
     final TaskActionClient segmentAwareClient = new TaskActionClient()
     {
       @Override
-      public <RetType> RetType submit(TaskAction<RetType> action) throws java.io.IOException
+      public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
       {
         if (action instanceof RetrieveUsedSegmentsAction) {
           return (RetType) segments;
@@ -2132,9 +2117,6 @@ public class CompactionTaskTest
     Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
   }
 
-  /**
-   * Native compaction subtasks must use TIME_CHUNK lock (enforced via context from createContextForSubtask).
-   */
   @Test
   public void testNativeCompactionSubtaskUsesTimeChunkLock() throws Exception
   {
@@ -2166,7 +2148,7 @@ public class CompactionTaskTest
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         ImmutableMap.of(
-            new org.apache.druid.query.spec.MultipleIntervalSegmentSpec(ImmutableList.of(testInterval)),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(testInterval)),
             dataSchema
         ),
         toolbox,
@@ -2194,7 +2176,7 @@ public class CompactionTaskTest
     final TaskActionClient segmentAwareClient = new TaskActionClient()
     {
       @Override
-      public <RetType> RetType submit(TaskAction<RetType> action) throws java.io.IOException
+      public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
       {
         if (action instanceof RetrieveUsedSegmentsAction) {
           return (RetType) segments;
@@ -2210,11 +2192,6 @@ public class CompactionTaskTest
     );
   }
 
-  /**
-   * SegmentProvider.checkSegments() with TIME_CHUNK + SpecificSegmentsSpec must allow subset:
-   * specified segments must exist; non-specified segments are upgraded, not validated as missing.
-   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
-   */
   @Test
   public void testSegmentProviderCheckSegmentsAllowsSubsetForTimeChunk() throws Exception
   {
@@ -2236,9 +2213,6 @@ public class CompactionTaskTest
     provider.checkSegments(LockGranularity.TIME_CHUNK, allSegments);
   }
 
-  /**
-   * NativeCompactionRunner.createIoConfig passes segment IDs to DruidInputSource when using SpecificSegmentsSpec.
-   */
   @Test
   public void testDruidInputSourceReceivesSegmentIdsForSpecificSegmentsSpec()
   {
@@ -2272,7 +2246,7 @@ public class CompactionTaskTest
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         ImmutableMap.of(
-            new org.apache.druid.query.spec.MultipleIntervalSegmentSpec(ImmutableList.of(interval)),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(interval)),
             dataSchema
         ),
         toolbox,

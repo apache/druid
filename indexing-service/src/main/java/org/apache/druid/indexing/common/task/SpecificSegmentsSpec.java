@@ -84,13 +84,13 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   @Override
   public Interval findInterval(String dataSource)
   {
-    final List<SegmentId> segmentIds = segments
+    final List<Interval> intervals = segments
         .stream()
         .map(segment -> SegmentId.tryParse(dataSource, segment))
+        .filter(Objects::nonNull)
+        .map(SegmentId::getInterval)
         .collect(Collectors.toList());
-    return JodaUtils.umbrellaInterval(
-        segmentIds.stream().map(SegmentId::getInterval).collect(Collectors.toList())
-    );
+    return JodaUtils.umbrellaInterval(intervals);
   }
 
   @Override

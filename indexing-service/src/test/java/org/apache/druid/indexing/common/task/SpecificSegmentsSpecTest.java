@@ -27,7 +27,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,11 +36,6 @@ import java.util.stream.IntStream;
 
 public class SpecificSegmentsSpecTest
 {
-  /**
-   * validateSegments() with TIME_CHUNK must allow subset: specified segments exist in thoseSegments;
-   * thoseSegments may contain additional segments (non-specified will be upgraded).
-   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
-   */
   @Test
   public void testValidateSegmentsTimeChunkAllowsSubset()
   {
@@ -50,12 +45,11 @@ public class SpecificSegmentsSpecTest
         .collect(Collectors.toList());
     // Spec has only first 2 segments (subset)
     final SpecificSegmentsSpec spec = new SpecificSegmentsSpec(
-        ImmutableList.of(
+        new ArrayList<>(List.of(
             allSegments.get(0).getId().toString(),
             allSegments.get(1).getId().toString()
-        ).stream().collect(Collectors.toList())
+        ))
     );
-    // thoseSegments = all 4 segments in interval. Subset check: thoseSegments.containsAll(spec.segments)
     Assert.assertTrue(
         spec.validateSegments(LockGranularity.TIME_CHUNK, allSegments)
     );

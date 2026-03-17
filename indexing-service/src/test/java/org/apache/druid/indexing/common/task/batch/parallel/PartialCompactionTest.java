@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -51,7 +52,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,7 +75,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   public PartialCompactionTest()
   {
-    super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(LockGranularity.TIME_CHUNK, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
   @Before
@@ -141,6 +141,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     final CompactionTask compactionTask = newCompactionTaskBuilder()
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
@@ -201,6 +202,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     final CompactionTask compactionTask = newCompactionTaskBuilder()
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
@@ -218,7 +220,6 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   /**
    * End-to-end minor compaction: compact a subset of segments with useConcurrentLocks (TIME_CHUNK).
    * Non-compacted segments in the interval are upgraded via MarkSegmentToUpgradeAction.
-   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
    */
   @Test
   public void testMinorCompactionUpgradesNonCompactedSegments()
