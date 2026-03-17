@@ -41,9 +41,9 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.common.guava.SettableSupplier;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -62,13 +62,16 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.NativeCompactionRunner.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -358,6 +361,9 @@ public class CompactionTaskTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
+  public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private StubServiceEmitter emitter;
 
@@ -2037,74 +2043,171 @@ public class CompactionTaskTest
    * - Multiple segments exist in the same interval with non-consecutive partition numbers (0, 2, 4, 6, 7, 8, 10, 12)
    * - We want to compact only segments 6,7,8 (which ARE consecutive)
    *
-   * This test demonstrates:
-   * 1. findSegmentsToLock() correctly filters to only the specified segments
-   * 2. The filtered segments (6, 7, 8) are consecutive and would pass validation
-   * 3. If ALL segments were validated, it would fail because of gaps (e.g., between 0 and 2)
+   * Per minor compaction PRD: findSegmentsToLock() must return ALL segments in the interval (no filtering)
+   * so that we can lock the entire interval with TIME_CHUNK/REPLACE lock. Non-compacted segments are upgraded.
+   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
    */
   @Test
-  public void testSpecificSegmentsSpecFiltersSegmentsInFindSegmentsToLock() throws Exception
+  public void testFindSegmentsToLockReturnsAllSegmentsForSpecificSegmentsSpec() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
     final String version = "2024-11-17T23:49:06.823Z";
 
-    // Create segments with non-consecutive partition numbers in the same interval
-    // This simulates the real-world scenario where segments 0, 2, 4, 6, 7, 8, 10, 12 exist
     final List<DataSegment> allSegmentsInInterval = new ArrayList<>();
-
-    // Add segments with gaps: 0, 2, 4, 6, 7, 8, 10, 12
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 0));
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 2));
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 4));
-
     final DataSegment segment6 = createSegmentWithPartition(testInterval, version, 6);
     final DataSegment segment7 = createSegmentWithPartition(testInterval, version, 7);
     final DataSegment segment8 = createSegmentWithPartition(testInterval, version, 8);
     allSegmentsInInterval.add(segment6);
     allSegmentsInInterval.add(segment7);
     allSegmentsInInterval.add(segment8);
-
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 10));
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 12));
 
-    // Verify that if we validate ALL segments, it would fail due to non-consecutive rootPartitionId ranges
-    Assert.assertThrows(
-        ISE.class,
-        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(allSegmentsInInterval)
-    );
-
-    // Use ArrayList instead of ImmutableList because SpecificSegmentsSpec constructor sorts the list in-place
     final SpecificSegmentsSpec specificSegmentsSpec = new SpecificSegmentsSpec(
-        new ArrayList<>(
-            ImmutableList.of(
-                segment6.getId().toString(),
-                segment7.getId().toString(),
-                segment8.getId().toString()
-            )
-        )
+        new ArrayList<>(ImmutableList.of(
+            segment6.getId().toString(),
+            segment7.getId().toString(),
+            segment8.getId().toString()
+        ))
     );
 
-    // Create CompactionTask with SpecificSegmentsSpec using Builder
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(specificSegmentsSpec)
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
-    // Create TaskActionClient that returns ALL segments in the interval
-    // This simulates what RetrieveUsedSegmentsAction would return
     final TestTaskActionClient taskActionClient = new TestTaskActionClient(allSegmentsInInterval);
 
-    // Verify that findSegmentsToLock() returns only the 3 specific segments, not all segments
+    // Verify findSegmentsToLock() returns ALL segments in interval (no filtering)
     final List<DataSegment> segmentsToLock = compactionTask.findSegmentsToLock(
         taskActionClient,
         ImmutableList.of(testInterval)
     );
-    Assert.assertEquals(3, segmentsToLock.size());
+    Assert.assertEquals(8, segmentsToLock.size());
+  }
 
-    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 6));
-    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 7));
-    Assert.assertTrue(segmentsToLock.stream().anyMatch(s -> s.getShardSpec().getPartitionNum() == 8));
+  /**
+   * When SpecificSegmentsSpec + useConcurrentLocks: true, compaction uses REPLACE mode which forces TIME_CHUNK lock.
+   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
+   */
+  @Test
+  public void testSpecificSegmentsSpecUsesTimeChunkLockWithConcurrentLocks() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> segments = ImmutableList.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1)
+    );
+    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
 
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segmentsToLock);
+    final CompactionTask task = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+        .inputSpec(spec)
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+
+    taskActionTestKit.getTaskLockbox().add(task);
+    final TaskActionClient taskActionClient = new LocalTaskActionClient(
+        task,
+        taskActionTestKit.getTaskActionToolbox()
+    );
+    // Use a client that returns segments for RetrieveUsedSegmentsAction - wrap to inject segments
+    final TaskActionClient segmentAwareClient = new TaskActionClient()
+    {
+      @Override
+      public <RetType> RetType submit(TaskAction<RetType> action) throws java.io.IOException
+      {
+        if (action instanceof RetrieveUsedSegmentsAction) {
+          return (RetType) segments;
+        }
+        return taskActionClient.submit(action);
+      }
+    };
+    task.determineLockGranularityAndTryLock(segmentAwareClient, ImmutableList.of(testInterval));
+
+    Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
+  }
+
+  /**
+   * SegmentProvider.checkSegments() with TIME_CHUNK + SpecificSegmentsSpec must allow subset:
+   * specified segments must exist; non-specified segments are upgraded, not validated as missing.
+   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
+   */
+  @Test
+  public void testSegmentProviderCheckSegmentsAllowsSubsetForTimeChunk() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> allSegments = ImmutableList.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1),
+        createSegmentWithPartition(testInterval, "v1", 2)
+    );
+    final SpecificSegmentsSpec spec = new SpecificSegmentsSpec(
+        new ArrayList<>(ImmutableList.of(allSegments.get(0).getId().toString(), allSegments.get(1).getId().toString()))
+    );
+
+    final SegmentProvider provider = new SegmentProvider(DATA_SOURCE, spec);
+    final TestTaskActionClient client = new TestTaskActionClient(allSegments);
+    provider.findSegments(client);
+
+    // Should not throw: specified segments (0,1) exist; segment 2 is not in spec but is in interval (will be upgraded)
+    provider.checkSegments(LockGranularity.TIME_CHUNK, allSegments);
+  }
+
+  /**
+   * NativeCompactionRunner.createIoConfig passes segment IDs to DruidInputSource when using SpecificSegmentsSpec.
+   */
+  @Test
+  public void testDruidInputSourceReceivesSegmentIdsForSpecificSegmentsSpec()
+  {
+    final Interval interval = Intervals.of("2024-01-01/2024-01-02");
+    final List<DataSegment> segments = ImmutableList.of(
+        createSegmentWithPartition(interval, "v1", 0),
+        createSegmentWithPartition(interval, "v1", 1)
+    );
+    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
+
+    final DataSchema dataSchema = DataSchema.builder()
+        .withDataSource(DATA_SOURCE)
+        .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+        .withDimensions(
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("dim1"),
+                    new StringDimensionSchema("dim2")
+                )
+            )
+        )
+        .withGranularity(
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.HOUR,
+                false,
+                ImmutableList.of(interval)
+            )
+        )
+        .build();
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
+        ImmutableMap.of(
+            new org.apache.druid.query.spec.MultipleIntervalSegmentSpec(ImmutableList.of(interval)),
+            dataSchema
+        ),
+        toolbox,
+        new CompactionIOConfig(spec, false, null),
+        new PartitionConfigurationManager(null),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+    Assert.assertEquals(1, ingestionSpecs.size());
+    final InputSource inputSource = ingestionSpecs.get(0).getIOConfig().getInputSource();
+    Assert.assertTrue(inputSource instanceof DruidInputSource);
+    final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
+    Assert.assertNotNull(druidInputSource.getSegmentIds());
+    Assert.assertEquals(2, druidInputSource.getSegmentIds().size());
   }
 
   private DataSegment createSegmentWithPartition(Interval interval, String version, int partitionNum)

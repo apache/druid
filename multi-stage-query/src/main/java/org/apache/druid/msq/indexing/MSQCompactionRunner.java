@@ -163,7 +163,7 @@ public class MSQCompactionRunner implements CompactionRunner
     if (compactionTask.getIoConfig().getInputSpec() instanceof SpecificSegmentsSpec) {
       return CompactionConfigValidationResult.failure(
           "MSQ: Minor compaction with SpecificSegmentsSpec is not supported. "
-          + "Use the native compaction engine for compacting specific segments."
+          + "Use MinorCompactionInputSpec (type: uncompacted) for MSQ minor compaction."
       );
     }
     if (intervalToDataSchemaMap.size() > 1) {

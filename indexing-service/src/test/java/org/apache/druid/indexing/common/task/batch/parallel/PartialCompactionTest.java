@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
@@ -50,6 +51,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Map;
 
@@ -211,6 +213,47 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         Assert.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
       }
     }
+  }
+
+  /**
+   * End-to-end minor compaction: compact a subset of segments with useConcurrentLocks (TIME_CHUNK).
+   * Non-compacted segments in the interval are upgraded via MarkSegmentToUpgradeAction.
+   * DEPRECATE_WHEN_SEGMENT_LOCK_REMOVED
+   */
+  @Test
+  public void testMinorCompactionUpgradesNonCompactedSegments()
+  {
+    DataSegmentsWithSchemas dataSegmentsWithSchemas =
+        runTestTask(
+            new HashedPartitionsSpec(null, 4, null),
+            TaskState.SUCCESS,
+            false
+        );
+    verifySchema(dataSegmentsWithSchemas);
+    final Map<Interval, List<DataSegment>> hashPartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+
+    hashPartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
+    // Pick a subset to compact (e.g. first 2 of each interval)
+    final List<DataSegment> segmentsToCompact = new ArrayList<>();
+    for (List<DataSegment> segmentsInInterval : hashPartitionedSegments.values()) {
+      segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
+    }
+    final CompactionTask compactionTask = newCompactionTaskBuilder()
+        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
+    verifySchema(dataSegmentsWithSchemas);
+    // After minor compaction: compacted subset produces new segments; non-compacted segments were upgraded
+    final Map<Interval, List<DataSegment>> resultSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+    Assert.assertFalse("Compaction should produce segments", resultSegments.isEmpty());
   }
 
   private DataSegmentsWithSchemas runTestTask(

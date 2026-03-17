@@ -82,7 +82,8 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
         .sorted()
         .collect(Collectors.toList());
     if (lockGranularityInUse == LockGranularity.TIME_CHUNK) {
-      return this.segments.equals(thoseSegments);
+      // Subset check: specified segments must exist in thoseSegments; extra segments are upgraded
+      return thoseSegments.containsAll(segments);
     } else {
       return thoseSegments.containsAll(segments);
     }

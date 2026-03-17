@@ -57,7 +57,7 @@ You can perform manual compaction where you submit a one-time compaction task fo
 |`segmentGranularity`|Deprecated. Use `granularitySpec`.|No|
 |`tuningConfig`|[Tuning configuration](../ingestion/native-batch.md#tuningconfig) for parallel indexing. `awaitSegmentAvailabilityTimeoutMillis` value is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
 |`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one from existing segments. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
-|`context`|[Task context](../ingestion/tasks.md#context-parameters)|No|
+|`context`|[Task context](../ingestion/tasks.md#context-parameters). For minor compaction (segments `inputSpec`), set `useConcurrentLocks: true`.|No|
 
 :::info
  Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
@@ -130,12 +130,18 @@ The compaction task has two kinds of `inputSpec`:
 |`type`|Task type. Set the value to `interval`.|Yes|
 |`interval`|Interval to compact.|Yes|
 
-### Segments `inputSpec`
+### Segments `inputSpec` (native minor compaction)
 
 |Field|Description|Required|
 |-----|-----------|--------|
 |`type`|Task type. Set the value to `segments`.|Yes|
 |`segments`|A list of segment IDs.|Yes|
+
+When using the segments `inputSpec`, the task compacts only the specified segments. Segments in the same interval that are not in the spec are upgraded in place rather than compacted. This allows compacting a subset of segments while preserving others.
+
+- Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE (TIME_CHUNK) locks over the entire interval.
+- `dropExisting: true` is allowed with segments `inputSpec`; the task replaces only the compacted segments.
+- MSQ compaction does not support segments `inputSpec`. Use `MinorCompactionInputSpec` (type: uncompacted) for MSQ minor compaction.
 
 ## Compaction dimensions spec
 

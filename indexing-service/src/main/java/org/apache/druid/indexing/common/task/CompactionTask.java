@@ -229,14 +229,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
-    // Validate that dropExisting is not used with SpecificSegmentsSpec.
-    // dropExisting replaces ALL segments in the interval, which contradicts minor compaction intent.
-    if (this.ioConfig.getInputSpec() instanceof SpecificSegmentsSpec && this.ioConfig.isDropExisting()) {
-      throw new IAE(
-          "Cannot use dropExisting with SpecificSegmentsSpec. "
-          + "Minor compaction (compacting specific segments) is incompatible with replacing all segments in the interval."
-      );
-    }
 
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
@@ -479,17 +471,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     List<DataSegment> allSegmentsInInterval = ImmutableList.copyOf(
         taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals))
     );
-
-    // When using SpecificSegmentsSpec, only return the specific segments requested.
-    // This ensures that validation only checks the segments being compacted, not all segments in the interval.
-    if (ioConfig.getInputSpec() instanceof SpecificSegmentsSpec) {
-      SpecificSegmentsSpec spec = (SpecificSegmentsSpec) ioConfig.getInputSpec();
-      Set<String> specificSegmentIds = new HashSet<>(spec.getSegments());
-      return allSegmentsInInterval
-          .stream()
-          .filter(segment -> specificSegmentIds.contains(segment.getId().toString()))
-          .collect(Collectors.toList());
-    }
 
     return allSegmentsInInterval;
   }
@@ -1338,6 +1319,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
         uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
+      } else if (inputSpec instanceof SpecificSegmentsSpec) {
+        minorCompaction = true;
+        uncompactedSegments = ((SpecificSegmentsSpec) inputSpec).getSegments()
+            .stream()
+            .map(segmentIdString -> {
+              SegmentId segmentId = SegmentId.tryParse(dataSource, segmentIdString);
+              return segmentId != null ? segmentId.toDescriptor() : null;
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
       } else {
         minorCompaction = false;
         uncompactedSegments = null;
