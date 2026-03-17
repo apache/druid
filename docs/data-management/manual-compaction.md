@@ -170,7 +170,7 @@ The required segment descriptor fields can be retrieved from the "Segments" sect
 When using the uncompacted `inputSpec`, the task compacts only the specified segments. Segments in the same interval that are not in the spec are upgraded in place rather than compacted. This allows compacting a subset of segments while preserving others.
 
 There are some requirements when triggering a native minor compaction:
-- Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE (TIME_CHUNK) locks over the entire interval.
+- Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE locks over the entire interval.
 - `dropExisting: true` is allowed with segments `inputSpec`; the task replaces only the compacted segments.
 
 ### Segment `inputSpec`
