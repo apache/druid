@@ -21,6 +21,8 @@ package org.apache.druid.testing.embedded.compact;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
+import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -51,6 +53,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -111,6 +114,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -837,24 +841,26 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void waitSegmentsAvailableInBroker()
   {
-    List<String> segments = overlord
+    Set<SegmentId> segments = overlord
         .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
         .stream()
         .map(DataSegment::getId)
-        .map(SegmentId::toString)
-        .map(s -> StringUtils.format("'%s'", s))
-        .toList();
+        .collect(Collectors.toSet());
 
     ITRetryUtil.retryUntilEquals(
         () ->
-            Numbers.parseInt(cluster.callApi()
-                                    .runSql(
-                                        "select count(*) from sys.segments where segment_id in (%s)",
-                                        String.join(", ", segments)
-                                    )),
-        segments.size(),
+            broker.bindings()
+                  .getInstance(BrokerServerView.class)
+                  .getTimeline(TableDataSource.create(dataSource))
+                  .get()
+                  .iterateAllObjects()
+                  .stream()
+                  .map(ServerSelector::getSegment)
+                  .map(DataSegment::getId)
+                  .collect(Collectors.toSet()).containsAll(segments),
+        true,
         "wait until segments are available in broker"
     );
   }
