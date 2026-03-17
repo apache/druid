@@ -35,9 +35,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
+ * Used only for native engine-based minor compaction.
+ * <p>
  * Compaction input spec that targets specific segments by ID.
- * Used for native engine-based minor compaction: the timeline is built from all segments in the interval,
- * and segments not in this spec are upgraded (no physical re-compaction).
+ * The timeline is built from all segments in the interval. Segments in the interval, 
+ * but not specified in the spec, are upgraded with no physical re-compaction.
  */
 public class SpecificSegmentsSpec implements CompactionInputSpec
 {
@@ -70,7 +72,6 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
 
   /**
    * Parses segment IDs to descriptors for minor compaction (compact vs upgrade partitioning).
-   * Invalid IDs are filtered out.
    */
   List<SegmentDescriptor> getSegmentDescriptors(String dataSource)
   {

@@ -1287,7 +1287,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   /**
    * Provides segment discovery and validation for compaction.
    * For minor compaction (SpecificSegmentsSpec, MinorCompactionInputSpec), finds all segments
-   * in the interval and partitions them into compact vs upgrade via {@link #shouldUpgradeSegment}.
+   * in the interval and partitions them into 'compact and upgrade metadata' vs 'upgrade metadata only' via {@link #shouldUpgradeSegment}.
    */
   @VisibleForTesting
   static class SegmentProvider
@@ -1325,10 +1325,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
     }
 
-    /**
-     * Returns all segments in the interval. For minor compaction (SpecificSegmentsSpec, MinorCompactionInputSpec),
-     * partitioning into compact vs upgrade is done via {@link #shouldUpgradeSegment}.
-     */
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
       return new ArrayList<>(
@@ -1338,16 +1334,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
     }
 
-    /**
-     * Validates that the specified segments exist in the latest segments. For TIME_CHUNK and minor compaction,
-     * the caller passes the full interval set from {@code findSegments}.
-     */
     void checkSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments)
     {
       if (latestSegments.isEmpty()) {
         throw new ISE("No segments found for compaction. Please check that datasource name and interval are correct.");
       }
-
       if (!inputSpec.validateSegments(lockGranularityInUse, latestSegments)) {
         throw new ISE(
             "Specified segments in the spec are different from the current used segments. "
