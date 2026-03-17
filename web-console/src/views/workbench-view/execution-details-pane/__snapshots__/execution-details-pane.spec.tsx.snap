@@ -722,6 +722,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
+          "workers": {
+            "0": [
+              {
+                "durationMs": -1,
+                "pendingMs": -1,
+                "state": "FAILED",
+                "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+              },
+            ],
+          },
         }
       }
     />
@@ -1354,6 +1364,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
+          "workers": {
+            "0": [
+              {
+                "durationMs": -1,
+                "pendingMs": -1,
+                "state": "FAILED",
+                "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+              },
+            ],
+          },
         }
       }
       goToTask={[Function]}
@@ -2031,6 +2051,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
             "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
         ],
+        "workers": {
+          "0": [
+            {
+              "durationMs": -1,
+              "pendingMs": -1,
+              "state": "FAILED",
+              "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+            },
+          ],
+        },
       }
     }
   />
