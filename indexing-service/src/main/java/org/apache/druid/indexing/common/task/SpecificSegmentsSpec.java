@@ -34,7 +34,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * @deprecated Use {@link MinorCompactionInputSpec} for minor compaction in both native and MSQ engines.
+ * @deprecated Use {@link MinorCompactionInputSpec} for minor compaction instead.
  */
 @Deprecated
 public class SpecificSegmentsSpec implements CompactionInputSpec
@@ -54,7 +54,6 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   @JsonCreator
   public SpecificSegmentsSpec(@JsonProperty("segments") List<String> segments)
   {
-    Preconditions.checkArgument(segments != null && !segments.isEmpty(), "Segments must not be null or empty");
     this.segments = segments;
     // Sort segments to use in validateSegments.
     Collections.sort(this.segments);
@@ -69,13 +68,13 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   @Override
   public Interval findInterval(String dataSource)
   {
-    final List<Interval> intervals = segments
+    final List<SegmentId> segmentIds = segments
         .stream()
         .map(segment -> SegmentId.tryParse(dataSource, segment))
-        .filter(Objects::nonNull)
-        .map(SegmentId::getInterval)
         .collect(Collectors.toList());
-    return JodaUtils.umbrellaInterval(intervals);
+    return JodaUtils.umbrellaInterval(
+        segmentIds.stream().map(SegmentId::getInterval).collect(Collectors.toList())
+    );
   }
 
   @Override
@@ -86,8 +85,11 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
         .map(segment -> segment.getId().toString())
         .sorted()
         .collect(Collectors.toList());
-
-    return thoseSegments.containsAll(segments);
+    if (lockGranularityInUse == LockGranularity.TIME_CHUNK) {
+      return this.segments.equals(thoseSegments);
+    } else {
+      return thoseSegments.containsAll(segments);
+    }
   }
 
   @Override
