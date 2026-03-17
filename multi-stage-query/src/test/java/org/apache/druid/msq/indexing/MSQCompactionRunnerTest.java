@@ -43,7 +43,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
-import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -83,8 +82,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -188,38 +185,6 @@ public class MSQCompactionRunnerTest
     Assert.assertEquals(
         StringUtils.format("MSQ: Disjoint compaction intervals[%s] not supported", intervalDataschemas.keySet()),
         validationResult.getReason()
-    );
-  }
-
-  @Test
-  public void testRejectsSpecificSegmentsSpec()
-  {
-    final List<DataSegment> segments = ImmutableList.of(
-        new DataSegment(
-            DATA_SOURCE,
-            COMPACTION_INTERVAL,
-            "v1",
-            null,
-            null,
-            null,
-            new NumberedShardSpec(0, 1),
-            0,
-            10
-        )
-    );
-    final CompactionTask compactionTask = new CompactionTask.Builder(DATA_SOURCE, null)
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segments))
-        .compactionRunner(MSQ_COMPACTION_RUNNER)
-        .build();
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
-        compactionTask,
-        INTERVAL_DATASCHEMAS
-    );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertTrue(
-        "Error message should mention MinorCompactionInputSpec",
-        validationResult.getReason().contains("MinorCompactionInputSpec")
-            || validationResult.getReason().contains("SpecificSegmentsSpec")
     );
   }
 

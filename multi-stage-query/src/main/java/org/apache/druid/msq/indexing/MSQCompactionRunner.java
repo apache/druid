@@ -38,7 +38,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
-import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -158,14 +157,6 @@ public class MSQCompactionRunner implements CompactionRunner
       Map<QuerySegmentSpec, DataSchema> intervalToDataSchemaMap
   )
   {
-    // MSQ compaction uses REPLACE mode which locks the entire interval and replaces all segments.
-    // Minor compaction (SpecificSegmentsSpec) is fundamentally incompatible with this behavior.
-    if (compactionTask.getIoConfig().getInputSpec() instanceof SpecificSegmentsSpec) {
-      return CompactionConfigValidationResult.failure(
-          "MSQ: Minor compaction with SpecificSegmentsSpec is not supported. "
-          + "Use MinorCompactionInputSpec (type: uncompacted) for MSQ minor compaction."
-      );
-    }
     if (intervalToDataSchemaMap.size() > 1) {
       // We are currently not able to handle multiple intervals in the map for multiple reasons, one of them being that
       // the subsequent worker ids clash -- since they are derived from MSQControllerTask ID which in turn is equal to

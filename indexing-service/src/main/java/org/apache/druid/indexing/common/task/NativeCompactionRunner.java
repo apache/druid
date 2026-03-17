@@ -37,12 +37,12 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -160,15 +160,17 @@ public class NativeCompactionRunner implements CompactionRunner
     if (!(inputSpec instanceof MinorCompactionInputSpec)) {
       return null;
     }
-    final MinorCompactionInputSpec spec = (MinorCompactionInputSpec) inputSpec;
     final List<WindowedSegmentId> segmentIds = new ArrayList<>();
-    for (SegmentDescriptor desc : spec.getUncompactedSegments()) {
+    for (SegmentDescriptor desc : ((MinorCompactionInputSpec) inputSpec).getUncompactedSegments()) {
       if (interval.contains(desc.getInterval())) {
-        final String segmentIdStr = SegmentId.of(
-            dataSource, desc.getInterval(), desc.getVersion(), desc.getPartitionNumber()
-        ).toString();
+        final SegmentId segmentId = SegmentId.of(
+            dataSource,
+            desc.getInterval(),
+            desc.getVersion(),
+            desc.getPartitionNumber()
+        );
         segmentIds.add(new WindowedSegmentId(
-            segmentIdStr,
+            segmentId.toString(),
             Collections.singletonList(desc.getInterval())
         ));
       }
