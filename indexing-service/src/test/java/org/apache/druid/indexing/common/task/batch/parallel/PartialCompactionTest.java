@@ -32,7 +32,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
-import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
+import org.apache.druid.indexing.common.task.MinorCompactionInputSpec;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,6 +54,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTest
 {
@@ -139,7 +140,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .inputSpec(new MinorCompactionInputSpec(
+            INTERVAL_TO_INDEX,
+            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+        ))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
@@ -200,7 +204,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .inputSpec(new MinorCompactionInputSpec(
+            INTERVAL_TO_INDEX,
+            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+        ))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
@@ -245,7 +252,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .inputSpec(new MinorCompactionInputSpec(
+            INTERVAL_TO_INDEX,
+            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+        ))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();

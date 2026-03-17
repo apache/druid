@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -35,12 +34,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Used only for native engine-based minor compaction.
- * <p>
- * Compaction input spec that targets specific segments by ID.
- * The timeline is built from all segments in the interval. Segments in the interval, 
- * but not specified in the spec, are upgraded with no physical re-compaction.
+ * @deprecated Use {@link MinorCompactionInputSpec} for minor compaction in both native and MSQ engines.
  */
+@Deprecated
 public class SpecificSegmentsSpec implements CompactionInputSpec
 {
   public static final String TYPE = "segments";
@@ -68,18 +64,6 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   public List<String> getSegments()
   {
     return segments;
-  }
-
-  /**
-   * Parses segment IDs to descriptors for minor compaction (compact vs upgrade partitioning).
-   */
-  List<SegmentDescriptor> getSegmentDescriptors(String dataSource)
-  {
-    return segments.stream()
-        .map(id -> SegmentId.tryParse(dataSource, id))
-        .filter(Objects::nonNull)
-        .map(SegmentId::toDescriptor)
-        .collect(Collectors.toList());
   }
 
   @Override

@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -103,9 +104,10 @@ public class NativeCompactionRunner implements CompactionRunner
           "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead."
       );
     }
-    if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
+    if (compactionTask.getIoConfig().getInputSpec() instanceof SpecificSegmentsSpec) {
       return CompactionConfigValidationResult.failure(
-          "Minor compaction is not supported by Native  compaction engine. Use MSQ compaction engine instead.");
+          "SpecificSegmentsSpec is deprecated. Use MinorCompactionInputSpec (type: uncompacted) for minor compaction."
+      );
     }
     return CompactionConfigValidationResult.success();
   }
@@ -144,8 +146,9 @@ public class NativeCompactionRunner implements CompactionRunner
   }
 
   /**
-   * When using {@link SpecificSegmentsSpec}, resolves specific segment IDs that belong to the given interval
-   * and returns them as {@link WindowedSegmentId} objects. Returns null for interval-based compaction.
+   * When using {@link MinorCompactionInputSpec}, resolves uncompacted segment descriptors that belong
+   * to the given interval and returns them as {@link WindowedSegmentId} objects.
+   * Returns null for interval-based compaction.
    */
   @Nullable
   private static List<WindowedSegmentId> resolveSegmentIdsForInterval(
@@ -154,17 +157,19 @@ public class NativeCompactionRunner implements CompactionRunner
       Interval interval
   )
   {
-    if (!(inputSpec instanceof SpecificSegmentsSpec)) {
+    if (!(inputSpec instanceof MinorCompactionInputSpec)) {
       return null;
     }
-    SpecificSegmentsSpec spec = (SpecificSegmentsSpec) inputSpec;
-    List<WindowedSegmentId> segmentIds = new ArrayList<>();
-    for (String segmentIdStr : spec.getSegments()) {
-      SegmentId segmentId = SegmentId.tryParse(dataSource, segmentIdStr);
-      if (segmentId != null && interval.contains(segmentId.getInterval())) {
+    final MinorCompactionInputSpec spec = (MinorCompactionInputSpec) inputSpec;
+    final List<WindowedSegmentId> segmentIds = new ArrayList<>();
+    for (SegmentDescriptor desc : spec.getUncompactedSegments()) {
+      if (interval.contains(desc.getInterval())) {
+        final String segmentIdStr = SegmentId.of(
+            dataSource, desc.getInterval(), desc.getVersion(), desc.getPartitionNumber()
+        ).toString();
         segmentIds.add(new WindowedSegmentId(
             segmentIdStr,
-            Collections.singletonList(segmentId.getInterval())
+            Collections.singletonList(desc.getInterval())
         ));
       }
     }
@@ -186,7 +191,7 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionIOConfig compactionIOConfig
   )
   {
-    // Resolve specific segment IDs for minor compaction if using SpecificSegmentsSpec
+    // Resolve specific segment IDs for minor compaction if using MinorCompactionInputSpec
     final List<WindowedSegmentId> segmentIds = resolveSegmentIdsForInterval(
         compactionIOConfig.getInputSpec(),
         dataSchema.getDataSource(),

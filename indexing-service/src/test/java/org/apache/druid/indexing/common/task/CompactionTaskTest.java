@@ -2039,7 +2039,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testFindSegmentsToLockReturnsAllSegmentsForSpecificSegmentsSpec() throws Exception
+  public void testFindSegmentsToLockReturnsAllSegmentsForMinorCompaction() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
     final String version = "2024-11-17T23:49:06.823Z";
@@ -2057,16 +2057,13 @@ public class CompactionTaskTest
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 10));
     allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 12));
 
-    final SpecificSegmentsSpec specificSegmentsSpec = new SpecificSegmentsSpec(
-        new ArrayList<>(ImmutableList.of(
-            segment6.getId().toString(),
-            segment7.getId().toString(),
-            segment8.getId().toString()
-        ))
+    final MinorCompactionInputSpec minorSpec = new MinorCompactionInputSpec(
+        testInterval,
+        ImmutableList.of(segment6.toDescriptor(), segment7.toDescriptor(), segment8.toDescriptor())
     );
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-        .inputSpec(specificSegmentsSpec)
+        .inputSpec(minorSpec)
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
@@ -2081,14 +2078,17 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testSpecificSegmentsSpecUsesTimeChunkLockWithConcurrentLocks() throws Exception
+  public void testMinorCompactionUsesTimeChunkLockWithConcurrentLocks() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
     final List<DataSegment> segments = ImmutableList.of(
         createSegmentWithPartition(testInterval, "v1", 0),
         createSegmentWithPartition(testInterval, "v1", 1)
     );
-    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
 
     final CompactionTask task = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(spec)
@@ -2125,7 +2125,10 @@ public class CompactionTaskTest
         createSegmentWithPartition(testInterval, "v1", 0),
         createSegmentWithPartition(testInterval, "v1", 1)
     );
-    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(spec)
@@ -2201,8 +2204,9 @@ public class CompactionTaskTest
         createSegmentWithPartition(testInterval, "v1", 1),
         createSegmentWithPartition(testInterval, "v1", 2)
     );
-    final SpecificSegmentsSpec spec = new SpecificSegmentsSpec(
-        new ArrayList<>(ImmutableList.of(allSegments.get(0).getId().toString(), allSegments.get(1).getId().toString()))
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        ImmutableList.of(allSegments.get(0).toDescriptor(), allSegments.get(1).toDescriptor())
     );
 
     final SegmentProvider provider = new SegmentProvider(DATA_SOURCE, spec);
@@ -2214,14 +2218,17 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testDruidInputSourceReceivesSegmentIdsForSpecificSegmentsSpec()
+  public void testDruidInputSourceReceivesSegmentIdsForMinorCompaction()
   {
     final Interval interval = Intervals.of("2024-01-01/2024-01-02");
     final List<DataSegment> segments = ImmutableList.of(
         createSegmentWithPartition(interval, "v1", 0),
         createSegmentWithPartition(interval, "v1", 1)
     );
-    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        interval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
 
     final DataSchema dataSchema = DataSchema.builder()
         .withDataSource(DATA_SOURCE)

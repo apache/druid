@@ -19,15 +19,12 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,25 +33,6 @@ import java.util.stream.IntStream;
 
 public class SpecificSegmentsSpecTest
 {
-  @Test
-  public void testValidateSegmentsTimeChunkAllowsSubset()
-  {
-    final Interval interval = Intervals.of("2019-01-01/2019-01-02");
-    final List<DataSegment> allSegments = IntStream.range(0, 4)
-        .mapToObj(i -> newSegmentWithPartition(interval, i))
-        .collect(Collectors.toList());
-    // Spec has only first 2 segments (subset)
-    final SpecificSegmentsSpec spec = new SpecificSegmentsSpec(
-        new ArrayList<>(List.of(
-            allSegments.get(0).getId().toString(),
-            allSegments.get(1).getId().toString()
-        ))
-    );
-    Assert.assertTrue(
-        spec.validateSegments(LockGranularity.TIME_CHUNK, allSegments)
-    );
-  }
-
   @Test
   public void createTest()
   {
@@ -86,18 +64,4 @@ public class SpecificSegmentsSpecTest
     );
   }
 
-  private static DataSegment newSegmentWithPartition(Interval interval, int partitionNum)
-  {
-    return new DataSegment(
-        "datasource",
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        new NumberedShardSpec(partitionNum, 4),
-        9,
-        10
-    );
-  }
 }

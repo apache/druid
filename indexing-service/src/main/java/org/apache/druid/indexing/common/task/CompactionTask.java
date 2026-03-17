@@ -1286,7 +1286,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   /**
    * Provides segment discovery and validation for compaction.
-   * For minor compaction (SpecificSegmentsSpec, MinorCompactionInputSpec), finds all segments
+   * For minor compaction (MinorCompactionInputSpec), finds all segments
    * in the interval and partitions them into 'compact and upgrade metadata' vs 'upgrade metadata only' via {@link #shouldUpgradeSegment}.
    */
   @VisibleForTesting
@@ -1307,9 +1307,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
         uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
-      } else if (inputSpec instanceof SpecificSegmentsSpec) {
-        minorCompaction = true;
-        uncompactedSegments = Set.copyOf(((SpecificSegmentsSpec) inputSpec).getSegmentDescriptors(dataSource));
       } else {
         minorCompaction = false;
         uncompactedSegments = null;
