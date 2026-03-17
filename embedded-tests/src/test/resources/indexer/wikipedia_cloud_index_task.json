@@ -68,6 +68,7 @@
       "type": "index_parallel",
       "inputSource": {
         "type": "%%INPUT_SOURCE_TYPE%%",
+        "properties": %%INPUT_SOURCE_PROPERTIES%%,
         "%%INPUT_SOURCE_PROPERTY_KEY%%": %%INPUT_SOURCE_PROPERTY_VALUE%%
       },
       "inputFormat": {

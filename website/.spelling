@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -562,6 +563,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -759,6 +761,8 @@ granularity_string
 QueryKit
 # MSQ report fields
 taskId
+taskGroupId
+movingAverages
 multiStageQuery.taskId
 multiStageQuery.payload.status
 multiStageQuery.payload.status.status
@@ -1820,6 +1824,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1837,6 +1842,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs
@@ -1883,6 +1889,7 @@ minTopNThreshold
 parallelMergeInitialYieldRows
 parallelMergeParallelism
 parallelMergeSmallBatchRows
+parallelPoolInit
 populateCache
 populateResultLevelCache
 queryId

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -30,10 +29,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -60,6 +59,7 @@ public class CostBasedAutoScalerMockTest
     mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSpec.getId()).thenReturn(SUPERVISOR_ID);
+    when(mockSpec.getDataSources()).thenReturn(java.util.List.of("test-datasource"));
     when(mockSpec.isSuspended()).thenReturn(false);
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn(STREAM_NAME);
@@ -96,7 +96,7 @@ public class CostBasedAutoScalerMockTest
     int scaleUpOptimal = 17;
     // Trigger scale-up, which should set the cooldown timer
     doReturn(scaleUpOptimal).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 5000.0, 0.1);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 5000.0, 0.1);
 
     Assert.assertEquals(
         "Should return optimal count when it's greater than current (scale-up)",
@@ -106,7 +106,7 @@ public class CostBasedAutoScalerMockTest
 
     // Verify cooldown blocks immediate subsequent scaling
     doReturn(scaleUpOptimal).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.9);
     Assert.assertEquals(
         "Scale action should be blocked during the cooldown window",
         -1,
@@ -123,7 +123,7 @@ public class CostBasedAutoScalerMockTest
     int optimalCount = 25; // Same as current
 
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 100.0, 0.5);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -152,7 +152,7 @@ public class CostBasedAutoScalerMockTest
     int optimalCount = 30; // Lower than current (scale-down scenario)
 
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.9);
 
     // First attempt: allowed (no prior scale action)
     Assert.assertEquals(
@@ -180,7 +180,7 @@ public class CostBasedAutoScalerMockTest
 
     // Mock computeOptimalTaskCount to return -1 (simulating null metrics scenario)
     doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 100.0, 0.5);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -201,7 +201,7 @@ public class CostBasedAutoScalerMockTest
 
     // Mock computeOptimalTaskCount to return -1 (simulating null lag stats scenario)
     doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 100.0, 0.5);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -221,7 +221,7 @@ public class CostBasedAutoScalerMockTest
     int expectedOptimalCount = 5;
 
     doReturn(expectedOptimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10000.0, 0.0);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10000.0, 0.0);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -241,7 +241,7 @@ public class CostBasedAutoScalerMockTest
     int expectedOptimalCount = 100; // Maximum allowed
 
     doReturn(expectedOptimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 50000.0, 0.0);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 50000.0, 0.0);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -261,7 +261,7 @@ public class CostBasedAutoScalerMockTest
     int expectedOptimalCount = 26; // Just one more than current
 
     doReturn(expectedOptimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 1000.0, 0.2);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 1000.0, 0.2);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -281,7 +281,7 @@ public class CostBasedAutoScalerMockTest
     int optimalCount = 24; // Just one less than current
 
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.8);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.8);
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
@@ -314,7 +314,7 @@ public class CostBasedAutoScalerMockTest
     int optimalCount = 30; // Lower than current (scale-down scenario)
 
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.9);
 
     Assert.assertEquals(
         "Should return -1 when scaleDownDuringTaskRolloverOnly is true",
@@ -346,7 +346,7 @@ public class CostBasedAutoScalerMockTest
 
     // Set up lastKnownMetrics by calling computeTaskCountForScaleAction first without scaling
     doReturn(currentTaskCount).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.9);
     autoScaler.computeTaskCountForScaleAction(); // This populates lastKnownMetrics
 
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
@@ -357,12 +357,26 @@ public class CostBasedAutoScalerMockTest
     );
   }
 
-  private void setupMocksForMetricsCollection(int taskCount, double avgLag, double pollIdleRatio)
+  private void setupMocksForMetricsCollection(
+      CostBasedAutoScaler autoScaler,
+      int taskCount,
+      double avgLag,
+      double pollIdleRatio
+  )
   {
-    when(mockSupervisor.computeLagStats()).thenReturn(new LagStats(0, (long) avgLag * 2, (long) avgLag));
-    when(mockIoConfig.getTaskCount()).thenReturn(taskCount);
-    when(mockSupervisor.getPartitionCount()).thenReturn(PARTITION_COUNT);
-    when(mockSupervisor.getStats()).thenReturn(Collections.emptyMap());
+    CostMetrics metrics = new CostMetrics(
+        avgLag,
+        taskCount,
+        PARTITION_COUNT,
+        pollIdleRatio,
+        TASK_DURATION_SECONDS,
+        AVG_PROCESSING_RATE
+    );
+    doReturn(metrics).when(autoScaler).collectMetrics();
+
+    SeekableStreamSupervisorIOConfig ioConfig = mock(SeekableStreamSupervisorIOConfig.class);
+    doReturn(ioConfig).when(mockSupervisor).getIoConfig();
+    doReturn(taskCount).when(ioConfig).getTaskCount();
   }
 
   private CostMetrics createMetrics(

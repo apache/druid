@@ -36,7 +36,8 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
-        .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
+        .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
+        .addProperty("druid.sql.planner.metadataSegmentPollPeriod", "1000");
 
     // Create a K3s cluster with all the required services
     final K3sClusterResource k3sCluster = new K3sClusterResource()
@@ -61,8 +62,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
         .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
-            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"postgresql-metadata-storage\"]"
         );
   }
 

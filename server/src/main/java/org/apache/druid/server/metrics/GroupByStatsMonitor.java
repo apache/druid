@@ -58,21 +58,16 @@ public class GroupByStatsMonitor extends AbstractMonitor
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
 
     emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", mergeBufferPool.getPendingRequests()));
-
     emitter.emit(builder.setMetric("mergeBuffer/used", mergeBufferPool.getUsedResourcesCount()));
 
     GroupByStatsProvider.AggregateStats statsContainer = groupByStatsProvider.getStatsSince();
 
     if (statsContainer.getMergeBufferQueries() > 0) {
       emitter.emit(builder.setMetric("mergeBuffer/queries", statsContainer.getMergeBufferQueries()));
-      emitter.emit(builder.setMetric(
-          "mergeBuffer/acquisitionTimeNs",
-          statsContainer.getMergeBufferAcquisitionTimeNs()
-      ));
-      emitter.emit(builder.setMetric(
-          "mergeBuffer/maxAcquisitionTimeNs",
-          statsContainer.getMaxMergeBufferAcquisitionTimeNs()
-      ));
+      emitter.emit(builder.setMetric("mergeBuffer/acquisitionTimeNs", statsContainer.getMergeBufferAcquisitionTimeNs()));
+      emitter.emit(builder.setMetric("mergeBuffer/maxAcquisitionTimeNs", statsContainer.getMaxMergeBufferAcquisitionTimeNs()));
+      emitter.emit(builder.setMetric("mergeBuffer/bytesUsed", statsContainer.getTotalMergeBufferUsedBytes()));
+      emitter.emit(builder.setMetric("mergeBuffer/maxBytesUsed", statsContainer.getMaxMergeBufferUsedBytes()));
     }
 
     if (statsContainer.getSpilledQueries() > 0) {

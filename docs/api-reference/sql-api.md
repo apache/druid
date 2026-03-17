@@ -911,15 +911,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
                         "dataSource": "wikipedia",
                         "intervals": [
                             "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-                        ],
-                        "filter": {
-                            "type": "equals",
-                            "column": "user",
-                            "matchValueType": "STRING",
-                            "matchValue": "BlueMoon2662"
-                        },
-                        "filterFields": [
-                            "user"
                         ]
                     }
                 ],

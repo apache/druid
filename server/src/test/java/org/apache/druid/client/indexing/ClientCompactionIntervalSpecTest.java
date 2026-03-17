@@ -19,19 +19,26 @@
 
 package org.apache.druid.client.indexing;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class ClientCompactionIntervalSpecTest
 {
@@ -73,7 +80,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithNoSegmentGranularity()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), null);
+    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), null, CompactionStatus.running(""));
     Assert.assertEquals(Intervals.of("2015-02-12/2015-04-14"), actual.getCompactionInterval());
   }
 
@@ -81,7 +88,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWitSegmentGranularitySameAsSegment()
   {
     // The umbrella interval of segments is 2015-04-11/2015-04-12
-    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1), Granularities.DAY);
+    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1), Granularities.DAY, CompactionStatus.running(""));
     Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), actual.getCompactionInterval());
   }
 
@@ -89,7 +96,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithCoarserSegmentGranularity()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.YEAR);
+    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.YEAR, CompactionStatus.running(""));
     // The compaction interval should be expanded to start of the year and end of the year to cover the segmentGranularity
     Assert.assertEquals(Intervals.of("2015-01-01/2016-01-01"), actual.getCompactionInterval());
   }
@@ -98,7 +105,7 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithFinerSegmentGranularityAndUmbrellaIntervalAlign()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.DAY);
+    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.DAY, CompactionStatus.running(""));
     // The segmentGranularity of DAY align with the umbrella interval (umbrella interval can be evenly divide into the segmentGranularity)
     Assert.assertEquals(Intervals.of("2015-02-12/2015-04-14"), actual.getCompactionInterval());
   }
@@ -107,9 +114,50 @@ public class ClientCompactionIntervalSpecTest
   public void testFromSegmentWithFinerSegmentGranularityAndUmbrellaIntervalNotAlign()
   {
     // The umbrella interval of segments is 2015-02-12/2015-04-14
-    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.WEEK);
+    CompactionCandidate actual = CompactionCandidate.from(ImmutableList.of(dataSegment1, dataSegment2, dataSegment3), Granularities.WEEK, CompactionStatus.running(""));
     // The segmentGranularity of WEEK does not align with the umbrella interval (umbrella interval cannot be evenly divide into the segmentGranularity)
     // Hence the compaction interval is modified to aling with the segmentGranularity
     Assert.assertEquals(Intervals.of("2015-02-09/2015-04-20"), actual.getCompactionInterval());
+  }
+
+  @Test
+  public void testClientMinorCompactionInputSpec_throwsException_whenEmptySegmentsList()
+  {
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new ClientMinorCompactionInputSpec(interval, null)
+    );
+  }
+
+  @Test
+  public void testClientCompactionIntervalSpec_serde() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+
+    // Test without uncompactedSegments (full compaction)
+    ClientCompactionIntervalSpec withoutSegments = new ClientCompactionIntervalSpec(interval, null);
+    String json2 = mapper.writeValueAsString(withoutSegments);
+    ClientCompactionIntervalSpec deserialized2 = mapper.readValue(json2, ClientCompactionIntervalSpec.class);
+    Assert.assertEquals(withoutSegments, deserialized2);
+  }
+
+  @Test
+  public void testClientMinorCompactionInputSpec_serde() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    List<SegmentDescriptor> segments = List.of(
+        new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
+    );
+
+    // Test with uncompactedSegments (minor compaction)
+    ClientCompactionInputSpec withSegments = new ClientMinorCompactionInputSpec(interval, segments);
+    String json1 = mapper.writeValueAsString(withSegments);
+    ClientCompactionInputSpec deserialized1 = mapper.readValue(json1, ClientCompactionIntervalSpec.class);
+    Assert.assertTrue(deserialized1 instanceof ClientMinorCompactionInputSpec);
+    Assert.assertEquals(withSegments, deserialized1);
+    Assert.assertEquals(segments, ((ClientMinorCompactionInputSpec) deserialized1).getUncompactedSegments());
   }
 }

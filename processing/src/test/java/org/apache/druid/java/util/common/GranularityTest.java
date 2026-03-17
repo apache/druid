@@ -85,8 +85,8 @@ public class GranularityTest
         new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-10-20-20-42-72/Test11"),
         new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-10-20-42-90-24/Test11"),
         new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-10-33-20-42-24/Test11"),
-        new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-13-20-20-42-24/Test11"),
-        };
+        new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-13-20-20-42-24/Test11")
+    };
     checkToDate(SECOND, Granularity.Formatter.HIVE, secondChecks);
   }
 

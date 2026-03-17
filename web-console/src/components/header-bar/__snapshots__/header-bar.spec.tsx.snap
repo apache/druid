@@ -257,6 +257,16 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint5.MenuItem
             active={false}
             disabled={false}
+            icon="applications"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Broker dynamic config"
+          />
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
             icon="wrench"
             multiline={false}
             onClick={[Function]}

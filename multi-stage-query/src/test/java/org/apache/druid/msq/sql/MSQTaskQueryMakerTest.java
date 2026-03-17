@@ -222,6 +222,7 @@ public class MSQTaskQueryMakerTest
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper, Collections.emptyMap(), true);
+    new MSQIndexingModule().getJacksonModules().forEach(objectMapper::registerModule);
 
     // Populate loadedSegmentMetadata from walker segments so CoordinatorClient.fetchSegment() can find them
     List<ImmutableSegmentLoadInfo> loadedSegmentMetadata = new ArrayList<>();

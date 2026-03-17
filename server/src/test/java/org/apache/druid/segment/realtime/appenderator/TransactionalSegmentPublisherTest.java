@@ -46,7 +46,7 @@ public class TransactionalSegmentPublisherTest
         SegmentPublishResult.retryableFailure("this error is retryable"),
         publisher.publishSegments(null, Set.of(), Function.identity(), null, null)
     );
-    Assert.assertEquals(6, attemptCount.get());
+    Assert.assertEquals(14, attemptCount.get());
   }
 
   @Test
@@ -98,6 +98,12 @@ public class TransactionalSegmentPublisherTest
       {
         attemptCount.incrementAndGet();
         return publishResult;
+      }
+
+      @Override
+      void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
+      {
+        // return immediately
       }
     };
   }

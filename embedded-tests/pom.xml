@@ -29,6 +29,8 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+    <!-- Must match iceberg.core.version in extensions-contrib/druid-iceberg-extensions/pom.xml -->
+    <iceberg.version>1.6.1</iceberg.version>
   </properties>
 
   <parent>
@@ -42,12 +44,6 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-services</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -80,42 +76,6 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.integration-tests</groupId>
-      <artifactId>druid-it-tools</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>mysql-metadata-storage</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>postgresql-metadata-storage</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-s3-extensions</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-protobuf-extensions</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-avro-extensions</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-testcontainers</artifactId>
       <version>${project.parent.version}</version>
@@ -124,18 +84,6 @@
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-testing-tools</artifactId>
       <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-basic-security</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions.contrib</groupId>
-      <artifactId>druid-exact-count-bitmap</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>joda-time</groupId>
@@ -238,9 +186,21 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
+      <artifactId>druid-services</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-indexing-service</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.integration-tests</groupId>
+      <artifactId>druid-it-tools</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
@@ -248,6 +208,97 @@
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-kinesis-indexing-service</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>mysql-metadata-storage</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>postgresql-metadata-storage</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-s3-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-protobuf-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-avro-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-basic-security</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-exact-count-bitmap</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-thrift-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.googlecode.json-simple</groupId>
+          <artifactId>json-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-iceberg-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-api</artifactId>
+      <version>${iceberg.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-core</artifactId>
+      <version>${iceberg.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-parquet</artifactId>
+      <version>${iceberg.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <!-- Let parquet version be driven by druid-parquet-extensions (1.15.2) -->
+        <exclusion>
+          <groupId>org.apache.parquet</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
@@ -292,6 +343,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>aliyun-oss-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-parquet-extensions</artifactId>
       <version>${project.parent.version}</version>
@@ -301,6 +358,20 @@
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-orc-extensions</artifactId>
       <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>simple-client-sslcontext</artifactId>
+      <version>${parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Pin protobuf-java-util to the version from druid-protobuf-extensions to satisfy
+         the enforcer's RequireUpperBoundDeps rule (google-cloud-storage brings a lower version). -->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+      <version>${protobuf.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -403,6 +474,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
       <version>${apache.kafka.version}</version>
@@ -429,6 +505,12 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers-kafka</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-localstack</artifactId>
       <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
@@ -507,13 +589,43 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-s3</artifactId>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>${aws.sdk.v2.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-core</artifactId>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sts</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>http-client-spi</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>kinesis</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>auth</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sdk-core</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>regions</artifactId>
+      <version>${aws.sdk.v2.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -530,7 +642,6 @@
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java-api</artifactId>
-      <version>19.0.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -549,11 +660,40 @@
       <version>5.5</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>0.13.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.aliyun.oss</groupId>
+      <artifactId>aliyun-sdk-oss</artifactId>
+      <version>3.11.3</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <ignoredUsedUndeclaredDependencies>
+            <!-- Configuration class comes from hadoop-common, which is re-exported via hadoop-client-api.
+                 Declaring hadoop-common directly pulls in banned transitive dependencies. -->
+            <ignoredUsedUndeclaredDependency>org.apache.hadoop:hadoop-common</ignoredUsedUndeclaredDependency>
+            <ignoredUsedUndeclaredDependency>org.apache.hadoop:hadoop-client-api</ignoredUsedUndeclaredDependency>
+          </ignoredUsedUndeclaredDependencies>
+        </configuration>
+      </plugin>
       <!-- Skip this module from jacoco coverage as it contains only tests -->
       <plugin>
         <groupId>org.jacoco</groupId>

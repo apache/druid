@@ -1097,7 +1097,7 @@ public class SystemSchema extends AbstractSchema
       );
 
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getDataSource()));
 
       final Iterable<SupervisorStatus> authorizedSupervisors = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,

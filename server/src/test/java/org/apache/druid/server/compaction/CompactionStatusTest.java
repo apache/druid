@@ -35,16 +35,22 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -148,28 +154,28 @@ public class CompactionStatusTest
                                               .forDataSource("datasource")
                                               .withMaxRowsPerSegment(100)
                                               .withTuningConfig(
-                                            new UserCompactionTaskQueryTuningConfig(
-                                                null,
-                                                null,
-                                                null,
-                                                1000L,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null
-                                            )
-                                        )
+                                                  new UserCompactionTaskQueryTuningConfig(
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1000L,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null
+                                                  )
+                                              )
                                               .build();
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
@@ -362,7 +368,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );
@@ -412,7 +418,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );
@@ -467,11 +473,110 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );
     Assert.assertFalse(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenTransformSpecVirtualColumnsMatch()
+  {
+    ExpressionVirtualColumn vc = new ExpressionVirtualColumn(
+        "extractedField", "concat(metadata, '_category')", ColumnType.STRING, ExprMacroTable.nil()
+    );
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(
+        new SelectorDimFilter("extractedField", "foo", null),
+        VirtualColumns.create(vc)
+    );
+    CompactionState lastCompactionState = new CompactionState(
+        null,
+        null,
+        null,
+        transformSpec,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+    DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(transformSpec)
+        .build();
+
+    DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    CompactionStatus status = CompactionStatus.compute(
+        List.of(segment), compactionConfig, fingerprintMapper
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenTransformSpecVirtualColumnsMismatch()
+  {
+    SelectorDimFilter filter = new SelectorDimFilter("extractedField", "foo", null);
+    ExpressionVirtualColumn oldVc = new ExpressionVirtualColumn(
+        "extractedField", "concat(metadata, '_old')", ColumnType.STRING, ExprMacroTable.nil()
+    );
+    ExpressionVirtualColumn newVc = new ExpressionVirtualColumn(
+        "extractedField", "concat(metadata, '_new')", ColumnType.STRING, ExprMacroTable.nil()
+    );
+
+    CompactionState lastCompactionState = new CompactionState(
+        null,
+        null,
+        null,
+        new CompactionTransformSpec(filter, VirtualColumns.create(oldVc)),
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+    DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(new CompactionTransformSpec(filter, VirtualColumns.create(newVc)))
+        .build();
+
+    DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    CompactionStatus status = CompactionStatus.compute(
+        List.of(segment), compactionConfig, fingerprintMapper
+    );
+    Assert.assertFalse(status.isComplete());
+    Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenMismatchedFingerprintStateHasDifferentVirtualColumns()
+  {
+    SelectorDimFilter filter = new SelectorDimFilter("extractedField", "foo", null);
+    ExpressionVirtualColumn vc = new ExpressionVirtualColumn(
+        "extractedField", "concat(metadata, '_category')", ColumnType.STRING, ExprMacroTable.nil()
+    );
+
+    DataSourceCompactionConfig oldConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(new CompactionTransformSpec(filter, null))
+        .build();
+    CompactionState oldState = oldConfig.toCompactionState();
+    String oldFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, oldState);
+
+    DataSourceCompactionConfig newConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(new CompactionTransformSpec(filter, VirtualColumns.create(vc)))
+        .build();
+
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, oldFingerprint, oldState, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(oldFingerprint).build()
+    );
+    CompactionStatus status = CompactionStatus.compute(segments, newConfig, fingerprintMapper);
+    Assert.assertFalse(status.isComplete());
+    Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }
 
   @Test
@@ -521,7 +626,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );
@@ -575,7 +680,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );
@@ -607,7 +712,7 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -643,7 +748,7 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -666,7 +771,7 @@ public class CompactionStatusTest
     syncCacheFromManager();
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         fingerprintMapper
     );
@@ -686,7 +791,7 @@ public class CompactionStatusTest
         .build();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         "One or more fingerprinted segments do not have a cached indexing state"
     );
@@ -711,7 +816,7 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         fingerprintMapper
     );
@@ -740,7 +845,7 @@ public class CompactionStatusTest
 
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
@@ -765,7 +870,7 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         fingerprintMapper
     );
@@ -795,7 +900,7 @@ public class CompactionStatusTest
     );
 
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(segments, null),
+        segments,
         compactionConfig,
         fingerprintMapper
     );
@@ -812,13 +917,13 @@ public class CompactionStatusTest
    * Allows customization of the segments in the compaction candidate.
    */
   private void verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-      CompactionCandidate candidate,
+      List<DataSegment> segments,
       DataSourceCompactionConfig compactionConfig,
       String expectedReason
   )
   {
     final CompactionStatus status = CompactionStatus.compute(
-        candidate,
+        segments,
         compactionConfig,
         fingerprintMapper
     );
@@ -838,7 +943,7 @@ public class CompactionStatusTest
                      .lastCompactionState(lastCompactionState)
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(List.of(segment), null),
+        List.of(segment),
         compactionConfig,
         fingerprintMapper
     );

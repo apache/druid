@@ -19,25 +19,14 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.util.SqlStatementResourceHelper;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.planner.ColumnMapping;
-import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -52,9 +41,6 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
 
   private final ReadableFrameChannel in;
   private final FrameReader frameReader;
-  private final ColumnMappings columnMappings;
-  private final ResultsContext resultsContext;
-  private final ObjectMapper jsonMapper;
   private final QueryListener queryListener;
 
   private boolean wroteResultsStart;
@@ -62,17 +48,11 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
   ControllerQueryResultsReader(
       final ReadableFrameChannel in,
       final FrameReader frameReader,
-      final ColumnMappings columnMappings,
-      final ResultsContext resultsContext,
-      final ObjectMapper jsonMapper,
       final QueryListener queryListener
   )
   {
     this.in = in;
     this.frameReader = frameReader;
-    this.columnMappings = columnMappings;
-    this.resultsContext = resultsContext;
-    this.jsonMapper = jsonMapper;
     this.queryListener = queryListener;
   }
 
@@ -96,23 +76,7 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
     }
 
     if (!wroteResultsStart) {
-      final RowSignature querySignature = frameReader.signature();
-      final ImmutableList.Builder<MSQResultsReport.ColumnAndType> mappedSignature = ImmutableList.builder();
-
-      for (final ColumnMapping mapping : columnMappings.getMappings()) {
-        mappedSignature.add(
-            new MSQResultsReport.ColumnAndType(
-                mapping.getOutputColumn(),
-                querySignature.getColumnType(mapping.getQueryColumn()).orElse(null)
-            )
-        );
-      }
-
-      queryListener.onResultsStart(
-          mappedSignature.build(),
-          resultsContext.getSqlTypeNames()
-      );
-
+      queryListener.onResultsStart(frameReader);
       wroteResultsStart = true;
     }
 
@@ -121,31 +85,7 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
       queryListener.onResultsComplete();
       return ReturnOrAwait.returnObject(null);
     } else {
-      final Frame frame = in.readFrame();
-      Yielder<Object[]> rowYielder = Yielders.each(
-          SqlStatementResourceHelper.getResultSequence(
-              frame,
-              frameReader,
-              columnMappings,
-              resultsContext,
-              jsonMapper
-          )
-      );
-
-      try {
-        while (!rowYielder.isDone()) {
-          if (queryListener.onResultRow(rowYielder.get())) {
-            rowYielder = rowYielder.next(null);
-          } else {
-            // Caller wanted to stop reading.
-            return ReturnOrAwait.returnObject(null);
-          }
-        }
-      }
-      finally {
-        CloseableUtils.closeAndSuppressExceptions(rowYielder, e -> log.warn(e, "Failed to close frame yielder"));
-      }
-
+      queryListener.onResultBatch(in.read());
       return ReturnOrAwait.awaitAll(inputChannels().size());
     }
   }

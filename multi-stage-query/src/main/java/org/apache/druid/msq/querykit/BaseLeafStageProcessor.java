@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.querykit;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,6 +45,7 @@ import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
@@ -50,6 +53,7 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.utils.CollectionUtils;
@@ -70,10 +74,12 @@ import java.util.function.Function;
 public abstract class BaseLeafStageProcessor extends BasicStageProcessor
 {
   private final Query<?> query;
+  private final Supplier<ExecutionVertex> executionVertexSupplier;
 
   protected BaseLeafStageProcessor(Query<?> query)
   {
     this.query = query;
+    this.executionVertexSupplier = Suppliers.memoize(() -> ExecutionVertex.of(query));
   }
 
   @Override
@@ -153,7 +159,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     final ProcessorManager processorManager;
 
     if (segmentMapFnProcessor == null) {
-      final SegmentMapFunction segmentMapFn = ExecutionVertex.of(query).createSegmentMapFunction(frameContext.policyEnforcer());
+      final SegmentMapFunction segmentMapFn = executionVertexSupplier.get().createSegmentMapFunction(frameContext.policyEnforcer());
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(
@@ -169,6 +175,13 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
             OutputChannels.wrap(outputChannels)
         )
     );
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return executionVertexSupplier.get().getSegmentPruner();
   }
 
   private ProcessorManager<Object, Long> createBaseLeafProcessorManagerWithHandoff(
@@ -224,6 +237,15 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   );
 
   /**
+   * Filters the physical input slices before they are used to create a {@link ReadableInputQueue}.
+   * Subclasses can override this to reduce the set of segments that need to be read.
+   */
+  protected List<PhysicalInputSlice> filterBaseInput(final List<PhysicalInputSlice> slices)
+  {
+    return slices;
+  }
+
+  /**
    * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
    * that drives query processing.
    *
@@ -231,7 +253,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
    * segments. Once {@link ReadableInputQueue#nextInput()} or {@link ReadableInputQueue#start()} is called,
    * the queue must be closed when done being used.
    */
-  private static ReadableInputQueue makeBaseInputQueue(
+  private ReadableInputQueue makeBaseInputQueue(
       final List<InputSlice> inputSlices,
       final ExecutionContext context
   )
@@ -252,12 +274,13 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
       }
     }
 
+    final List<PhysicalInputSlice> filteredSlices = filterBaseInput(physicalInputSlices);
     final Integer segmentLoadAheadCount =
         MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
     return new ReadableInputQueue(
         stageDef.getId().getQueryId(),
         new StandardPartitionReader(context),
-        physicalInputSlices,
+        filteredSlices,
         segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
     );
   }
@@ -327,7 +350,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     final Int2ObjectMap<ReadableInput> broadcastInputs = readBroadcastInputsFromEarlierStages(context);
 
     if (broadcastInputs.isEmpty()) {
-      if (ExecutionVertex.of(query).isSegmentMapFunctionExpensive()) {
+      if (executionVertexSupplier.get().isSegmentMapFunctionExpensive()) {
         // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
         return new SimpleSegmentMapFnProcessor(query, context.frameContext().policyEnforcer());
       } else {

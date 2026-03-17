@@ -22,29 +22,59 @@ package org.apache.druid.testing.embedded.compact;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -54,22 +84,35 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.tools.EventSerializer;
+import org.apache.druid.testing.tools.JsonEventSerializer;
+import org.apache.druid.testing.tools.StreamGenerator;
+import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Embedded test that runs compaction supervisors of various types.
  */
 public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
+  private final KafkaResource kafkaServer = new KafkaResource();
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(2_000_000_000L)
@@ -95,7 +138,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                    "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
                                )
                                .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
-                               .addExtensions(CatalogClientModule.class, CatalogCoordinatorModule.class)
+                               .addExtensions(
+                                   CatalogClientModule.class,
+                                   CatalogCoordinatorModule.class,
+                                   KafkaIndexTaskModule.class
+                               )
+                               .addResource(kafkaServer)
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)
@@ -105,19 +153,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
 
-  private void configureCompaction(CompactionEngine compactionEngine)
+  private void configureCompaction(CompactionEngine compactionEngine, @Nullable CompactionCandidateSearchPolicy policy)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, true))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, policy, true, compactionEngine, true))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_ingestDayGranularity_andCompactToMonthGranularity_andCompactToYearGranularity_withInlineConfig(CompactionEngine compactionEngine)
+  public void test_ingestDayGranularity_andCompactToMonthGranularity_andCompactToYearGranularity_withInlineConfig(
+      CompactionEngine compactionEngine
+  )
   {
-    configureCompaction(compactionEngine);
+    configureCompaction(compactionEngine, null);
 
     // Ingest data at DAY granularity and verify
     runIngestionAtGranularity(
@@ -138,26 +188,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
                 )
             )
             .build();
@@ -179,26 +211,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
                 )
             )
             .build();
@@ -212,6 +226,129 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.YEAR));
 
     verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
+  }
+
+  @MethodSource("getPartitionsSpec")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_minorCompactionWithMSQ(PartitionsSpec partitionsSpec) throws Exception
+  {
+    configureCompaction(
+        CompactionEngine.MSQ,
+        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null)
+    );
+    KafkaSupervisorSpecBuilder kafkaSupervisorSpecBuilder = MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                                        .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build()))
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
+        .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(kafkaServer.consumerProperties()).withTaskCount(2));
+
+    // Set up first topic and supervisor
+    final String topic1 = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic1, 1);
+    final KafkaSupervisorSpec supervisor1 = kafkaSupervisorSpecBuilder.withId(topic1).build(dataSource, topic1);
+    cluster.callApi().postSupervisor(supervisor1);
+
+    final int totalRowCount = publish1kRecords(topic1, true) + publish1kRecords(topic1, false);
+    waitUntilPublishedRecordsAreIngested(totalRowCount);
+
+    // Before compaction
+    Assertions.assertEquals(4, getNumSegmentsWith(Granularities.HOUR));
+
+    // Create a compaction config with DAY granularity
+    InlineSchemaDataSourceCompactionConfig dayGranularityConfig =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false))
+            .withDimensionsSpec(new UserCompactionTaskDimensionsConfig(
+                WikipediaStreamEventStreamGenerator.dimensions()
+                                                   .stream()
+                                                   .map(StringDimensionSchema::new)
+                                                   .collect(Collectors.toUnmodifiableList())))
+            .withTaskContext(Map.of("useConcurrentLocks", true))
+            .withIoConfig(new UserCompactionTaskIOConfig(true))
+            .withTuningConfig(UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build())
+            .build();
+
+    runCompactionWithSpec(dayGranularityConfig);
+    waitForAllCompactionTasksToFinish();
+
+    pauseCompaction(dayGranularityConfig);
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(2000, getTotalRowCount());
+
+    verifyCompactedSegmentsHaveFingerprints(dayGranularityConfig);
+
+    // published another 1k
+    final int appendedRowCount = publish1kRecords(topic1, true);
+    indexer.latchableEmitter().flush();
+    waitUntilPublishedRecordsAreIngested(appendedRowCount);
+
+    // Tear down both topics and supervisors
+    kafkaServer.deleteTopic(topic1);
+    cluster.callApi().postSupervisor(supervisor1.createSuspendedSpec());
+
+    long totalUsed = overlord.latchableEmitter().getMetricValues(
+        "segment/metadataCache/used/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().reduce((first, second) -> second).orElse(0).longValue();
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    // 1 compacted segment + 2 appended segment
+    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(3000, getTotalRowCount());
+
+    runCompactionWithSpec(dayGranularityConfig);
+    waitForAllCompactionTasksToFinish();
+
+    // wait for new segments have been updated to the cache
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/metadataCache/used/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasValueMatching(Matchers.greaterThan(totalUsed)));
+
+    // performed minor compaction: 1 previously compacted segment + 1 incrementally compacted segment
+    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(3000, getTotalRowCount());
+  }
+
+  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
+  {
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(expectedRowCount)
+    );
+
+    final int totalEventsProcessed = indexer
+        .latchableEmitter()
+        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
+        .stream()
+        .mapToInt(Number::intValue)
+        .sum();
+    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
+  }
+
+  protected int publish1kRecords(String topic, boolean useTransactions)
+  {
+    final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
+    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
+    List<byte[]> records = streamGenerator.generateEvents(10);
+
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+
+    if (useTransactions) {
+      kafkaServer.produceRecordsToTopic(producerRecords);
+    } else {
+      kafkaServer.produceRecordsWithoutTransaction(producerRecords);
+    }
+    return producerRecords.size();
   }
 
   @MethodSource("getEngine")
@@ -244,26 +381,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false)
                 )
             )
             .build();
@@ -274,12 +393,202 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
+  @Test
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
+  {
+    // Configure cluster with MSQ engine and storeCompactionStatePerSegment=false
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(
+            new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ, false)
+        )
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+
+    DateTime now = DateTimes.nowUtc();
+
+    // Note that we are purposely creating events in intervals like this to make the test deterministic regardless of when it is run.
+    // The supervisor will use the current time as reference time to determine which rules apply to which segments so we take extra
+    // care to create segments that fall cleanly into the different rule periods that we are testing.
+    String freshEvents = generateEventsInInterval(
+        new Interval(now.minusHours(4), now),
+        4,
+        Duration.ofMinutes(30).toMillis()
+    );
+    String hourRuleEvents = generateEventsInInterval(
+        new Interval(now.minusDays(3), now.minusDays(2)),
+        5,
+        Duration.ofMinutes(90).toMillis()
+    );
+    String dayRuleEvents = generateEventsInInterval(
+        new Interval(now.minusDays(31), now.minusDays(14)),
+        7,
+        Duration.ofHours(25).toMillis()
+    );
+
+    String allData = freshEvents + "\n" + hourRuleEvents + "\n" + dayRuleEvents;
+
+    runIngestionAtGranularity(
+        "FIFTEEN_MINUTE",
+        allData
+    );
+    Assertions.assertEquals(16, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
+
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
+        "hourRule",
+        "Compact to HOUR granularity for data older than 1 days",
+        Period.days(1),
+        Granularities.HOUR
+    );
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule(
+        "dayRule",
+        "Compact to DAY granularity for data older than 7 days",
+        Period.days(7),
+        Granularities.DAY
+    );
+
+    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
+        "tuningConfigRule",
+        "Use dimension range partitioning with max 1000 rows per segment",
+        Period.days(1),
+        createTuningConfigWithPartitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
+    );
+
+    ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
+        "deletionRule",
+        "Drop rows where item is 'hat'",
+        Period.days(7),
+        new EqualityFilter("item", ColumnType.STRING, "hat", null),
+        null
+    );
+
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider
+        .builder()
+        .segmentGranularityRules(List.of(hourRule, dayRule))
+        .tuningConfigRules(List.of(tuningConfigRule))
+        .deletionRules(List.of(deletionRule))
+        .build();
+
+    CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        ruleProvider,
+        null,
+        null,
+        null,
+        Granularities.HOUR
+    );
+    runCompactionWithSpec(cascadingReindexingTemplate);
+    waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(4, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
+    Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertEquals(4, getNumSegmentsWith(Granularities.DAY));
+    verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
+  }
+
+  @Test
+  public void test_cascadingReindexing_withVirtualColumnOnNestedData_filtersCorrectly()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine, null);
+
+    String jsonDataWithNestedColumn =
+        "{\"timestamp\":\"2025-06-01T00:00:00.000Z\",\"item\":\"shirt\",\"value\":105,"
+        + "\"extraInfo\":{\"fieldA\":\"valueA\",\"fieldB\":\"valueB\"}}\n"
+        + "{\"timestamp\":\"2025-06-02T00:00:00.000Z\",\"item\":\"trousers\",\"value\":210,"
+        + "\"extraInfo\":{\"fieldA\":\"valueC\",\"fieldB\":\"valueD\"}}\n"
+        + "{\"timestamp\":\"2025-06-03T00:00:00.000Z\",\"item\":\"jeans\",\"value\":150,"
+        + "\"extraInfo\":{\"fieldA\":\"valueA\",\"fieldB\":\"valueE\"}}\n"
+        + "{\"timestamp\":\"2025-06-04T00:00:00.000Z\",\"item\":\"hat\",\"value\":50,"
+        + "\"extraInfo\":{\"fieldA\":\"valueF\",\"fieldB\":\"valueG\"}}";
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .segmentGranularity("DAY");
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(4, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "extractedFieldA",
+            "json_value(extraInfo, '$.fieldA')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        )
+    );
+
+    ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
+        "deleteByNestedField",
+        "Remove rows where extraInfo.fieldA = 'valueA'",
+        Period.days(7),
+        new EqualityFilter("extractedFieldA", ColumnType.STRING, "valueA", null),
+        virtualColumns
+    );
+
+    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
+        "tuningConfigRule",
+        null,
+        Period.days(7),
+        createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
+    );
+
+    CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder()
+                                    .deletionRules(List.of(deletionRule))
+                                    .tuningConfigRules(List.of(tuningConfigRule))
+                                    .build(),
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    runCompactionWithSpec(cascadingTemplate);
+
+    // vsf storage monitor metrics are only emitted for MSQ ingestion, so picked this compaction test at random to test
+    LatchableEmitter emitter = indexer.latchableEmitter();
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // Verify: Should have 2 rows left (valueA appeared in 2 rows, both filtered out)
+    Assertions.assertEquals(2, getTotalRowCount());
+
+    // Verify the correct rows were filtered
+    verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
+
+    List<ServiceMetricEvent> events = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_COUNT);
+    long count = 0;
+    for (ServiceMetricEvent event : events) {
+      count += event.getValue().longValue();
+      Assertions.assertNotNull(event.getUserDims().get("taskId"));
+      Assertions.assertNotNull(event.getUserDims().get("groupId"));
+    }
+    Assertions.assertTrue(count > 0);
+  }
 
   /**
    * Tests that when a compaction task filters out all rows using a transform spec,
    * tombstones are created to properly drop the old segments. This test covers both
    * hash and range partitioning strategies.
-   *
+   * <p>
    * This regression test addresses a bug where compaction with transforms that filter
    * all rows would succeed but not create tombstones, leaving old segments visible
    * and causing indefinite compaction retries.
@@ -291,7 +600,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       String partitionType
   )
   {
-    configureCompaction(compactionEngine);
+    configureCompaction(compactionEngine, null);
 
     runIngestionAtGranularity(
         "DAY",
@@ -313,7 +622,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .withTransformSpec(
             // This filter drops all rows: expression "false" always evaluates to false
             new CompactionTransformSpec(
-                new NotDimFilter(new SelectorDimFilter("item", "shirt", null))
+                new NotDimFilter(new EqualityFilter("item", ColumnType.STRING, "shirt", null)),
+                null
             )
         );
 
@@ -326,60 +636,22 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     // Add partitioning spec based on test parameter
     if ("range".equals(partitionType)) {
-      builder.withTuningConfig(
-          new UserCompactionTaskQueryTuningConfig(
-              null,
-              null,
-              null,
-              null,
-              null,
-              new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
-      );
+      PartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false);
+      builder.withTuningConfig(UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build());
     } else {
       // Hash partitioning
-      builder.withTuningConfig(
-          new UserCompactionTaskQueryTuningConfig(
-              null,
-              null,
-              null,
-              null,
-              null,
-              new HashedPartitionsSpec(null, null, null),
-              null,
-              null,
-              null,
-              null,
-              null,
-              2,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
-      );
+      PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, null, null);
+      builder.withTuningConfig(UserCompactionTaskQueryTuningConfig.builder()
+                                                                  .partitionsSpec(partitionsSpec)
+                                                                  .maxNumConcurrentSubTasks(2)
+                                                                  .build());
     }
 
     InlineSchemaDataSourceCompactionConfig compactionConfig = builder.build();
 
     runCompactionWithSpec(compactionConfig);
     waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     int finalSegmentCount = getNumSegmentsWith(Granularities.DAY);
     Assertions.assertEquals(
@@ -387,6 +659,95 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         finalSegmentCount,
         "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
     );
+  }
+
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_compaction_legacy_string_discovery_sparse_column(
+      CompactionEngine compactionEngine
+  )
+  {
+    // test for a bug encountered where ordering contained columns not in dimensions list
+    configureCompaction(compactionEngine, null);
+    String jsonallnull =
+        """
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "a"}
+            {"timestamp": "2026-03-04T00:00:00", "string":[], "another_string": "b"}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonallnull)
+        .isoTimestampColumn("timestamp")
+        .dataSchema(builder -> builder.withDimensions(DimensionsSpec.builder().build()))
+        .segmentGranularity("DAY");
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+
+    // switch to year granularity to trigger compaction
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+            )
+            .withTuningConfig(createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null)))
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.get(0).getDimensions().size());
+  }
+
+  private int getTotalRowCount()
+  {
+    return Numbers.parseInt(cluster.runSql("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource));
+  }
+
+  private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
+  {
+    String result = cluster.runSql(
+        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
+        dataSource,
+        nestedColumn,
+        field,
+        value
+    );
+    Assertions.assertEquals(
+        0,
+        Numbers.parseInt(result),
+        StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
+    );
+  }
+
+
+  private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
+  {
+    List<String> events = new ArrayList<>();
+
+    for (int i = 1; i <= numEvents; i++) {
+      DateTime eventTime = interval.getStart().plus(spacingMillis * i);
+      if (eventTime.isAfter(interval.getEnd())) {
+        throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
+      }
+      String item = i % 2 == 0 ? "hat" : "shirt";
+      int metricValue = 100 + i * 5;
+      events.add(eventTime + "," + item + "," + metricValue);
+    }
+
+    return String.join("\n", events);
   }
 
   private void verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint()
@@ -434,9 +795,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void runCompactionWithSpec(DataSourceCompactionConfig config)
   {
-    final CompactionSupervisorSpec compactionSupervisor
-        = new CompactionSupervisorSpec(config, false, null);
-    cluster.callApi().postSupervisor(compactionSupervisor);
+    cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
+  }
+
+  private void pauseCompaction(DataSourceCompactionConfig config)
+  {
+    cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, true, null));
   }
 
   private void waitForAllCompactionTasksToFinish()
@@ -492,6 +856,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task, overlord);
   }
 
+  public static List<PartitionsSpec> getPartitionsSpec()
+  {
+    return List.of(
+        new DimensionRangePartitionsSpec(null, 5000, List.of("page"), false),
+        new DynamicPartitionsSpec(null, null)
+    );
+  }
+
   public static List<CompactionEngine> getEngine()
   {
     return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
@@ -513,5 +885,55 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       }
     }
     return params;
+  }
+
+  private void verifyEventCountOlderThan(Period period, String dimension, String value, int expectedCount)
+  {
+    DateTime now = DateTimes.nowUtc();
+    DateTime threshold = now.minus(period);
+
+    String result = cluster.runSql(
+        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE %s = '%s' AND __time < MILLIS_TO_TIMESTAMP(%d)",
+        dataSource,
+        dimension,
+        value,
+        threshold.getMillis()
+    );
+    Assertions.assertEquals(
+        expectedCount,
+        Numbers.parseInt(result),
+        StringUtils.format(
+            "Expected %d events where %s='%s' older than %s",
+            expectedCount,
+            dimension,
+            value,
+            period
+        )
+    );
+  }
+
+  private UserCompactionTaskQueryTuningConfig createTuningConfigWithPartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    return new UserCompactionTaskQueryTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        partitionsSpec,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

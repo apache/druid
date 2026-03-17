@@ -62,9 +62,15 @@ public class ChannelCounters implements QueryCounter
   @GuardedBy("this")
   private final LongList loadBytes = new LongArrayList();
 
+  /**
+   * Segment load time. Stored here in nanos, snapshotted in millis.
+   */
   @GuardedBy("this")
   private final LongList loadTime = new LongArrayList();
 
+  /**
+   * Segment load waiting time. Stored here in nanos, snapshotted in millis.
+   */
   @GuardedBy("this")
   private final LongList loadWait = new LongArrayList();
 
@@ -99,8 +105,8 @@ public class ChannelCounters implements QueryCounter
       addLoad(
           NO_PARTITION,
           loadResult.getLoadSizeBytes(),
-          TimeUnit.NANOSECONDS.toMillis(loadResult.getLoadTimeNanos()),
-          TimeUnit.NANOSECONDS.toMillis(loadResult.getWaitTimeNanos()),
+          loadResult.getLoadTimeNanos(),
+          loadResult.getWaitTimeNanos(),
           1
       );
     }
@@ -117,11 +123,11 @@ public class ChannelCounters implements QueryCounter
     add(partitionNumber, rac.numRows(), numBytes, 1, 0);
   }
 
-  public ChannelCounters setTotalFiles(final long nFiles)
+  public ChannelCounters addTotalFiles(final long nFiles)
   {
     synchronized (this) {
       ensureCapacityForPartition(NO_PARTITION);
-      totalFiles.set(NO_PARTITION, nFiles);
+      totalFiles.set(NO_PARTITION, totalFiles.getLong(NO_PARTITION) + nFiles);
       return this;
     }
   }
@@ -242,6 +248,20 @@ public class ChannelCounters implements QueryCounter
     ) {
       return null;
     } else {
+      if (loadTimeArray != null) {
+        // Stored as nanoseconds, snapshotted as milliseconds.
+        for (int i = 0; i < loadTimeArray.length; i++) {
+          loadTimeArray[i] = TimeUnit.NANOSECONDS.toMillis(loadTimeArray[i]);
+        }
+      }
+
+      if (loadWaitArray != null) {
+        // Stored as nanoseconds, snapshotted as milliseconds.
+        for (int i = 0; i < loadWaitArray.length; i++) {
+          loadWaitArray[i] = TimeUnit.NANOSECONDS.toMillis(loadWaitArray[i]);
+        }
+      }
+
       return new Snapshot(
           rowsArray,
           bytesArray,

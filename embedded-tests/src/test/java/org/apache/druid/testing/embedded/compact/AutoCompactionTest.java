@@ -1528,7 +1528,7 @@ public class AutoCompactionTest extends CompactionTestBase
           NO_SKIP_OFFSET,
           null,
           null,
-          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null)),
+          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null), null),
           null,
           false,
           CompactionEngine.NATIVE
@@ -1780,35 +1780,35 @@ public class AutoCompactionTest extends CompactionTestBase
                                               .forDataSource(fullDatasourceName)
                                               .withSkipOffsetFromLatest(skipOffsetFromLatest)
                                               .withTuningConfig(
-                                            new UserCompactionTaskQueryTuningConfig(
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                new MaxSizeSplitHintSpec(null, 1),
-                                                partitionsSpec,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                1,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                1,
-                                                null
-                                            )
-                                        )
+                                                  new UserCompactionTaskQueryTuningConfig(
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      new MaxSizeSplitHintSpec(null, 1),
+                                                      partitionsSpec,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      null,
+                                                      1,
+                                                      null
+                                                  )
+                                              )
                                               .withGranularitySpec(granularitySpec)
                                               .withDimensionsSpec(dimensionsSpec)
                                               .withMetricsSpec(metricsSpec)
                                               .withTransformSpec(transformSpec)
                                               .withIoConfig(
-                                      !dropExisting ? null : new UserCompactionTaskIOConfig(true)
-                                  )
+                                                  !dropExisting ? null : new UserCompactionTaskIOConfig(true)
+                                              )
                                               .withEngine(engine)
                                               .withTaskContext(ImmutableMap.of("maxNumTasks", 2))
                                               .build();

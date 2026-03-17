@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -66,7 +67,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -74,6 +75,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.security.Action;
@@ -153,7 +155,7 @@ public class MSQCompactionRunner implements CompactionRunner
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalToDataSchemaMap
+      Map<QuerySegmentSpec, DataSchema> intervalToDataSchemaMap
   )
   {
     // MSQ compaction uses REPLACE mode which locks the entire interval and replaces all segments.
@@ -242,11 +244,11 @@ public class MSQCompactionRunner implements CompactionRunner
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemas,
+      Map<QuerySegmentSpec, DataSchema> inputSchemas,
       TaskToolbox taskToolbox
   ) throws Exception
   {
-    List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, intervalDataSchemas);
+    List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, inputSchemas);
 
     if (msqControllerTasks.isEmpty()) {
       String msg = StringUtils.format(
@@ -265,21 +267,22 @@ public class MSQCompactionRunner implements CompactionRunner
 
   public List<MSQControllerTask> createMsqControllerTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemas
+      Map<QuerySegmentSpec, DataSchema> inputSchemas
   ) throws JsonProcessingException
   {
     final List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
 
-    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalDataSchemas.entrySet()) {
+    for (Map.Entry<QuerySegmentSpec, DataSchema> inputSchema : inputSchemas.entrySet()) {
       Query<?> query;
-      Interval interval = intervalDataSchema.getKey();
-      DataSchema dataSchema = intervalDataSchema.getValue();
-      Map<String, VirtualColumn> inputColToVirtualCol = getVirtualColumns(dataSchema, interval);
+      QuerySegmentSpec segmentSpec = inputSchema.getKey();
+      DataSchema dataSchema = inputSchema.getValue();
+      Map<String, VirtualColumn> inputColToVirtualCol =
+          getVirtualColumns(dataSchema, JodaUtils.umbrellaInterval(segmentSpec.getIntervals()), compactionTask.getTransformSpec());
 
       if (isGroupBy(dataSchema)) {
-        query = buildGroupByQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
+        query = buildGroupByQuery(compactionTask, segmentSpec, dataSchema, inputColToVirtualCol);
       } else {
-        query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
+        query = buildScanQuery(compactionTask, segmentSpec, dataSchema, inputColToVirtualCol);
       }
 
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
@@ -509,7 +512,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private Query<?> buildScanQuery(
       CompactionTask compactionTask,
-      Interval interval,
+      QuerySegmentSpec segmentSpec,
       DataSchema dataSchema,
       Map<String, VirtualColumn> inputColToVirtualCol
   )
@@ -521,7 +524,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .columns(rowSignature.getColumnNames())
         .virtualColumns(virtualColumns)
         .columnTypes(rowSignature.getColumnTypes())
-        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
+        .intervals(segmentSpec)
         .filters(dataSchema.getTransformSpec().getFilter())
         .context(buildQueryContext(compactionTask.getContext(), dataSchema));
 
@@ -574,7 +577,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * grouping on them without unnesting.</li>
    * </ul>
    */
-  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
+  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval, CompactionTransformSpec compactionTransformSpec)
   {
     Map<String, VirtualColumn> inputColToVirtualCol = new HashMap<>();
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
@@ -635,12 +638,19 @@ public class MSQCompactionRunner implements CompactionRunner
         );
       }
     }
+
+    if (compactionTransformSpec != null && compactionTransformSpec.getVirtualColumns() != null) {
+      for (VirtualColumn vc : compactionTransformSpec.getVirtualColumns().getVirtualColumns()) {
+        inputColToVirtualCol.put(vc.getOutputName(), vc);
+      }
+    }
+
     return inputColToVirtualCol;
   }
 
   private Query<?> buildGroupByQuery(
       CompactionTask compactionTask,
-      Interval interval,
+      QuerySegmentSpec segmentSpec,
       DataSchema dataSchema,
       Map<String, VirtualColumn> inputColToVirtualCol
   )
@@ -654,7 +664,7 @@ public class MSQCompactionRunner implements CompactionRunner
     List<PostAggregator> postAggregators =
         inputColToVirtualCol.entrySet()
                             .stream()
-                            .filter(entry -> !entry.getKey().equals(ColumnHolder.TIME_COLUMN_NAME))
+                            .filter(entry -> entry.getValue().getOutputName().startsWith(ARRAY_VIRTUAL_COLUMN_PREFIX))
                             .map(
                                 entry ->
                                     new ExpressionPostAggregator(
@@ -676,7 +686,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
         .setPostAggregatorSpecs(postAggregators)
         .setContext(buildQueryContext(compactionTask.getContext(), dataSchema))
-        .setInterval(interval);
+        .setQuerySegmentSpec(segmentSpec);
 
     if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
       getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec()).forEach(builder::addOrderByColumn);

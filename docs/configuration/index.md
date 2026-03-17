@@ -441,6 +441,7 @@ This deep storage is used to interface with HDFS. You must load the `druid-hdfs-
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
+|`druid.storage.compressionFormat`|The compression format applied to the segments uploaded to HDFS. Only `zip` and `lz4` are supported. |zip|
 
 #### Cassandra deep storage
 
@@ -996,7 +997,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.server.maxConcurrentActions`|Maximum number of concurrent action requests (such as getting locks, creating segments, fetching segments etc) that the Overlord will process simultaneously. This prevents thread exhaustion while preserving access to health check endpoints. Set to `0` to disable quality of service filtering entirely. If not specified, defaults to `max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`.|`max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`|
 |`druid.indexer.storage.type`|Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. One of `local` or `metadata`. `local` is mainly for internal testing while `metadata` is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|`local`|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|`PT24H`|
-|`druid.indexer.tasklock.forceTimeChunkLock`|**Setting this to false is still experimental**<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context-parameters). See [Task lock system](../ingestion/tasks.md#task-lock-system) for more details about locking in tasks.|true|
+|`druid.indexer.tasklock.forceTimeChunkLock`|If set to true, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use, and may select the deprecated segment lock. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context-parameters). See [Task lock system](../ingestion/tasks.md#task-lock-system) for more details about locking in tasks.|true|
 |`druid.indexer.tasklock.batchSegmentAllocation`| If set to true, Druid performs segment allocate actions in batches to improve throughput and reduce the average `task/action/run/time`. See [batching `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions) for details.|true|
 |`druid.indexer.tasklock.batchAllocationWaitTime`|Number of milliseconds after Druid adds the first segment allocate action to a batch, until it executes the batch. Allows the batch to add more requests and improve the average segment allocation run time. This configuration takes effect only if `batchSegmentAllocation` is enabled.|0|
 |`druid.indexer.tasklock.batchAllocationNumThreads`|Number of worker threads to use for batch segment allocation. This represents the maximum number of allocation batches that can be processed in parallel for distinct datasources. Batches for a single datasource are always processed sequentially. This configuration takes effect only if `batchSegmentAllocation` is enabled.|5|
@@ -1380,6 +1381,7 @@ Processing properties set on the Middle Manager are passed through to Peons.
 |`druid.processing.fifo`|Enables the processing queue to treat tasks of equal priority in a FIFO manner.|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 |`druid.processing.intermediaryData.storage.type`|Storage type for intermediary segments of data shuffle between native parallel index tasks. <br />Set to `local` to store segment files in the local storage of the Middle Manager or Indexer. <br />Set to `deepstore` to use configured deep storage for better fault tolerance during rolling updates. When the storage type is `deepstore`, Druid stores the data in the `shuffle-data` directory under the configured deep storage path. Druid does not support automated cleanup for the `shuffle-data` directory. You can set up cloud storage lifecycle rules for automated cleanup of data at the `shuffle-data` prefix location.|`local`|
+|`druid.processing.parallelPoolInit`|(EXPERIMENTAL) Allows all merge/processing memory pools to be allocated in parallel on process launch. This may significantly speed up Peon launch times if allocating several large buffers.|`false`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -1525,6 +1527,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the indexer.|0|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
+|`druid.processing.parallelPoolInit`|(EXPERIMENTAL) Allows all merge/processing memory pools to be allocated in parallel on process launch. This may significantly speed up Indexer launch times if allocating several large buffers.|`false`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -1635,6 +1638,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the historical.|0|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
+|`druid.processing.parallelPoolInit`|(EXPERIMENTAL) Allows all merge/processing memory pools to be allocated in parallel on process launch. This may significantly speed up Historical/Broker launch times if allocating several large buffers.|`false`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -1721,7 +1725,7 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 |`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentRangeThreshold`|ISO duration threshold for maximum segment range a query can span before the priority is automatically adjusted.|none|
-|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
+|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|5|
 
 ##### Laning strategies
 
@@ -1862,6 +1866,11 @@ queries in order to avoid running as a default priority of 0.
 |--------|-----------|-------|
 |`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
 
+#### Dynamic configuration
+
+The Broker has dynamic configurations to tune certain behavior dynamically, without requiring a service restart.
+You can configure these parameters using the [web console](../operations/web-console.md) (recommended) or through the [Broker dynamic configuration API](../api-reference/dynamic-configuration-api.md#broker-dynamic-configuration).
+
 #### SQL
 
 The Druid SQL server is configured through the following properties on the Broker.
@@ -1886,7 +1895,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.useLexicographicTopN`|Whether to use [TopN queries](../querying/topnquery.md) with lexicographic dimension ordering. If false, [GroupBy queries](../querying/groupbyquery.md) will be used instead for lexicographic ordering. When both this and `useApproximateTopN` are false, TopN queries are never used.|false|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on `__time` column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on `__time` column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
-|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments on Broker that can be used to serve queries against `sys.segments`. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|true|
 |`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
 |`druid.sql.planner.authorizeSystemTablesDirectly`|If true, Druid authorizes queries against any of the system schema tables (`sys` in SQL) as `SYSTEM_TABLE` resources which require `READ` access, in addition to permissions based content filtering.|false|
 |`druid.sql.planner.useNativeQueryExplain`|If true, `EXPLAIN PLAN FOR` will return the explain plan as a JSON representation of equivalent native query(s), else it will return the original version of explain plan generated by Calcite. It can be overridden per query with `useNativeQueryExplain` context key.|true|
@@ -1974,6 +1983,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|Any|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|Overlord|
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|Overlord|
+|`org.apache.druid.server.metrics.SupervisorStatsMonitor`|Reports supervisor count and state, per supervisor per emission period.|Overlord|
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
@@ -1988,10 +1998,10 @@ All the services in your Druid deployment would have these two monitors.
 
 If you want any service specific monitors though, you need to add all the monitors you want to run for that service to the service's `runtime.properties` file even if they are listed in the common file. The service specific properties take precedence.
 
-The following example adds the `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
+The following example adds the `TaskCountStatsMonitor`, `TaskSlotCountStatsMonitor`, and `SupervisorStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
 
 ```properties
-druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.server.metrics.SupervisorStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
 If you don't include `OshiSysMonitor` and `JvmMonitor` in the Overlord's `runtime.properties` file, the monitors don't get loaded onto the Overlord despite being specified in the common file.
@@ -2019,6 +2029,8 @@ log4j config to route these logs to different sources based on the feed of the e
 |--------|-----------|--------|
 |`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
+|`druid.emitter.logging.shouldFilterMetrics`|When true, only metrics listed in the allow list are emitted; non-metric events (e.g. alerts) are always emitted. When false, all events are logged (backward-compatible).|false|
+|`druid.emitter.logging.allowedMetricsPath`|Path to a JSON file whose keys are the allowed metric names. Only used when `shouldFilterMetrics` is true. If null or empty, the bundled classpath resource `defaultMetrics.json` is used. If a path is set but the file is missing, a warning is logged and the emitter falls back to the default classpath resource.|null|
 
 #### HTTP emitter module
 
@@ -2254,6 +2266,7 @@ Supported runtime properties:
 |`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
+|`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|Integer.MAX_VALUE (unlimited)|
 |`druid.query.groupBy.defaultOnDiskStorage`|Default amount of disk space to use, per-query, for spilling the result sets to disk when either the merging buffer or the dictionary fills up. Set to zero to disable disk spilling for queries which don't override `maxOnDiskStorage` in their context.|`druid.query.groupBy.maxOnDiskStorage`|
 
 Supported query contexts:
@@ -2263,6 +2276,7 @@ Supported query contexts:
 |`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to set `maxOnDiskStorage` to a value between 0 and `druid.query.groupBy.maxOnDiskStorage` for this query. If this query context override exceeds `druid.query.groupBy.maxOnDiskStorage`, the query will use `druid.query.groupBy.maxOnDiskStorage`. Omitting this from the query context will cause the query to use `druid.query.groupBy.defaultOnDiskStorage` for `maxOnDiskStorage`|
+|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
 
 ### Advanced configurations
 
