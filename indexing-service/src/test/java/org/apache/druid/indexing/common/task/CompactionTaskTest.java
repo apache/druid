@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.MarkSegmentToUpgradeAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -1204,14 +1205,15 @@ public class CompactionTaskTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
-    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    Collections.sort(segments);
-    // Remove one segment in the middle
-    segments.remove(segments.size() / 2);
+    // Spec includes a segment ID that does not exist in metadata - validation should fail
+    final List<String> segmentIds = new ArrayList<>(
+        SEGMENTS.stream().map(s -> s.getId().toString()).collect(Collectors.toList())
+    );
+    segmentIds.add(DATA_SOURCE + "_2020-01-01T00:00:00.000Z_2020-02-01T00:00:00.000Z_x_0");
     final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
+        new SegmentProvider(DATA_SOURCE, new SpecificSegmentsSpec(segmentIds)),
         null,
         null,
         null,
@@ -1239,11 +1241,10 @@ public class CompactionTaskTest
 
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
-    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         null,
         null,
         null,
@@ -2231,10 +2232,13 @@ public class CompactionTaskTest
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
-      if (!(taskAction instanceof RetrieveUsedSegmentsAction)) {
-        throw new ISE("action[%s] is not supported", taskAction);
+      if (taskAction instanceof RetrieveUsedSegmentsAction) {
+        return (RetType) segments;
       }
-      return (RetType) segments;
+      if (taskAction instanceof MarkSegmentToUpgradeAction) {
+        return (RetType) Integer.valueOf(0);
+      }
+      throw new ISE("action[%s] is not supported", taskAction);
     }
   }
 

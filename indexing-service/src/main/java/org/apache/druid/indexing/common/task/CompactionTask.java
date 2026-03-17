@@ -229,7 +229,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
-
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
     this.metricsSpec = metricsSpec;
@@ -468,11 +467,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    List<DataSegment> allSegmentsInInterval = ImmutableList.copyOf(
+    return ImmutableList.copyOf(
         taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals))
     );
-
-    return allSegmentsInInterval;
   }
 
   @Override
@@ -743,16 +740,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   {
     final List<DataSegment> usedSegments = segmentProvider.findSegments(toolbox.getTaskActionClient());
     segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
-
-    SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(usedSegments);
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments;
-    if (segmentProvider.inputSpec instanceof SpecificSegmentsSpec) {
-      // When compacting a subset of segments, the timeline may have incomplete partitions.
-      // Use lookupWithIncompletePartitions to include them.
-      timelineSegments = segmentTimeline.lookupWithIncompletePartitions(segmentProvider.interval);
-    } else {
-      timelineSegments = segmentTimeline.lookup(segmentProvider.interval);
-    }
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
+        .forSegments(usedSegments)
+        .lookup(segmentProvider.interval);
     return VersionedIntervalTimeline.getAllObjects(timelineSegments);
   }
 
@@ -1300,13 +1290,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
+  /**
+   * Provides segment discovery and validation for compaction.
+   * For minor compaction (SpecificSegmentsSpec, MinorCompactionInputSpec), finds all segments
+   * in the interval and partitions them into compact vs upgrade via {@link #shouldUpgradeSegment}.
+   */
   @VisibleForTesting
   static class SegmentProvider
   {
     private final String dataSource;
     private final CompactionInputSpec inputSpec;
     private final Interval interval;
-    private List<DataSegment> allSegmentsInInterval;
 
     private final boolean minorCompaction;
     private final Set<SegmentDescriptor> uncompactedSegments;
@@ -1321,14 +1315,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
       } else if (inputSpec instanceof SpecificSegmentsSpec) {
         minorCompaction = true;
-        uncompactedSegments = ((SpecificSegmentsSpec) inputSpec).getSegments()
-            .stream()
-            .map(segmentIdString -> {
-              SegmentId segmentId = SegmentId.tryParse(dataSource, segmentIdString);
-              return segmentId != null ? segmentId.toDescriptor() : null;
-            })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
+        uncompactedSegments = Set.copyOf(((SpecificSegmentsSpec) inputSpec).getSegmentDescriptors(dataSource));
       } else {
         minorCompaction = false;
         uncompactedSegments = null;
@@ -1344,37 +1331,22 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
     }
 
-    List<DataSegment> findAndCacheAllSegments(TaskActionClient actionClient) throws IOException
+    /**
+     * Returns all segments in the interval. For minor compaction (SpecificSegmentsSpec, MinorCompactionInputSpec),
+     * partitioning into compact vs upgrade is done via {@link #shouldUpgradeSegment}.
+     */
+    List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
-      this.allSegmentsInInterval = new ArrayList<>(
+      return new ArrayList<>(
           actionClient.submit(
               new RetrieveUsedSegmentsAction(dataSource, ImmutableList.of(interval))
           )
       );
-      return this.allSegmentsInInterval;
-    }
-
-    List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
-    {
-      List<DataSegment> allSegmentsInInterval = findAndCacheAllSegments(actionClient);
-
-      if (inputSpec instanceof SpecificSegmentsSpec) {
-        SpecificSegmentsSpec spec = (SpecificSegmentsSpec) inputSpec;
-        Set<String> specificSegmentIds = new HashSet<>(spec.getSegments());
-        return allSegmentsInInterval
-            .stream()
-            .filter(segment -> specificSegmentIds.contains(segment.getId().toString()))
-            .collect(Collectors.toList());
-      }
-
-      return allSegmentsInInterval;
     }
 
     /**
-     * The compaction task needs to check that in the case TIME_CHUNK lock granularity is used, all segments in the
-     * interval are to be checked. Since this is always called after {@code findSegments}, which caches all segments
-     * in the datasource to {@code allSegmentsInInterval}, we can safely use {@code allSegmentsInInterval} should
-     * we realize that our lock granularity is of type TIME_CHUNK.
+     * Validates that the specified segments exist in the latest segments. For TIME_CHUNK and minor compaction,
+     * the caller passes the full interval set from {@code findSegments}.
      */
     void checkSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments)
     {
@@ -1382,11 +1354,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         throw new ISE("No segments found for compaction. Please check that datasource name and interval are correct.");
       }
 
-      final List<DataSegment> segmentsToBeChecked = lockGranularityInUse == LockGranularity.TIME_CHUNK
-                                                    ? allSegmentsInInterval
-                                                    : latestSegments;
-
-      if (!inputSpec.validateSegments(lockGranularityInUse, segmentsToBeChecked)) {
+      if (!inputSpec.validateSegments(lockGranularityInUse, latestSegments)) {
         throw new ISE(
             "Specified segments in the spec are different from the current used segments. "
             + "Possibly new segments would have been added or some segments have been unpublished."

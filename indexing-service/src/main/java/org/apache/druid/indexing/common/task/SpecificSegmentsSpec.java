@@ -24,15 +24,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Compaction input spec that targets specific segments by ID.
+ * Used for native engine-based minor compaction: the timeline is built from all segments in the interval,
+ * and segments not in this spec are upgraded (no physical re-compaction).
+ */
 public class SpecificSegmentsSpec implements CompactionInputSpec
 {
   public static final String TYPE = "segments";
@@ -50,6 +58,7 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   @JsonCreator
   public SpecificSegmentsSpec(@JsonProperty("segments") List<String> segments)
   {
+    Preconditions.checkArgument(segments != null && !segments.isEmpty(), "Segments must not be null or empty");
     this.segments = segments;
     // Sort segments to use in validateSegments.
     Collections.sort(this.segments);
@@ -59,6 +68,19 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   public List<String> getSegments()
   {
     return segments;
+  }
+
+  /**
+   * Parses segment IDs to descriptors for minor compaction (compact vs upgrade partitioning).
+   * Invalid IDs are filtered out.
+   */
+  List<SegmentDescriptor> getSegmentDescriptors(String dataSource)
+  {
+    return segments.stream()
+        .map(id -> SegmentId.tryParse(dataSource, id))
+        .filter(Objects::nonNull)
+        .map(SegmentId::toDescriptor)
+        .collect(Collectors.toList());
   }
 
   @Override
