@@ -34,9 +34,9 @@ import java.io.IOException;
  * <ul>
  * <li>Enable TLS port on the Druid services</li>
  * <li>Generate client certificates using script
- * {@code integration-tests/docker/tls/generate-client-certs-and-keystores.sh}</li>
+ * {@code tls/generate-client-certs-and-keystores.sh}</li>
  * <li>Generate server truststore using script
- * {@code integration-tests/docker/tls/generate-server-certs-and-keystores.sh}</li>
+ * {@code tls/generate-server-certs-and-keystores.sh}</li>
  * <li>Keep the generated certificates in the {@code TestFolder} used by the cluster</li>
  * <li>Configure the cluster with the appropriate keystore/truststore paths.</li>
  * </ul>
