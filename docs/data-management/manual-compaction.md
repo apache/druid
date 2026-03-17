@@ -117,9 +117,9 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |Field|Description|Default|Required|
 |-----|-----------|-------|--------|
 |`type`|Task type. Set the value to `compact`.|none|Yes|
-|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
+|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [uncompacted](#uncompacted-inputspec).|none|Yes|
 |`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br />- the `interval` in the `interval` type `inputSpec`.<br />- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br />If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
-|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [segments](#segments-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
+|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [uncompacted](#uncompacted-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
 
 The compaction task has two kinds of `inputSpec`:
 
@@ -127,23 +127,55 @@ The compaction task has two kinds of `inputSpec`:
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `interval` to trigger native-engine major compaction.|Yes|
+|`type`|Task type. Set the value to `interval` to trigger major compaction.|Yes|
 |`interval`|Interval to compact.|Yes|
 
-### Segments `inputSpec`
+### Uncompacted `inputSpec`
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `segments` to trigger native-engine minor compaction.|Yes|
-|`segments`|A list of segment IDs.|Yes|
+|`type`|Task type. Set the value to `uncompacted` to trigger native-engine minor compaction.|Yes|
+|`interval`|Interval to compact.|Yes|
+|`uncompactedSegments`|A list of segment descriptors.|Yes|
 
-Note: MSQ compaction does not support segments `inputSpec`. Use `MinorCompactionInputSpec` (type: uncompacted) for MSQ minor compaction.
+The required segment descriptor fields can be retrieved from the "Segments" section in the web console.
 
-When using the segments `inputSpec`, the task compacts only the specified segments. Segments in the same interval that are not in the spec are upgraded in place rather than compacted. This allows compacting a subset of segments while preserving others.
+|Field|Description|Required|
+|-----|-----------|--------|
+|`itvl`|Interval of segment to compact.|Yes|
+|`ver`|Version of the segment.|Yes|
+|`part`|Partition number of the segment.|Yes|
+
+#### Example uncompacted inputSpec
+
+```json
+{
+  "type": "uncompacted",
+  "interval": "2020-01-01T00:00:00.000Z/2020-01-01T01:00:00.000Z",
+  "uncompactedSegments": [
+    {
+      "itvl": "2020-01-01T00:00:00.000Z/2020-01-01T01:00:00.000Z",
+      "ver": "2020-01-01T00:07:18.186Z",
+      "part": 0
+    },
+    {
+      "itvl": "2020-01-01T00:00:00.000Z/2020-01-01T01:00:00.000Z",
+      "ver": "2020-01-01T00:07:18.186Z",
+      "part": 1
+    }
+  ]
+}
+```
+
+When using the uncompacted `inputSpec`, the task compacts only the specified segments. Segments in the same interval that are not in the spec are upgraded in place rather than compacted. This allows compacting a subset of segments while preserving others.
 
 There are some requirements when triggering a native minor compaction:
 - Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE (TIME_CHUNK) locks over the entire interval.
 - `dropExisting: true` is allowed with segments `inputSpec`; the task replaces only the compacted segments.
+
+### Segment `inputSpec`
+
+The segment `inputSpec` is deprecated, instructions for usage will no longer be documented. Please use the above 2 `inputSpec` instead.
 
 ## Compaction dimensions spec
 
