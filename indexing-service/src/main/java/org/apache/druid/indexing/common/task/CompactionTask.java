@@ -157,12 +157,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
 
-  /**
-   * Context key to pass specific segment IDs to sub-tasks when compacting a subset of segments.
-   * This ensures that sub-tasks lock only the specified segments, not all segments in the interval.
-   */
-  public static final String CTX_KEY_SPECIFIC_SEGMENTS_TO_COMPACT = "specificSegmentsToCompact";
-
   private final CompactionIOConfig ioConfig;
   @Nullable
   private final DimensionsSpec dimensionsSpec;

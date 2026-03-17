@@ -77,6 +77,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.NativeCompactionRunner.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -2129,6 +2130,84 @@ public class CompactionTaskTest
     task.determineLockGranularityAndTryLock(segmentAwareClient, ImmutableList.of(testInterval));
 
     Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
+  }
+
+  /**
+   * Native compaction subtasks must use TIME_CHUNK lock (enforced via context from createContextForSubtask).
+   */
+  @Test
+  public void testNativeCompactionSubtaskUsesTimeChunkLock() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> segments = ImmutableList.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1)
+    );
+    final SpecificSegmentsSpec spec = SpecificSegmentsSpec.fromSegments(segments);
+
+    final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+        .inputSpec(spec)
+        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+
+    final NativeCompactionRunner runner = new NativeCompactionRunner(segmentCacheManagerFactory);
+    final Map<String, Object> subtaskContext = runner.createContextForSubtask(compactionTask);
+
+    final DataSchema dataSchema = DataSchema.builder()
+        .withDataSource(DATA_SOURCE)
+        .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+        .withDimensions(
+            new DimensionsSpec(ImmutableList.of(new StringDimensionSchema("dim1"), new StringDimensionSchema("dim2")))
+        )
+        .withGranularity(
+            new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, false, ImmutableList.of(testInterval))
+        )
+        .build();
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
+        ImmutableMap.of(
+            new org.apache.druid.query.spec.MultipleIntervalSegmentSpec(ImmutableList.of(testInterval)),
+            dataSchema
+        ),
+        toolbox,
+        new CompactionIOConfig(spec, false, null),
+        new PartitionConfigurationManager(null),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+    final ParallelIndexSupervisorTask subtask = new ParallelIndexSupervisorTask(
+        "test_subtask",
+        "test_group",
+        null,
+        ingestionSpecs.get(0),
+        "base_0",
+        subtaskContext,
+        true
+    );
+
+    taskActionTestKit.getTaskLockbox().add(subtask);
+    final TaskActionClient taskActionClient = new LocalTaskActionClient(
+        subtask,
+        taskActionTestKit.getTaskActionToolbox()
+    );
+    final TaskActionClient segmentAwareClient = new TaskActionClient()
+    {
+      @Override
+      public <RetType> RetType submit(TaskAction<RetType> action) throws java.io.IOException
+      {
+        if (action instanceof RetrieveUsedSegmentsAction) {
+          return (RetType) segments;
+        }
+        return taskActionClient.submit(action);
+      }
+    };
+    subtask.determineLockGranularityAndTryLock(segmentAwareClient, ImmutableList.of(testInterval));
+
+    Assert.assertEquals(
+        LockGranularity.TIME_CHUNK,
+        subtask.getTaskLockHelper().getLockGranularityToUse()
+    );
   }
 
   /**

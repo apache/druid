@@ -365,13 +365,8 @@ public class NativeCompactionRunner implements CompactionRunner
     newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
-
-    // Pass specific segment IDs to sub-tasks when using SpecificSegmentsSpec.
-    // This ensures sub-tasks lock only the specified segments, not all segments in the interval.
-    if (compactionTask.getIoConfig().getInputSpec() instanceof SpecificSegmentsSpec) {
-      SpecificSegmentsSpec specificSpec = (SpecificSegmentsSpec) compactionTask.getIoConfig().getInputSpec();
-      newContext.put(CompactionTask.CTX_KEY_SPECIFIC_SEGMENTS_TO_COMPACT, specificSpec.getSegments());
-    }
+    // Native compaction subtasks always use TIME_CHUNK (REPLACE mode).
+    newContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     return newContext;
   }
 

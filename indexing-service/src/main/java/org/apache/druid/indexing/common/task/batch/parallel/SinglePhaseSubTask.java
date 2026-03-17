@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
@@ -308,27 +307,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    List<DataSegment> allSegments = findInputSegments(
+    return findInputSegments(
         getDataSource(),
         taskActionClient,
         intervals
     );
-
-    // Check if specific segments were passed via context (from CompactionTask)
-    @SuppressWarnings("unchecked")
-    List<String> specificSegmentIds = (List<String>) getContext().get(
-        CompactionTask.CTX_KEY_SPECIFIC_SEGMENTS_TO_COMPACT
-    );
-
-    if (specificSegmentIds != null && !specificSegmentIds.isEmpty()) {
-      // Filter to only the specified segments
-      Set<String> segmentIdSet = new HashSet<>(specificSegmentIds);
-      return allSegments.stream()
-                        .filter(segment -> segmentIdSet.contains(segment.getId().toString()))
-                        .collect(Collectors.toList());
-    }
-
-    return allSegments;
   }
 
   @Override
