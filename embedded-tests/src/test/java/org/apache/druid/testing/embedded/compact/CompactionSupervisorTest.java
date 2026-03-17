@@ -89,10 +89,12 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.tools.EventSerializer;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
@@ -245,8 +247,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingest1kRecords();
     ingest1kRecords();
 
-    broker.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    waitSegmentsAvailableInBroker();
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(2000, getTotalRowCount());
 
@@ -272,8 +274,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     pauseCompaction(dayGranularityConfig);
 
-    broker.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    waitSegmentsAvailableInBroker();
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(2000, getTotalRowCount());
 
@@ -283,8 +285,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingest1kRecords();
     ingest1kRecords();
 
-    broker.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    waitSegmentsAvailableInBroker();
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(4000, getTotalRowCount());
 
@@ -831,6 +833,30 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .filter(segment -> !segment.isTombstone())
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
+  }
+
+  private void waitSegmentsAvailableInBroker()
+  {
+    List<String> segments = overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .stream()
+        .map(DataSegment::getId)
+        .map(SegmentId::toString)
+        .map(s -> StringUtils.format("'%s'", s))
+        .toList();
+
+    ITRetryUtil.retryUntilEquals(
+        () ->
+            Numbers.parseInt(cluster.callApi()
+                                    .runSql(
+                                        "select count(*) from sys.segments where segment_id in (%s)",
+                                        String.join(", ", segments)
+                                    )),
+        segments.size(),
+        "wait until segments are available in broker"
+    );
   }
 
   private void runIngestionAtGranularity(
