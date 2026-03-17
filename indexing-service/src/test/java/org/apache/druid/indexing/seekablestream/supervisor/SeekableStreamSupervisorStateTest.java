@@ -3074,7 +3074,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected void updatePartitionLagFromStream()
+    public void updatePartitionLagFromStream()
     {
       // do nothing
     }
@@ -3170,7 +3170,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+    public SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
         String stream,
         Map<String, String> map
     )
@@ -3286,7 +3286,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected Map<String, String> getLatestSequencesFromStream()
+    public Map<String, String> getLatestSequencesFromStream()
     {
       return streamOffsets;
     }

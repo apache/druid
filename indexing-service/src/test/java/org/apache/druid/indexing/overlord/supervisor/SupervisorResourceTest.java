@@ -1257,12 +1257,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     )).andReturn(false);
     replayAll();
 
-    Response response = supervisorResource.reset("my-id");
+    Response response = supervisorResource.reset("my-id", false);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
-    response = supervisorResource.reset("my-id-2");
+    response = supervisorResource.reset("my-id-2", false);
 
     Assert.assertEquals(404, response.getStatus());
     Assert.assertEquals("my-id", id1.getValue());

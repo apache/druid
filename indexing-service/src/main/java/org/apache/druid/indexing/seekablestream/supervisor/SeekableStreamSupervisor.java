@@ -1916,6 +1916,51 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     checkTaskDuration();
   }
 
+  /**
+   * Calculates the skipped offset ranges between start and end offsets.
+   * Returns a map with partition ID as key and [startOffset, endOffset] array as value.
+   *
+   * @param startOffsets Starting offsets (last checkpointed)
+   * @param endOffsets Ending offsets (latest from stream)
+   * @return Map of partition ID (as String) to offset range [start, end]
+   */
+  public Map<String, Object> calculateSkippedOffsetRanges(
+      Map<PartitionIdType, SequenceOffsetType> startOffsets,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets
+  )
+  {
+    Map<String, Object> skippedRanges = new HashMap<>();
+
+    for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+      PartitionIdType partition = entry.getKey();
+      SequenceOffsetType endOffset = entry.getValue();
+      SequenceOffsetType startOffset = (startOffsets != null) ? startOffsets.get(partition) : null;
+
+      if (startOffset != null) {
+        // Both start and end exist - calculate range
+        skippedRanges.put(
+            partition.toString(),
+            ImmutableMap.of(
+                "start", startOffset,
+                "end", endOffset
+            )
+        );
+      } else {
+        // No checkpoint exists for this partition
+        skippedRanges.put(
+            partition.toString(),
+            ImmutableMap.of(
+                "start", "none",
+                "end", endOffset,
+                "note", "No committed offset found for this partition"
+            )
+        );
+      }
+    }
+
+    return skippedRanges;
+  }
+
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
@@ -3144,9 +3189,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * gets mapping of partitions in stream to their latest offsets.
+   * Gets mapping of partitions in stream to their latest offsets.
+   * This returns the cached latest offsets that were captured by the most recent
+   * call to {@link #updatePartitionLagFromStream()}.
+   *
+   * @return Map of partition ID to latest sequence offset
    */
-  protected Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
+  public Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
   {
     return new HashMap<>();
   }
@@ -4263,7 +4312,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
+  /**
+   * Gets the last committed offsets from metadata storage.
+   * This represents the offsets that have been successfully published by tasks.
+   *
+   * @return Map of partition ID to sequence offset, or empty map if no metadata exists or stream doesn't match
+   */
+  public Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
@@ -4478,7 +4533,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
-  protected abstract void updatePartitionLagFromStream();
+  public abstract void updatePartitionLagFromStream();
 
   /**
    * Gets 'lag' of currently processed offset behind latest offset as a measure of difference between offsets.
@@ -4716,7 +4771,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param map    partitionId -> sequence
    * @return specific instance of datasource metadata
    */
-  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
+  public abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
       String stream,
       Map<PartitionIdType, SequenceOffsetType> map
   );

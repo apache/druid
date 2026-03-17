@@ -821,7 +821,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         caughtExceptionInner = e;
         if (Throwables.getRootCause(e) instanceof InterruptedException) {
           // Suppress InterruptedException stack trace to avoid flooding the logs
-          log.error("Encounted InterrupedException in run() before persisting");
+          log.error("Encountered InterrupedException in run() before persisting");
         } else {
           log.error(e, "Encountered exception in run() before persisting.");
         }

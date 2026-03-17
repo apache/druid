@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
@@ -37,7 +38,10 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -273,7 +277,7 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
-      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
+      log.info("Stopping [%d] supervisors", supervisors.size());
       for (String id : supervisors.keySet()) {
         try {
           stopFutures.add(supervisors.get(id).lhs.stopAsync());
@@ -363,6 +367,76 @@ public class SupervisorManager
       autoscaler.reset();
     }
     return true;
+  }
+
+  /**
+   * Resets a supervisor to latest offsets and returns the skipped offset ranges.
+   * Requirements:
+   * - Supervisor must be RUNNING - needs active stream connection
+   * - Supervisor must be a SeekableStreamSupervisor (Kafka, Kinesis)
+   * - useEarliestOffset must be false (otherwise supervisor always starts from earliest)
+   * @param id supervisor ID
+   * @return Map containing supervisorId and skipped offset ranges
+   * @throws IllegalArgumentException if supervisor doesn't exist or if useEarliestOffset is true
+   * @throws IllegalStateException if supervisor is not running
+   */
+  public Map<String, Object> resetSupervisorAndReturnSkippedOffsets(String id)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
+    if (supervisorPair == null || supervisorPair.lhs == null || supervisorPair.rhs == null) {
+      throw new IAE("Supervisor[%s] does not exist", id);
+    }
+    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+      throw new IAE("Supervisor[%s] is not a SeekableStreamSupervisor", id);
+    }
+    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
+
+    // Verify useEarliestOffset is false
+    if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
+      throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
+    }
+
+    // We need an active recordSupplier to query the latest offsets from the stream
+    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
+      throw new ISE("A running supervisor is required to query the latest offsets from the stream");
+    }
+
+    log.info("Capturing latest offsets from stream for supervisor[%s]", id);
+    streamSupervisor.updatePartitionLagFromStream();
+    Map<?, ?> latestOffsets = streamSupervisor.getLatestSequencesFromStream();
+
+    log.info("Capturing checkpointed offsets for supervisor[%s]", id);
+    Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorage();
+
+    log.info("Resetting supervisor[%s] metadata to latest offsets", id);
+    DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
+      streamSupervisor.getIoConfig().getStream(),
+      latestOffsets
+    );
+
+    streamSupervisor.resetOffsets(resetMetadata);
+
+    // Reset autoscaler if present
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.reset();
+    }
+
+    Map<String, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
+
+    log.info(
+     "Successfully reset supervisor[%s] to latest. Skipped ranges: %s",
+      id,
+      skippedRanges
+    );
+
+    return ImmutableMap.of(
+      "id", id,
+      "skippedOffsets", skippedRanges
+    );
   }
 
   public boolean checkPointDataSourceMetadata(

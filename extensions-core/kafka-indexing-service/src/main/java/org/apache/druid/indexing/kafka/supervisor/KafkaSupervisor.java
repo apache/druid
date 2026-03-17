@@ -345,7 +345,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<KafkaTopicPartition, Long> map)
+  public KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<KafkaTopicPartition, Long> map)
   {
     return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
@@ -502,7 +502,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
    * {@link #getPartitionRecordLag}.
    */
   @Override
-  protected void updatePartitionLagFromStream()
+  public void updatePartitionLagFromStream()
   {
     if (getIoConfig().isEmitTimeLagMetrics()) {
       updatePartitionTimeAndRecordLagFromStream();
@@ -539,7 +539,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected Map<KafkaTopicPartition, Long> getLatestSequencesFromStream()
+  public Map<KafkaTopicPartition, Long> getLatestSequencesFromStream()
   {
     return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();
   }
@@ -572,17 +572,17 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
    * Gets the offsets as stored in the metadata store. The map returned will only contain
    * offsets from topic partitions that match the current supervisor config stream. This
    * override is needed because in the case of multi-topic, a user could have updated the supervisor
-   * config from single topic to mult-topic, where the new multi-topic pattern regex matches the
+   * config from single topic to multi-topic, where the new multi-topic pattern regex matches the
    * old config single topic. Without this override, the previously stored metadata for the single
    * topic would be deemed as different from the currently configure stream, and not be included in
    * the offset map returned. This implementation handles these cases appropriately.
    *
-   * @return the previoulsy stored offsets from metadata storage, possibly updated with offsets removed
+   * @return the previously stored offsets from metadata storage, possibly updated with offsets removed
    * for topics that do not match the currently configured supervisor topic. Topic partition keys may also be
    * updated to single topic or multi-topic depending on the supervisor config, as needed.
    */
   @Override
-  protected Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
+  public Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (checkSourceMetadataMatch(dataSourceMetadata)) {
