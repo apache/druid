@@ -1191,8 +1191,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   /**
-   * Verifies that columns with analysis errors are included in the row signature with {@link ColumnType#UNKNOWN_COMPLEX}
-   * rather than skipped. Skipping error columns can cause invalid query plans and results as seen in
+   * Verifies that columns with analysis errors are included in the row signature rather than skipped.
+   * Skipping error columns can cause invalid query plans and results as seen in
    * <a href="https://github.com/apache/druid/issues/18437">issue 18437</a> and <a href="https://github.com/apache/druid/pull/18966">pr 18966</a>.
    */
   @Test
