@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
@@ -66,9 +67,9 @@ public class DelayMetricEmittingScheduledExecutorService extends DecoratedSchedu
     @Override
     public <T> Callable<T> decorateCallable(final Callable<T> callable)
     {
-      final long submittedAtNanos = System.nanoTime();
+      final Stopwatch stopwatch = Stopwatch.createStarted();
       return () -> {
-        emitSchedulingDelay(submittedAtNanos, 0);
+        emitSchedulingDelay(stopwatch.millisElapsed(), 0);
         return callable.call();
       };
     }
@@ -76,9 +77,9 @@ public class DelayMetricEmittingScheduledExecutorService extends DecoratedSchedu
     @Override
     public Runnable decorateRunnable(final Runnable runnable)
     {
-      final long submittedAtNanos = System.nanoTime();
+      final Stopwatch stopwatch = Stopwatch.createStarted();
       return () -> {
-        emitSchedulingDelay(submittedAtNanos, 0);
+        emitSchedulingDelay(stopwatch.millisElapsed(), 0);
         runnable.run();
       };
     }
@@ -90,10 +91,10 @@ public class DelayMetricEmittingScheduledExecutorService extends DecoratedSchedu
         final TimeUnit unit
     )
     {
-      final long submittedAtNanos = System.nanoTime();
-      final long intendedDelayNanos = unit.toNanos(delay);
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+      final long intendedDelayMillis = unit.toMillis(delay);
       return () -> {
-        emitSchedulingDelay(submittedAtNanos, intendedDelayNanos);
+        emitSchedulingDelay(stopwatch.millisElapsed(), intendedDelayMillis);
         return callable.call();
       };
     }
@@ -101,23 +102,23 @@ public class DelayMetricEmittingScheduledExecutorService extends DecoratedSchedu
     @Override
     public Runnable decorateScheduledRunnable(final Runnable runnable, final long delay, final TimeUnit unit)
     {
-      final long submittedAtNanos = System.nanoTime();
-      final long intendedDelayNanos = unit.toNanos(delay);
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+      final long intendedDelayMillis = unit.toMillis(delay);
       return () -> {
-        emitSchedulingDelay(submittedAtNanos, intendedDelayNanos);
+        emitSchedulingDelay(stopwatch.millisElapsed(), intendedDelayMillis);
         runnable.run();
       };
     }
 
-    private void emitSchedulingDelay(final long submittedAtNanos, final long intendedDelayNanos)
+    private void emitSchedulingDelay(final long actualDelayMillis, final long intendedDelayMillis)
     {
-      final long actualDelayNanos = System.nanoTime() - submittedAtNanos;
-      final long delayMillis = Math.max(0, TimeUnit.NANOSECONDS.toMillis(actualDelayNanos - intendedDelayNanos));
+      final long delayMillis = Math.max(0, actualDelayMillis - intendedDelayMillis);
 
       final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
       for (final Map.Entry<String, Object> entry : metricDimensions.entrySet()) {
         builder.setDimensionIfNotNull(entry.getKey(), entry.getValue());
       }
+
       emitter.emit(builder.setMetric(metricName, delayMillis));
     }
   }

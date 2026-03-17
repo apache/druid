@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -156,7 +157,7 @@ public class ScheduledExecutors
           @Override
           public void run()
           {
-            final long startNanos = System.nanoTime();
+            final Stopwatch stopwatch = Stopwatch.createStarted();
             Signal signal = Signal.REPEAT;
 
             try {
@@ -168,9 +169,11 @@ public class ScheduledExecutors
             }
 
             if (signal == Signal.REPEAT && !exec.isShutdown()) {
-              final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
-              final long nextDelay = Math.max(0, rate.getMillis() - elapsedMillis);
+              final long nextDelay = Math.max(0, rate.getMillis() - stopwatch.millisElapsed());
+              log.trace("Rescheduling %s (delay %s)", callable, nextDelay);
               exec.schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+            } else {
+              log.debug("Stopped rescheduling %s (rate %s)", callable, rate);
             }
           }
         },

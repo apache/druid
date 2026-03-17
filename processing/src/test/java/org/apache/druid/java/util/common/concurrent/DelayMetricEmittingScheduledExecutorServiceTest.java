@@ -24,8 +24,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -52,15 +52,15 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     final CountDownLatch latch = new CountDownLatch(1);
     exec.schedule(latch::countDown, 10, TimeUnit.MILLISECONDS);
 
-    Assert.assertTrue("Task should complete", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Task should complete");
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
 
     final ServiceMetricEvent event = events.get(0);
-    Assert.assertTrue("Lag should be >= 0", event.getValue().longValue() >= 0);
-    Assert.assertEquals("testComponent", event.getUserDims().get("component"));
+    Assertions.assertTrue(event.getValue().longValue() >= 0, "Lag should be >= 0");
+    Assertions.assertEquals("testComponent", event.getUserDims().get("component"));
   }
 
   @Test
@@ -77,11 +77,11 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     final String result = exec.schedule(() -> "hello", 10, TimeUnit.MILLISECONDS).get(5, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertEquals("hello", result);
+    Assertions.assertEquals("hello", result);
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
-    Assert.assertTrue("Lag should be >= 0", events.get(0).getValue().longValue() >= 0);
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
+    Assertions.assertTrue(events.get(0).getValue().longValue() >= 0, "Lag should be >= 0");
   }
 
   @Test
@@ -99,14 +99,14 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     final CountDownLatch latch = new CountDownLatch(1);
     exec.schedule(latch::countDown, 200, TimeUnit.MILLISECONDS);
 
-    Assert.assertTrue("Task should complete", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Task should complete");
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals(1, events.size());
-    Assert.assertTrue(
-        "Lag should be less than 100ms, was: " + events.get(0).getValue().longValue(),
-        events.get(0).getValue().longValue() < 100
+    Assertions.assertEquals(1, events.size());
+    Assertions.assertTrue(
+        events.get(0).getValue().longValue() < 100,
+        "Lag should be less than 100ms, was: " + events.get(0).getValue().longValue()
     );
   }
 
@@ -138,19 +138,15 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
         }
     );
 
-    Assert.assertTrue("Should complete", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Should complete");
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
     // 3 executions = 3 schedule calls that ran = 3 metrics
-    Assert.assertEquals(
-        "Should emit one metric per schedule call",
-        3,
-        events.size()
-    );
+    Assertions.assertEquals(3, events.size(), "Should emit one metric per schedule call");
 
     for (final ServiceMetricEvent event : events) {
-      Assert.assertEquals("test", event.getUserDims().get("scheduler"));
+      Assertions.assertEquals("test", event.getUserDims().get("scheduler"));
     }
   }
 
@@ -168,13 +164,13 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     final CountDownLatch latch = new CountDownLatch(1);
     exec.execute(latch::countDown);
 
-    Assert.assertTrue("Task should complete", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Task should complete");
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
-    Assert.assertTrue("Lag should be >= 0", events.get(0).getValue().longValue() >= 0);
-    Assert.assertEquals("testComponent", events.get(0).getUserDims().get("component"));
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
+    Assertions.assertTrue(events.get(0).getValue().longValue() >= 0, "Lag should be >= 0");
+    Assertions.assertEquals("testComponent", events.get(0).getUserDims().get("component"));
   }
 
   @Test
@@ -191,13 +187,13 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     final CountDownLatch latch = new CountDownLatch(1);
     final Future<?> future = exec.submit(latch::countDown);
 
-    Assert.assertTrue("Task should complete", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Task should complete");
     future.get(5, TimeUnit.SECONDS);
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
-    Assert.assertTrue("Lag should be >= 0", events.get(0).getValue().longValue() >= 0);
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
+    Assertions.assertTrue(events.get(0).getValue().longValue() >= 0, "Lag should be >= 0");
   }
 
   @Test
@@ -213,12 +209,12 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
 
     final Future<String> future = exec.submit(() -> {}, "result");
 
-    Assert.assertEquals("result", future.get(5, TimeUnit.SECONDS));
+    Assertions.assertEquals("result", future.get(5, TimeUnit.SECONDS));
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
-    Assert.assertTrue("Lag should be >= 0", events.get(0).getValue().longValue() >= 0);
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
+    Assertions.assertTrue(events.get(0).getValue().longValue() >= 0, "Lag should be >= 0");
   }
 
   @Test
@@ -234,12 +230,12 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
 
     final Future<String> future = exec.submit(() -> "hello");
 
-    Assert.assertEquals("hello", future.get(5, TimeUnit.SECONDS));
+    Assertions.assertEquals("hello", future.get(5, TimeUnit.SECONDS));
     exec.shutdown();
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents(METRIC_NAME);
-    Assert.assertEquals("Should emit exactly one metric", 1, events.size());
-    Assert.assertTrue("Lag should be >= 0", events.get(0).getValue().longValue() >= 0);
+    Assertions.assertEquals(1, events.size(), "Should emit exactly one metric");
+    Assertions.assertTrue(events.get(0).getValue().longValue() >= 0, "Lag should be >= 0");
   }
 
   @Test
@@ -253,7 +249,7 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     );
 
     try {
-      Assert.assertThrows(
+      Assertions.assertThrows(
           DruidException.class,
           () -> exec.scheduleAtFixedRate(() -> {}, 0, 100, TimeUnit.MILLISECONDS)
       );
@@ -274,7 +270,7 @@ public class DelayMetricEmittingScheduledExecutorServiceTest
     );
 
     try {
-      Assert.assertThrows(
+      Assertions.assertThrows(
           DruidException.class,
           () -> exec.scheduleWithFixedDelay(() -> {}, 0, 100, TimeUnit.MILLISECONDS)
       );
