@@ -116,6 +116,12 @@ public class ServletResourceUtils
     throw new RuntimeException(e);
   }
 
+  /**
+   * Creates an {@link AsyncListener} which performs the given action on the event
+   * in case of a {@link AsyncListener#onTimeout}. The other actions performed
+   * by the listener viz. {@link AsyncListener#onStartAsync}, {@link AsyncListener#onComplete}
+   * and {@link AsyncListener#onError} are noop.
+   */
   public static AsyncListener createAsyncTimeoutListener(Consumer<AsyncEvent> onTimeoutHandler)
   {
     return new AsyncListener()
