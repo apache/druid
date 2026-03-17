@@ -30,7 +30,7 @@
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
     <!-- Must match iceberg.core.version in extensions-contrib/druid-iceberg-extensions/pom.xml -->
-    <iceberg.version>1.6.1</iceberg.version>
+    <iceberg.version>1.7.2</iceberg.version>
   </properties>
 
   <parent>
@@ -292,6 +292,12 @@
       <artifactId>iceberg-core</artifactId>
       <version>${iceberg.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>

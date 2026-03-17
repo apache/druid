@@ -119,7 +119,7 @@ Security credentials may be provided in the `catalogProperties` object.
 ## Glue catalog
 
 Configure the `icebergCatalog` type as `glue`.`warehousePath` and properties must be provided in `catalogProperties` object.
-Refer [Iceberg Glue Catalog documentation](https://iceberg.apache.org/docs/1.6.0/aws/#glue-catalog) for setting properties. 
+Refer [Iceberg Glue Catalog documentation](https://iceberg.apache.org/docs/1.7.2/aws/#glue-catalog) for setting properties. 
 
 
 ## Downloading Iceberg extension
