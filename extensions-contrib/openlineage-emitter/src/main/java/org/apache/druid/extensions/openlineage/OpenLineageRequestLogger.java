@@ -22,6 +22,8 @@ package org.apache.druid.extensions.openlineage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -34,28 +36,36 @@ import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * OpenLineage RunEvents for completed Druid queries.
@@ -77,6 +87,28 @@ public class OpenLineageRequestLogger implements RequestLogger
   private static final String SQL_FACET_SCHEMA_URL =
       "https://openlineage.io/spec/facets/1-0-1/SQLJobFacet.json";
 
+  // Standard Calcite parser (not Druid's custom parser): sufficient for table name extraction.
+  // Druid-specific syntax (REPLACE, EXTERN, etc.) falls through to the SqlParseException handler.
+  private static final SqlParser.Config SQL_PARSER_CONFIG = SqlParser
+      .config()
+      .withCaseSensitive(true)
+      .withUnquotedCasing(Casing.UNCHANGED)
+      .withQuotedCasing(Casing.UNCHANGED)
+      .withQuoting(Quoting.DOUBLE_QUOTE);
+
+  private static final int EMIT_QUEUE_CAPACITY = 1000;
+  private static final int EMIT_THREAD_COUNT = 1;
+
+  /**
+   * Internal broker query types that are automatically issued for schema discovery and metadata
+   * caching. These are not user-initiated and produce noisy, low-value lineage events.
+   */
+  private static final Set<String> INTERNAL_QUERY_TYPES = Set.of(
+      "segmentMetadata",
+      "dataSourceMetadata",
+      "timeBoundary"
+  );
+
   private final ObjectMapper jsonMapper;
   private final String namespace;
   private final OpenLineageRequestLoggerProvider.TransportType transportType;
@@ -84,6 +116,8 @@ public class OpenLineageRequestLogger implements RequestLogger
   private final String transportUrl;
   @Nullable
   private final HttpClient httpClient;
+  @Nullable
+  private final ExecutorService emitExecutor;
 
   public OpenLineageRequestLogger(
       ObjectMapper jsonMapper,
@@ -96,9 +130,23 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.namespace = namespace;
     this.transportType = transportType;
     this.transportUrl = transportUrl;
-    this.httpClient = transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP
-                      ? HttpClientBuilder.create().build()
-                      : null;
+    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
+      this.httpClient = HttpClientBuilder.create().build();
+      // Bounded queue: if the queue is full, silently drop the event rather than blocking
+      // the query thread. Uses Druid's Execs for daemon thread naming conventions.
+      this.emitExecutor = new ThreadPoolExecutor(
+          EMIT_THREAD_COUNT,
+          EMIT_THREAD_COUNT,
+          60L,
+          TimeUnit.SECONDS,
+          new ArrayBlockingQueue<>(EMIT_QUEUE_CAPACITY),
+          Execs.makeThreadFactory("OpenLineageEmitter-%d"),
+          new ThreadPoolExecutor.DiscardPolicy()
+      );
+    } else {
+      this.httpClient = null;
+      this.emitExecutor = null;
+    }
   }
 
   @LifecycleStart
@@ -110,25 +158,41 @@ public class OpenLineageRequestLogger implements RequestLogger
           "druid.request.logging.transportUrl must be set when transportType=HTTP"
       );
     }
-    log.info(
-        "Started OpenLineage %s transport%s",
-        transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP ? "HTTP" : "console",
-        transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP ? " to [" + transportUrl + "]" : ""
-    );
+    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
+      log.info("Started OpenLineage HTTP transport to [%s]", transportUrl);
+    } else {
+      log.info("Started OpenLineage console transport");
+    }
   }
 
   @LifecycleStop
   @Override
   public void stop()
   {
-    // HTTP client cleanup is handled by Druid lifecycle management
+    if (emitExecutor != null) {
+      emitExecutor.shutdown();
+      try {
+        if (!emitExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+          emitExecutor.shutdownNow();
+        }
+      }
+      catch (InterruptedException e) {
+        emitExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+    }
+    if (httpClient instanceof Closeable) {
+      CloseableUtils.closeAndSuppressExceptions(
+          (Closeable) httpClient,
+          e -> log.warn(e, "Failed to close OpenLineage HTTP client")
+      );
+    }
     log.info("Stopped OpenLineage request logger");
   }
 
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
-    // Skip if query failed to parse (query is null)
     if (requestLogLine.getQuery() == null) {
       return;
     }
@@ -138,14 +202,19 @@ public class OpenLineageRequestLogger implements RequestLogger
       return;
     }
 
-    List<String> inputs = new ArrayList<>(requestLogLine.getQuery().getDataSource().getTableNames());
+    String queryType = requestLogLine.getQuery().getType();
+
+    if (INTERNAL_QUERY_TYPES.contains(queryType)) {
+      return;
+    }
+
+    List<String> inputs = new ArrayList<>(new LinkedHashSet<>(requestLogLine.getQuery().getDataSource().getTableNames()));
     String queryId = requestLogLine.getQuery().getId();
     if (queryId == null) {
       queryId = UUID.randomUUID().toString();
     }
-    String queryType = requestLogLine.getQuery().getType();
 
-    emit(buildRunEvent(queryId, null, queryType, requestLogLine, inputs, Optional.empty()));
+    emit(buildRunEvent(queryId, null, queryType, requestLogLine, inputs, null));
   }
 
   @Override
@@ -153,11 +222,11 @@ public class OpenLineageRequestLogger implements RequestLogger
   {
     String sql = requestLogLine.getSql();
     List<String> inputs = new ArrayList<>();
-    Optional<String> output = Optional.empty();
+    String output = null;
 
     if (sql != null) {
       try {
-        SqlNode parsed = SqlParser.create(sql, SqlParser.config()).parseQuery();
+        SqlNode parsed = SqlParser.create(sql, SQL_PARSER_CONFIG).parseQuery();
         inputs = extractInputs(parsed);
         output = extractOutput(parsed);
       }
@@ -172,7 +241,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
 
     String queryId = extractSqlQueryId(requestLogLine);
-    emit(buildRunEvent(queryId, sql, "sql", requestLogLine, inputs, output));
+    emit(buildRunEvent(queryId, sql, "sql", requestLogLine, new ArrayList<>(new LinkedHashSet<>(inputs)), output));
   }
 
   private ObjectNode buildRunEvent(
@@ -181,7 +250,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       String queryType,
       RequestLogLine requestLogLine,
       List<String> inputs,
-      Optional<String> output
+      @Nullable String output
   )
   {
     Map<String, Object> stats = requestLogLine.getQueryStats().getStats();
@@ -195,7 +264,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     event.set("run", buildRun(queryId, queryType, requestLogLine, stats, success));
     event.set("job", buildJob(queryId, sql));
     event.set("inputs", buildDatasets(inputs));
-    event.set("outputs", buildDatasets(output.map(List::of).orElse(List.of())));
+    event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of()));
     return event;
   }
 
@@ -212,14 +281,12 @@ public class OpenLineageRequestLogger implements RequestLogger
 
     ObjectNode facets = jsonMapper.createObjectNode();
 
-    ObjectNode engineFacet = jsonMapper.createObjectNode();
-    engineFacet.put("_producer", PRODUCER);
-    engineFacet.put("_schemaURL", ENGINE_FACET_SCHEMA_URL);
+    ObjectNode engineFacet = createFacet(ENGINE_FACET_SCHEMA_URL);
     engineFacet.put("name", "druid");
+    engineFacet.put("version", getDruidVersion());
     facets.set("processing_engine", engineFacet);
 
-    ObjectNode contextFacet = jsonMapper.createObjectNode();
-    contextFacet.put("_producer", PRODUCER);
+    ObjectNode contextFacet = createFacet(null);
     contextFacet.put("queryType", queryType);
     contextFacet.put("remoteAddress", requestLogLine.getRemoteAddr());
     Object identity = stats.get("identity");
@@ -232,8 +299,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
     facets.set("druid_query_context", contextFacet);
 
-    ObjectNode statsFacet = jsonMapper.createObjectNode();
-    statsFacet.put("_producer", PRODUCER);
+    ObjectNode statsFacet = createFacet(null);
     putLongStat(statsFacet, "durationMs", stats, "sqlQuery/time", "query/time");
     putLongStat(statsFacet, "bytes", stats, "sqlQuery/bytes", "query/bytes");
     putLongStat(statsFacet, "planningTimeMs", stats, "sqlQuery/planningTimeMs");
@@ -246,9 +312,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     if (!success) {
       Object exception = stats.get("exception");
       if (exception != null) {
-        ObjectNode errorFacet = jsonMapper.createObjectNode();
-        errorFacet.put("_producer", PRODUCER);
-        errorFacet.put("_schemaURL", ERROR_FACET_SCHEMA_URL);
+        ObjectNode errorFacet = createFacet(ERROR_FACET_SCHEMA_URL);
         errorFacet.put("message", exception.toString());
         if ("sql".equals(queryType)) {
           errorFacet.put("programmingLanguage", "SQL");
@@ -269,24 +333,30 @@ public class OpenLineageRequestLogger implements RequestLogger
 
     ObjectNode facets = jsonMapper.createObjectNode();
 
-    ObjectNode jobTypeFacet = jsonMapper.createObjectNode();
-    jobTypeFacet.put("_producer", PRODUCER);
-    jobTypeFacet.put("_schemaURL", JOB_TYPE_FACET_SCHEMA_URL);
+    ObjectNode jobTypeFacet = createFacet(JOB_TYPE_FACET_SCHEMA_URL);
     jobTypeFacet.put("processingType", "BATCH");
     jobTypeFacet.put("integration", "DRUID");
     jobTypeFacet.put("jobType", "QUERY");
     facets.set("jobType", jobTypeFacet);
 
     if (sql != null) {
-      ObjectNode sqlFacet = jsonMapper.createObjectNode();
-      sqlFacet.put("_producer", PRODUCER);
-      sqlFacet.put("_schemaURL", SQL_FACET_SCHEMA_URL);
+      ObjectNode sqlFacet = createFacet(SQL_FACET_SCHEMA_URL);
       sqlFacet.put("query", sql);
       facets.set("sql", sqlFacet);
     }
 
     job.set("facets", facets);
     return job;
+  }
+
+  private ObjectNode createFacet(@Nullable String schemaUrl)
+  {
+    ObjectNode facet = jsonMapper.createObjectNode();
+    facet.put("_producer", PRODUCER);
+    if (schemaUrl != null) {
+      facet.put("_schemaURL", schemaUrl);
+    }
+    return facet;
   }
 
   private ArrayNode buildDatasets(List<String> tableNames)
@@ -296,18 +366,12 @@ public class OpenLineageRequestLogger implements RequestLogger
       ObjectNode node = jsonMapper.createObjectNode();
       node.put("namespace", namespace);
       node.put("name", name);
-      // Schema and columnLineage facets require Druid coordinator metadata lookups and are not
-      // populated here. Column-level lineage is a future enhancement.
       node.set("facets", jsonMapper.createObjectNode());
       array.add(node);
     }
     return array;
   }
 
-  /**
-   * Extracts the names of input datasources referenced in FROM clauses.
-   * CTEs (WITH clause names) are excluded since they are not physical datasources.
-   */
   private List<String> extractInputs(SqlNode root)
   {
     List<String> tables = new ArrayList<>();
@@ -329,24 +393,18 @@ public class OpenLineageRequestLogger implements RequestLogger
     return tables;
   }
 
-  /**
-   * Extracts the output datasource name for INSERT statements. Returns empty for SELECT queries.
-   */
-  private Optional<String> extractOutput(SqlNode root)
+  @Nullable
+  private String extractOutput(SqlNode root)
   {
     if (root instanceof SqlInsert) {
       SqlNode target = ((SqlInsert) root).getTargetTable();
       if (target instanceof SqlIdentifier) {
-        return Optional.of(String.join(".", ((SqlIdentifier) target).names));
+        return String.join(".", ((SqlIdentifier) target).names);
       }
     }
-    return Optional.empty();
+    return null;
   }
 
-  /**
-   * Recursively walks a FROM clause node and appends physical table names to {@code tables}.
-   * CTE names in {@code excludeNames} are skipped.
-   */
   private void collectFromClause(SqlNode from, List<String> tables, Set<String> excludeNames)
   {
     if (from == null) {
@@ -375,15 +433,8 @@ public class OpenLineageRequestLogger implements RequestLogger
       collectFromClause(with.body, tables, innerExcludes);
     } else if (from instanceof SqlOrderBy) {
       collectFromClause(((SqlOrderBy) from).query, tables, excludeNames);
-    } else if (from instanceof SqlBasicCall) {
-      SqlBasicCall call = (SqlBasicCall) from;
-      if (call.getKind() == SqlKind.AS) {
-        collectFromClause(call.operand(0), tables, excludeNames);
-      } else {
-        for (SqlNode operand : call.getOperandList()) {
-          collectFromClause(operand, tables, excludeNames);
-        }
-      }
+    } else if (from instanceof SqlBasicCall && from.getKind() == SqlKind.AS) {
+      collectFromClause(((SqlBasicCall) from).operand(0), tables, excludeNames);
     }
   }
 
@@ -392,13 +443,13 @@ public class OpenLineageRequestLogger implements RequestLogger
     try {
       String json = jsonMapper.writeValueAsString(event);
       if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
-        emitHttp(json);
+        emitExecutor.submit(() -> emitHttp(json));
       } else {
         log.info("OpenLineage event: %s", json);
       }
     }
-    catch (Exception e) {
-      log.error(e, "Failed to emit OpenLineage event");
+    catch (IOException e) {
+      log.error(e, "Failed to serialize OpenLineage event");
     }
   }
 
@@ -407,9 +458,10 @@ public class OpenLineageRequestLogger implements RequestLogger
     HttpPost post = new HttpPost(transportUrl);
     post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
     try {
-      httpClient.execute(post);
+      org.apache.http.HttpResponse response = httpClient.execute(post);
+      EntityUtils.consumeQuietly(response.getEntity());
     }
-    catch (Exception e) {
+    catch (IOException e) {
       log.error(e, "Failed to POST OpenLineage event to [%s]", transportUrl);
     }
     finally {
@@ -437,13 +489,10 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
   }
 
-  @Override
-  public String toString()
+  private static String getDruidVersion()
   {
-    return "OpenLineageRequestLogger{" +
-           "namespace='" + namespace + '\'' +
-           ", transportType=" + transportType +
-           ", transportUrl='" + transportUrl + '\'' +
-           '}';
+    String v = OpenLineageRequestLogger.class.getPackage().getImplementationVersion();
+    return v != null ? v : "unknown";
   }
+
 }
