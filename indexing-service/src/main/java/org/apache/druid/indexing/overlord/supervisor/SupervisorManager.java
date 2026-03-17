@@ -41,7 +41,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -427,11 +426,7 @@ public class SupervisorManager
 
     Map<String, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
 
-    log.info(
-     "Successfully reset supervisor[%s] to latest. Skipped ranges: %s",
-      id,
-      skippedRanges
-    );
+    log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, skippedRanges);
 
     return ImmutableMap.of(
       "id", id,
