@@ -381,7 +381,8 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2001"),
-        StandardQueryState.RUNNING
+        StandardQueryState.RUNNING,
+        null
     );
     Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
@@ -449,7 +450,8 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        StandardQueryState.RUNNING
+        StandardQueryState.RUNNING,
+        null
     );
     Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
@@ -486,7 +488,8 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        StandardQueryState.RUNNING
+        StandardQueryState.RUNNING,
+        null
     );
     Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
