@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.AvroHadoopInputRowParser;
-import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import org.apache.druid.initialization.DruidModule;
 import org.schemarepo.InMemoryRepository;
@@ -52,7 +51,6 @@ public class AvroExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("AvroInputRowParserModule")
             .registerSubtypes(
-                new NamedType(AvroStreamInputRowParser.class, "avro_stream"),
                 new NamedType(AvroHadoopInputRowParser.class, "avro_hadoop"),
                 new NamedType(AvroParseSpec.class, "avro"),
                 new NamedType(AvroOCFInputFormat.class, "avro_ocf"),
