@@ -65,8 +65,7 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    OpenLineageRequestLogger logger = new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl);
-    log.debug(new Exception("Stack trace"), "Creating %s at", logger);
-    return logger;
+    log.debug("Creating OpenLineageRequestLogger [namespace=%s, transport=%s]", namespace, transportType);
+    return new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl);
   }
 }
