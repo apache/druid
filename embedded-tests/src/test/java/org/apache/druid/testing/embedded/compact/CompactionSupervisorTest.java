@@ -527,7 +527,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(count > 0);
   }
 
-
   @Test
   public void test_compaction_cluster_by_virtualcolumn()
   {

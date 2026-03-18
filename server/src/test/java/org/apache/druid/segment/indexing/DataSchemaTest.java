@@ -28,7 +28,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;

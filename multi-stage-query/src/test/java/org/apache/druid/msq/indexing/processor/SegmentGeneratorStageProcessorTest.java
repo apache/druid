@@ -45,7 +45,6 @@ import java.util.Map;
 
 class SegmentGeneratorStageProcessorTest
 {
-
   @Test
   public void testSerde() throws JsonProcessingException
   {

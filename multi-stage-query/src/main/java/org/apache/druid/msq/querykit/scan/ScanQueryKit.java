@@ -103,6 +103,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final Granularity segmentGranularity =
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final List<KeyColumn> clusterByColumns = new ArrayList<>();
+
     // Add regular orderBys.
     for (final OrderBy orderBy : queryToRun.getOrderBys()) {
       clusterByColumns.add(
@@ -116,10 +117,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
     signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
 
-    final ClusterBy clusterBy = QueryKitUtils.clusterByWithSegmentGranularity(
-        new ClusterBy(clusterByColumns, 0),
-        segmentGranularity
-    );
+    final ClusterBy clusterBy =
+        QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
     final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(clusterBy, false);
 
     final RowSignature signatureToUse = QueryKitUtils.sortableSignature(
