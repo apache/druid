@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -43,6 +42,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.DecoratedExecutorService;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -73,7 +73,6 @@ import org.apache.druid.msq.shuffle.input.WorkerOrLocalInputChannelFactory;
 import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
-import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
@@ -101,6 +100,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -884,7 +884,7 @@ public class WorkerImpl implements Worker
    * In production, the underlying {@link QueryProcessingPool} pool is set up by
    * {@link org.apache.druid.guice.DruidProcessingModule}.
    */
-  private ListeningExecutorService makeProcessingPool()
+  private ExecutorService makeProcessingPool()
   {
     final QueryProcessingPool queryProcessingPool = context.injector().getInstance(QueryProcessingPool.class);
     final int priority = 0;
