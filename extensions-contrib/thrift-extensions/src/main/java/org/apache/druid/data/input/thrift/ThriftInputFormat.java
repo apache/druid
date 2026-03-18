@@ -53,8 +53,7 @@ public class ThriftInputFormat extends NestedInputFormat
   {
     super(flattenSpec);
     this.thriftJar = thriftJar;
-    InvalidInput.conditionalException(thriftClass != null, "thriftClass must not be null");
-    this.thriftClass = thriftClass;
+    this.thriftClass = InvalidInput.notNull(thriftClass, "thriftClass");
   }
 
   @Nullable

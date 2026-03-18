@@ -62,7 +62,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   public void testTest1() throws IOException
   {
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("col1", "col2"))),
         new OrcInputFormat(null, null, new Configuration()),
         "example/test_1.orc"
@@ -90,7 +90,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(null),
         inputFormat,
         "example/test_2.orc"
@@ -536,7 +536,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a"),
@@ -602,7 +602,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a"),
@@ -677,7 +677,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 new StringDimensionSchema("c1"),

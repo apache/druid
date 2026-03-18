@@ -65,7 +65,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "listDim"))),
         ColumnsFilter.all()
     );
@@ -99,7 +99,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ColumnsFilter.all()
     );
@@ -132,7 +132,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "list"))),
         ColumnsFilter.all()
     );
@@ -173,7 +173,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "listExtracted"))),
         ColumnsFilter.all()
     );
@@ -213,7 +213,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1"))),
         ColumnsFilter.all()
     );
@@ -249,7 +249,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ColumnsFilter.all()
     );
@@ -282,7 +282,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ColumnsFilter.all()
     );
@@ -325,7 +325,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ColumnsFilter.all()
     );
@@ -366,7 +366,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/nullable_list.snappy.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of()
         ),

@@ -62,8 +62,6 @@ import java.util.Map;
 @RunWith(MockitoJUnitRunner.class)
 public class StreamChunkReaderTest
 {
-  private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(null, null, null);
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -87,7 +85,7 @@ public class StreamChunkReaderTest
     final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null, null, null);
     final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
@@ -125,7 +123,7 @@ public class StreamChunkReaderTest
     );
     final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
@@ -147,7 +145,7 @@ public class StreamChunkReaderTest
     );
     final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
