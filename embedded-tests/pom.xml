@@ -648,12 +648,18 @@
     <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-protobuf-provider</artifactId>
-      <version>6.2.12</version>
+      <version>${confluent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okio</groupId>
+      <artifactId>okio</artifactId>
+      <version>3.16.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
