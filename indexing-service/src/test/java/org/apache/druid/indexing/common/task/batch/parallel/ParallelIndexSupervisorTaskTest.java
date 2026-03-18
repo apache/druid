@@ -41,6 +41,8 @@ import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.DataSegmentKiller;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -50,6 +52,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -614,6 +617,165 @@ public class ParallelIndexSupervisorTaskTest
       Assert.assertEquals(
           new HashSet<>(Arrays.asList(expectedTaskIds)),
           observedTaskIds
+      );
+    }
+  }
+
+  public static class CleanupTest
+  {
+    private static final String TEST_DATASOURCE = "test-datasource";
+    private static final Interval DAY1 = Intervals.of("2024-01-01/2024-01-02");
+    private static final Interval DAY2 = Intervals.of("2024-01-02/2024-01-03");
+
+    @Test
+    public void testCleanupWithDeepStoragePartitionStats() throws Exception
+    {
+      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+
+      final Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
+      reports.put("subtask-1", new GeneratedPartitionsReport("subtask-1", Arrays.asList(
+          createDeepStoragePartitionStat(DAY1, 0, "s3", "bucket-1", "key-1"),
+          createDeepStoragePartitionStat(DAY1, 1, "s3", "bucket-1", "key-2")
+      ), null));
+      reports.put("subtask-2", new GeneratedPartitionsReport("subtask-2", Arrays.asList(
+          createDeepStoragePartitionStat(DAY2, 0, "s3", "bucket-1", "key-3")
+      ), null));
+
+      killer.kill(EasyMock.<List<DataSegment>>anyObject());
+      EasyMock.expectLastCall().andAnswer(() -> {
+        final List<DataSegment> segments = (List<DataSegment>) EasyMock.getCurrentArguments()[0];
+        Assert.assertEquals(3, segments.size());
+        final Set<Object> keys = segments.stream()
+                                         .map(s -> s.getLoadSpec().get("key"))
+                                         .collect(Collectors.toSet());
+        Assert.assertEquals(
+            new HashSet<>(Arrays.asList("key-1", "key-2", "key-3")),
+            keys
+        );
+        return null;
+      });
+      EasyMock.replay(killer);
+
+      ParallelIndexSupervisorTask.cleanupDeepStorageShuffleData(killer, TEST_DATASOURCE, reports);
+
+      EasyMock.verify(killer);
+    }
+
+    @Test
+    public void testCleanupWithLocalPartitionStats()
+    {
+      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+      EasyMock.replay(killer);
+
+      final Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
+      reports.put("subtask-1", new GeneratedPartitionsReport("subtask-1", Arrays.asList(
+          createLocalPartitionStat(DAY1, 0),
+          createLocalPartitionStat(DAY1, 1)
+      ), null));
+
+      ParallelIndexSupervisorTask.cleanupDeepStorageShuffleData(killer, TEST_DATASOURCE, reports);
+
+      EasyMock.verify(killer);
+    }
+
+    @Test
+    public void testCleanupWithMixedPartitionStats() throws Exception
+    {
+      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+
+      final Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
+      reports.put("subtask-1", new GeneratedPartitionsReport("subtask-1", Arrays.asList(
+          createDeepStoragePartitionStat(DAY1, 0, "s3", "bucket-1", "key-deep"),
+          createLocalPartitionStat(DAY1, 1)
+      ), null));
+
+      killer.kill(EasyMock.<List<DataSegment>>anyObject());
+      EasyMock.expectLastCall().andAnswer(() -> {
+        final List<DataSegment> segments = (List<DataSegment>) EasyMock.getCurrentArguments()[0];
+        Assert.assertEquals(1, segments.size());
+        Assert.assertEquals("key-deep", segments.get(0).getLoadSpec().get("key"));
+        return null;
+      });
+      EasyMock.replay(killer);
+
+      ParallelIndexSupervisorTask.cleanupDeepStorageShuffleData(killer, TEST_DATASOURCE, reports);
+
+      EasyMock.verify(killer);
+    }
+
+    @Test
+    public void testCleanupDoesNotFailWhenKillerThrows() throws Exception
+    {
+      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+
+      final Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
+      reports.put("subtask-1", new GeneratedPartitionsReport("subtask-1", Collections.singletonList(
+          createDeepStoragePartitionStat(DAY1, 0, "s3", "bucket-1", "key-1")
+      ), null));
+
+      killer.kill(EasyMock.<List<DataSegment>>anyObject());
+      EasyMock.expectLastCall().andThrow(new SegmentLoadingException("Simulated failure"));
+      EasyMock.replay(killer);
+
+      ParallelIndexSupervisorTask.cleanupDeepStorageShuffleData(killer, TEST_DATASOURCE, reports);
+
+      EasyMock.verify(killer);
+    }
+
+    @Test
+    public void testCleanupCalledEvenWhenPhase2Fails() throws Exception
+    {
+      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+
+      final Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
+      reports.put("subtask-1", new GeneratedPartitionsReport("subtask-1", Collections.singletonList(
+          createDeepStoragePartitionStat(DAY1, 0, "s3", "bucket-1", "key-1")
+      ), null));
+
+      killer.kill(EasyMock.<List<DataSegment>>anyObject());
+      EasyMock.expectLastCall();
+      EasyMock.replay(killer);
+
+      boolean phase2Failed = false;
+      try {
+        throw new RuntimeException("Simulated phase 2 failure");
+      }
+      catch (RuntimeException e) {
+        phase2Failed = true;
+      }
+      finally {
+        ParallelIndexSupervisorTask.cleanupDeepStorageShuffleData(killer, TEST_DATASOURCE, reports);
+      }
+
+      Assert.assertTrue("Phase 2 should have failed", phase2Failed);
+      EasyMock.verify(killer);
+    }
+
+    private static DeepStoragePartitionStat createDeepStoragePartitionStat(
+        Interval interval,
+        int bucketId,
+        String type,
+        String bucket,
+        String key
+    )
+    {
+      return new DeepStoragePartitionStat(
+          interval,
+          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1"), null, null),
+          ImmutableMap.of("type", type, "bucket", bucket, "key", key)
+      );
+    }
+
+    private static GenericPartitionStat createLocalPartitionStat(Interval interval, int bucketId)
+    {
+      return new GenericPartitionStat(
+          "host",
+          8080,
+          false,
+          interval,
+          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1"), null, null),
+          null,
+          null
       );
     }
   }

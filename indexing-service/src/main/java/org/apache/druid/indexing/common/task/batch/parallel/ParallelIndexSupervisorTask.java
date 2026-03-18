@@ -77,6 +77,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.ChatHandlers;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.server.security.Action;
@@ -84,7 +85,9 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.utils.CollectionUtils;
@@ -209,6 +212,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private Long segmentsRead;
   private Long segmentsPublished;
   private final boolean isCompactionTask;
+
+  @Nullable
+  private volatile Map<String, GeneratedPartitionsReport> deepStorageShuffleReports;
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -812,6 +818,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       );
       return TaskStatus.failure(getId(), errMsg);
     }
+    deepStorageShuffleReports = indexingRunner.getReports();
     indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // 2. Partial segment merge phase
@@ -919,7 +926,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       );
       return TaskStatus.failure(getId(), errMsg);
     }
-
+    deepStorageShuffleReports = indexingRunner.getReports();
     indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // partition (interval, partitionId) -> partition locations
@@ -955,6 +962,66 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
     updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
+  }
+
+  /**
+   * Cleans up deep storage shuffle data produced during phase 1 of multi-phase parallel indexing.
+   *
+   * <p>Cleanup is performed here in the supervisor task rather than in
+   * {@link org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager} because of
+   * the process model: phase-1 sub-tasks run as separate peon processes that exit before phase 2
+   * starts. Each sub-task's DeepStorageIntermediaryDataManager instance is destroyed when the peon
+   * exits, so no surviving manager instance has knowledge of what files were pushed. The supervisor
+   * task is the only entity that is both alive after phase 2 completes and has the complete set of
+   * loadSpecs (collected from all sub-task reports).
+   *
+   * <p>This method constructs minimal {@link DataSegment} objects from the
+   * {@link DeepStoragePartitionStat} loadSpecs and delegates deletion to
+   * {@link DataSegmentKiller}, which routes to the appropriate storage-specific
+   * killer (S3, HDFS, GCS, Azure, Local) via {@code OmniDataSegmentKiller}.
+   *
+   * <p>Exceptions are caught and logged as warnings. Cleanup failures must never
+   * cause the overall indexing task to fail.
+   *
+   * @param killer  the segment killer from {@link TaskToolbox#getDataSegmentKiller()}
+   * @param reports phase-1 sub-task reports containing partition stats with loadSpecs,
+   *                may be null or empty if phase 1 produced no output
+   */
+  @VisibleForTesting
+  static void cleanupDeepStorageShuffleData(
+      DataSegmentKiller killer,
+      String datasource,
+      @Nullable Map<String, GeneratedPartitionsReport> reports
+  )
+  {
+    if (reports == null || reports.isEmpty()) {
+      return;
+    }
+
+    final List<DataSegment> segmentsToKill = new ArrayList<>();
+    for (final GeneratedPartitionsReport report : reports.values()) {
+      for (final PartitionStat stat : report.getPartitionStats()) {
+        if (stat instanceof DeepStoragePartitionStat deepStorageStat) {
+          segmentsToKill.add(
+              DataSegment.builder(
+                  SegmentId.of(datasource, deepStorageStat.getInterval(), "shuffle_data", deepStorageStat.getBucketId())
+              ).loadSpec(deepStorageStat.getLoadSpec()).build()
+          );
+        }
+      }
+    }
+
+    if (segmentsToKill.isEmpty()) {
+      return;
+    }
+
+    LOG.info("Cleaning up [%d] deep storage shuffle files.", segmentsToKill.size());
+    try {
+      killer.kill(segmentsToKill);
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Failed to clean up deep storage shuffle data. Residual files may need manual cleanup.");
+    }
   }
 
   private static Map<Interval, Union> mergeCardinalityReports(Collection<DimensionCardinalityReport> reports)
@@ -1835,6 +1902,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
+    // Shuffle data in deep storage is only needed for phase 2 to read.
+    // Clean up regardless of task outcome (success or failure).
+    cleanupDeepStorageShuffleData(toolbox.getDataSegmentKiller(), getDataSource(), deepStorageShuffleReports);
+
     if (!isCompactionTask) {
       super.cleanUp(toolbox, taskStatus);
     }

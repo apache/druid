@@ -30,6 +30,7 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -48,6 +49,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
@@ -204,6 +206,32 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "20");
     runGroupByQuery("Crimson Typhoon,2,1810.0,18100.0");
+  }
+
+  public static List<PartitionsSpec> getMultiPhasePartitionsSpecs()
+  {
+    return List.of(
+        new HashedPartitionsSpec(null, 2, null, null),
+        new SingleDimensionPartitionsSpec(2, null, "namespace", false)
+    );
+  }
+
+  @MethodSource("getMultiPhasePartitionsSpecs")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_shuffleDataIsCleanedUp_afterSuccessfulMultiPhaseTask(PartitionsSpec partitionsSpec)
+  {
+    final TaskBuilder.IndexParallel indexTask = buildIndexParallelTask(partitionsSpec, false);
+    runTask(indexTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    final File deepStoreDir = cluster.getTestFolder().getOrCreateFolder("deep-store");
+    final File shuffleDir = new File(deepStoreDir, DeepStorageIntermediaryDataManager.SHUFFLE_DATA_DIR_PREFIX);
+
+    if (shuffleDir.exists()) {
+      final File[] remainingFiles = shuffleDir.listFiles();
+      Assertions.assertNotNull(remainingFiles);
+      Assertions.assertEquals(0, remainingFiles.length);
+    }
   }
 
   /**

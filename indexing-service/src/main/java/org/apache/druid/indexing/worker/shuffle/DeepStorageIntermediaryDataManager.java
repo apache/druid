@@ -95,9 +95,23 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
     throw new UnsupportedOperationException("Not supported, get partition file using segment loadspec");
   }
 
+  /**
+   * Not implemented for deep storage mode. Unlike {@link LocalIntermediaryDataManager},
+   * which can walk the local filesystem to find and delete files by supervisorTaskId,
+   * this manager has no way to discover what files were pushed: it has no
+   * {@link org.apache.druid.segment.loading.DataSegmentKiller}, does not track pushed
+   * paths, and runs on short-lived peon processes whose state is lost on exit.
+   *
+   * <p>Deep storage shuffle cleanup is instead handled by
+   * {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanupDeepStorageShuffleData},
+   * which uses the phase-1 reports (containing loadSpecs) to identify and
+   * delete files via {@link org.apache.druid.segment.loading.DataSegmentKiller}.
+   */
   @Override
   public void deletePartitions(String supervisorTaskId)
   {
-    throw new UnsupportedOperationException("Not supported");
+    throw new UnsupportedOperationException(
+        "Deep storage shuffle cleanup is handled by ParallelIndexSupervisorTask, not by the data manager"
+    );
   }
 }
