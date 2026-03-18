@@ -217,7 +217,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                       effectiveType = WatchResult.NOT_READY;
                     } else if (WatchResult.ADDED.equals(item.type)) {
                       // Pod is not ready yet (e.g., still starting up). Skip this event entirely.
-                      // It will appear via a MODIFIED event that remaps to ADDED for dicovery, once it becomes ready.
+                      // It will appear via a MODIFIED event that remaps to ADDED for discovery, once it becomes ready.
                       LOGGER.debug(
                           "Pod[%s] for role[%s] is not ready on ADDED event, skipping until it becomes ready.",
                           item.object.getMetadata().getName(),

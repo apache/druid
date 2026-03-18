@@ -271,11 +271,11 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                     baseNodeRoleWatcher.childAdded(item.object.getNode());
                     break;
                   case WatchResult.DELETED:
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode());
-                    break;
                   case WatchResult.NOT_READY:
-                    // Pod container became not-ready (e.g., OOM-killed). Remove if present
-                    // in cache, but don't log errors for repeated events during CrashLoopBackOff.
+                    // Use skipIfUnknown=true for all k8s discovery removals.
+                    // DELETED can fire after NOT_READY (so the service is already removed), or before ADDED (pod deleted before becoming ready).
+                    // NOT_READY can repeat during CrashLoopBackOff. None of these warrant the error-level logging that
+                    // comes with trying to remove an unknown service.
                     baseNodeRoleWatcher.childRemoved(item.object.getNode(), true);
                     break;
                   default:

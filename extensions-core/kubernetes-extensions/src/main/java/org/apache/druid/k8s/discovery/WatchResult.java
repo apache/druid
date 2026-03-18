@@ -23,6 +23,12 @@ import io.kubernetes.client.util.Watch;
 
 import java.net.SocketTimeoutException;
 
+/**
+ * Iterator over k8s pod watch events that is aligned with the needs of Druid service discovery rather than
+ * raw Kubernetes watch semantics. Implementations may remap or synthesize event types: for example,
+ * a Kubernetes MODIFIED event for a pod whose containers are no longer ready (according to k8s readiness state) is surfaced as the
+ * synthetic {@link #NOT_READY} type so that consumers can handle it as a removal from k8s service discovery.
+ */
 public interface WatchResult
 {
   String ADDED = "ADDED";
