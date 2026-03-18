@@ -966,26 +966,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
   /**
    * Cleans up deep storage shuffle data produced during phase 1 of multi-phase parallel indexing.
-   *
-   * <p>Cleanup is performed here in the supervisor task rather than in
+   * <p>
+   * Cleanup is performed here in the supervisor task rather than in
    * {@link org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager} because of
    * the process model: phase-1 sub-tasks run as separate peon processes that exit before phase 2
    * starts. Each sub-task's DeepStorageIntermediaryDataManager instance is destroyed when the peon
    * exits, so no surviving manager instance has knowledge of what files were pushed. The supervisor
    * task is the only entity that is both alive after phase 2 completes and has the complete set of
    * loadSpecs (collected from all sub-task reports).
+   * <p>
+   * This method constructs minimal {@link DataSegment} objects from {@link DeepStoragePartitionStat} loadSpecs and
+   * delegates deletion to the appropriate storage-specific {@link DataSegmentKiller}.
    *
-   * <p>This method constructs minimal {@link DataSegment} objects from the
-   * {@link DeepStoragePartitionStat} loadSpecs and delegates deletion to
-   * {@link DataSegmentKiller}, which routes to the appropriate storage-specific
-   * killer (S3, HDFS, GCS, Azure, Local) via {@code OmniDataSegmentKiller}.
-   *
-   * <p>Exceptions are caught and logged as warnings. Cleanup failures must never
-   * cause the overall indexing task to fail.
-   *
-   * @param killer  the segment killer from {@link TaskToolbox#getDataSegmentKiller()}
+   * @param killer  the segment killer from {@link TaskToolbox#getDataSegmentKiller()}.
    * @param reports phase-1 sub-task reports containing partition stats with loadSpecs,
-   *                may be null or empty if phase 1 produced no output
+   *                may be null or empty if phase 1 produced no output.
    */
   @VisibleForTesting
   static void cleanupDeepStorageShuffleData(
@@ -1015,12 +1010,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       return;
     }
 
-    LOG.info("Cleaning up [%d] deep storage shuffle files.", segmentsToKill.size());
+    LOG.info("Cleaning up [%d] deep storage shuffle files for datasource[%s].", segmentsToKill.size(), datasource);
     try {
       killer.kill(segmentsToKill);
     }
     catch (Exception e) {
-      LOG.warn(e, "Failed to clean up deep storage shuffle data. Residual files may need manual cleanup.");
+      // Cleanup failures must never cause the overall indexing task to fail.
+      LOG.warn(e, "Failed to clean up deep storage shuffle data files for datasource[%s]", datasource);
     }
   }
 
