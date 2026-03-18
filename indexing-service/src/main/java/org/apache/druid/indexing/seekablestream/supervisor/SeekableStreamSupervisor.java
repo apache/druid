@@ -1009,7 +1009,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.supervisorId = spec.getId();
     this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorTag));
     this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Scheduler-%d");
-    this.reportingExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Reporting-%d");
+    final Map<String, Object> reportingDimensions = new HashMap<>();
+    reportingDimensions.put(DruidMetrics.SUPERVISOR_ID, supervisorId);
+    reportingDimensions.put(DruidMetrics.DATASOURCE, dataSource);
+    reportingDimensions.put(DruidMetrics.STREAM, ioConfig.getStream());
+    reportingDimensions.put(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS));
+    this.reportingExec = ScheduledExecutors.emittingDelayMetric(
+        Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Reporting-%d"),
+        spec.getEmitter(),
+        "ingest/reporting/wait/millis",
+        reportingDimensions
+    );
 
     this.stateManager = new SeekableStreamSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
@@ -4742,26 +4752,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
     // Lag is collected with fixed delay instead of fixed rate as lag collection can involve calling external
     // services and with fixed delay, a cooling buffer is guaranteed between successive calls
-    reportingExec.scheduleWithFixedDelay(
-        this::updateCurrentAndLatestOffsets,
-        ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
-        Math.max(
+    ScheduledExecutors.scheduleWithFixedDelay(
+        reportingExec,
+        Duration.millis(ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS),
+        Duration.millis(Math.max(
             tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
-        ),
-        TimeUnit.MILLISECONDS
+        )),
+        this::updateCurrentAndLatestOffsets
     );
 
-    reportingExec.scheduleAtFixedRate(
-        this::emitLag,
-        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-        TimeUnit.MILLISECONDS
+    ScheduledExecutors.scheduleAtFixedRate(
+        reportingExec,
+        Duration.millis(ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS),
+        Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+        this::emitLag
     );
-    reportingExec.scheduleAtFixedRate(
-        this::emitNoticesQueueSize,
-        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-        TimeUnit.MILLISECONDS
+    ScheduledExecutors.scheduleAtFixedRate(
+        reportingExec,
+        Duration.millis(ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS),
+        Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+        this::emitNoticesQueueSize
     );
   }
 

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -317,16 +316,14 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     );
 
     return VirtualColumns.create(
-        ImmutableList.of(
-            longVirtualColumn,
-            doubleVirtualColumn,
-            mixedNumericVirtualColumn,
-            mixedVirtualColumn,
-            sparseLongVirtualColumn,
-            sparseDoubleVirtualColumn,
-            sparseMixedNumericVirtualColumn,
-            sparseMixedVirtualColumn
-        )
+        longVirtualColumn,
+        doubleVirtualColumn,
+        mixedNumericVirtualColumn,
+        mixedVirtualColumn,
+        sparseLongVirtualColumn,
+        sparseDoubleVirtualColumn,
+        sparseMixedNumericVirtualColumn,
+        sparseMixedVirtualColumn
     );
   }
 

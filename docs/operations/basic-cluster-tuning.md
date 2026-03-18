@@ -261,10 +261,6 @@ If you use the [Kafka Indexing Service](../ingestion/kafka-ingestion.md) or [Kin
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
 slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).
 
-###### Hadoop ingestion
-
-If you are only using [Hadoop-based batch ingestion](../ingestion/hadoop.md) with no other ingestion types, you can lower the amount of resources allocated per Task. Batch ingestion tasks do not need to answer queries, and the bulk of the ingestion workload will be executed on the Hadoop cluster, so the Tasks do not require much resources.
-
 ###### Parallel native ingestion
 
 If you are using [parallel native batch ingestion](../ingestion/native-batch.md), allocating more available task slots is a good idea and will allow greater ingestion concurrency.

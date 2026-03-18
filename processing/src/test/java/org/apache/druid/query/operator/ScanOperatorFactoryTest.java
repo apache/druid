@@ -88,9 +88,9 @@ public class ScanOperatorFactoryTest
         Collections.emptyList()
     };
     VirtualColumns[] virtualCols = new VirtualColumns[]{
-        VirtualColumns.create(Collections.singletonList(
+        VirtualColumns.create(
             new ExpressionVirtualColumn("test", "2", null, TestExprMacroTable.INSTANCE)
-        ))
+        )
     };
 
     for (int i = 0; i <= intervals.length; ++i) {

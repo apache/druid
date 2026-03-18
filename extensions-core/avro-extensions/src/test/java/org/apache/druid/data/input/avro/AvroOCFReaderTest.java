@@ -25,8 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.druid.data.input.AvroHadoopInputRowParserTest;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
@@ -191,8 +190,8 @@ public class AvroOCFReaderTest
       Map<String, Object> readerSchema
   ) throws Exception
   {
-    final GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
-    final File someAvroFile = AvroHadoopInputRowParserTest.createAvroFile(someAvroDatum);
+    final GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
+    final File someAvroFile = AvroStreamInputFormatTest.createAvroFile(someAvroDatum);
     final TimestampSpec timestampSpec = new TimestampSpec("timestamp", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
         "eventType")));

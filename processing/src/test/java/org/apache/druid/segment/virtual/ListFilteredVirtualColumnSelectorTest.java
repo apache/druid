@@ -51,7 +51,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.List;
 
 public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandlingTest
 {
@@ -205,7 +204,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     try (final Closer closer = Closer.create()) {
       ColumnIndexSelector bitmapIndexSelector = new ColumnCache(
           queryableIndex,
-          VirtualColumns.create(List.of(virtualColumn)),
+          VirtualColumns.create(virtualColumn),
           closer
       );
 
@@ -266,7 +265,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     try (final Closer closer = Closer.create()) {
       ColumnIndexSelector bitmapIndexSelector = new ColumnCache(
           queryableIndex,
-          VirtualColumns.create(List.of(virtualColumn)),
+          VirtualColumns.create(virtualColumn),
           closer
       );
 
@@ -302,7 +301,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
             rowSignature,
             false
         ),
-        VirtualColumns.create(ImmutableList.of(virtualColumn))
+        VirtualColumns.create(virtualColumn)
     );
 
     return selectorFactory;

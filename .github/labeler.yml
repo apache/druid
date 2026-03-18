@@ -23,7 +23,6 @@
 'Area - Batch Ingestion':
   - changed-files:
     - any-glob-to-any-file:
-      - 'indexing-hadoop/**'
       - 'multi-stage-query/**'
 
 'Area - Dependencies':

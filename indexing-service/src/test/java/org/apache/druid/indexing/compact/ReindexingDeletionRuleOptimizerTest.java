@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.compact;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -428,11 +427,9 @@ public class ReindexingDeletionRuleOptimizerTest
   {
     // Create virtual columns vc1, vc2, vc3
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     // Create a filter that only references vc1 and vc3 (vc2 is unreferenced by deletion rules)
@@ -472,10 +469,8 @@ public class ReindexingDeletionRuleOptimizerTest
   {
     // Create virtual columns (could be partitioning VCs unrelated to deletion rules)
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     // Create a filter that references a physical column, not virtual columns
@@ -500,11 +495,9 @@ public class ReindexingDeletionRuleOptimizerTest
   public void testOptimize_PartiallyApplied_PreservesPartitioningVCsAndUnappliedDeletionVCs()
   {
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc_deletion_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc_deletion_b", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion_b", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     DimFilter filterA = new SelectorDimFilter("vc_deletion_a", "value_a", null);
@@ -543,10 +536,8 @@ public class ReindexingDeletionRuleOptimizerTest
   public void testOptimize_AllFiltersApplied_PreservesPartitioningVCs()
   {
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc_deletion", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     DimFilter filter = new SelectorDimFilter("vc_deletion", "value", null);
@@ -578,10 +569,8 @@ public class ReindexingDeletionRuleOptimizerTest
   public void testOptimize_PartiallyApplied_PreservesSharedVC()
   {
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc_shared", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc_only_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc_shared", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_only_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     // filterA references both vc_shared and vc_only_a

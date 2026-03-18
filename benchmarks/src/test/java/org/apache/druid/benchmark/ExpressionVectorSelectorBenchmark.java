@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
@@ -137,13 +136,11 @@ public class ExpressionVectorSelectorBenchmark
   public void scan(Blackhole blackhole)
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v",
-                expression,
-                ExpressionType.toColumnType(outputType),
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v",
+            expression,
+            ExpressionType.toColumnType(outputType),
+            TestExprMacroTable.INSTANCE
         )
     );
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
