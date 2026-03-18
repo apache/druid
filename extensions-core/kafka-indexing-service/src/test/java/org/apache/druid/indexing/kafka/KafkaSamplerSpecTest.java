@@ -364,6 +364,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public void testInvalidKafkaConfig()
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
         .withIoConfig(
             ioConfig -> ioConfig
                 .withJsonInputFormat()
@@ -388,6 +389,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public void testGetInputSourceResources()
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
         .withIoConfig(
             ioConfig -> ioConfig
                 .withJsonInputFormat()
