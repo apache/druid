@@ -101,11 +101,9 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
    * this manager has no way to discover what files were pushed: it has no
    * {@link org.apache.druid.segment.loading.DataSegmentKiller}, does not track pushed
    * paths, and runs on short-lived peon processes whose state is lost on exit.
-   *
-   * <p>Deep storage shuffle cleanup is instead handled by
-   * {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanupDeepStorageShuffleData},
-   * which uses the phase-1 reports (containing loadSpecs) to identify and
-   * delete files via {@link org.apache.druid.segment.loading.DataSegmentKiller}.
+   * <p>
+   * Deep storage shuffle cleanup is handled by
+   * {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanupDeepStorageShuffleData}.
    */
   @Override
   public void deletePartitions(String supervisorTaskId)

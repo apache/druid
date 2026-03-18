@@ -1898,8 +1898,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    // Shuffle data in deep storage is only needed for phase 2 to read.
-    // Clean up regardless of task outcome (success or failure).
     cleanupDeepStorageShuffleData(toolbox.getDataSegmentKiller(), getDataSource(), deepStorageShuffleReports);
 
     if (!isCompactionTask) {
