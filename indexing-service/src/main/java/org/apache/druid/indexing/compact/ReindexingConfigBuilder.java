@@ -22,6 +22,7 @@ package org.apache.druid.indexing.compact;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -44,9 +45,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Builds compaction configs for cascading reindexing by applying reindexing rules.
@@ -240,24 +239,23 @@ class ReindexingConfigBuilder
     List<VirtualColumn> allVCs = new ArrayList<>(deletionVCs);
 
     if (partitioningVCs != null && !partitioningVCs.isEmpty()) {
-      // Check for name collisions
-      Set<String> deletionVCNames = new HashSet<>();
-      for (VirtualColumn vc : deletionVCs) {
-        deletionVCNames.add(vc.getOutputName());
-      }
-      for (VirtualColumn vc : partitioningVCs.getVirtualColumns()) {
-        if (deletionVCNames.contains(vc.getOutputName())) {
-          throw InvalidInput.exception(
-              "Partitioning virtual column name [%s] collides with a deletion virtual column name. "
-              + "Please rename the partitioning virtual column or the deletion virtual column to avoid this collision.",
-              vc.getOutputName()
-          );
-        }
-        allVCs.add(vc);
-      }
+      allVCs.addAll(Arrays.asList(partitioningVCs.getVirtualColumns()));
     }
 
-    return allVCs.isEmpty() ? null : VirtualColumns.create(allVCs);
+    if (allVCs.isEmpty()) {
+      return null;
+    }
+
+    try {
+      return VirtualColumns.create(allVCs);
+    }
+    catch (IAE e) {
+      throw InvalidInput.exception(
+          e,
+          "Partitioning virtual column name collides with a deletion virtual column name. "
+          + "Please rename the partitioning virtual column or the deletion virtual column to avoid this collision."
+      );
+    }
   }
 
   private void applyDataSchemaRule(
