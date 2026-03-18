@@ -21,8 +21,8 @@ package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexing.template.BatchIndexingJob;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.timeline.CompactionState;
 
 /**
@@ -34,32 +34,20 @@ public class CompactionJob extends BatchIndexingJob
   private final int maxRequiredTaskSlots;
   private final String targetIndexingStateFingerprint;
   private final CompactionState targetIndexingState;
+  private final Eligibility eligibility;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
       String targetIndexingStateFingerprint,
-      CompactionState targetIndexingState
+      CompactionState targetIndexingState,
+      Eligibility eligibility
   )
   {
     super(task, null);
     this.candidate = candidate;
-    this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-    this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
-    this.targetIndexingState = targetIndexingState;
-  }
-
-  public CompactionJob(
-      ClientSqlQuery msqQuery,
-      CompactionCandidate candidate,
-      int maxRequiredTaskSlots,
-      String targetIndexingStateFingerprint,
-      CompactionState targetIndexingState
-  )
-  {
-    super(null, msqQuery);
-    this.candidate = candidate;
+    this.eligibility = eligibility;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
     this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
     this.targetIndexingState = targetIndexingState;
@@ -88,6 +76,11 @@ public class CompactionJob extends BatchIndexingJob
   public CompactionState getTargetIndexingState()
   {
     return targetIndexingState;
+  }
+
+  public Eligibility getEligibility()
+  {
+    return eligibility;
   }
 
   @Override

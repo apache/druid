@@ -98,7 +98,7 @@ public class ComparatorsTest
             Intervals.of("2011-04-02/2011-04-03T06"),
             Intervals.of("2011-04-01/2011-04-04"),
             Intervals.of("2011-04-02/2011-04-04")
-            },
+        },
         intervals
     );
   }

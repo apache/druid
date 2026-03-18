@@ -22,6 +22,9 @@ package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.VertxOptions;
 
+import java.util.Collections;
+import java.util.Map;
+
 public class DruidKubernetesVertxHttpClientConfig
 {
   @JsonProperty
@@ -32,6 +35,9 @@ public class DruidKubernetesVertxHttpClientConfig
 
   @JsonProperty
   private int internalBlockingPoolSize = VertxOptions.DEFAULT_INTERNAL_BLOCKING_POOL_SIZE;
+
+  @JsonProperty
+  private Map<String, Object> webClientOptions = Collections.emptyMap();
 
   public int getWorkerPoolSize()
   {
@@ -46,5 +52,10 @@ public class DruidKubernetesVertxHttpClientConfig
   public int getInternalBlockingPoolSize()
   {
     return internalBlockingPoolSize;
+  }
+
+  public Map<String, Object> getWebClientOptions()
+  {
+    return webClientOptions;
   }
 }

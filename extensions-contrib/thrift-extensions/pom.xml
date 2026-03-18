@@ -66,12 +66,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-indexing-hadoop</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.twitter.elephantbird</groupId>
       <artifactId>elephant-bird-core</artifactId>
       <version>${elephantbird.version}</version>
@@ -116,6 +110,16 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.twitter</groupId>
       <artifactId>scrooge-core_2.11</artifactId>
       <version>${scrooge.version}</version>
@@ -134,6 +138,11 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>nl.jqno.equalsverifier</groupId>
+      <artifactId>equalsverifier</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -126,7 +126,8 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
   protected String doTest(
       Pair<String, List<?>> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
-      String inputSourceType
+      String inputSourceType,
+      Object inputSourceProperties
   ) throws Exception
   {
     final String indexDatasource = dataSource;
@@ -161,6 +162,13 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
               spec,
               "%%INPUT_SOURCE_TYPE%%",
               inputSourceType
+          );
+
+          final String properties = jsonMapper.writeValueAsString(inputSourceProperties);
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_SOURCE_PROPERTIES%%",
+              properties
           );
           spec = StringUtils.replace(
               spec,

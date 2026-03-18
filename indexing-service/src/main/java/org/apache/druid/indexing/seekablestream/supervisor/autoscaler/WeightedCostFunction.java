@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 
 /**
@@ -34,6 +35,13 @@ public class WeightedCostFunction
    * during extensive testing as the most balanced multiplier for high-lag recovery.
    */
   static final double LAG_AMPLIFICATION_MULTIPLIER = 0.05;
+
+  /**
+   * Minimum rate of processing for any task in records per second. This is used
+   * as a placeholder if avg rate is not available to ensure that cost computations
+   * do not return infinitely large lag recovery times.
+   */
+  static final double MIN_PROCESSING_RATE = 1_000;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -62,14 +70,8 @@ public class WeightedCostFunction
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
     final double lagRecoveryTime;
-    if (avgProcessingRate <= 0) {
-      // Metrics are unavailable - favor maintaining the current task count.
-      // We're conservative about scale up, but won't let an unlikey scale down to happen.
-      if (proposedTaskCount == metrics.getCurrentTaskCount()) {
-        return new CostResult(0.01d, 0.0, 0.0);
-      } else {
-        return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
-      }
+    if (avgProcessingRate < 0) {
+      throw DruidException.defensive("Avg processing rate[%.2f] must not be negative.", avgProcessingRate);
     } else {
       // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
       // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
@@ -79,7 +81,8 @@ public class WeightedCostFunction
       } else {
         final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
         final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
-        lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * avgProcessingRate);
+        final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
+        lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
       }
     }
 

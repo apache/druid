@@ -25,7 +25,7 @@ title: "Protobuf"
 
 This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
 
-The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
+The `druid-protobuf-extensions` provides the [Protobuf InputFormat](../../ingestion/data-formats.md#protobuf)
 for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
 
 ## Example: Load Protobuf messages from Kafka
@@ -116,94 +116,82 @@ Important supervisor properties
 
 ```json
 {
-"type": "kafka",
-"spec": {
-    "dataSchema": {
-        "dataSource": "metrics-protobuf",
-        "timestampSpec": {
-            "column": "timestamp",
-            "format": "auto"
-        },
-        "dimensionsSpec": {
-            "dimensions": [
-                "unit",
-                "http_method",
-                "http_code",
-                "page",
-                "metricType",
-                "server"
+    "type": "kafka",
+    "spec": {
+        "dataSchema": {
+            "dataSource": "metrics-protobuf",
+            "timestampSpec": {
+                "column": "timestamp",
+                "format": "auto"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "unit",
+                    "http_method",
+                    "http_code",
+                    "page",
+                    "metricType",
+                    "server"
+                ],
+                "dimensionExclusions": [
+                    "timestamp",
+                    "value"
+                ]
+            },
+            "metricsSpec": [
+                {
+                    "name": "count",
+                    "type": "count"
+                },
+                {
+                    "name": "value_sum",
+                    "fieldName": "value",
+                    "type": "doubleSum"
+                },
+                {
+                    "name": "value_min",
+                    "fieldName": "value",
+                    "type": "doubleMin"
+                },
+                {
+                    "name": "value_max",
+                    "fieldName": "value",
+                    "type": "doubleMax"
+                }
             ],
-            "dimensionExclusions": [
-                "timestamp",
-                "value"
-            ]
-        },
-        "metricsSpec": [
-            {
-                "name": "count",
-                "type": "count"
-            },
-            {
-                "name": "value_sum",
-                "fieldName": "value",
-                "type": "doubleSum"
-            },
-            {
-                "name": "value_min",
-                "fieldName": "value",
-                "type": "doubleMin"
-            },
-            {
-                "name": "value_max",
-                "fieldName": "value",
-                "type": "doubleMax"
+            "granularitySpec": {
+                "type": "uniform",
+                "segmentGranularity": "HOUR",
+                "queryGranularity": "NONE"
             }
-        ],
-        "granularitySpec": {
-            "type": "uniform",
-            "segmentGranularity": "HOUR",
-            "queryGranularity": "NONE"
+        },
+        "tuningConfig": {
+            "type": "kafka",
+            "maxRowsPerSegment": 5000000
+        },
+        "ioConfig": {
+            "topic": "metrics_pb",
+            "consumerProperties": {
+                "bootstrap.servers": "localhost:9092"
+            },
+            "inputFormat": {
+                "type": "protobuf",
+                "protoBytesDecoder": {
+                    "type": "file",
+                    "descriptor": "file:///tmp/metrics.desc",
+                    "protoMessageType": "Metrics"
+                },
+                "flattenSpec": {
+                    "useFieldDiscovery": true
+                },
+                "binaryAsString": false
+            },
+            "taskCount": 1,
+            "replicas": 1,
+            "taskDuration": "PT1H",
+            "type": "kafka"
         }
-    },
-    "tuningConfig": {
-        "type": "kafka",
-        "maxRowsPerSegment": 5000000
-    },
-    "ioConfig": {
-        "topic": "metrics_pb",
-        "consumerProperties": {
-            "bootstrap.servers": "localhost:9092"
-        },
-        "inputFormat": {
-            "type": "protobuf",
-            "protoBytesDecoder": {
-                "type": "file",
-                "descriptor": "file:///tmp/metrics.desc",
-                "protoMessageType": "Metrics"
-            },
-            "flattenSpec": {
-                "useFieldDiscovery": true
-            },
-            "binaryAsString": false
-        },
-        "taskCount": 1,
-        "replicas": 1,
-        "taskDuration": "PT1H",
-        "type": "kafka"
     }
-}
-}
-```
-
-To adopt to old version. You can use old parser style, which also works.
-
-```json
-{
-  "parser": {
-    "type": "protobuf",
-    "descriptor": "file:///tmp/metrics.desc",
-    "protoMessageType": "Metrics"
-  }
 }
 ```
 
@@ -215,33 +203,28 @@ Important supervisor properties
 - `protoBytesDecoder.capacity` capacity for schema registry cached schemas.
 - `protoBytesDecoder.config` to send additional configurations, configured for Schema Registry.
 - `protoBytesDecoder.headers` to send headers to the Schema Registry.
-- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file.
-- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`.
+- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file..
 
 ```json
+
 {
-  "parser": {
-    "type": "protobuf",
-    "protoBytesDecoder": {
-      "urls": ["http://schemaregistry.example1.com:8081","http://schemaregistry.example2.com:8081"],
-      "type": "schema_registry",
-      "capacity": 100,
-      "config" : {
-           "basic.auth.credentials.source": "USER_INFO",
-           "basic.auth.user.info": "fred:letmein",
-           "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
-           "schema.registry.ssl.truststore.password": "<password>",
-           "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
-           "schema.registry.ssl.keystore.password": "<password>",
-           "schema.registry.ssl.key.password": "<password>",
-             ... 
-      },
-      "headers": {
-          "traceID" : "b29c5de2-0db4-490b-b421",
-          "timeStamp" : "1577191871865",
-          ...
-      }
-    }
+  "urls": ["http://schemaregistry.example1.com:8081","http://schemaregistry.example2.com:8081"],
+  "type": "schema_registry",
+  "capacity": 100,
+  "config" : {
+       "basic.auth.credentials.source": "USER_INFO",
+       "basic.auth.user.info": "fred:letmein",
+       "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
+       "schema.registry.ssl.truststore.password": "<password>",
+       "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
+       "schema.registry.ssl.keystore.password": "<password>",
+       "schema.registry.ssl.key.password": "<password>",
+         ... 
+  },
+  "headers": {
+      "traceID" : "b29c5de2-0db4-490b-b421",
+      "timeStamp" : "1577191871865",
+      ...
   }
 }
 ```
