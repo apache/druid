@@ -167,7 +167,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
   {
-    return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
+    return virtualColumns(VirtualColumns.create(virtualColumns));
   }
 
   public TopNQueryBuilder dataSource(DataSource d)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -44,10 +43,8 @@ public class VirtualizedColumnSelectorFactoryTest extends InitializedNullHandlin
           false
       ),
       VirtualColumns.create(
-          ImmutableList.of(
-              new ExpressionVirtualColumn("v0", "x + 1", null, ExprMacroTable.nil()),
-              new ExpressionVirtualColumn("v1", "v0 + y", null, ExprMacroTable.nil())
-          )
+          new ExpressionVirtualColumn("v0", "x + 1", null, ExprMacroTable.nil()),
+          new ExpressionVirtualColumn("v1", "v0 + y", null, ExprMacroTable.nil())
       )
   );
 
