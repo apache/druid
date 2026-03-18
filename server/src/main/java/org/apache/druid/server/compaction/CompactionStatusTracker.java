@@ -49,6 +49,17 @@ public class CompactionStatusTracker
 
   private final AtomicReference<DateTime> segmentSnapshotTime = new AtomicReference<>();
 
+  /**
+   * Optional stats collector for recording detailed compaction statistics, useful for dryRun.
+   */
+  @Nullable
+  private CompactionStatusDetailedStats detailedStats;
+
+  public void resetCompactionStatusDetailedStats(@Nullable CompactionStatusDetailedStats detailedStats)
+  {
+    this.detailedStats = detailedStats;
+  }
+
   public void stop()
   {
     datasourceStatuses.clear();
@@ -78,37 +89,23 @@ public class CompactionStatusTracker
   }
 
   /**
-   * Checks if compaction can be started for the given {@link CompactionCandidate}.
-   * This method assumes that the given candidate is eligible for compaction
-   * based on the current compaction config/supervisor of the datasource.
+   * Computes the compaction status for the given candidate by checking:
+   * <ul>
+   *   <li>If a task is already running for this interval</li>
+   *   <li>If segments were recently compacted but timeline not yet updated</li>
+   *   <li>If the candidate is filtered out by the search policy</li>
+   * </ul>
+   * Callsite may pass null for searchPolicy if eligibility has already been checked.
    *
-   * @deprecated This method is used only by Coordinator-based CompactSegments
-   * duty and will be removed in the future.
+   * @return PENDING if compaction should proceed, RUNNING if already in progress,
+   *         or SKIPPED with a reason if compaction should not proceed
    */
-  @Deprecated
   public CompactionStatus computeCompactionStatus(
       CompactionCandidate candidate,
-      CompactionCandidateSearchPolicy searchPolicy
+      @Nullable CompactionCandidateSearchPolicy searchPolicy
   )
   {
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
-    CompactionStatus status = deriveCompactionStatus(lastTaskStatus);
-    if (!CompactionStatus.State.PENDING.equals(status.getState())) {
-      return status;
-    }
-
-    // Skip intervals that have been filtered out by the policy
-    final Eligibility eligibility
-        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
-    if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
-    } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
-    }
-  }
-
-  public CompactionStatus deriveCompactionStatus(CompactionTaskStatus lastTaskStatus)
-  {
     // Skip intervals that already have a running task
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
       return CompactionStatus.running("Task for interval is already running");
@@ -123,19 +120,32 @@ public class CompactionStatusTracker
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
-    return CompactionStatus.pending("Not compacted yet");
+
+    if (searchPolicy == null) {
+      return CompactionStatus.pending("Not compacted yet");
+    }
+
+    // Skip intervals that have been filtered out by the policy
+    final Eligibility eligibility = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
+    if (eligibility.isEligible()) {
+      return CompactionStatus.pending("Not compacted yet");
+    } else {
+      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
+    }
   }
 
   /**
-   * Tracks the latest compaction status of the given compaction candidates.
-   * Used only by the {@link CompactionRunSimulator}.
+   * Records the compaction status to detailed stats if enabled.
    */
-  public void onCompactionStatusComputed(
+  public void collectCompactionStatus(
       CompactionCandidate candidateSegments,
-      DataSourceCompactionConfig config
+      @Nullable String reason,
+      @Nullable DataSourceCompactionConfig config
   )
   {
-    // Nothing to do, used by simulator
+    if (detailedStats != null) {
+      detailedStats.recordCompactionStatus(candidateSegments, reason);
+    }
   }
 
   public void onSegmentTimelineUpdated(DateTime snapshotTime)
@@ -164,12 +174,25 @@ public class CompactionStatusTracker
 
   public void onTaskSubmitted(
       String taskId,
-      CompactionCandidate candidateSegments
+      CompactionCandidate candidateSegments,
+      CompactionMode compactionMode
   )
   {
     submittedTaskIdToSegments.put(taskId, candidateSegments);
     getOrComputeDatasourceStatus(candidateSegments.getDataSource())
         .handleSubmittedTask(candidateSegments);
+    recordSubmittedTask(candidateSegments, compactionMode);
+  }
+
+  /**
+   * Records a pending compaction task to detailed stats after task submission.
+   * In dryRun mode, records tasks that could be allocated to a slot without actually submitting them.
+   */
+  public void recordSubmittedTask(CompactionCandidate candidateSegments, CompactionMode compactionMode)
+  {
+    if (detailedStats != null) {
+      detailedStats.recordSubmittedTask(candidateSegments, compactionMode);
+    }
   }
 
   public void onTaskFinished(String taskId, TaskStatus taskStatus)

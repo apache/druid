@@ -46,7 +46,6 @@ import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -88,6 +87,7 @@ public class CompactionJobQueue
 
   private final ObjectMapper objectMapper;
   private final CompactionStatusTracker statusTracker;
+  private final boolean dryRun;
   private final TaskActionClientFactory taskActionClientFactory;
   private final OverlordClient overlordClient;
   private final GlobalTaskLockbox taskLockbox;
@@ -107,6 +107,7 @@ public class CompactionJobQueue
       DataSourcesSnapshot dataSourcesSnapshot,
       ClusterCompactionConfig clusterCompactionConfig,
       CompactionStatusTracker statusTracker,
+      boolean dryRun,
       TaskActionClientFactory taskActionClientFactory,
       GlobalTaskLockbox taskLockbox,
       OverlordClient overlordClient,
@@ -119,6 +120,7 @@ public class CompactionJobQueue
     this.runStats = new CoordinatorRunStats();
     this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
     this.clusterCompactionConfig = clusterCompactionConfig;
+    this.dryRun = dryRun;
     this.searchPolicy = clusterCompactionConfig.getCompactionPolicy();
     this.queue = new PriorityQueue<>(
         (o1, o2) -> searchPolicy.compareCandidates(o1.getCandidate(), o2.getCandidate())
@@ -130,6 +132,7 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         statusTracker::getLatestTaskStatus,
+        statusTracker::collectCompactionStatus,
         snapshotBuilder,
         new DefaultIndexingStateFingerprintMapper(indexingStateCache, objectMapper)
     );
@@ -143,6 +146,11 @@ public class CompactionJobQueue
     this.statusTracker = statusTracker;
     this.objectMapper = objectMapper;
     this.taskLockbox = taskLockbox;
+  }
+
+  public boolean isDryRun()
+  {
+    return dryRun;
   }
 
   /**
@@ -281,18 +289,24 @@ public class CompactionJobQueue
     final CompactionConfigValidationResult validationResult = validateCompactionJob(job);
     if (!validationResult.isValid()) {
       log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
+      statusTracker.collectCompactionStatus(
+          candidate.withCurrentStatus(CompactionStatus.skipped(validationResult.getReason())),
+          null,
+          null
+      );
       snapshotBuilder.moveFromPendingToSkipped(candidate);
       return false;
     }
 
     // Check if the job is already running or skipped or pending
-    final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
-    final CompactionStatus compactionStatus = statusTracker.deriveCompactionStatus(lastTaskStatus);
+    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(candidate, null);
 
     switch (compactionStatus.getState()) {
       case RUNNING:
+        statusTracker.recordSubmittedTask(candidate, job.getEligibility().getMode());
         return false;
       case SKIPPED:
+        statusTracker.collectCompactionStatus(candidate.withCurrentStatus(compactionStatus), null, null);
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
       case PENDING:
@@ -305,20 +319,31 @@ public class CompactionJobQueue
     // Check if enough compaction task slots are available
     if (job.getMaxRequiredTaskSlots() > slotManager.getNumAvailableTaskSlots()) {
       pendingJobs.add(job);
+      statusTracker.collectCompactionStatus(candidate, null, null);
       return false;
     }
 
     // Reserve task slots and try to start the task
     slotManager.reserveTaskSlots(job.getMaxRequiredTaskSlots());
-    final String taskId = startTaskIfReady(job);
-    if (taskId == null) {
-      // Mark the job as skipped for now as the intervals might be locked by other tasks
-      snapshotBuilder.moveFromPendingToSkipped(candidate);
+    if (dryRun) {
+      statusTracker.recordSubmittedTask(job.getCandidate(), job.getEligibility().getMode());
       return false;
     } else {
-      statusTracker.onTaskSubmitted(taskId, job.getCandidate());
-      submittedTaskIdToJob.put(taskId, job);
-      return true;
+      final String taskId = startTaskIfReady(job);
+      if (taskId == null) {
+        // Mark the job as skipped for now as the intervals might be locked by other tasks
+        statusTracker.collectCompactionStatus(
+            candidate.withCurrentStatus(CompactionStatus.skipped("task was not submitted")),
+            null,
+            null
+        );
+        snapshotBuilder.moveFromPendingToSkipped(candidate);
+        return false;
+      } else {
+        statusTracker.onTaskSubmitted(taskId, job.getCandidate(), job.getEligibility().getMode());
+        submittedTaskIdToJob.put(taskId, job);
+        return true;
+      }
     }
   }
 

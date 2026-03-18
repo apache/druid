@@ -42,9 +42,8 @@ public class CompactionCandidate
   private final Interval umbrellaInterval;
   private final Interval compactionInterval;
   private final String dataSource;
-  private final long totalBytes;
-  private final int numIntervals;
 
+  private final CompactionStatistics compactionStatistics;
   private final CompactionStatus currentStatus;
 
   public static Interval getCompactionInterval(
@@ -99,12 +98,23 @@ public class CompactionCandidate
   )
   {
     this.segments = segments;
-    this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
+
+    final Long totalRows;
+    if (segments.stream().allMatch(s -> s.getTotalRows() != null)) {
+      totalRows = segments.stream().mapToLong(DataSegment::getTotalRows).sum();
+    } else {
+      totalRows = null;
+    }
+    this.compactionStatistics = CompactionStatistics.create(
+        segments.stream().mapToLong(DataSegment::getSize).sum(),
+        totalRows,
+        segments.size(),
+        numDistinctSegmentIntervals
+    );
 
     this.umbrellaInterval = umbrellaInterval;
     this.compactionInterval = compactionInterval;
 
-    this.numIntervals = numDistinctSegmentIntervals;
     this.dataSource = segments.get(0).getDataSource();
     this.currentStatus = currentStatus;
   }
@@ -115,11 +125,6 @@ public class CompactionCandidate
   public List<DataSegment> getSegments()
   {
     return segments;
-  }
-
-  public long getTotalBytes()
-  {
-    return totalBytes;
   }
 
   public int numSegments()
@@ -152,7 +157,7 @@ public class CompactionCandidate
 
   public CompactionStatistics getStats()
   {
-    return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
+    return compactionStatistics;
   }
 
   @Nullable
@@ -187,7 +192,13 @@ public class CompactionCandidate
    */
   public CompactionCandidate withCurrentStatus(CompactionStatus status)
   {
-    return new CompactionCandidate(segments, umbrellaInterval, compactionInterval, numIntervals, status);
+    return new CompactionCandidate(
+        segments,
+        umbrellaInterval,
+        compactionInterval,
+        Math.toIntExact(compactionStatistics.getNumIntervals()),
+        status
+    );
   }
 
   @Override
@@ -196,7 +207,7 @@ public class CompactionCandidate
     return "SegmentsToCompact{" +
            "datasource=" + dataSource +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-           ", totalSize=" + totalBytes +
+           ", compactionStatistics=" + compactionStatistics +
            ", currentStatus=" + currentStatus +
            '}';
   }

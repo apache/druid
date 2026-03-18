@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
@@ -54,6 +56,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -64,11 +67,15 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionMode;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.server.compaction.CompactionStatusDetailedStats;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
+import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -95,6 +102,7 @@ import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -109,6 +117,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -116,6 +125,8 @@ import java.util.stream.Collectors;
  */
 public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
+  private static final int DEFAULT_TASK_SLOTS = 100;
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(2_000_000_000L)
@@ -154,16 +165,52 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void configureCompaction(CompactionEngine compactionEngine, @Nullable CompactionCandidateSearchPolicy policy)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(
-            1.0,
-            100,
-            policy,
-            true,
+        o -> o.updateClusterCompactionConfig(buildClusterCompactionConfing(
             compactionEngine,
-            true
+            policy,
+            DEFAULT_TASK_SLOTS
         ))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
+  }
+
+  private void configureCompactionWithNoSlot(
+      CompactionEngine compactionEngine,
+      @Nullable CompactionCandidateSearchPolicy policy
+  )
+  {
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(buildClusterCompactionConfing(compactionEngine, policy, 0))
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+  }
+
+  private CompactionStatusDetailedStats dryRun(
+      CompactionEngine compactionEngine,
+      @Nullable CompactionCandidateSearchPolicy policy
+  )
+  {
+    ClusterCompactionConfig clusterCompactionConfig = buildClusterCompactionConfing(compactionEngine, policy, 100);
+    return cluster.callApi()
+                  .serviceClient()
+                  .onLeaderOverlord(
+                      mapper ->
+                          new RequestBuilder(
+                              HttpMethod.POST,
+                              StringUtils.format("%s/compaction/dryRun", "/druid/indexer/v1")
+                          ).jsonContent(new ObjectMapper(), clusterCompactionConfig), new TypeReference<>()
+                      {
+                      }
+                  );
+  }
+
+  private ClusterCompactionConfig buildClusterCompactionConfing(
+      CompactionEngine compactionEngine,
+      @Nullable CompactionCandidateSearchPolicy policy,
+      int maxCompactionTaskSlots
+  )
+  {
+    return new ClusterCompactionConfig(1.0, maxCompactionTaskSlots, policy, true, compactionEngine, true);
   }
 
   @MethodSource("getEngine")
@@ -199,7 +246,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             )
             .build();
 
-    runCompactionWithSpec(monthGranularityConfig);
+    enableSupervisor(monthGranularityConfig);
     waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
@@ -223,7 +270,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .build();
 
     overlord.latchableEmitter().flush(); // flush events so wait for works correctly on the next round of compaction
-    runCompactionWithSpec(yearGranConfig);
+    enableSupervisor(yearGranConfig);
     waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
@@ -233,15 +280,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
   }
 
-  @MethodSource("getPartitionsSpec")
+  @MethodSource("getPolicyAndPartition")
   @ParameterizedTest(name = "partitionsSpec={0}")
-  public void test_minorCompactionWithMSQ(PartitionsSpec partitionsSpec) throws Exception
+  public void test_minorCompactionWithMSQ(MostFragmentedIntervalFirstPolicy policy, PartitionsSpec partitionsSpec)
   {
-    configureCompaction(
-        CompactionEngine.MSQ,
-        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null)
-    );
-
+    configureCompactionWithNoSlot(CompactionEngine.MSQ, policy);
     ingest1kRecords();
     ingest1kRecords();
 
@@ -266,16 +309,38 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withIoConfig(new UserCompactionTaskIOConfig(true))
             .withTuningConfig(UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build())
             .build();
+    enableSupervisor(dayGranularityConfig);
 
-    runCompactionWithSpec(dayGranularityConfig);
+    Map<CompactionStatus.State, Table> result1 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
+    // Expect dry run to return 1 compaction job with 2 segments
+    Assertions.assertEquals(Set.of(CompactionStatus.State.RUNNING), result1.keySet());
+    List<List<Object>> running1 = result1.get(CompactionStatus.State.RUNNING).getRows();
+    Assertions.assertEquals(1, running1.size());
+    Assertions.assertEquals(2, running1.get(0).get(2)); // all segments
+    Assertions.assertEquals(2000, running1.get(0).get(4)); // all rows
+    Assertions.assertEquals(2, running1.get(0).get(5)); // uncompacted segments
+    Assertions.assertEquals(2000, running1.get(0).get(6)); // uncompacted rows
+    Assertions.assertEquals(CompactionMode.ALL_SEGMENTS.toString(), running1.get(0).get(8));
+
+    configureCompaction(CompactionEngine.MSQ, policy);
     waitForAllCompactionTasksToFinish();
-
-    pauseCompaction(dayGranularityConfig);
 
     overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(2000, getTotalRowCount());
+
+    // set task slot to 0 to disable compaction job submission
+    configureCompactionWithNoSlot(CompactionEngine.MSQ, policy);
+    Map<CompactionStatus.State, Table> result2 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
+    // Expect dry run to return 1 completed compaction job with 1 segments
+    List<List<Object>> compacted2 = result2.get(CompactionStatus.State.COMPLETE).getRows();
+    Assertions.assertEquals(1, compacted2.size());
+    Assertions.assertEquals(1, compacted2.get(0).get(2)); // all segments
+    Assertions.assertEquals(2000, compacted2.get(0).get(4)); // all rows
+    Assertions.assertEquals(0, compacted2.get(0).get(5)); // uncompacted segments
+    Assertions.assertEquals(0, compacted2.get(0).get(6)); // uncompacted rows
+    Assertions.assertNull(compacted2.get(0).get(8));
 
     verifyCompactedSegmentsHaveFingerprints(dayGranularityConfig);
 
@@ -293,7 +358,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         Map.of(DruidMetrics.DATASOURCE, dataSource)
     ).stream().reduce((first, second) -> second).orElse(0).longValue();
 
-    runCompactionWithSpec(dayGranularityConfig);
+    Map<CompactionStatus.State, Table> result3 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
+    // Expect dry run to return 1 compaction job with 3 segments
+    List<List<Object>> running3 = result3.get(CompactionStatus.State.RUNNING).getRows();
+    Assertions.assertEquals(1, running3.size());
+    Assertions.assertEquals(3, running3.get(0).get(2)); // all segments
+    Assertions.assertEquals(4000, running3.get(0).get(4)); // all rows
+    Assertions.assertEquals(2, running3.get(0).get(5)); // uncompacted segments
+    Assertions.assertEquals(2000, running3.get(0).get(6)); // uncompacted rows
+    Assertions.assertEquals(CompactionMode.UNCOMPACTED_SEGMENTS_ONLY.toString(), running3.get(0).get(8));
+
+    configureCompaction(CompactionEngine.MSQ, policy);
     waitForAllCompactionTasksToFinish();
 
     // wait for new segments have been updated to the cache
@@ -305,6 +380,18 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // performed minor compaction: 1 previously compacted segment + 1 recently compacted segment from minor compaction
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(4000, getTotalRowCount());
+
+    Map<CompactionStatus.State, Table> result4 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
+    // Expect dry run to return 1 compacted compaction job with 2 segments
+    List<List<Object>> compacted4 = result4.get(CompactionStatus.State.COMPLETE).getRows();
+    Assertions.assertEquals(1, compacted4.size());
+    Assertions.assertEquals(2, compacted4.get(0).get(2)); // all segments
+    Assertions.assertEquals(4000, compacted4.get(0).get(4)); // all rows
+    Assertions.assertEquals(0, compacted4.get(0).get(5)); // uncompacted segments
+    Assertions.assertEquals(0, compacted4.get(0).get(6)); // uncompacted rows
+    Assertions.assertNull(compacted4.get(0).get(8));
+
+    disableSupervisor(dayGranularityConfig);
   }
 
   protected void ingest1kRecords()
@@ -378,7 +465,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             )
             .build();
 
-    runCompactionWithSpec(monthConfig);
+    enableSupervisor(monthConfig);
     waitForAllCompactionTasksToFinish();
 
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
@@ -470,7 +557,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         Granularities.HOUR
     );
-    runCompactionWithSpec(cascadingReindexingTemplate);
+    enableSupervisor(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
@@ -549,7 +636,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         Granularities.DAY
     );
 
-    runCompactionWithSpec(cascadingTemplate);
+    enableSupervisor(cascadingTemplate);
 
     // vsf storage monitor metrics are only emitted for MSQ ingestion, so picked this compaction test at random to test
     LatchableEmitter emitter = indexer.latchableEmitter();
@@ -640,7 +727,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     InlineSchemaDataSourceCompactionConfig compactionConfig = builder.build();
 
-    runCompactionWithSpec(compactionConfig);
+    enableSupervisor(compactionConfig);
     waitForAllCompactionTasksToFinish();
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
@@ -694,7 +781,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withTuningConfig(createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null)))
             .build();
 
-    runCompactionWithSpec(config);
+    enableSupervisor(config);
     waitForAllCompactionTasksToFinish();
 
     segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
@@ -784,12 +871,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         });
   }
 
-  private void runCompactionWithSpec(DataSourceCompactionConfig config)
+  private void enableSupervisor(DataSourceCompactionConfig config)
   {
     cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
   }
 
-  private void pauseCompaction(DataSourceCompactionConfig config)
+  private void disableSupervisor(DataSourceCompactionConfig config)
   {
     cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, true, null));
   }
@@ -847,11 +934,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task, overlord);
   }
 
-  public static List<PartitionsSpec> getPartitionsSpec()
+  public static List<Object[]> getPolicyAndPartition()
   {
     return List.of(
-        new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false),
-        new DynamicPartitionsSpec(null, null)
+        new Object[]{
+            // decides minor compaction based on bytes percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null),
+            new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false)
+        },
+        new Object[]{
+            // decides minor compaction based on rows percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null),
+            new DynamicPartitionsSpec(null, null)
+        }
     );
   }
 

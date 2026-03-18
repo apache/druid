@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusDetailedStats;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -83,7 +84,15 @@ public interface CompactionScheduler
    * Simulates a compaction run with the given cluster config.
    *
    * @return Result of the simulation
+   * @deprecated Use {@link #dryRunWithConfig(ClusterCompactionConfig)} instead
    */
+  @Deprecated
   CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 
+  /**
+   * Dry run with the given config to view compaction status without submitting jobs.
+   *
+   * @return Detailed compaction statistics
+   */
+  CompactionStatusDetailedStats dryRunWithConfig(ClusterCompactionConfig config);
 }

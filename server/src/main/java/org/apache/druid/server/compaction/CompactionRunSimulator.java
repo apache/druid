@@ -102,9 +102,10 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onCompactionStatusComputed(
+      public void collectCompactionStatus(
           CompactionCandidate candidateSegments,
-          DataSourceCompactionConfig config
+          @Nullable String reason,
+          @Nullable DataSourceCompactionConfig config
       )
       {
         final CompactionStatus status = candidateSegments.getCurrentStatus();
@@ -126,7 +127,7 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
+      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments, CompactionMode unused)
       {
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCurrentStatus();
@@ -182,7 +183,7 @@ public class CompactionRunSimulator
     row.add(candidate.getDataSource());
     row.add(candidate.getCompactionInterval());
     row.add(candidate.numSegments());
-    row.add(candidate.getTotalBytes());
+    row.add(candidate.getStats().getTotalBytes());
     row.add(CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     if (reason != null) {
       row.add(reason);

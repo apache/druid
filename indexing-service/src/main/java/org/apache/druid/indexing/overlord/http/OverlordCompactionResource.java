@@ -354,6 +354,10 @@ public class OverlordCompactionResource
     }
   }
 
+  /**
+   * @deprecated Use {@link #dryRun(ClusterCompactionConfig)} instead
+   */
+  @Deprecated
   @POST
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -366,6 +370,16 @@ public class OverlordCompactionResource
     return Response.ok().entity(
         scheduler.simulateRunWithConfigUpdate(updatePayload)
     ).build();
+  }
+
+  @POST
+  @Path("/dryRun")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response dryRun(ClusterCompactionConfig updatePayload)
+  {
+    return Response.ok().entity(scheduler.dryRunWithConfig(updatePayload)).build();
   }
 
   private static boolean isEmpty(String dataSource)
