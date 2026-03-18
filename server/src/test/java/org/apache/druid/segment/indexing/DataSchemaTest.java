@@ -410,6 +410,35 @@ class DataSchemaTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testSerdeFailsWithParser() throws Exception
+  {
+    // deserialize, then serialize, then deserialize of DataSchema.
+    String jsonStr = "{"
+                     + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
+                     + "\"parser\":{"
+                     + "\"type\":\"string\","
+                     + "\"parseSpec\":{"
+                     + "\"format\":\"json\","
+                     + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[]},"
+                     + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+                     + "\"featureSpec\":{}},"
+                     + "\"encoding\":\"UTF-8\""
+                     + "},"
+                     + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+                     + "\"granularitySpec\":{"
+                     + "\"type\":\"arbitrary\","
+                     + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+                     + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+
+    Throwable t = Assertions.assertThrows(
+        ValueInstantiationException.class,
+        () -> jsonMapper.readValue(jsonStr, DataSchema.class)
+    );
+    Assertions.assertTrue(t.getMessage().contains("parser was removed in Druid 37"));
+  }
+
+  @Test
   public void testSerdeWithProjections() throws Exception
   {
     // serialize, then deserialize of DataSchema with projections.

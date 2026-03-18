@@ -86,14 +86,29 @@ public class DataSchema
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
-  public DataSchema(
+  private DataSchema(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
       @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
-      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
+      @JsonProperty("parser") @Nullable Map<String, Object> parserMap
+  )
+  {
+    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, projections);
+    InvalidInput.conditionalException(parserMap == null, "parser was removed in Druid 37, define the timestampSpec and dimensionSpec on the schema directly instead of nested inside the parser definition");
+  }
+
+  public DataSchema(
+      String dataSource,
+      @Nullable TimestampSpec timestampSpec, // can be null in old task spec
+      @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
+      @Nullable AggregatorFactory[] aggregators,
+      @Nullable GranularitySpec granularitySpec,
+      TransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projections
   )
   {
     validateDatasourceName(dataSource);
@@ -131,7 +146,6 @@ public class DataSchema
           dataSource
       );
     }
-
   }
 
   @JsonProperty
