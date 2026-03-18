@@ -575,27 +575,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 )
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(4, null, List.of("v0"), false))
+                    .build()
             )
             .build();
 
@@ -684,27 +667,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 )
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(4, null, List.of("v0"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(4, null, List.of("v0"), false))
+                    .build()
             )
             .build();
 

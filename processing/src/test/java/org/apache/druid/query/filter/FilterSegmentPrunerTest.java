@@ -76,8 +76,12 @@ class FilterSegmentPrunerTest
     FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), null);
     FilterSegmentPruner prunerExpression = new FilterSegmentPruner(expression_b, null, null);
 
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1, seg4, seg5, seg6, seg7), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.of(seg1, seg4, seg5, seg6, seg7), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerExpression.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerExpression.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
   }
 
@@ -111,7 +115,10 @@ class FilterSegmentPrunerTest
     DimFilter range_a = new RangeFilter("vdim1", ColumnType.STRING, null, "aaa", null, null, null);
     FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
     FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
+    // prune twice to exercise cache
     Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
 
     // same expression, different name
@@ -122,18 +129,10 @@ class FilterSegmentPrunerTest
     prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
     prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
 
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
-
-    // same expression, different name
-    queryVirtualColumns = VirtualColumns.create(
-        new ExpressionVirtualColumn("v10", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-    );
-    range_a = new RangeFilter("v10", ColumnType.STRING, null, "aaa", null, null, null);
-    prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
-    prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
-
-    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
   }
 
