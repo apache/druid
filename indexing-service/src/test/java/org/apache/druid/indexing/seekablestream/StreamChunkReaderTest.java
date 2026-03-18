@@ -121,8 +121,7 @@ public class StreamChunkReaderTest
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
     );
-    final StreamChunkReader<By
-    teEntity> chunkParser = new StreamChunkReader<>(
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
