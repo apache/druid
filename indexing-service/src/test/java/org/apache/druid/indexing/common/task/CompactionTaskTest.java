@@ -1206,13 +1206,14 @@ public class CompactionTaskTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
-    // Spec includes a segment ID that does not exist in metadata - validation should fail
-    final List<String> segmentIds = SEGMENTS.stream().map(s -> s.getId().toString()).collect(Collectors.toList());
-    segmentIds.add(DATA_SOURCE + "_2020-01-01T00:00:00.000Z_2020-02-01T00:00:00.000Z_x_0");
+    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
+    Collections.sort(segments);
+    // Remove one segment in the middle
+    segments.remove(segments.size() / 2);
     final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new SpecificSegmentsSpec(segmentIds)),
+        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         null,
         null,
         null,
