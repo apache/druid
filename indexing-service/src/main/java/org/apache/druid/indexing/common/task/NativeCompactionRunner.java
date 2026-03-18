@@ -367,8 +367,10 @@ public class NativeCompactionRunner implements CompactionRunner
     newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
-    // Native compaction subtasks always use TIME_CHUNK (REPLACE mode).
-    newContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    // Native minor compaction uses REPLACE ingestion mode, which uses time chunk lock.
+    if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
+      newContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
     return newContext;
   }
 
