@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -47,13 +46,11 @@ public class NativeCompactionRunnerTest
   public void testVirtualColumnsInTransformSpecAreNotSupported()
   {
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "extractedField",
-                "json_value(metadata, '$.category')",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "extractedField",
+            "json_value(metadata, '$.category')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 

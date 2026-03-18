@@ -514,7 +514,7 @@ public class UnnestCursorFactory implements CursorFactory
                           .setInterval(spec.getInterval())
                           .setFilter(baseTableFilter)
                           .setPhysicalColumns(physicalColumns)
-                          .setVirtualColumns(VirtualColumns.create(List.of(unnestColumn)))
+                          .setVirtualColumns(VirtualColumns.create(unnestColumn))
                           .setPreferredOrdering(maybeOrderByTime)
                           .setQueryContext(spec.getQueryContext())
                           .setQueryMetrics(spec.getQueryMetrics())
