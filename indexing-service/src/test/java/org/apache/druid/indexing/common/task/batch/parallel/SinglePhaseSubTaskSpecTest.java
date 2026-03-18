@@ -49,7 +49,7 @@ public class SinglePhaseSubTaskSpecTest
       new ParallelIndexIngestionSpec(
           DataSchema.builder()
                     .withDataSource("dataSource")
-                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withTimestamp(TimestampSpec.DEFAULT)
                     .withDimensions(DimensionsSpec.builder().build())
                     .build(),
           new ParallelIndexIOConfig(

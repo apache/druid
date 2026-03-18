@@ -246,7 +246,7 @@ public class CsvReaderTest
     );
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
-            new TimestampSpec("Timestamp", "auto", null),
+            TimestampSpec.DEFAULT,
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
             ColumnsFilter.all()
         ),
@@ -362,7 +362,7 @@ public class CsvReaderTest
     );
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
-            new TimestampSpec("Timestamp", "auto", null),
+            TimestampSpec.DEFAULT,
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
             ColumnsFilter.all()
         ),

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.NoopInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
@@ -49,7 +50,7 @@ public class TaskAnnouncementTest
         "theid",
         new TaskResource("rofl", 2),
         new IndexTask.IndexIngestionSpec(
-            DataSchema.builder().withDataSource("foo").build(),
+            DataSchema.builder().withDataSource("foo").withTimestamp(TimestampSpec.DEFAULT).build(),
             ioConfig,
             null
         ),

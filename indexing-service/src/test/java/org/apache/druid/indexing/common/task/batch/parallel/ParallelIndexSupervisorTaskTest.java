@@ -261,7 +261,7 @@ public class ParallelIndexSupervisorTaskTest
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
           DataSchema.builder()
                     .withDataSource("datasource")
-                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withTimestamp(TimestampSpec.DEFAULT)
                     .withDimensions(DimensionsSpec.EMPTY)
                     .build(),
           ioConfig,
@@ -490,7 +490,7 @@ public class ParallelIndexSupervisorTaskTest
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
           DataSchema.builder()
                     .withDataSource("datasource")
-                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withTimestamp(TimestampSpec.DEFAULT)
                     .withDimensions(DimensionsSpec.EMPTY)
                     .build(),
               ioConfig,

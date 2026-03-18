@@ -592,7 +592,7 @@ public class TaskQueueTest extends IngestionTestBase
     final DataSchema dataSchema =
         DataSchema.builder()
                   .withDataSource("DS")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(DimensionsSpec.builder().build())
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)

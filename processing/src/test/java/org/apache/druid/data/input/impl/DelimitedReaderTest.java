@@ -281,7 +281,7 @@ public class DelimitedReaderTest
     );
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
-            new TimestampSpec("Timestamp", "auto", null),
+            TimestampSpec.DEFAULT,
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
             ColumnsFilter.all()
         ),

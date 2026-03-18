@@ -86,38 +86,25 @@ public class DataSchema
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
-  private DataSchema(
+  public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
+      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
+      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
-      @JsonProperty("parser") @Nullable Map<String, Object> parserMap
+      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap
   )
   {
-    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, projections);
-    InvalidInput.conditionalException(parserMap == null, "parser was removed in Druid 37, define the timestampSpec and dimensionSpec on the schema directly instead of nested inside the parser definition");
-  }
-
-  public DataSchema(
-      String dataSource,
-      @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
-      @Nullable AggregatorFactory[] aggregators,
-      @Nullable GranularitySpec granularitySpec,
-      TransformSpec transformSpec,
-      @Nullable List<AggregateProjectionSpec> projections
-  )
-  {
+    InvalidInput.conditionalException(parserMap == null, "parser was removed in Druid 37, define the timestampSpec and dimensionsSpec on the schema directly instead of nested inside the parser definition");
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
-    this.timestampSpec = timestampSpec;
+    this.timestampSpec = InvalidInput.notNull(timestampSpec, "timestampSpec");
     this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
     this.dimensionsSpec = dimensionsSpec == null ? null : computeDimensionsSpec(
-        InvalidInput.notNull(timestampSpec, "timestampSpec"),
+        timestampSpec,
         dimensionsSpec,
         this.aggregators
     );
@@ -588,7 +575,8 @@ public class DataSchema
           aggregators,
           granularitySpec,
           transformSpec,
-          projections
+          projections,
+          null
       );
     }
   }

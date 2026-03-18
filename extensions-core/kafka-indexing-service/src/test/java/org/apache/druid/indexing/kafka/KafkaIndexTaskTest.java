@@ -419,7 +419,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     final KafkaIndexTask task = createTask(
         null,
-        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
+        DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -463,7 +463,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         null,
-        NEW_DATA_SCHEMA.withDimensionsSpec(
+        DATA_SCHEMA.withDimensionsSpec(
             new DimensionsSpec(
                 ImmutableList.of(
                     new StringDimensionSchema("dim1"),
@@ -667,7 +667,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions)
             )
@@ -797,7 +797,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions)
             )
@@ -806,7 +806,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(topic, currentOffsets, ImmutableSet.of())
@@ -905,7 +905,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions)
             )
@@ -990,7 +990,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   DataSourceMetadata newDataSchemaMetadata()
   {
-    return metadataStorageCoordinator.retrieveDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource());
+    return metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource());
   }
 
   @Test(timeout = 60_000L)
@@ -1201,7 +1201,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     final KafkaIndexTask task = createTask(
         null,
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
@@ -2714,7 +2714,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         "taskid",
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 null,
                 ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
@@ -2747,7 +2747,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         "taskid",
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 null,
                 ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
@@ -2809,7 +2809,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private List<Map<String, Object>> scanData(final Task task, QuerySegmentSpec spec)
   {
-    ScanQuery query = new Druids.ScanQueryBuilder().dataSource(NEW_DATA_SCHEMA.getDataSource())
+    ScanQuery query = new Druids.ScanQueryBuilder().dataSource(DATA_SCHEMA.getDataSource())
                                                    .intervals(spec)
                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                                                    .build();
@@ -2866,7 +2866,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       final KafkaIndexTaskIOConfig ioConfig
   ) throws JsonProcessingException
   {
-    return createTask(taskId, NEW_DATA_SCHEMA, ioConfig);
+    return createTask(taskId, DATA_SCHEMA, ioConfig);
   }
 
   private KafkaIndexTask createTask(
@@ -2875,7 +2875,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       final Map<String, Object> context
   ) throws JsonProcessingException
   {
-    return createTask(taskId, NEW_DATA_SCHEMA, ioConfig, context);
+    return createTask(taskId, DATA_SCHEMA, ioConfig, context);
   }
 
   private KafkaIndexTask createTask(
@@ -3374,7 +3374,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         "index_kafka_test_id1",
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(

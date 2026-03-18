@@ -42,6 +42,7 @@ public class TimestampSpec
     DateTime lastDateTime = null;
   }
 
+  public static final TimestampSpec DEFAULT = new TimestampSpec(null, null, null);
   public static final String DEFAULT_COLUMN = "timestamp";
   private static final String DEFAULT_FORMAT = "auto";
   private static final DateTime DEFAULT_MISSING_VALUE = null;

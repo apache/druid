@@ -49,6 +49,7 @@ public class TestModifiedDataSchema extends DataSchema
         aggregators,
         granularitySpec,
         transformSpec,
+        null,
         null
     );
     this.extra = extra;

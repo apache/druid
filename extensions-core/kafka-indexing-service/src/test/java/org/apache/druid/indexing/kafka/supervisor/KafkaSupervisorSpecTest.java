@@ -508,7 +508,7 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpec validDestSpec = new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
-                .withTimestamp(new TimestampSpec(null, null, null))
+                .withTimestamp(TimestampSpec.DEFAULT)
                 .withAggregators(new CountAggregatorFactory("rows"))
                 .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
         )
@@ -526,7 +526,7 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpecBuilder builder = new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
-                .withTimestamp(new TimestampSpec(null, null, null))
+                .withTimestamp(TimestampSpec.DEFAULT)
                 .withAggregators(new CountAggregatorFactory("rows"))
                 .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
         )

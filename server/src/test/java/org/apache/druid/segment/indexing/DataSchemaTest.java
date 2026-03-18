@@ -62,6 +62,7 @@ import java.util.Set;
 
 class DataSchemaTest extends InitializedNullHandlingTest
 {
+  public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("time", "auto", null);
   private static ArbitraryGranularitySpec ARBITRARY_GRANULARITY = new ArbitraryGranularitySpec(
       Granularities.DAY,
       ImmutableList.of(Intervals.of("2014/2015"))
@@ -74,7 +75,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   {
     DataSchema schema = DataSchema.builder()
                                   .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                                  .withTimestamp(TIMESTAMP_SPEC)
                                   .withDimensions(
                                       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dimB", "dimA")))
                                   )
@@ -96,7 +97,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   {
     DataSchema schema = DataSchema.builder()
                                   .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                                  .withTimestamp(TIMESTAMP_SPEC)
                                   .withDimensions(
                                       DimensionsSpec.builder()
                                                     .setDimensions(
@@ -127,7 +128,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withDimensions(
                             DimensionsSpec.builder()
                                           .setDimensions(
@@ -162,7 +163,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   {
     DataSchema schema = DataSchema.builder()
                                   .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                                  .withTimestamp(TIMESTAMP_SPEC)
                                   .withDimensions(
                                       DimensionsSpec.builder()
                                                     .setDimensions(
@@ -193,7 +194,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withDimensions(
                             DimensionsSpec.builder()
                                           .setDimensions(
@@ -224,7 +225,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withDimensions(
                             DimensionsSpec.builder()
                                           .setDimensions(
@@ -255,7 +256,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                  .withTimestamp(TIMESTAMP_SPEC)
                   .withDimensions(
                       DimensionsSpec.builder()
                                     .setDimensions(
@@ -287,7 +288,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withDimensions(
                             DimensionsSpec.builder()
                                           .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time")))
@@ -318,7 +319,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
     DruidExceptionMatcher.ThrowingSupplier thrower =
         () -> DataSchema.builder()
                         .withDataSource("")
-                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withDimensions(
                             DimensionsSpec.builder()
                                           .setDimensions(
@@ -454,7 +455,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
                                .build();
     DataSchema original = DataSchema.builder()
                                     .withDataSource("datasource")
-                                    .withTimestamp(new TimestampSpec(null, null, null))
+                                    .withTimestamp(TIMESTAMP_SPEC)
                                     .withDimensions(DimensionsSpec.EMPTY)
                                     .withAggregators(new CountAggregatorFactory("rows"))
                                     .withProjections(ImmutableList.of(projectionSpec))
@@ -527,7 +528,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   {
     DataSchema originalSchema = DataSchema.builder()
                                           .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                          .withTimestamp(new TimestampSpec("time", "auto", null))
+                                          .withTimestamp(TIMESTAMP_SPEC)
                                           .withDimensions(
                                               new DimensionsSpec(
                                                   DimensionsSpec.getDefaultSchemas(List.of("dimB", "dimA"))
@@ -557,7 +558,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   {
     TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
         IdUtilsTest.VALID_ID_CHARS,
-        new TimestampSpec("time", "auto", null),
+        TIMESTAMP_SPEC,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA"))),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -616,7 +617,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
 
     CombinedDataSchema schema = new CombinedDataSchema(
         IdUtilsTest.VALID_ID_CHARS,
-        new TimestampSpec("time", "auto", null),
+        TIMESTAMP_SPEC,
         DimensionsSpec.builder()
                       .setDimensions(
                           DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimA", "dimB", "metric1"))
@@ -639,6 +640,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -684,6 +686,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -727,6 +730,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
@@ -765,6 +769,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> DataSchema.builder()
                         .withDataSource("dataSource")
+                        .withTimestamp(TIMESTAMP_SPEC)
                         .withGranularity(
                             new UniformGranularitySpec(
                                 Granularities.HOUR,
