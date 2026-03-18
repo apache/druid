@@ -838,11 +838,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               }
 
               // Create a new sequence starting from current offsets, ending at the task's overall end offsets
-              final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = createNewSequence(
-                  nextSequenceNumber(),
+              final int nextSequenceId = getLastSequenceMetadata().getSequenceId() + 1;
+              final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
+                  nextSequenceId,
+                  StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), nextSequenceId),
                   currOffsets,
                   this.endOffsets, // Continue to the task's end offsets
-                  exclusiveStartPartitions
+                  false, // not checkpointed
+                  exclusiveStartPartitions,
+                  getTaskLockType()
               );
               sequences.add(newSequence);
 
@@ -1349,36 +1353,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
-  }
-
-  /**
-   * Returns the next sequence ID to use when creating a new sequence.
-   */
-  private int nextSequenceNumber()
-  {
-    return getLastSequenceMetadata().getSequenceId() + 1;
-  }
-
-  /**
-   * Creates a new SequenceMetadata for intermediate checkpoints when the task is unsupervised.
-   * This allows respecting maxRowsPerSegment without requiring supervisor coordination.
-   */
-  private SequenceMetadata<PartitionIdType, SequenceOffsetType> createNewSequence(
-      int sequenceId,
-      Map<PartitionIdType, SequenceOffsetType> startOffsets,
-      Map<PartitionIdType, SequenceOffsetType> endOffsets,
-      Set<PartitionIdType> exclusiveStartPartitions
-  )
-  {
-    return new SequenceMetadata<>(
-        sequenceId,
-        StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), sequenceId),
-        startOffsets,
-        endOffsets,
-        false, // not checkpointed
-        exclusiveStartPartitions,
-        getTaskLockType()
-    );
   }
 
   /**
