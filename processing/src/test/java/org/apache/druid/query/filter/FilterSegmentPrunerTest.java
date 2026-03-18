@@ -91,6 +91,10 @@ class FilterSegmentPrunerTest
     VirtualColumns shardVirtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
     );
+    VirtualColumns shardVirtualColumnsDifferentName = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdifferentname", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
     String interval1 = "2026-02-18T00:00:00Z/2026-02-19T00:00:00Z";
 
     DataSegment seg1 = makeDataSegment(
@@ -101,9 +105,10 @@ class FilterSegmentPrunerTest
         interval1,
         makeRange(List.of("vdim1"), shardVirtualColumns, 1, StringTuple.create("abcfoo"), StringTuple.create("lmnfoo"))
     );
+    // same virtual column with a different name in this segment
     DataSegment seg3 = makeDataSegment(
         interval1,
-        makeRange(List.of("vdim1"), shardVirtualColumns, 2, StringTuple.create("lmnfoo"), null)
+        makeRange(List.of("vdifferentname"), shardVirtualColumnsDifferentName, 2, StringTuple.create("lmnfoo"), null)
     );
 
     List<DataSegment> segs = List.of(seg1, seg2, seg3);
