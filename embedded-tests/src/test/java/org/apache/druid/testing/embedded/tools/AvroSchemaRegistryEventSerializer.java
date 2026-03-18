@@ -27,29 +27,15 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.embedded.indexing.SchemaRegistryResource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
 
 public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
 {
-  public static CachedSchemaRegistryClient createSchemaRegistryClient(String schemaRegistryHost)
-  {
-    return new CachedSchemaRegistryClient(
-        StringUtils.format("http://%s", schemaRegistryHost),
-        Integer.MAX_VALUE,
-        Map.of(
-            "basic.auth.credentials.source", "USER_INFO",
-            "basic.auth.user.info", "druid:diurd"
-        ),
-        Map.of()
-    );
-  }
-
   private static final int MAX_INITIALIZE_RETRIES = 10;
   public static final String TYPE = "avro-schema-registry";
 
@@ -62,7 +48,7 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
       String schemaRegistryHost
   )
   {
-    this.client = createSchemaRegistryClient(schemaRegistryHost);
+    this.client = SchemaRegistryResource.createSchemaRegistryClient(schemaRegistryHost);
   }
 
   @Override

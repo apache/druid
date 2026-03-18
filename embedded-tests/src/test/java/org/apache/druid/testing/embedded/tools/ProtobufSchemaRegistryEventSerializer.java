@@ -25,6 +25,7 @@ import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.testing.embedded.indexing.SchemaRegistryResource;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -41,7 +42,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
       String schemaRegistryHost
   )
   {
-    this.client = AvroSchemaRegistryEventSerializer.createSchemaRegistryClient(schemaRegistryHost);
+    this.client = SchemaRegistryResource.createSchemaRegistryClient(schemaRegistryHost);
   }
 
   @Override
