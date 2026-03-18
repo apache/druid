@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.compact;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -426,11 +425,9 @@ public class ReindexingDeletionRuleOptimizerTest
   {
     // Create virtual columns vc1, vc2, vc3
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     // Create a filter that only references vc1 and vc3 (vc2 is unreferenced)
@@ -469,10 +466,8 @@ public class ReindexingDeletionRuleOptimizerTest
   {
     // Create virtual columns
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
     // Create a filter that references a physical column, not virtual columns

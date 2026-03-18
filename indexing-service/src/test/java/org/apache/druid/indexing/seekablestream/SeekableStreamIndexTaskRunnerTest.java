@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -74,7 +73,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -102,8 +101,10 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
 
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(
+        task,
+        LockGranularity.TIME_CHUNK
+    );
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
     Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
@@ -127,7 +128,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -155,8 +156,10 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getDataSchema()).thenReturn(schema);
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(
+        task,
+        LockGranularity.TIME_CHUNK
+    );
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
     Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
@@ -180,7 +183,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -206,8 +209,10 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
 
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(
+        task,
+        LockGranularity.TIME_CHUNK
+    );
 
     Assert.assertEquals(InputRowFilterResult.NULL_OR_EMPTY_RECORD, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(null));
   }
@@ -224,7 +229,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -249,8 +254,10 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
 
     Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(
+        task,
+        LockGranularity.TIME_CHUNK
+    );
     Assert.assertEquals("supervisorId", runner.getSupervisorId());
   }
 
@@ -258,11 +265,10 @@ public class SeekableStreamIndexTaskRunnerTest
   {
     public TestasbleSeekableStreamIndexTaskRunner(
         SeekableStreamIndexTask task,
-        @Nullable InputRowParser parser,
         LockGranularity lockGranularityToUse
     )
     {
-      super(task, parser, lockGranularityToUse);
+      super(task, lockGranularityToUse);
     }
 
     @Override

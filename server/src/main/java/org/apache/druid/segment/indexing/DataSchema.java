@@ -19,13 +19,9 @@
 
 package org.apache.druid.segment.indexing;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
@@ -34,8 +30,6 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -84,35 +78,36 @@ public class DataSchema
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
   private final TransformSpec transformSpec;
-  private final Map<String, Object> parserMap;
-  private final ObjectMapper objectMapper;
-
+  @Nullable
   private final TimestampSpec timestampSpec;
+  @Nullable
   private final DimensionsSpec dimensionsSpec;
-
-  // This is used for backward compatibility
-  private InputRowParser inputRowParser;
   @Nullable
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
-      @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
+      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec,
+      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] aggregators,
+      @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
-      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
-      @JacksonInject ObjectMapper objectMapper
+      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap
   )
   {
+    InvalidInput.conditionalException(parserMap == null, "parser was removed in Druid 37, define the timestampSpec and dimensionsSpec on the schema directly instead of nested inside the parser definition");
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
-    this.objectMapper = objectMapper;
-    this.parserMap = parserMap;
+    this.timestampSpec = InvalidInput.notNull(timestampSpec, "timestampSpec");
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+    this.dimensionsSpec = dimensionsSpec == null ? null : computeDimensionsSpec(
+        timestampSpec,
+        dimensionsSpec,
+        this.aggregators
+    );
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -121,24 +116,7 @@ public class DataSchema
       this.granularitySpec = granularitySpec;
     }
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
-    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
     this.projections = projections;
-
-    // do these 2 last to populate stuff
-    if (timestampSpec == null) {
-      this.timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
-    } else {
-      this.timestampSpec = timestampSpec;
-    }
-    if (dimensionsSpec == null) {
-      this.dimensionsSpec = computeDimensionsSpec(
-          this.timestampSpec,
-          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
-          this.aggregators
-      );
-    } else {
-      this.dimensionsSpec = computeDimensionsSpec(this.timestampSpec, dimensionsSpec, this.aggregators);
-    }
 
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
@@ -165,11 +143,6 @@ public class DataSchema
 
   @Nullable
   @JsonProperty("timestampSpec")
-  private TimestampSpec getGivenTimestampSpec()
-  {
-    return timestampSpec;
-  }
-
   public TimestampSpec getTimestampSpec()
   {
     return timestampSpec;
@@ -177,11 +150,6 @@ public class DataSchema
 
   @Nullable
   @JsonProperty("dimensionsSpec")
-  private DimensionsSpec getGivenDimensionsSpec()
-  {
-    return dimensionsSpec;
-  }
-
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
@@ -222,39 +190,6 @@ public class DataSchema
     return projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList());
   }
 
-  @Deprecated
-  @JsonProperty("parser")
-  @Nullable
-  @JsonInclude(Include.NON_NULL)
-  public Map<String, Object> getParserMap()
-  {
-    return parserMap;
-  }
-
-  @Nullable
-  public InputRowParser getParser()
-  {
-    if (inputRowParser == null) {
-      if (parserMap == null) {
-        return null;
-      }
-      //noinspection unchecked
-      inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
-      ParseSpec parseSpec = inputRowParser.getParseSpec();
-      parseSpec = parseSpec.withDimensionsSpec(
-          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
-      );
-      if (timestampSpec != null) {
-        parseSpec = parseSpec.withTimestampSpec(timestampSpec);
-      }
-      if (dimensionsSpec != null) {
-        parseSpec = parseSpec.withDimensionsSpec(dimensionsSpec);
-      }
-      inputRowParser = inputRowParser.withParseSpec(parseSpec);
-    }
-    return inputRowParser;
-  }
-
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
     return builder(this).withGranularity(granularitySpec).build();
@@ -278,11 +213,9 @@ public class DataSchema
            ", aggregators=" + Arrays.toString(aggregators) +
            ", granularitySpec=" + granularitySpec +
            ", transformSpec=" + transformSpec +
-           ", parserMap=" + parserMap +
            ", timestampSpec=" + timestampSpec +
            ", dimensionsSpec=" + dimensionsSpec +
            ", projections=" + projections +
-           ", inputRowParser=" + inputRowParser +
            '}';
   }
 
@@ -535,10 +468,9 @@ public class DataSchema
            Objects.deepEquals(aggregators, that.aggregators) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
-           Objects.equals(parserMap, that.parserMap) &&
            Objects.equals(timestampSpec, that.timestampSpec) &&
-           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
-           Objects.equals(projections, that.projections);
+           Objects.equals(dimensionsSpec, that.dimensionsSpec)
+           && Objects.equals(projections, that.projections);
   }
 
   @Override
@@ -549,7 +481,6 @@ public class DataSchema
         Arrays.hashCode(aggregators),
         granularitySpec,
         transformSpec,
-        parserMap,
         timestampSpec,
         dimensionsSpec,
         projections
@@ -562,8 +493,6 @@ public class DataSchema
     private AggregatorFactory[] aggregators;
     private GranularitySpec granularitySpec;
     private TransformSpec transformSpec;
-    private Map<String, Object> parserMap;
-    private ObjectMapper objectMapper;
     private TimestampSpec timestampSpec;
     private DimensionsSpec dimensionsSpec;
     private List<AggregateProjectionSpec> projections;
@@ -582,8 +511,6 @@ public class DataSchema
       this.aggregators = schema.aggregators;
       this.projections = schema.projections;
       this.granularitySpec = schema.granularitySpec;
-      this.parserMap = schema.parserMap;
-      this.objectMapper = schema.objectMapper;
     }
 
     public Builder withDataSource(String dataSource)
@@ -639,20 +566,6 @@ public class DataSchema
       return this;
     }
 
-    @Deprecated
-    public Builder withObjectMapper(ObjectMapper objectMapper)
-    {
-      this.objectMapper = objectMapper;
-      return this;
-    }
-
-    @Deprecated
-    public Builder withParserMap(Map<String, Object> parserMap)
-    {
-      this.parserMap = parserMap;
-      return this;
-    }
-
     public DataSchema build()
     {
       return new DataSchema(
@@ -663,8 +576,7 @@ public class DataSchema
           granularitySpec,
           transformSpec,
           projections,
-          parserMap,
-          objectMapper
+          null
       );
     }
   }

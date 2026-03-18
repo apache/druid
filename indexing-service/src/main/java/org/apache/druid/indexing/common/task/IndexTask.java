@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -36,10 +35,9 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -606,7 +604,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
-    final boolean determineNumPartitions = partitionsSpec.needsDeterminePartitions(false);
+    final boolean determineNumPartitions = partitionsSpec.needsDeterminePartitions();
 
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
@@ -692,7 +690,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         final HashedPartitionsSpec hashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
         final HyperLogLogCollector collector = entry.getValue().orNull();
 
-        if (partitionsSpec.needsDeterminePartitions(false)) {
+        if (partitionsSpec.needsDeterminePartitions()) {
           final long numRows = Preconditions.checkNotNull(collector, "HLL collector").estimateCardinalityRound();
           final int nonNullMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
                                                ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
@@ -755,7 +753,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           interval = optInterval.get();
         }
 
-        if (partitionsSpec.needsDeterminePartitions(false)) {
+        if (partitionsSpec.needsDeterminePartitions()) {
           hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
           List<Object> groupKey = Rows.toGroupKey(
@@ -1060,9 +1058,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       super(dataSchema, ioConfig, tuningConfig);
 
-      if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
-        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
-      }
+      InvalidInput.notNull(ioConfig.getInputSource(), "inputSource");
 
       IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
 
@@ -1072,13 +1068,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
       }
 
-      if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
-        Checks.checkOneNotNullOrEmpty(
-            ImmutableList.of(
-                new Property<>("parser", dataSchema.getParserMap()),
-                new Property<>("inputFormat", ioConfig.getInputFormat())
-            )
-        );
+      if (ioConfig.getInputSource().needsFormat()) {
+        InvalidInput.notNull(ioConfig.getInputFormat(), "inputFormat");
       }
 
       this.dataSchema = dataSchema;

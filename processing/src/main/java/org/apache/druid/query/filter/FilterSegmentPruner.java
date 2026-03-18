@@ -55,8 +55,7 @@ public class FilterSegmentPruner implements SegmentPruner
       @Nullable VirtualColumns virtualColumns
   )
   {
-    InvalidInput.conditionalException(filter != null, "filter must not be null");
-    this.filter = filter;
+    this.filter = InvalidInput.notNull(filter, "filter");
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();

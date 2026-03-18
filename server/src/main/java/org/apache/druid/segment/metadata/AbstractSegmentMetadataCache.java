@@ -991,11 +991,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
-      if (entry.getValue().isError()) {
-        // Skip columns with analysis errors.
-        continue;
-      }
-
       ColumnType valueType = entry.getValue().getTypeSignature();
 
       // this shouldn't happen, but if it does, first try to fall back to legacy type information field in case

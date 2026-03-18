@@ -711,7 +711,12 @@ public class DruidCoordinator
     {
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutyGroup = new CoordinatorDutyGroup(alias, duties, period, this);
-      this.executor = executorFactory.create(1, "Coordinator-Exec-" + alias + "-%d");
+      this.executor = ScheduledExecutors.emittingDelayMetric(
+          executorFactory.create(1, "Coordinator-Exec-" + alias + "-%d"),
+          emitter,
+          "coordinator/duty/wait/millis",
+          Map.of(Dimension.DUTY_GROUP.reportedName(), alias)
+      );
     }
 
     @Override

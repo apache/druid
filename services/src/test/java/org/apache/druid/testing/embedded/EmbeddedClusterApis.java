@@ -41,12 +41,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.server.metrics.LatchableEmitter;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -148,24 +146,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public String runSql(String sql, Object... args)
   {
-    try {
-      return onAnyBroker(
-          b -> b.submitSqlQuery(
-              new ClientSqlQuery(
-                  StringUtils.format(sql, args),
-                  ResultFormat.CSV.name(),
-                  false,
-                  false,
-                  false,
-                  null,
-                  null
-              )
-          )
-      ).trim();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return client.runSql(sql, args);
   }
 
   /**
