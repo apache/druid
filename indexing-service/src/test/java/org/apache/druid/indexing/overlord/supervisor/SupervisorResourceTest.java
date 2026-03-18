@@ -1328,6 +1328,43 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testResetOffsetsAndReturnSkippedOffsets()
+  {
+    Capture<String> id1 = Capture.newInstance();
+    Map<String, Object> expectedResult = ImmutableMap.of(
+        "id", "my-id",
+        "skippedOffsets", ImmutableMap.of(
+            "0", ImmutableMap.of("start", 50L, "end", 100L),
+            "1", ImmutableMap.of("start", 150L, "end", 200L),
+            "2", ImmutableMap.of("start", 250L, "end", 300L)
+        )
+    );
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndReturnSkippedOffsets(
+        EasyMock.capture(id1)
+    )).andReturn(expectedResult);
+    replayAll();
+
+    Response response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedResult, response.getEntity());
+    Assert.assertEquals("my-id", id1.getValue());
+    verifyAll();
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
   public void testNoopSupervisorSpecSerde() throws Exception
   {
     ObjectMapper mapper = new ObjectMapper();

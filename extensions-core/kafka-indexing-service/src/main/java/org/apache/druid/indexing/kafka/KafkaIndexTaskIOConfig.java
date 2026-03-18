@@ -64,7 +64,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
-      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("supervised") @Nullable Boolean supervised
   )
   {
     super(
@@ -78,7 +79,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        supervised
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -128,7 +130,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         inputFormat,
         configOverrides,
         KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        true
     );
   }
 

@@ -163,7 +163,8 @@ public abstract class SeekableStreamSupervisorTestBase
           minimumMessageTime,
           maximumMessageTime,
           ioConfig.getInputFormat(),
-          ioConfig.getTaskDuration().getStandardMinutes()
+          ioConfig.getTaskDuration().getStandardMinutes(),
+          true
       )
       {
       };

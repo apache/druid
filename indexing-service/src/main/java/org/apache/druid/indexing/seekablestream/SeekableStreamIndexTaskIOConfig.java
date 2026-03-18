@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
+  private static final boolean DEFAULT_SUPERVISED = true;
 
   private final Integer taskGroupId;
   private final String baseSequenceName;
@@ -42,6 +43,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final DateTime maximumMessageTime;
   private final InputFormat inputFormat;
   private final Long refreshRejectionPeriodsInMinutes;
+  private final boolean supervised;
 
   public SeekableStreamIndexTaskIOConfig(
       @Nullable final Integer taskGroupId, // can be null for backward compabitility
@@ -52,7 +54,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       @Nullable final DateTime minimumMessageTime,
       @Nullable final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
-      @Nullable final Long refreshRejectionPeriodsInMinutes // can be null for backward compabitility
+      @Nullable final Long refreshRejectionPeriodsInMinutes, // can be null for backward compabitility
+      @Nullable final Boolean supervised
   )
   {
     this.taskGroupId = taskGroupId;
@@ -64,6 +67,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.maximumMessageTime = maximumMessageTime;
     this.inputFormat = inputFormat;
     this.refreshRejectionPeriodsInMinutes = refreshRejectionPeriodsInMinutes;
+    this.supervised = Configs.valueOrDefault(supervised, DEFAULT_SUPERVISED);
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -142,5 +146,11 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   public Long getRefreshRejectionPeriodsInMinutes()
   {
     return refreshRejectionPeriodsInMinutes;
+  }
+
+  @JsonProperty
+  public boolean isSupervised()
+  {
+    return supervised;
   }
 }

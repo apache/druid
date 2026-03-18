@@ -79,7 +79,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("supervised") @Nullable Boolean supervised
   )
   {
     super(
@@ -91,7 +92,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        supervised
     );
     Preconditions.checkArgument(
         getEndSequenceNumbers().getPartitionSequenceNumberMap()
@@ -139,7 +141,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         fetchDelayMillis,
         awsAssumedRoleArn,
         awsExternalId,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        true
     );
   }
 

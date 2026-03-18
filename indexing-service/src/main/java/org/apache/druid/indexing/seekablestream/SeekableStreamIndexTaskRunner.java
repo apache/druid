@@ -797,21 +797,61 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 sequenceToCheckpoint,
                 sequences
             );
-            requestPause();
-            final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
-                getSupervisorId(),
-                ioConfig.getTaskGroupId(),
-                null,
-                createDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(
-                        stream,
-                        sequenceToCheckpoint.getStartOffsets(),
-                        sequenceToCheckpoint.getExclusiveStartPartitions()
-                    )
-                )
-            );
-            if (!toolbox.getTaskActionClient().submit(checkpointAction)) {
-              throw new ISE("Checkpoint request with sequences [%s] failed, dying", currOffsets);
+
+            if (ioConfig.isSupervised()) {
+              // Normal checkpoint with supervisor coordination
+              requestPause();
+              final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
+                  getSupervisorId(),
+                  ioConfig.getTaskGroupId(),
+                  null,
+                  createDataSourceMetadata(
+                      new SeekableStreamStartSequenceNumbers<>(
+                          stream,
+                          sequenceToCheckpoint.getStartOffsets(),
+                          sequenceToCheckpoint.getExclusiveStartPartitions()
+                      )
+                  )
+              );
+              if (!toolbox.getTaskActionClient().submit(checkpointAction)) {
+                throw new ISE("Checkpoint request with sequences [%s] failed, dying", currOffsets);
+              }
+            } else {
+              // Unsupervised task: skip supervisor coordination but still create a new sequence to respect maxRowsPerSegment
+              log.info(
+                  "Task is unsupervised - skipping checkpoint coordination for sequence [%s], but finalizing sequence to respect segment size limits. Current offsets: [%s]",
+                  sequenceToCheckpoint.getSequenceName(),
+                  currOffsets
+              );
+
+              // Set end offsets for the current sequence to current position to trigger segment publish
+              sequenceToCheckpoint.setEndOffsets(currOffsets);
+
+              // Determine exclusive start partitions for the new sequence
+              final Set<PartitionIdType> exclusiveStartPartitions;
+              if (isEndOffsetExclusive()) {
+                // When end offsets are exclusive, no partitions need exclusive start
+                exclusiveStartPartitions = Collections.emptySet();
+              } else {
+                // When end offsets are inclusive, all partitions in the new sequence need exclusive start
+                exclusiveStartPartitions = ImmutableSet.copyOf(currOffsets.keySet());
+              }
+
+              // Create a new sequence starting from current offsets, ending at the task's overall end offsets
+              final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = createNewSequence(
+                  nextSequenceNumber(),
+                  currOffsets,
+                  this.endOffsets, // Continue to the task's end offsets
+                  exclusiveStartPartitions
+              );
+              sequences.add(newSequence);
+
+              log.info(
+                  "Created new sequence [%s] starting from offsets [%s], will read until end offsets [%s]",
+                  newSequence.getSequenceName(),
+                  currOffsets,
+                  this.endOffsets
+              );
             }
           }
         }
@@ -1309,6 +1349,36 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
+  }
+
+  /**
+   * Returns the next sequence ID to use when creating a new sequence.
+   */
+  private int nextSequenceNumber()
+  {
+    return getLastSequenceMetadata().getSequenceId() + 1;
+  }
+
+  /**
+   * Creates a new SequenceMetadata for intermediate checkpoints when the task is unsupervised.
+   * This allows respecting maxRowsPerSegment without requiring supervisor coordination.
+   */
+  private SequenceMetadata<PartitionIdType, SequenceOffsetType> createNewSequence(
+      int sequenceId,
+      Map<PartitionIdType, SequenceOffsetType> startOffsets,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets,
+      Set<PartitionIdType> exclusiveStartPartitions
+  )
+  {
+    return new SequenceMetadata<>(
+        sequenceId,
+        StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), sequenceId),
+        startOffsets,
+        endOffsets,
+        false, // not checkpointed
+        exclusiveStartPartitions,
+        getTaskLockType()
+    );
   }
 
   /**

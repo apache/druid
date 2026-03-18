@@ -54,7 +54,8 @@ public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConf
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("uri") String uri,
-      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("supervised") @Nullable Boolean supervised
   )
   {
     super(
@@ -66,7 +67,8 @@ public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConf
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        supervised
     );
 
     this.pollTimeout = pollTimeout != null ? pollTimeout : RabbitStreamSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
