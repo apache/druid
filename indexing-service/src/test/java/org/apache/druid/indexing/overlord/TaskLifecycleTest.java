@@ -669,7 +669,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -733,6 +733,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
                           new UniformGranularitySpec(
@@ -741,7 +742,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                               ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                           )
                       )
-                      .withObjectMapper(mapper)
                       .build(),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
@@ -1165,7 +1165,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -1254,7 +1254,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(

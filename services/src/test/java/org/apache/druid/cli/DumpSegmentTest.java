@@ -355,7 +355,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         closer,
         "nested-test-data.json",
         TestIndex.DEFAULT_JSON_INPUT_FORMAT,
-        new TimestampSpec("timestamp", null, null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null,
         new AggregatorFactory[] {

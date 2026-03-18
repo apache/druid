@@ -509,7 +509,7 @@ public class MSQCompactionRunner implements CompactionRunner
   )
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
+    VirtualColumns virtualColumns = VirtualColumns.create(inputColToVirtualCol.values());
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
         .dataSource(getInputDataSource(dataSchema.getDataSource()))
         .columns(rowSignature.getColumnNames())
@@ -648,7 +648,7 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
 
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
+    VirtualColumns virtualColumns = VirtualColumns.create(inputColToVirtualCol.values());
 
     // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
     // This is safe since input column names no longer exist at post-aggregation stage.

@@ -65,7 +65,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    InvalidInput.conditionalException(inputFormat != null, "inputFormat must not be null");
+    InvalidInput.notNull(inputFormat, "inputFormat");
     this.byteEntityReader = new SettableByteEntityReader<>(
         inputFormat,
         inputRowSchema,
@@ -85,8 +85,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    InvalidInput.conditionalException(byteEntityReader != null, "byteEntityReader must not be null");
-    this.byteEntityReader = byteEntityReader;
+    this.byteEntityReader = InvalidInput.notNull(byteEntityReader, "byteEntityReader");
     this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;

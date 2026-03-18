@@ -2720,7 +2720,6 @@ public class IndexTaskTest extends IngestionTestBase
                         )
                     )
                     .withTransform(transformSpec)
-                    .withObjectMapper(objectMapper)
                     .build(),
           new IndexIOConfig(
               new LocalInputSource(baseDir, "druid*"),

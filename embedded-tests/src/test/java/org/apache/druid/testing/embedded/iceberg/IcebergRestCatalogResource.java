@@ -45,7 +45,7 @@ import java.util.Map;
  */
 public class IcebergRestCatalogResource extends TestcontainerResource<GenericContainer<?>>
 {
-  // 1.6.0 is the latest available tag; the REST protocol is compatible with the 1.6.1 client libraries
+  // 1.6.0 is the latest available tag; the REST protocol is compatible with the 1.7.2 client libraries
   private static final String ICEBERG_REST_IMAGE = "tabulario/iceberg-rest:1.6.0";
   private static final int REST_CATALOG_PORT = 8181;
   private static final String CONTAINER_WAREHOUSE_PATH = "/tmp/iceberg-warehouse";

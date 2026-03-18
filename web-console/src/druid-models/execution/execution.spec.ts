@@ -602,6 +602,16 @@ describe('Execution', () => {
             "runningTasks": 1,
           },
           "warnings": undefined,
+          "workers": {
+            "0": [
+              {
+                "durationMs": 8789,
+                "pendingMs": 123,
+                "state": "SUCCESS",
+                "workerId": "query-346b9ac6-4912-46e4-9b98-75f11071af87-worker0_0",
+              },
+            ],
+          },
         }
       `);
     });
@@ -1112,6 +1122,7 @@ describe('Execution', () => {
           "status": "SUCCESS",
           "usageInfo": undefined,
           "warnings": undefined,
+          "workers": undefined,
         }
       `);
     });
@@ -1512,6 +1523,7 @@ describe('Execution', () => {
               "taskId": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4-worker0_0",
             },
           ],
+          "workers": undefined,
         }
       `);
     });
