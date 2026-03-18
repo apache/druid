@@ -17,18 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.utils;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.sql.http.SqlQuery;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
-    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
-})
-public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
 {
-  String PROPERTY_BASE = "druid.test.config";
+
+  @JsonCreator
+  public SqlQueryWithResults(
+      @JsonProperty("query") SqlQuery query,
+      @JsonProperty("description") String description,
+      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
+  )
+  {
+    super(query, description, expectedResults, Collections.emptyList());
+  }
+
 }

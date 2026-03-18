@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.tools;
 
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.github.os72.protobuf.dynamic.MessageDefinition;

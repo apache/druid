@@ -17,25 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.tools;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
-public class MsqQueryWithResults extends AbstractQueryWithResults<String>
+public class DelimitedEventSerializer implements EventSerializer
 {
+  public static final String TYPE = "tsv";
 
-  @JsonCreator
-  public MsqQueryWithResults(
-      @JsonProperty("query") String query,
-      @JsonProperty("description") String description,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
-  )
+  @Override
+  public byte[] serialize(List<Pair<String, Object>> event)
   {
-    super(query, description, expectedResults, Collections.emptyList());
+    //noinspection ConstantConditions
+    return StringUtils.toUtf8(event.stream().map(pair -> pair.rhs.toString()).collect(Collectors.joining("\t")));
+  }
+
+  @Override
+  public void close()
+  {
   }
 }

@@ -42,10 +42,10 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.kinesis.KinesisResource;
-import org.apache.druid.testing.tools.EventSerializer;
-import org.apache.druid.testing.tools.JsonEventSerializer;
-import org.apache.druid.testing.tools.StreamGenerator;
-import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.testing.embedded.tools.EventSerializer;
+import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
+import org.apache.druid.testing.embedded.tools.StreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 

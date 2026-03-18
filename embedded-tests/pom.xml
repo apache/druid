@@ -197,12 +197,6 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.integration-tests</groupId>
-      <artifactId>druid-it-tools</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-kafka-indexing-service</artifactId>
       <version>${project.parent.version}</version>
@@ -645,7 +639,12 @@
       <artifactId>regions</artifactId>
       <version>${aws.sdk.v2.version}</version>
       <scope>test</scope>
-    </dependency>
+    </dependency><dependency>
+    <groupId>com.github.os72</groupId>
+    <artifactId>protobuf-dynamic</artifactId>
+    <version>0.9.3</version>
+    <scope>test</scope>
+  </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-protobuf-provider</artifactId>

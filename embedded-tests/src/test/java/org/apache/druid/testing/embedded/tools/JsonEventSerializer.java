@@ -17,27 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.tools;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.sql.http.SqlQuery;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.Pair;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
+public class JsonEventSerializer implements EventSerializer
 {
+  public static final String TYPE = "json";
+
+  private final ObjectMapper jsonMapper;
 
   @JsonCreator
-  public SqlQueryWithResults(
-      @JsonProperty("query") SqlQuery query,
-      @JsonProperty("description") String description,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
-  )
+  public JsonEventSerializer(@JacksonInject @Json ObjectMapper jsonMapper)
   {
-    super(query, description, expectedResults, Collections.emptyList());
+    this.jsonMapper = jsonMapper;
   }
 
+  @Override
+  public byte[] serialize(List<Pair<String, Object>> event) throws JsonProcessingException
+  {
+    Map<String, Object> map = Maps.newHashMapWithExpectedSize(event.size());
+    event.forEach(pair -> map.put(pair.lhs, pair.rhs));
+    return jsonMapper.writeValueAsBytes(map);
+  }
+
+  @Override
+  public void close()
+  {
+  }
 }

@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.tools;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
@@ -36,7 +34,6 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   private static final int MAX_INITIALIZE_RETRIES = 10;
   public static final String TYPE = "protobuf-schema-registry";
 
-  private final IntegrationTestingConfig config;
   private final CachedSchemaRegistryClient client;
   private int schemaId = -1;
 
@@ -44,17 +41,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
       String schemaRegistryHost
   )
   {
-    this.config = null;
-    this.client = KafkaUtil.createSchemaRegistryClient(schemaRegistryHost);
-  }
-
-  @JsonCreator
-  public ProtobufSchemaRegistryEventSerializer(
-      @JacksonInject IntegrationTestingConfig config
-  )
-  {
-    this.config = config;
-    this.client = KafkaUtil.createSchemaRegistryClient(config.getSchemaRegistryHost());
+    this.client = AvroSchemaRegistryEventSerializer.createSchemaRegistryClient(schemaRegistryHost);
   }
 
   @Override
