@@ -123,7 +123,7 @@ public class StreamChunkReaderTest
     );
     final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
@@ -145,7 +145,7 @@ public class StreamChunkReaderTest
     );
     final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
