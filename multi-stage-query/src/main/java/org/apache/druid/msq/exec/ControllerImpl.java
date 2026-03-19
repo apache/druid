@@ -75,6 +75,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceActio
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -1581,6 +1582,9 @@ public class ControllerImpl implements Controller
 
     // Include tombstones in the reported segments count
     metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric(metricBuilder);
+
+    metricBuilder.setMetric("ingest/rows/published", IndexTaskUtils.getTotalRowCount(segmentsWithTombstones));
     context.emitMetric(metricBuilder);
   }
 

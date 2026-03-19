@@ -65,6 +65,7 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -117,7 +118,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1099,13 +1099,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             if (publishedSegmentsAndCommitMetadata != null
                 && publishedSegmentsAndCommitMetadata.getSegments() != null) {
               segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
-              totalRowCount = publishedSegmentsAndCommitMetadata
-                  .getSegments()
-                  .stream()
-                  .map(DataSegment::getTotalRows)
-                  .filter(Objects::nonNull)
-                  .mapToInt(Integer::intValue)
-                  .sum();
+              totalRowCount = IndexTaskUtils.getTotalRowCount(publishedSegmentsAndCommitMetadata.getSegments());
             }
             task.emitMetric(
                 toolbox.getEmitter(),
