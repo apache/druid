@@ -191,8 +191,8 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             if (!confirmCancelId) return;
             try {
               await Api.instance.delete(`/druid/v2/sql/${Api.encodePath(confirmCancelId)}`);
-            } catch (e) {
-              if ((e as any).response?.status === 404) {
+            } catch (e: any) {
+              if (e.response?.status === 404) {
                 // Query may have already completed or been canceled, which is fine.
               } else {
                 AppToaster.show({
