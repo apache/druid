@@ -117,6 +117,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1094,15 +1095,26 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             // emit segment count metric:
             int segmentCount = 0;
+            int totalRowCount = 0;
             if (publishedSegmentsAndCommitMetadata != null
                 && publishedSegmentsAndCommitMetadata.getSegments() != null) {
               segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
+              totalRowCount = publishedSegmentsAndCommitMetadata
+                  .getSegments()
+                  .stream()
+                  .map(DataSegment::getTotalRows)
+                  .filter(Objects::nonNull)
+                  .mapToInt(Integer::intValue)
+                  .sum();
             }
             task.emitMetric(
                 toolbox.getEmitter(),
                 "ingest/segments/count",
                 segmentCount
             );
+            if (totalRowCount > 0) {
+              task.emitMetric(toolbox.getEmitter(), "ingest/rows/published", totalRowCount);
+            }
           }
 
           @Override
