@@ -2059,11 +2059,11 @@ public class CompactionTaskTest
     );
 
     Assert.assertThrows(
-        DruidException.class, () -> new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-            // Setting dropExisting == false disables REPLACE mode.
+        DruidException.class,
+        // Setting dropExisting == false disables REPLACE mode.
+        () -> new Builder(DATA_SOURCE, segmentCacheManagerFactory)
             .inputSpec(minorSpec, false)
-            .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
-            .build()
+            .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true)).build()
     );
   }
 
