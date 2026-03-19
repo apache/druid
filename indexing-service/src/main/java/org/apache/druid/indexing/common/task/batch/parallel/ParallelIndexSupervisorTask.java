@@ -212,6 +212,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private Long segmentsPublished;
   private final boolean isCompactionTask;
 
+  @Nullable
+  private Map<String, GeneratedPartitionsReport> deepStorageShuffleReports;
+
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
@@ -814,6 +817,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       );
       return TaskStatus.failure(getId(), errMsg);
     }
+    deepStorageShuffleReports = indexingRunner.getReports();
     indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // 2. Partial segment merge phase
@@ -921,6 +925,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       );
       return TaskStatus.failure(getId(), errMsg);
     }
+    deepStorageShuffleReports = indexingRunner.getReports();
     indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // partition (interval, partitionId) -> partition locations
@@ -1892,8 +1897,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    // TODO: Need to find a way to get the reports!
-    cleanupDeepStorageShuffleData(toolbox.getDataSegmentKiller(), getDataSource(), null);
+    cleanupDeepStorageShuffleData(toolbox.getDataSegmentKiller(), getDataSource(), deepStorageShuffleReports);
 
     if (!isCompactionTask) {
       super.cleanUp(toolbox, taskStatus);
