@@ -122,7 +122,7 @@ RUN if [ ! -x "$(command -v ip)" ]; then \
 ARG AWS_CLI_VERSION=2.34.11
 ARG ASYNC_PROFILER_VERSION=4.3
 RUN set -e \
-    && if [ "$TARGETARCH" = "arm64" ]; then ARCH=aarch64; AP_ARCH=aarch64; else ARCH=x86_64; AP_ARCH=x64; fi \
+    && if [ "$TARGETARCH" = "arm64" ]; then ARCH=aarch64; AP_ARCH=arm64; else ARCH=x86_64; AP_ARCH=x64; fi \
     && if [ -x "$(command -v apt)" ]; then \
          apt-get update && apt-get install -y --no-install-recommends curl htop strace bind-tools netcat unzip \
          && CLEANUP="apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*"; \
