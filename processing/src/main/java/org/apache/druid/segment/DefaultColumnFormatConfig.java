@@ -68,6 +68,21 @@ public class DefaultColumnFormatConfig
     return stringMultiValueHandlingMode;
   }
 
+  @Nullable
+  private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
+  {
+    if (maxStringLength != null && maxStringLength <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Invalid value[%s] specified for 'druid.indexing.formats.maxStringLength'."
+                              + " Value must be a positive integer.",
+                              maxStringLength
+                          );
+    }
+    return maxStringLength;
+  }
+
   @JsonProperty("stringMultiValueHandlingMode")
   @Nullable
   private final Integer nestedColumnFormatVersion;
@@ -98,7 +113,7 @@ public class DefaultColumnFormatConfig
     this.stringMultiValueHandlingMode = validateMultiValueHandlingMode(stringMultiValueHandlingMode);
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
     this.indexSpec = indexSpec;
-    this.maxStringLength = maxStringLength;
+    this.maxStringLength = validateMaxStringLength(maxStringLength);
   }
 
   @Nullable

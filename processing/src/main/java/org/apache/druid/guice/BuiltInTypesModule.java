@@ -137,6 +137,12 @@ public class BuiltInTypesModule implements DruidModule
     }
   }
 
+  @VisibleForTesting
+  public static void setMaxStringLength(int maxStringLength)
+  {
+    MAX_STRING_LENGTH = maxStringLength;
+  }
+
   public static int getMaxStringLength()
   {
     return MAX_STRING_LENGTH;
