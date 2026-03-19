@@ -112,12 +112,6 @@ public class NativeCompactionRunner implements CompactionRunner
             "Task context[%s] must be true when using native minor compaction", Tasks.USE_CONCURRENT_LOCKS
         );
       }
-
-      if (!compactionTask.getIoConfig().isDropExisting()) {
-        return CompactionConfigValidationResult.failure(
-            "Task ioConfig[dropExisting] must be true when using native minor compaction"
-        );
-      }
     }
     return CompactionConfigValidationResult.success();
   }

@@ -223,6 +223,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
+
+    assert(ioConfig != null);
+    if (ioConfig.getInputSpec() != null && ioConfig.getInputSpec() instanceof MinorCompactionInputSpec) {
+      if (computeCompactionIngestionMode(ioConfig) != IngestionMode.REPLACE) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[isDropExisting] to true.");
+      }
+    }
+
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
     this.metricsSpec = metricsSpec;
