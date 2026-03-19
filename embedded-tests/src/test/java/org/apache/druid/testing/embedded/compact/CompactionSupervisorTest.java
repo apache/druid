@@ -58,6 +58,7 @@ import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -100,6 +101,7 @@ import org.apache.druid.testing.tools.JsonEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.Streams;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -284,6 +286,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   @ParameterizedTest(name = "partitionsSpec={0}")
   public void test_minorCompactionWithMSQ(MostFragmentedIntervalFirstPolicy policy, PartitionsSpec partitionsSpec)
   {
+    // terminal all existing active supervisors before test
+    // otherwise datasource from other tests would also show up in dryRun result
+    Streams.sequentialStreamFrom(cluster.callApi().onLeaderOverlord(OverlordClient::supervisorStatuses))
+           .filter(s -> !s.isSuspended())
+           .forEach(supervisor -> cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(supervisor.getId())));
     configureCompactionWithNoSlot(CompactionEngine.MSQ, policy);
     ingest1kRecords();
     ingest1kRecords();
@@ -391,8 +398,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, compacted4.get(0).get(5)); // uncompacted segments
     Assertions.assertEquals(0, compacted4.get(0).get(6)); // uncompacted rows
     Assertions.assertNull(compacted4.get(0).get(8));
-
-    disableSupervisor(dayGranularityConfig);
   }
 
   protected void ingest1kRecords()
@@ -875,11 +880,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void enableSupervisor(DataSourceCompactionConfig config)
   {
     cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
-  }
-
-  private void disableSupervisor(DataSourceCompactionConfig config)
-  {
-    cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, true, null));
   }
 
   private void waitForAllCompactionTasksToFinish()
