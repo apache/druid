@@ -2061,7 +2061,7 @@ public class CompactionTaskTest
     );
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-        .inputSpec(minorSpec)
+        .inputSpec(minorSpec, true)
         .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
@@ -2089,7 +2089,7 @@ public class CompactionTaskTest
     );
 
     final CompactionTask task = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-        .inputSpec(spec)
+        .inputSpec(spec, true)
         .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
@@ -2118,7 +2118,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testNativeCompactionSubtaskUsesTimeChunkLock() throws Exception
+  public void testNativeMinorCompactionSubtaskUsesTimeChunkLock() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
     final List<DataSegment> segments = List.of(
@@ -2131,7 +2131,7 @@ public class CompactionTaskTest
     );
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-        .inputSpec(spec)
+        .inputSpec(spec, true)
         .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
