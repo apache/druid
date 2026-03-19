@@ -196,9 +196,12 @@ public class NativeCompactionRunner implements CompactionRunner
     );
 
     final Interval inputInterval;
+    boolean isDropExisting = compactionIOConfig.isDropExisting();
     if (segmentIds != null && !segmentIds.isEmpty()) {
-      // When compacting specific segments, use segment IDs instead of interval
+      // When doing minor compaction, use segment IDs instead of interval.
       inputInterval = null;
+      // Force dropExisting to true in minor compaction.
+      isDropExisting = true;
     } else {
       inputInterval = interval;
     }
@@ -235,7 +238,7 @@ public class NativeCompactionRunner implements CompactionRunner
         ).withTaskToolbox(toolbox),
         null,
         false,
-        compactionIOConfig.isDropExisting()
+        isDropExisting
     );
   }
 
@@ -370,6 +373,7 @@ public class NativeCompactionRunner implements CompactionRunner
     // Native minor compaction uses REPLACE ingestion mode, which uses time chunk lock.
     if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
       newContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+      newContext.put(Tasks.USE_CONCURRENT_LOCKS, true);
     }
     return newContext;
   }
