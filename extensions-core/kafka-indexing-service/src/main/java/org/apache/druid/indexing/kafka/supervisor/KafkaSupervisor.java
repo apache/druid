@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.kafka.KafkaSequenceNumber;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -260,6 +262,84 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       ));
     }
     return taskList;
+  }
+
+  @Override
+  public void submitBackfillTask(
+      Map<KafkaTopicPartition, Long> startOffsets,
+      Map<KafkaTopicPartition, Long> endOffsets
+  )
+  {
+    if (startOffsets == null || startOffsets.isEmpty() || endOffsets == null || endOffsets.isEmpty()) {
+      log.info("No offsets to backfill, skipping backfill task submission");
+      return;
+    }
+
+    try {
+      String backfillSupervisorId = spec.getDataSchema().getDataSource() + "_backfill";
+      String baseSequenceName = generateSequenceName(
+          startOffsets,
+          null, // minimumMessageTime - process all data in range
+          null, // maximumMessageTime - process all data in range
+          spec.getDataSchema(),
+          spec.getTuningConfig()
+      );
+
+      KafkaSupervisorIOConfig kafkaIoConfig = spec.getIoConfig();
+      KafkaIndexTaskIOConfig backfillIoConfig = new KafkaIndexTaskIOConfig(
+          0,
+          baseSequenceName,
+          null,
+          null,
+          new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getStream(), startOffsets, Collections.emptySet()),
+          new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getStream(), endOffsets),
+          kafkaIoConfig.getConsumerProperties(),
+          kafkaIoConfig.getPollTimeout(),
+          false, // useTransaction = false for backfill (no supervisor coordination)
+          null, // minimumMessageTime - no time filtering for backfill
+          null, // maximumMessageTime - no time filtering for backfill
+          kafkaIoConfig.getInputFormat(),
+          kafkaIoConfig.getConfigOverrides(),
+          kafkaIoConfig.isMultiTopic(),
+          null, // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
+          false // supervised = false
+      );
+
+      // Create backfill task with different supervisorId
+      String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
+      Map<String, Object> context = createBaseTaskContexts();
+      // Use APPEND locks to allow writing to intervals that may overlap with main supervisor
+      context.put("useConcurrentLocks", true);
+
+      KafkaIndexTask backfillTask = new KafkaIndexTask(
+          taskId,
+          backfillSupervisorId, // Use backfill supervisorId instead of spec.getId()
+          new TaskResource(baseSequenceName, 1),
+          spec.getDataSchema(),
+          spec.getTuningConfig(),
+          backfillIoConfig,
+          context,
+          sortingMapper,
+          null // no server priority for backfill tasks
+      );
+
+      Optional<TaskQueue> taskQueue = getTaskMaster().getTaskQueue();
+      if (taskQueue.isPresent()) {
+        log.info(
+            "Submitting backfill task[%s] with supervisorId[%s] for offsets from [%s] to [%s]",
+            taskId,
+            backfillSupervisorId,
+            startOffsets,
+            endOffsets
+        );
+        taskQueue.get().add(backfillTask);
+      } else {
+        log.error("Failed to submit backfill task because I'm not the leader!");
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to submit backfill task, skipping backfill");
+    }
   }
 
   @Override

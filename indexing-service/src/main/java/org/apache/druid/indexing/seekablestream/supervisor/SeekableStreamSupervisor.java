@@ -4621,6 +4621,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return ioConfig;
   }
 
+  protected TaskMaster getTaskMaster()
+  {
+    return taskMaster;
+  }
+
   @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
@@ -4763,6 +4768,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return true if isInstance else false
    */
   protected abstract boolean doesTaskMatchSupervisor(Task task);
+
+  /**
+   * Submits a backfill task to process skipped offsets between startOffsets and endOffsets.
+   * The backfill task will use supervisorId = datasource + "_backfill" and supervised = false
+   * to avoid interference with the main supervisor.
+   *
+   * Default implementation does nothing. Subclasses should override to implement backfill logic.
+   *
+   * @param startOffsets Starting offsets (old checkpoint)
+   * @param endOffsets Ending offsets (new reset target)
+   */
+  public void submitBackfillTask(
+      Map<PartitionIdType, SequenceOffsetType> startOffsets,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets
+  )
+  {
+    log.info("submitBackfillTask not implemented for supervisor[%s], skipping backfill submission", supervisorId);
+  }
 
   /**
    * creates a specific instance of kafka/kinesis datasource metadata. Only used for reset.

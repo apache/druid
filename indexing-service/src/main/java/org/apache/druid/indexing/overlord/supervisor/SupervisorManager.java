@@ -426,6 +426,8 @@ public class SupervisorManager
 
     Map<?, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
 
+    streamSupervisor.submitBackfillTask(startOffsets, latestOffsets);
+
     log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, skippedRanges);
 
     return ImmutableMap.of(
