@@ -88,6 +88,12 @@ public class AWSClientConfig
     return forceGlobalBucketAccessEnabled;
   }
 
+  @Nullable
+  public Boolean getCrossRegionAccessEnabled()
+  {
+    return crossRegionAccessEnabled;
+  }
+
   /**
    * Resolves cross-region access setting. Precedence:
    * 1. If crossRegionAccessEnabled is explicitly set, use it.

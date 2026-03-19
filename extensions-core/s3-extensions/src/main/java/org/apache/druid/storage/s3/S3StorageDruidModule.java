@@ -141,7 +141,10 @@ public class S3StorageDruidModule implements DruidModule
     if (clientConfig.isForceGlobalBucketAccessEnabled() != null) {
       log.warn(
           "Configuration 'druid.s3.client.forceGlobalBucketAccessEnabled' is deprecated and will be removed in a future release. "
-          + "Please use 'druid.s3.client.crossRegionAccessEnabled' instead."
+          + "Please use 'druid.s3.client.crossRegionAccessEnabled' instead.%s",
+          clientConfig.getCrossRegionAccessEnabled() != null
+              ? " Note: 'crossRegionAccessEnabled' is also set and will take precedence. Removing the legacy config will stop this warning from showing up."
+              : ""
       );
     }
 
