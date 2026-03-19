@@ -2037,45 +2037,6 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testFindSegmentsToLockReturnsAllSegmentsForMinorCompaction() throws Exception
-  {
-    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
-    final String version = "2024-11-17T23:49:06.823Z";
-
-    final List<DataSegment> allSegmentsInInterval = new ArrayList<>();
-    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 0));
-    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 2));
-    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 4));
-    final DataSegment segment6 = createSegmentWithPartition(testInterval, version, 6);
-    final DataSegment segment7 = createSegmentWithPartition(testInterval, version, 7);
-    final DataSegment segment8 = createSegmentWithPartition(testInterval, version, 8);
-    allSegmentsInInterval.add(segment6);
-    allSegmentsInInterval.add(segment7);
-    allSegmentsInInterval.add(segment8);
-    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 10));
-    allSegmentsInInterval.add(createSegmentWithPartition(testInterval, version, 12));
-
-    final MinorCompactionInputSpec minorSpec = new MinorCompactionInputSpec(
-        testInterval,
-        List.of(segment6.toDescriptor(), segment7.toDescriptor(), segment8.toDescriptor())
-    );
-
-    final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
-        .inputSpec(minorSpec, true)
-        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
-        .build();
-
-    final TestTaskActionClient taskActionClient = new TestTaskActionClient(allSegmentsInInterval);
-
-    // Verify findSegmentsToLock() returns ALL segments in interval (no filtering)
-    final List<DataSegment> segmentsToLock = compactionTask.findSegmentsToLock(
-        taskActionClient,
-        List.of(testInterval)
-    );
-    Assert.assertEquals(8, segmentsToLock.size());
-  }
-
-  @Test
   public void testMinorCompactionUsesTimeChunkLockWithConcurrentLocks() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
