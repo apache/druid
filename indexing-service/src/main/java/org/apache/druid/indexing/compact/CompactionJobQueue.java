@@ -302,13 +302,17 @@ public class CompactionJobQueue
     final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(candidate, null);
 
     switch (compactionStatus.getState()) {
-      case RUNNING:
-        statusTracker.recordSubmittedTask(candidate, job.getEligibility().getMode());
-        return false;
       case SKIPPED:
         statusTracker.collectCompactionStatus(candidate.withCurrentStatus(compactionStatus), null, null);
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
+      case RUNNING:
+        if (!dryRun) {
+          statusTracker.recordSubmittedTask(candidate, job.getEligibility().getMode());
+          return false;
+        }
+        // in dryRun mode, ignore the currently running job
+        break;
       case PENDING:
         break;
       case COMPLETE:
