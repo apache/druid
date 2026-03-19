@@ -29,9 +29,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -191,7 +188,7 @@ public class CompactionTaskTest
   private static final String TIMESTAMP_COLUMN = "timestamp";
   private static final String MIXED_TYPE_COLUMN = "string_to_double";
   private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-07-01");
-  private static final List<Interval> SEGMENT_INTERVALS = ImmutableList.of(
+  private static final List<Interval> SEGMENT_INTERVALS = List.of(
       Intervals.of("2017-01-01/2017-02-01"),
       Intervals.of("2017-02-01/2017-03-01"),
       Intervals.of("2017-03-01/2017-04-01"),
@@ -276,7 +273,7 @@ public class CompactionTaskTest
               DATA_SOURCE,
               SEGMENT_INTERVALS.get(i),
               "version_" + i,
-              ImmutableMap.of(),
+              Map.of(),
               findDimensions(i, SEGMENT_INTERVALS.get(i)),
               AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()),
               new NumberedShardSpec(0, 1),
@@ -304,7 +301,7 @@ public class CompactionTaskTest
     );
     GuiceInjectableValues injectableValues = new GuiceInjectableValues(
         GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.of(
+            List.of(
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
@@ -528,7 +525,7 @@ public class CompactionTaskTest
             new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -546,7 +543,7 @@ public class CompactionTaskTest
     final CompactionTask task = builder
         .segments(SEGMENTS)
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -566,7 +563,7 @@ public class CompactionTaskTest
         .segments(SEGMENTS)
         .dimensionsSpec(
             new DimensionsSpec(
-                ImmutableList.of(
+                List.of(
                     new StringDimensionSchema("dim1"),
                     new StringDimensionSchema("dim2"),
                     new StringDimensionSchema("dim3")
@@ -574,7 +571,7 @@ public class CompactionTaskTest
             )
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testVal"))
+        .context(Map.of("testKey", "testVal"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -683,7 +680,7 @@ public class CompactionTaskTest
             new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
@@ -791,7 +788,7 @@ public class CompactionTaskTest
     expectedException.expectMessage(
         "No segments found for compaction. Please check that datasource name and interval are correct."
     );
-    provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
+    provider.checkSegments(LockGranularity.TIME_CHUNK, List.of());
   }
 
   @Test
@@ -1305,7 +1302,7 @@ public class CompactionTaskTest
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory
     );
-    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+    final List<DimensionsSpec> expectedDimensionsSpec = List.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
 
@@ -1400,7 +1397,7 @@ public class CompactionTaskTest
     );
 
 
-    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+    final List<DimensionsSpec> expectedDimensionsSpec = List.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
 
@@ -1633,7 +1630,7 @@ public class CompactionTaskTest
                                                 new DimensionRangePartitionsSpec(
                                                     3,
                                                     null,
-                                                    ImmutableList.of(
+                                                    List.of(
                                                         "string_dim_1"),
                                                     false
                                                 ))
@@ -1654,7 +1651,7 @@ public class CompactionTaskTest
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
 
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     final CompactionTask compactionTask = builder.build();
     // A string dimension with rollup=true should need MVD info
     Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
@@ -1677,12 +1674,12 @@ public class CompactionTaskTest
                                                 new DimensionRangePartitionsSpec(
                                                     3,
                                                     null,
-                                                    ImmutableList.of(
+                                                    List.of(
                                                         stringDim.getName()),
                                                     false
                                                 ))
                                             .build());
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
@@ -1709,7 +1706,7 @@ public class CompactionTaskTest
                                                 )
                                             )
                                             .build());
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assert.assertFalse(compactionTask.identifyMultiValuedDimensions());
   }
@@ -1734,7 +1731,7 @@ public class CompactionTaskTest
   @Test
   public void testChooseFinestGranularityNone()
   {
-    List<Granularity> input = ImmutableList.of(
+    List<Granularity> input = List.of(
         Granularities.DAY,
         Granularities.SECOND,
         Granularities.MINUTE,
@@ -1799,7 +1796,7 @@ public class CompactionTaskTest
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
-    return ImmutableList.of(
+    return List.of(
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
@@ -1962,7 +1959,7 @@ public class CompactionTaskTest
         List<Interval> intervals
     )
     {
-      return Futures.immediateFuture(ImmutableList.copyOf(segmentMap.keySet()));
+      return Futures.immediateFuture(List.copyOf(segmentMap.keySet()));
     }
   }
 
@@ -2060,12 +2057,12 @@ public class CompactionTaskTest
 
     final MinorCompactionInputSpec minorSpec = new MinorCompactionInputSpec(
         testInterval,
-        ImmutableList.of(segment6.toDescriptor(), segment7.toDescriptor(), segment8.toDescriptor())
+        List.of(segment6.toDescriptor(), segment7.toDescriptor(), segment8.toDescriptor())
     );
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(minorSpec)
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     final TestTaskActionClient taskActionClient = new TestTaskActionClient(allSegmentsInInterval);
@@ -2073,7 +2070,7 @@ public class CompactionTaskTest
     // Verify findSegmentsToLock() returns ALL segments in interval (no filtering)
     final List<DataSegment> segmentsToLock = compactionTask.findSegmentsToLock(
         taskActionClient,
-        ImmutableList.of(testInterval)
+        List.of(testInterval)
     );
     Assert.assertEquals(8, segmentsToLock.size());
   }
@@ -2082,7 +2079,7 @@ public class CompactionTaskTest
   public void testMinorCompactionUsesTimeChunkLockWithConcurrentLocks() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
-    final List<DataSegment> segments = ImmutableList.of(
+    final List<DataSegment> segments = List.of(
         createSegmentWithPartition(testInterval, "v1", 0),
         createSegmentWithPartition(testInterval, "v1", 1)
     );
@@ -2093,7 +2090,7 @@ public class CompactionTaskTest
 
     final CompactionTask task = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(spec)
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -2108,13 +2105,15 @@ public class CompactionTaskTest
       public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
       {
         if (action instanceof RetrieveUsedSegmentsAction) {
-          return (RetType) segments;
+          @SuppressWarnings("unchecked")
+          RetType retVal = (RetType) segments;
+          return retVal;
         }
         return taskActionClient.submit(action);
       }
     };
-    task.determineLockGranularityAndTryLock(segmentAwareClient, ImmutableList.of(testInterval));
 
+    task.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
     Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
   }
 
@@ -2122,7 +2121,7 @@ public class CompactionTaskTest
   public void testNativeCompactionSubtaskUsesTimeChunkLock() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
-    final List<DataSegment> segments = ImmutableList.of(
+    final List<DataSegment> segments = List.of(
         createSegmentWithPartition(testInterval, "v1", 0),
         createSegmentWithPartition(testInterval, "v1", 1)
     );
@@ -2133,7 +2132,7 @@ public class CompactionTaskTest
 
     final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
         .inputSpec(spec)
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     final NativeCompactionRunner runner = new NativeCompactionRunner(segmentCacheManagerFactory);
@@ -2143,18 +2142,15 @@ public class CompactionTaskTest
         .withDataSource(DATA_SOURCE)
         .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
         .withDimensions(
-            new DimensionsSpec(ImmutableList.of(new StringDimensionSchema("dim1"), new StringDimensionSchema("dim2")))
+            new DimensionsSpec(List.of(new StringDimensionSchema("dim1"), new StringDimensionSchema("dim2")))
         )
         .withGranularity(
-            new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, false, ImmutableList.of(testInterval))
+            new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, false, List.of(testInterval))
         )
         .build();
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        ImmutableMap.of(
-            new MultipleIntervalSegmentSpec(ImmutableList.of(testInterval)),
-            dataSchema
-        ),
+        Map.of(new MultipleIntervalSegmentSpec(List.of(testInterval)), dataSchema),
         toolbox,
         new CompactionIOConfig(spec, false, null),
         new PartitionConfigurationManager(null),
@@ -2188,7 +2184,7 @@ public class CompactionTaskTest
         return taskActionClient.submit(action);
       }
     };
-    subtask.determineLockGranularityAndTryLock(segmentAwareClient, ImmutableList.of(testInterval));
+    subtask.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
 
     Assert.assertEquals(
         LockGranularity.TIME_CHUNK,
@@ -2200,14 +2196,14 @@ public class CompactionTaskTest
   public void testSegmentProviderCheckSegmentsAllowsSubsetForTimeChunk() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
-    final List<DataSegment> allSegments = ImmutableList.of(
+    final List<DataSegment> allSegments = List.of(
         createSegmentWithPartition(testInterval, "v1", 0),
         createSegmentWithPartition(testInterval, "v1", 1),
         createSegmentWithPartition(testInterval, "v1", 2)
     );
     final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
         testInterval,
-        ImmutableList.of(allSegments.get(0).toDescriptor(), allSegments.get(1).toDescriptor())
+        List.of(allSegments.get(0).toDescriptor(), allSegments.get(1).toDescriptor())
     );
 
     final SegmentProvider provider = new SegmentProvider(DATA_SOURCE, spec);
@@ -2222,7 +2218,7 @@ public class CompactionTaskTest
   public void testDruidInputSourceReceivesSegmentIdsForMinorCompaction()
   {
     final Interval interval = Intervals.of("2024-01-01/2024-01-02");
-    final List<DataSegment> segments = ImmutableList.of(
+    final List<DataSegment> segments = List.of(
         createSegmentWithPartition(interval, "v1", 0),
         createSegmentWithPartition(interval, "v1", 1)
     );
@@ -2236,7 +2232,7 @@ public class CompactionTaskTest
         .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
         .withDimensions(
             new DimensionsSpec(
-                ImmutableList.of(
+                List.of(
                     new StringDimensionSchema("dim1"),
                     new StringDimensionSchema("dim2")
                 )
@@ -2247,16 +2243,13 @@ public class CompactionTaskTest
                 Granularities.DAY,
                 Granularities.HOUR,
                 false,
-                ImmutableList.of(interval)
+                List.of(interval)
             )
         )
         .build();
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        ImmutableMap.of(
-            new MultipleIntervalSegmentSpec(ImmutableList.of(interval)),
-            dataSchema
-        ),
+        Map.of(new MultipleIntervalSegmentSpec(List.of(interval)), dataSchema),
         toolbox,
         new CompactionIOConfig(spec, false, null),
         new PartitionConfigurationManager(null),
@@ -2566,7 +2559,7 @@ public class CompactionTaskTest
     @Override
     public Set<ResourceAction> getInputSourceResources()
     {
-      return ImmutableSet.of();
+      return Set.of();
     }
 
     @JsonProperty
