@@ -45,8 +45,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.DefaultQueryContext;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryContextProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -198,7 +198,7 @@ public class SqlModuleTest
               binder.bind(Escalator.class).toInstance(new NoopEscalator());
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
               binder.bind(RequestLogger.class).toInstance(NoopRequestLogger.instance());
-              binder.bind(DefaultQueryContext.class).to(DefaultQueryConfig.class);
+              binder.bind(QueryContextProvider.class).to(DefaultQueryConfig.class);
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
               binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);

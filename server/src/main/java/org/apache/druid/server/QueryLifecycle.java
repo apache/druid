@@ -34,11 +34,11 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryContext;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextProvider;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
@@ -97,7 +97,7 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryContext defaultQueryContext;
+  private final QueryContextProvider queryContextProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final List<QueryBlocklistRule> queryBlocklist;
@@ -120,7 +120,7 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryContext defaultQueryContext,
+      final QueryContextProvider queryContextProvider,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final List<QueryBlocklistRule> queryBlocklist,
@@ -134,7 +134,7 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryContext = defaultQueryContext;
+    this.queryContextProvider = queryContextProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.queryBlocklist = queryBlocklist;
@@ -217,7 +217,7 @@ public class QueryLifecycle
     }
 
     Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        defaultQueryContext.getContext(),
+        queryContextProvider.getContext(),
         baseQuery.getContext()
     );
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);

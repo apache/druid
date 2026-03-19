@@ -28,7 +28,7 @@ import java.util.Map;
  * On brokers it is backed by {@code BrokerViewOfBrokerConfig}, which merges the static defaults with
  * operator-supplied overrides pushed dynamically from the Coordinator.
  */
-public interface DefaultQueryContext
+public interface QueryContextProvider
 {
   Map<String, Object> getContext();
 }

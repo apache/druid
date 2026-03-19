@@ -67,7 +67,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
-import org.apache.druid.query.DefaultQueryContext;
+import org.apache.druid.query.QueryContextProvider;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
@@ -134,7 +134,7 @@ public class CliBroker extends ServerRunnable
         new BrokerProcessingModule(),
         new QueryableModule(),
         Modules.override(new QueryRunnerFactoryModule()).with(
-            overrideBinder -> overrideBinder.bind(DefaultQueryContext.class).to(BrokerViewOfBrokerConfig.class)
+            overrideBinder -> overrideBinder.bind(QueryContextProvider.class).to(BrokerViewOfBrokerConfig.class)
         ),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),

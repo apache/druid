@@ -36,10 +36,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.DefaultQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContextProvider;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -117,9 +117,9 @@ public class QueryLifecycleTest
   @Bind
   AuthorizerMapper authzMapper;
 
-  DefaultQueryContext queryConfig;
+  QueryContextProvider queryConfig;
   @Bind(lazy = true)
-  DefaultQueryContext defaultQueryContext;
+  QueryContextProvider queryContextProvider;
 
   @Bind(lazy = true)
   AuthConfig authConfig;
@@ -150,8 +150,8 @@ public class QueryLifecycleTest
     requestLogger = EasyMock.createNiceMock(RequestLogger.class);
     authorizer = EasyMock.createMock(Authorizer.class);
     authzMapper = new AuthorizerMapper(ImmutableMap.of(AUTHORIZER, authorizer));
-    queryConfig = EasyMock.createMock(DefaultQueryContext.class);
-    defaultQueryContext = queryConfig;
+    queryConfig = EasyMock.createMock(QueryContextProvider.class);
+    queryContextProvider = queryConfig;
 
     toolChest = EasyMock.createMock(QueryToolChest.class);
     runner = EasyMock.createMock(QueryRunner.class);
