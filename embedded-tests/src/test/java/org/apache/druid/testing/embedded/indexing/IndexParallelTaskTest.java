@@ -206,14 +206,6 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
     runGroupByQuery("Crimson Typhoon,2,1810.0,18100.0");
   }
 
-  public static List<PartitionsSpec> getMultiPhasePartitionsSpecs()
-  {
-    return List.of(
-        new HashedPartitionsSpec(null, 2, null, null),
-        new SingleDimensionPartitionsSpec(2, null, "namespace", false)
-    );
-  }
-
   /**
    * Creates a builder for an "index_parallel" task to ingest into {@link #dataSource}.
    */
