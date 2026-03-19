@@ -44,23 +44,23 @@ public class AWSClientConfigTest
   }
 
   @Test
-  public void testDeprecatedForceGlobalBucketAccessTrueOverridesCrossRegion() throws Exception
+  public void testNewConfigTakesPrecedenceOverDeprecatedWhenBothSet() throws Exception
   {
     AWSClientConfig config = MAPPER.readValue(
         "{\"forceGlobalBucketAccessEnabled\": true, \"crossRegionAccessEnabled\": false}",
         AWSClientConfig.class
     );
-    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
+    Assertions.assertFalse(config.isCrossRegionAccessEnabled());
   }
 
   @Test
-  public void testDeprecatedForceGlobalBucketAccessFalseOverridesCrossRegion() throws Exception
+  public void testNewConfigTrueWinsOverDeprecatedFalse() throws Exception
   {
     AWSClientConfig config = MAPPER.readValue(
         "{\"forceGlobalBucketAccessEnabled\": false, \"crossRegionAccessEnabled\": true}",
         AWSClientConfig.class
     );
-    Assertions.assertFalse(config.isCrossRegionAccessEnabled());
+    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
   }
 
   @Test
