@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,6 +40,7 @@ public class BuildingDimensionRangeShardSpecTest
     Assert.assertEquals(
         new DimensionRangeShardSpec(
             Arrays.asList("dim1", "dim2"),
+            VirtualColumns.EMPTY,
             StringTuple.create("start1", "start2"),
             StringTuple.create("end1", "end2"),
             5,

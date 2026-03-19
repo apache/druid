@@ -160,6 +160,7 @@ public class S3InputSource extends CloudObjectInputSource
                   .pathStyleAccessEnabled(awsClientConfig.isEnablePathStyleAccess())
                   .chunkedEncodingEnabled(!awsClientConfig.isDisableChunkedEncoding());
               customBuilder.serviceConfiguration(s3ConfigBuilder.build());
+              customBuilder.crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
             }
 
             // Configure HTTP client with proxy if needed
