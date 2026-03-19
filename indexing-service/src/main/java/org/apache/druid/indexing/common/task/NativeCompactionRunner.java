@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -42,7 +43,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.Function;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -170,26 +170,22 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionIOConfig compactionIOConfig
   )
   {
-    // Resolve specific segment IDs for minor compaction if using MinorCompactionInputSpec
-    final List<WindowedSegmentId> segmentIds = resolveSegmentIdsForMinorCompaction(
-        compactionIOConfig.getInputSpec(),
-        dataSchema.getDataSource(),
-        interval
-    );
 
-    final Interval inputInterval;
-    boolean isDropExisting = compactionIOConfig.isDropExisting();
-    if (segmentIds != null && !segmentIds.isEmpty()) {
-      // When doing minor compaction, use segment IDs instead of interval.
-      inputInterval = null;
-      // Force dropExisting to true in minor compaction.
-      isDropExisting = true;
-    } else {
-      inputInterval = interval;
-    }
+    return (compactionIOConfig.getInputSpec() instanceof MinorCompactionInputSpec)
+           ? createMinorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig)
+           : createMajorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig);
+  }
 
-    if (inputInterval != null && !compactionIOConfig.isAllowNonAlignedInterval()) {
-      // Validate interval alignment only when using interval-based input (not segment-ID mode).
+  private static ParallelIndexIOConfig createMajorCompactionIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval inputInterval,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      CompactionIOConfig compactionIOConfig
+  )
+  {
+    if (!compactionIOConfig.isAllowNonAlignedInterval()) {
       final Granularity segmentGranularity = dataSchema.getGranularitySpec().getSegmentGranularity();
       final Interval widenedInterval = Intervals.utc(
           segmentGranularity.bucketStart(inputInterval.getStart()).getMillis(),
@@ -209,6 +205,46 @@ public class NativeCompactionRunner implements CompactionRunner
         new DruidInputSource(
             dataSchema.getDataSource(),
             inputInterval,
+            null,
+            null,
+            null,
+            null,
+            toolbox.getIndexIO(),
+            coordinatorClient,
+            segmentCacheManagerFactory,
+            toolbox.getConfig()
+        ).withTaskToolbox(toolbox),
+        null,
+        false,
+        compactionIOConfig.isDropExisting()
+    );
+  }
+
+  private static ParallelIndexIOConfig createMinorCompactionIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval interval,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      CompactionIOConfig compactionIOConfig
+  )
+  {
+    final List<WindowedSegmentId> segmentIds = resolveSegmentIdsForMinorCompaction(
+        (MinorCompactionInputSpec) compactionIOConfig.getInputSpec(),
+        dataSchema.getDataSource(),
+        interval
+    );
+
+    if (segmentIds.isEmpty()) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                    .ofCategory(DruidException.Category.INVALID_INPUT)
+                    .build("Minor compaction spec submitted targets no segments.");
+    }
+
+    return new ParallelIndexIOConfig(
+        new DruidInputSource(
+            dataSchema.getDataSource(),
+            null,
             segmentIds,
             null,
             null,
@@ -220,26 +256,22 @@ public class NativeCompactionRunner implements CompactionRunner
         ).withTaskToolbox(toolbox),
         null,
         false,
-        isDropExisting
+        compactionIOConfig.isDropExisting()
     );
   }
 
   /**
-   * When using {@link MinorCompactionInputSpec}, resolves uncompacted segment descriptors that belong
+   * When using {@link MinorCompactionInputSpec}, resolves segment descriptors to compact that belong
    * to the given interval and returns them as {@link WindowedSegmentId} objects.
    */
   private static List<WindowedSegmentId> resolveSegmentIdsForMinorCompaction(
-      CompactionInputSpec inputSpec,
+      MinorCompactionInputSpec inputSpec,
       String dataSource,
       Interval interval
   )
   {
-    if (!(inputSpec instanceof MinorCompactionInputSpec)) {
-      return List.of();
-    }
-
     final List<WindowedSegmentId> segmentIds = new ArrayList<>();
-    for (SegmentDescriptor desc : ((MinorCompactionInputSpec) inputSpec).getUncompactedSegments()) {
+    for (SegmentDescriptor desc : inputSpec.getUncompactedSegments()) {
       if (interval.contains(desc.getInterval())) {
         final SegmentId segmentId = SegmentId.of(
             dataSource,
@@ -252,7 +284,7 @@ public class NativeCompactionRunner implements CompactionRunner
         );
       }
     }
-    return segmentIds.isEmpty() ? List.of() : segmentIds;
+    return segmentIds;
   }
 
   @Override
