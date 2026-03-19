@@ -47,6 +47,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -2037,6 +2038,36 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testMinorCompactionChecksIfSegmentsToCompactIsEmpty()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new MinorCompactionInputSpec(COMPACTION_INTERVAL, List.of())
+    );
+  }
+
+  @Test
+  public void testMinorCompactionShouldAlwaysUseIngestionMode()
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final String version = "2024-11-17T23:49:06.823Z";
+    final DataSegment segment = createSegmentWithPartition(testInterval, version, 1);
+
+    final MinorCompactionInputSpec minorSpec = new MinorCompactionInputSpec(
+        testInterval,
+        List.of(segment.toDescriptor())
+    );
+
+    Assert.assertThrows(
+        DruidException.class, () -> new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+            // Setting dropExisting == false disables REPLACE mode.
+            .inputSpec(minorSpec, false)
+            .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+            .build()
+    );
+  }
+
+  @Test
   public void testMinorCompactionUsesTimeChunkLockWithConcurrentLocks() throws Exception
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
@@ -2140,7 +2171,9 @@ public class CompactionTaskTest
       public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
       {
         if (action instanceof RetrieveUsedSegmentsAction) {
-          return (RetType) segments;
+          @SuppressWarnings("unchecked")
+          RetType retVal = (RetType) segments;
+          return retVal;
         }
         return taskActionClient.submit(action);
       }
