@@ -73,7 +73,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -391,7 +390,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
             Collectors.toMap(
                 Entry::getKey,
                 e -> e.getValue() != null
-                     ? e.getValue() - Optional.ofNullable(currentOffsets.get(e.getKey())).orElse(0L)
+                     ? e.getValue() - Optional.fromNullable(currentOffsets.get(e.getKey())).or(0L)
                      : 0
             )
         );
