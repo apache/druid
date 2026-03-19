@@ -309,10 +309,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withIoConfig(new UserCompactionTaskIOConfig(true))
             .withTuningConfig(UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build())
             .build();
-    enableSupervisor(dayGranularityConfig);
+    String supervisorId = enableSupervisor(dayGranularityConfig);
 
     Map<CompactionStatus.State, Table> result1 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
     // Expect dry run to return 1 compaction job with 2 segments
+    System.out.println("--- result1: " + result1);
     Assertions.assertEquals(Set.of(CompactionStatus.State.RUNNING), result1.keySet());
     List<List<Object>> running1 = result1.get(CompactionStatus.State.RUNNING).getRows();
     Assertions.assertEquals(1, running1.size());
@@ -391,7 +392,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, compacted4.get(0).get(6)); // uncompacted rows
     Assertions.assertNull(compacted4.get(0).get(8));
 
-    disableSupervisor(dayGranularityConfig);
+    terminateSupervisor(supervisorId);
   }
 
   protected void ingest1kRecords()
@@ -871,12 +872,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         });
   }
 
-  private void enableSupervisor(DataSourceCompactionConfig config)
+  private String enableSupervisor(DataSourceCompactionConfig config)
   {
-    cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
+    return cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
   }
 
-  private void disableSupervisor(DataSourceCompactionConfig config)
+  private void terminateSupervisor(String supervisorId)
   {
     cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, true, null));
   }
