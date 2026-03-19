@@ -214,7 +214,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   {
     final KafkaSupervisorSpec kafkaSupervisor = MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec(null, null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(Map.of("bootstrap.servers", "localhost")))
         .build(dataSource, "topic");
 

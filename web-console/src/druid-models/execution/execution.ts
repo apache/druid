@@ -38,6 +38,7 @@ import type {
   MsqTaskReportResponse,
   SegmentLoadWaiterStatus,
   TaskStatus,
+  WorkerState,
 } from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -188,6 +189,7 @@ export interface ExecutionValue {
   error?: ExecutionError;
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
+  workers?: Record<string, WorkerState[]>;
   _payload?: MsqTaskPayloadResponse;
   segmentStatus?: SegmentLoadWaiterStatus;
 }
@@ -348,6 +350,7 @@ export class Execution {
       stages: Array.isArray(stages)
         ? new Stages(stages, deepGet(taskReport, 'multiStageQuery.payload.counters'))
         : undefined,
+      workers: deepGet(taskReport, 'multiStageQuery.payload.status.workers'),
       error,
       warnings: Array.isArray(warnings) ? warnings : undefined,
       result,
@@ -406,6 +409,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly workers?: Record<string, WorkerState[]>;
   public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
@@ -428,6 +432,7 @@ export class Execution {
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.workers = value.workers;
     this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
@@ -451,6 +456,7 @@ export class Execution {
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      workers: this.workers,
       segmentStatus: this.segmentStatus,
 
       _payload: this._payload,

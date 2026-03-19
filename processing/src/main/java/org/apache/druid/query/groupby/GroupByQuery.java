@@ -1052,7 +1052,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder setVirtualColumns(VirtualColumn... virtualColumns)
     {
-      this.virtualColumns = VirtualColumns.create(Arrays.asList(virtualColumns));
+      this.virtualColumns = VirtualColumns.create(virtualColumns);
       return this;
     }
 
