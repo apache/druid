@@ -28,7 +28,8 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +40,7 @@ public class TaskLockHelperTest
   private static final Interval TEST_INTERVAL = Intervals.of("2017-01-01/2017-01-02");
   private static final String TEST_VERSION = DateTimes.nowUtc().toString();
 
-  @Test(expected = ISE.class)
+  @Test
   public void testVerifyNonConsecutiveSegmentsInInputFails()
   {
     // Test that non-consecutive segments within the input list fail.
@@ -50,7 +51,10 @@ public class TaskLockHelperTest
         createSegment(3, 3, 4, (short) 1, (short) 1)    // rootPartitionRange [3, 4)
     );
 
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
   @Test
@@ -77,7 +81,7 @@ public class TaskLockHelperTest
     TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testVerifyLargeGapSegmentsFails()
   {
     final List<DataSegment> segments = ImmutableList.of(
@@ -86,7 +90,10 @@ public class TaskLockHelperTest
         createSegment(10, 10, 11, (short) 1, (short) 1)
     );
 
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
   @Test
@@ -100,7 +107,7 @@ public class TaskLockHelperTest
     TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testVerifyAtomicUpdateGroupIncompleteFails()
   {
     final List<DataSegment> segments = ImmutableList.of(
@@ -109,10 +116,13 @@ public class TaskLockHelperTest
     );
 
     // Should throw ISE because atomicUpdateGroupSize is 3 but we only have 2 segments
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testVerifyDifferentMinorVersionsFail()
   {
     // Test that segments with same root partition range but different minor versions fail
@@ -120,11 +130,13 @@ public class TaskLockHelperTest
         createSegment(0, 0, 1, (short) 1, (short) 2),
         createSegment(1, 0, 1, (short) 2, (short) 2) // Different minor version
     );
-
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testVerifyDifferentAtomicUpdateGroupSizesFail()
   {
     // Test that segments with same root partition range but different atomicUpdateGroupSize fail
@@ -132,8 +144,10 @@ public class TaskLockHelperTest
         createSegment(0, 0, 1, (short) 1, (short) 2),
         createSegment(1, 0, 1, (short) 1, (short) 3)
     );
-
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        ISE.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
   @Test
@@ -152,7 +166,7 @@ public class TaskLockHelperTest
     TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testVerifyDifferentIntervalsFail()
   {
     final Interval interval1 = Intervals.of("2017-01-01/2017-01-02");
@@ -179,8 +193,10 @@ public class TaskLockHelperTest
             .size(0)
             .build()
     );
-
-    TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments);
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TaskLockHelper.verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(segments)
+    );
   }
 
   /**
