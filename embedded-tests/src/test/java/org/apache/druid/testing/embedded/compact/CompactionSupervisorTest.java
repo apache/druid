@@ -320,7 +320,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     Map<CompactionStatus.State, Table> result1 = dryRun(CompactionEngine.MSQ, policy).getCompactionStates();
     // Expect dry run to return 1 compaction job with 2 segments
-    System.out.println("--- result1: " + result1);
     Assertions.assertEquals(Set.of(CompactionStatus.State.RUNNING), result1.keySet());
     List<List<Object>> running1 = result1.get(CompactionStatus.State.RUNNING).getRows();
     Assertions.assertEquals(1, running1.size());
