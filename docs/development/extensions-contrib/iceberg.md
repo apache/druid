@@ -79,7 +79,7 @@ Set the `type` property of the `warehouseSource` object to `s3` in the ingestion
     "protocol": "http",
     "disableChunkedEncoding": true,
     "enablePathStyleAccess": true,
-    "forceGlobalBucketAccessEnabled": false
+    "crossRegionAccessEnabled": false
   },
   "properties": {
     "accessKeyId": {

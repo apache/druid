@@ -138,6 +138,13 @@ public class S3StorageDruidModule implements DruidModule
       S3StorageConfig storageConfig
   )
   {
+    if (clientConfig.isForceGlobalBucketAccessEnabled() != null) {
+      log.warn(
+          "Configuration 'druid.s3.client.forceGlobalBucketAccessEnabled' is deprecated and will be removed in a future release. "
+          + "Please use 'druid.s3.client.crossRegionAccessEnabled' instead."
+      );
+    }
+
     final boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
     final URI endpointOverride = buildEndpointOverride(endpointConfig, useHttps);
     final Region region = StringUtils.isNotEmpty(endpointConfig.getSigningRegion())
@@ -166,7 +173,8 @@ public class S3StorageDruidModule implements DruidModule
           .credentialsProvider(provider)
           .httpClientBuilder(httpClientBuilder)
           .serviceConfiguration(s3Configuration)
-          .forcePathStyle(clientConfig.isEnablePathStyleAccess());
+          .forcePathStyle(clientConfig.isEnablePathStyleAccess())
+          .crossRegionAccessEnabled(clientConfig.isCrossRegionAccessEnabled());
 
       if (endpointOverride != null) {
         s3ClientBuilder.endpointOverride(endpointOverride);
@@ -190,6 +198,7 @@ public class S3StorageDruidModule implements DruidModule
           .credentialsProvider(provider)
           .httpClientBuilder(asyncHttpClientBuilder)
           .forcePathStyle(clientConfig.isEnablePathStyleAccess())
+          .crossRegionAccessEnabled(clientConfig.isCrossRegionAccessEnabled())
           .multipartEnabled(true);
 
       if (endpointOverride != null) {

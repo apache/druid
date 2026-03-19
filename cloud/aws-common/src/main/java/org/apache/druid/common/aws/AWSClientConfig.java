@@ -21,12 +21,14 @@ package org.apache.druid.common.aws;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+
 public class AWSClientConfig
 {
   // Default values matching AWS SDK v2 defaults
   private static final boolean DEFAULT_CHUNKED_ENCODING_DISABLED = false;
   private static final boolean DEFAULT_PATH_STYLE_ACCESS = false;
-  private static final boolean DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED = false;
+  private static final boolean DEFAULT_CROSS_REGION_ACCESS_ENABLED = false;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 10_000;
   private static final int DEFAULT_SOCKET_TIMEOUT_MILLIS = 50_000;
   private static final int DEFAULT_MAX_CONNECTIONS = 50;
@@ -40,8 +42,16 @@ public class AWSClientConfig
   @JsonProperty
   private boolean enablePathStyleAccess = DEFAULT_PATH_STYLE_ACCESS;
 
+  /**
+   * @deprecated Use {@link #crossRegionAccessEnabled} instead.
+   */
+  @Deprecated
   @JsonProperty
-  protected boolean forceGlobalBucketAccessEnabled = DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+  @Nullable
+  protected Boolean forceGlobalBucketAccessEnabled;
+
+  @JsonProperty
+  private boolean crossRegionAccessEnabled = DEFAULT_CROSS_REGION_ACCESS_ENABLED;
 
   @JsonProperty
   private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT_MILLIS;
@@ -67,9 +77,22 @@ public class AWSClientConfig
     return enablePathStyleAccess;
   }
 
-  public boolean isForceGlobalBucketAccessEnabled()
+  /**
+   * @deprecated Use {@link #isCrossRegionAccessEnabled()} instead.
+   */
+  @Deprecated
+  @Nullable
+  public Boolean isForceGlobalBucketAccessEnabled()
   {
     return forceGlobalBucketAccessEnabled;
+  }
+
+  public boolean isCrossRegionAccessEnabled()
+  {
+    if (forceGlobalBucketAccessEnabled != null) {
+      return forceGlobalBucketAccessEnabled;
+    }
+    return crossRegionAccessEnabled;
   }
 
   public int getConnectionTimeoutMillis()
@@ -94,7 +117,7 @@ public class AWSClientConfig
            "protocol='" + protocol + '\'' +
            ", disableChunkedEncoding=" + disableChunkedEncoding +
            ", enablePathStyleAccess=" + enablePathStyleAccess +
-           ", forceGlobalBucketAccessEnabled=" + forceGlobalBucketAccessEnabled +
+           ", crossRegionAccessEnabled=" + isCrossRegionAccessEnabled() +
            ", connectionTimeout=" + connectionTimeout +
            ", socketTimeout=" + socketTimeout +
            ", maxConnections=" + maxConnections +
