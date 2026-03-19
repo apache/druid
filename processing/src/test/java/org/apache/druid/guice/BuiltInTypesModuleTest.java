@@ -202,7 +202,7 @@ public class BuiltInTypesModuleTest
         () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
     );
     Assertions.assertTrue(exception.getMessage().contains(
-        "Invalid value[-1] specified for 'druid.indexing.formats.maxStringLength'."
+        "Invalid value[-1] specified for 'druid.indexing.formats.maxStringLength'"
     ));
   }
 
