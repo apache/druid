@@ -47,7 +47,7 @@ public class MinorCompactionInputSpecTest
 
     Assert.assertEquals(spec, deserialized);
     Assert.assertEquals(interval, deserialized.getInterval());
-    Assert.assertEquals(segments, deserialized.getUncompactedSegments());
+    Assert.assertEquals(segments, deserialized.getSegmentsToCompact());
   }
 
   @Test
@@ -63,10 +63,10 @@ public class MinorCompactionInputSpecTest
     MinorCompactionInputSpec deserialized = mapper.readValue(clientJson, MinorCompactionInputSpec.class);
 
     Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), deserialized.getInterval());
-    Assert.assertEquals(1, deserialized.getUncompactedSegments().size());
+    Assert.assertEquals(1, deserialized.getSegmentsToCompact().size());
     Assert.assertEquals(
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0),
-        deserialized.getUncompactedSegments().get(0)
+        deserialized.getSegmentsToCompact().get(0)
     );
   }
 

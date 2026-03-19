@@ -117,9 +117,9 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |Field|Description|Default|Required|
 |-----|-----------|-------|--------|
 |`type`|Task type. Set the value to `compact`.|none|Yes|
-|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [uncompacted](#uncompacted-inputspec).|none|Yes|
-|`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br />- the `interval` in the `interval` type `inputSpec`.<br />- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br />If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
-|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [uncompacted](#uncompacted-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
+|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [minor](#minor-inputspec).|none|Yes|
+|`dropExisting`|If `true`, the task replaces all existing segments fully contained by the `interval` in the `interval` type `inputSpec`. If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
+|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [minor](#minor-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
 
 The compaction task has two kinds of `inputSpec`:
 
@@ -130,13 +130,13 @@ The compaction task has two kinds of `inputSpec`:
 |`type`|Task type. Set the value to `interval` to trigger major compaction.|Yes|
 |`interval`|Interval to compact.|Yes|
 
-### Uncompacted `inputSpec`
+### Minor `inputSpec`
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Set the value to `uncompacted` to trigger minor compaction.|Yes|
+|`type`|Task type. Set the value to `minor` to trigger minor compaction.|Yes|
 |`interval`|Interval to compact.|Yes|
-|`uncompactedSegments`|A list of segment descriptors.|Yes|
+|`segments`|A list of segment descriptors.|Yes|
 
 The required segment descriptor fields can be retrieved from the "Segments" section in the web console.
 
@@ -146,13 +146,13 @@ The required segment descriptor fields can be retrieved from the "Segments" sect
 |`ver`|Version of the segment.|Yes|
 |`part`|Partition number of the segment.|Yes|
 
-#### Example uncompacted inputSpec
+#### Example minor inputSpec
 
 ```json
 {
-  "type": "uncompacted",
+  "type": "minor",
   "interval": "2020-01-01T00:00:00.000Z/2020-01-01T01:00:00.000Z",
-  "uncompactedSegments": [
+  "segments": [
     {
       "itvl": "2020-01-01T00:00:00.000Z/2020-01-01T01:00:00.000Z",
       "ver": "2020-01-01T00:07:18.186Z",
@@ -171,11 +171,11 @@ When using the uncompacted `inputSpec`, the task compacts only the specified seg
 
 There are some requirements when triggering a minor compaction:
 - Set `useConcurrentLocks: true` in the task context. Minor compaction uses REPLACE locks over the entire interval.
-- `dropExisting: true` is allowed with segments `inputSpec`; the task replaces only the compacted segments.
+- Set `dropExisting: true` in the ioConfig.
 
 ### Segment `inputSpec`
 
-The segment `inputSpec` is deprecated, instructions for usage will no longer be documented. Please use the above 2 `inputSpec` instead.
+No longer documented as this is deprecated. Please use `interval` or `minor` specs instead.
 
 ## Compaction dimensions spec
 

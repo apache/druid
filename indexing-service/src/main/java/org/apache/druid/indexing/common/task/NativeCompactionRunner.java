@@ -265,7 +265,7 @@ public class NativeCompactionRunner implements CompactionRunner
   )
   {
     final List<WindowedSegmentId> segmentIds = new ArrayList<>();
-    for (SegmentDescriptor desc : inputSpec.getUncompactedSegments()) {
+    for (SegmentDescriptor desc : inputSpec.getSegmentsToCompact()) {
       if (interval.contains(desc.getInterval())) {
         final SegmentId segmentId = SegmentId.of(
             dataSource,

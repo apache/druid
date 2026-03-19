@@ -1306,7 +1306,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final Interval interval;
 
     private final boolean minorCompaction;
-    private final Set<SegmentDescriptor> uncompactedSegments;
+    private final Set<SegmentDescriptor> segmentsToCompact;
 
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
@@ -1315,17 +1315,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.interval = inputSpec.findInterval(dataSource);
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
-        uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
+        segmentsToCompact = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getSegmentsToCompact());
       } else {
         minorCompaction = false;
-        uncompactedSegments = null;
+        segmentsToCompact = null;
       }
     }
 
     private boolean shouldUpgradeSegment(DataSegment s)
     {
       if (minorCompaction) {
-        return !uncompactedSegments.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
+        return !segmentsToCompact.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
       } else {
         return false;
       }
