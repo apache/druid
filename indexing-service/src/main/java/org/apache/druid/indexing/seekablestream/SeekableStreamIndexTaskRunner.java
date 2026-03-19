@@ -848,7 +848,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   exclusiveStartPartitions,
                   getTaskLockType()
               );
-              sequences.add(newSequence);
+              addSequence(newSequence);
 
               log.info(
                   "Created new sequence [%s] starting from offsets [%s], will read until end offsets [%s]",
