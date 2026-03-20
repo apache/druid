@@ -104,6 +104,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
+  private final int maxStringLength;
 
   public StringDimensionHandler(
       String dimensionName,
@@ -112,10 +113,22 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       boolean hasSpatialIndexes
   )
   {
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+  }
+
+  public StringDimensionHandler(
+      String dimensionName,
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      int maxStringLength
+  )
+  {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
+    this.maxStringLength = maxStringLength;
   }
 
   @Override
@@ -160,7 +173,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength);
   }
 
   @Override

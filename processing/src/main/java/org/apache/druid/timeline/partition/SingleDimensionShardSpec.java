@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -62,6 +63,7 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
   {
     super(
         dimension == null ? Collections.emptyList() : Collections.singletonList(dimension),
+        VirtualColumns.EMPTY,
         start == null ? null : StringTuple.create(start),
         end == null ? null : StringTuple.create(end),
         partitionNum,

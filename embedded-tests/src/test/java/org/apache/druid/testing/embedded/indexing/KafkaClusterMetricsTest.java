@@ -23,15 +23,20 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.emitter.kafka.KafkaEmitterModule;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -50,10 +55,14 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
@@ -96,7 +105,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
       }
     };
 
-    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+    indexer.setServerMemory(1_000_000_000L)
+           .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            .addProperty("druid.worker.capacity", "10");
     overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}")
             .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
@@ -126,6 +136,20 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addServer(new EmbeddedRouter());
 
     return cluster;
+  }
+
+  public static Stream<Arguments> getCompactionSupervisorTestParams()
+  {
+    return Stream.of(
+        Arguments.of(
+            CompactionEngine.NATIVE,
+            new NewestSegmentFirstPolicy(null)
+        ),
+        Arguments.of(
+            CompactionEngine.MSQ,
+            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null)
+        )
+    );
   }
 
   @Test
@@ -176,9 +200,13 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
-  @Test
+  @MethodSource("getCompactionSupervisorTestParams")
+  @ParameterizedTest(name = "engine={0}, policy={1}")
   @Timeout(120)
-  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments()
+  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments(
+      CompactionEngine engine,
+      CompactionCandidateSearchPolicy policy
+  )
   {
     final int maxRowsPerSegment = 500;
     final int compactedMaxRowsPerSegment = 5000;
@@ -213,7 +241,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, null, true, null, null);
+        = new ClusterCompactionConfig(1.0, 10, policy, true, engine, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );
@@ -237,6 +265,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.TASK_TYPE, "compact")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasDimension(DruidMetrics.TASK_STATUS, "SUCCESS"),
         agg -> agg.hasCountAtLeast(10)
     );

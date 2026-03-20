@@ -166,7 +166,6 @@ In the package, you should find:
 * `bin/*` - scripts related to the [single-machine quickstart](index.md)
 * `conf/druid/cluster/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions
-* `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
 * `quickstart/*` - files related to the [single-machine quickstart](index.md)
 
@@ -277,27 +276,6 @@ mapred-site.xml) on the classpath of your Druid processes. You can do this by co
 `conf/druid/cluster/_common/`.
 
 Please see the [HDFS extension](../development/extensions-core/hdfs.md) documentation for more info.
-
-<a name="hadoop"></a>
-
-## Configure for connecting to Hadoop (optional)
-
-If you will be loading data from a Hadoop cluster, then at this point you should configure Druid to be aware
-of your cluster:
-
-- Update `druid.indexer.task.hadoopWorkingPath` in `conf/druid/cluster/middleManager/runtime.properties` to
-a path on HDFS that you'd like to use for temporary files required during the indexing process.
-`druid.indexer.task.hadoopWorkingPath=/tmp/druid-indexing` is a common choice.
-
-- Place your Hadoop configuration XMLs (core-site.xml, hdfs-site.xml, yarn-site.xml,
-mapred-site.xml) on the classpath of your Druid processes. You can do this by copying them into
-`conf/druid/cluster/_common/core-site.xml`, `conf/druid/cluster/_common/hdfs-site.xml`, and so on.
-
-Note that you don't need to use HDFS deep storage in order to load data from Hadoop. For example, if
-your cluster is running on Amazon Web Services, we recommend using S3 for deep storage even if you
-are loading data using Hadoop or Elastic MapReduce.
-
-For more info, please see the [Hadoop-based ingestion](../ingestion/hadoop.md) page.
 
 ## Configure Zookeeper connection
 

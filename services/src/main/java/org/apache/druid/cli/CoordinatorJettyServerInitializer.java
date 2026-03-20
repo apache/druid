@@ -53,6 +53,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/coordinator/false",
       "/overlord/false",
       "/status/health",
+      "/status/ready",
       "/druid/coordinator/v1/isLeader"
   );
 

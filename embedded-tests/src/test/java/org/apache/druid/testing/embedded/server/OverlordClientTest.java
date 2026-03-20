@@ -19,7 +19,7 @@
 
 package org.apache.druid.testing.embedded.server;
 
-import com.amazonaws.util.Throwables;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -214,7 +214,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   {
     final KafkaSupervisorSpec kafkaSupervisor = MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec(null, null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(Map.of("bootstrap.servers", "localhost")))
         .build(dataSource, "topic");
 

@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.output.GoogleStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -69,21 +68,6 @@ public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputS
     }
     catch (Exception e) {
       LOG.warn(e, "Unable to delete segments from GCS");
-    }
-  }
-
-  @AfterAll
-  public void deleteDataFilesFromGcs()
-  {
-    LOG.info("Deleting data files from GCS");
-    try {
-      for (String file : fileList()) {
-        // Deleting uploaded data files
-        gcs.deleteFileFromGcs(file);
-      }
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to delete files in GCS");
     }
   }
 }

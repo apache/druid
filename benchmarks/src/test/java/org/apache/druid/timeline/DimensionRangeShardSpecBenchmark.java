@@ -26,6 +26,7 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.junit.Assert;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -73,6 +74,7 @@ public class DimensionRangeShardSpecBenchmark
   // Initial segment (null -> values)
   private final DimensionRangeShardSpec shardSpec0 = new DimensionRangeShardSpec(
       Arrays.asList("country", "city"),
+      VirtualColumns.EMPTY,
       new StringTuple(new String[]{null, null}),
       new StringTuple(new String[]{"Germany", "Munich"}),
       0,
@@ -82,6 +84,7 @@ public class DimensionRangeShardSpecBenchmark
   // Middle segment (values -> other values)
   private final DimensionRangeShardSpec shardSpec1 = new DimensionRangeShardSpec(
       Arrays.asList("country", "city"),
+      VirtualColumns.EMPTY,
       new StringTuple(new String[]{"Germany", "Munich"}),
       new StringTuple(new String[]{"United States", "New York"}),
       1,
@@ -91,6 +94,7 @@ public class DimensionRangeShardSpecBenchmark
   // End segment (values -> null)
   private final DimensionRangeShardSpec shardSpec2 = new DimensionRangeShardSpec(
       Arrays.asList("country", "city"),
+      VirtualColumns.EMPTY,
       new StringTuple(new String[]{"United States", "New York"}),
       new StringTuple(new String[]{null, null}),
       2,

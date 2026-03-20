@@ -57,7 +57,7 @@ public interface PartitionsSpec
    * Returns true if this partitionsSpec needs to determine the number of partitions to start data ingestion.
    * It should usually return true if perfect rollup is enforced but number of partitions is not specified.
    */
-  boolean needsDeterminePartitions(boolean useForHadoopTask);
+  boolean needsDeterminePartitions();
 
   /**
    * @return True if this partitionSpec's type is compatible with forceGuaranteedRollup=true.

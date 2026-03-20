@@ -46,6 +46,7 @@ import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
@@ -670,7 +671,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           ImmutableMap.of("path", "a-" + i),
           ImmutableList.of("dim1"),
           ImmutableList.of("m1"),
-          new DimensionRangeShardSpec(List.of("dim1"), null, null, i - 1, 8),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
           9,
           100
       );
@@ -695,7 +696,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           ImmutableMap.of("path", "b-" + i),
           ImmutableList.of("dim1"),
           ImmutableList.of("m1"),
-          new DimensionRangeShardSpec(List.of("dim1"), null, null, i - 1, 8),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
           9,
           100
       );
@@ -3622,6 +3623,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
               metrics,
               new DimensionRangeShardSpec(
                   Collections.singletonList("dim"),
+                  VirtualColumns.EMPTY,
                   i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
                   i == 5 ? null : StringTuple.create(String.valueOf(i)),
                   i,
@@ -4316,7 +4318,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           loadspec,
           dimensions,
           metrics,
-          new DimensionRangeShardSpec(dimensions, null, null, 0, 1),
+          new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, null, null, 0, 1),
           0,
           100
       );

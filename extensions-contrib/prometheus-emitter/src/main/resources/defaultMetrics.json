@@ -101,6 +101,7 @@
   "ingest/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
   "ingest/segments/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
   "ingest/tombstones/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of tombstones created by job." },
+  "ingest/rows/published": { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Number of rows successfully published by the job." },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
@@ -151,6 +152,7 @@
   "task/running/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of current running tasks."},
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of current pending tasks."},
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count", "help":  "Number of current waiting tasks."},
+  "supervisor/count" : { "dimensions" : ["supervisorId", "type", "state", "detailedState"], "type" : "gauge", "help": "Count of active supervisors. Each supervisor emits 1, tagged with its state. Available only if the SupervisorStatsMonitor module is included."},
 
   "segment/assigned/count" : { "dimensions" : ["tier"], "type" : "count", "help": "Number of segments assigned to be loaded in the cluster."},
   "segment/moved/count" : { "dimensions" : ["tier"], "type" : "count", "help": "Number of segments moved in the cluster." },

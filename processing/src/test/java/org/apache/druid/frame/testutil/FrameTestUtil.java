@@ -62,7 +62,6 @@ import java.nio.channels.Channels;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -308,7 +307,7 @@ public class FrameTestUtil
 
     if (populateRowNumber) {
       rowNumberVirtualColumn = new SettableLongVirtualColumn(ROW_NUMBER_COLUMN);
-      virtualColumns = VirtualColumns.create(Collections.singletonList(rowNumberVirtualColumn));
+      virtualColumns = VirtualColumns.create(rowNumberVirtualColumn);
     } else {
       rowNumberVirtualColumn = null;
       virtualColumns = VirtualColumns.EMPTY;

@@ -61,6 +61,7 @@ import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -75,6 +76,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceActio
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -174,6 +176,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -1062,6 +1066,7 @@ public class ControllerImpl implements Controller
       final ClusterBy clusterBy,
       final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
+      final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
   ) throws IOException
@@ -1073,6 +1078,7 @@ public class ControllerImpl implements Controller
           clusterBy,
           keyReader,
           partitionBoundaries,
+          clusterByVirtualColumnMappings,
           mayHaveMultiValuedClusterByFields,
           isStageOutputEmpty
       );
@@ -1240,6 +1246,7 @@ public class ControllerImpl implements Controller
       final ClusterBy clusterBy,
       final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
+      final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
   ) throws IOException
@@ -1254,6 +1261,7 @@ public class ControllerImpl implements Controller
         signature,
         clusterBy,
         querySpec.getColumnMappings(),
+        clusterByVirtualColumnMappings,
         mayHaveMultiValuedClusterByFields
     );
     final List<String> shardColumns = shardReasonPair.lhs;
@@ -1314,8 +1322,14 @@ public class ControllerImpl implements Controller
               segmentNumber == ranges.size() - 1
               ? null
               : makeStringTuple(clusterBy, keyReader, range.getEnd(), shardColumns.size());
-
-          shardSpec = new DimensionRangeShardSpec(shardColumns, start, end, segmentNumber, ranges.size());
+          shardSpec = new DimensionRangeShardSpec(
+              shardColumns,
+              VirtualColumns.create(clusterByVirtualColumnMappings.values()),
+              start,
+              end,
+              segmentNumber,
+              ranges.size()
+          );
         }
 
         retVal[partitionNumber] = new SegmentIdWithShardSpec(destination.getDataSource(), interval, version, shardSpec);
@@ -1582,6 +1596,9 @@ public class ControllerImpl implements Controller
     // Include tombstones in the reported segments count
     metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size());
     context.emitMetric(metricBuilder);
+
+    metricBuilder.setMetric("ingest/rows/published", IndexTaskUtils.getTotalRowCount(segmentsWithTombstones));
+    context.emitMetric(metricBuilder);
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(
@@ -1710,19 +1727,13 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         } else {
-          DataSchema dataSchema = ((SegmentGeneratorStageProcessor) queryKernel
-              .getStageDefinition(finalStageId).getProcessor()).getDataSchema();
-
-          ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
-          ClusterBy clusterBy = queryKernel.getStageDefinition(finalStageId).getClusterBy();
+          final ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
 
           compactionStateAnnotateFunction = addCompactionStateToSegments(
+              queryDef,
               querySpec,
               context.jsonMapper(),
-              dataSchema,
-              shardSpec,
-              clusterBy,
-              queryDef.getQueryId()
+              shardSpec
           );
         }
       }
@@ -1761,17 +1772,21 @@ public class ControllerImpl implements Controller
   }
 
   private static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
+      QueryDefinition queryDef,
       MSQSpec querySpec,
       ObjectMapper jsonMapper,
-      DataSchema dataSchema,
-      @Nullable ShardSpec shardSpec,
-      @Nullable ClusterBy clusterBy,
-      String queryId
+      @Nullable ShardSpec shardSpec
   )
   {
+    final ClusterBy clusterBy = queryDef.getFinalStageDefinition().getClusterBy();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
-    PartitionsSpec partitionSpec;
+    final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+    final SegmentGeneratorStageProcessor segmentProcessor =
+        (SegmentGeneratorStageProcessor) queryDef.getFinalStageDefinition().getProcessor();
 
+    final DataSchema dataSchema = segmentProcessor.getDataSchema();
+
+    final PartitionsSpec partitionSpec;
     // shardSpec is absent in the absence of segments, which happens when only tombstones are generated by an
     // MSQControllerTask.
     if (shardSpec != null) {
@@ -1793,7 +1808,7 @@ public class ControllerImpl implements Controller
             UnknownFault.forMessage(
                 StringUtils.format(
                     "Query[%s] cannot store compaction state in segments as shard spec of unsupported type[%s].",
-                    queryId,
+                    queryDef.getQueryId(),
                     shardSpec.getType()
                 )));
       }
@@ -1811,27 +1826,40 @@ public class ControllerImpl implements Controller
       partitionSpec = new DynamicPartitionsSpec(tuningConfig.getRowsPerSegment(), Long.MAX_VALUE);
     }
 
-    Granularity segmentGranularity = ((DataSourceMSQDestination) querySpec.getDestination())
-        .getSegmentGranularity();
+    Granularity segmentGranularity = destination.getSegmentGranularity();
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        querySpec.getContext()
-                    .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+        querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
         // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
-        ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
+        destination.getReplaceTimeChunks()
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    CompactionTransformSpec transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                            ? null
-                                            : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+
+    // if the clustered by requires virtual columns, preserve them here so that we can rebuild during compaction
+    CompactionTransformSpec transformSpec;
+    final Map<String, VirtualColumn> clusterByVirtualColumnMappings =
+        segmentProcessor.getClusterByVirtualColumnMappings();
+
+    // only range partitioning can have virtual columns
+    if (clusterByVirtualColumnMappings.isEmpty() || !SecondaryPartitionType.RANGE.equals(partitionSpec.getType())) {
+      transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                      ? null
+                      : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+    } else {
+      transformSpec = new CompactionTransformSpec(
+          dataSchema.getTransformSpec().getFilter(),
+          VirtualColumns.create(clusterByVirtualColumnMappings.values())
+      );
+    }
+
     List<AggregatorFactory> metricsSpec = buildMSQCompactionMetrics(querySpec, dataSchema);
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
 
-    log.info("Query[%s] storing compaction state in segments.", queryId);
+    log.info("Query[%s] storing compaction state in segments.", queryDef.getQueryId());
 
     return CompactionState.addCompactionStateToSegments(
         partitionSpec,
@@ -1909,6 +1937,7 @@ public class ControllerImpl implements Controller
       final RowSignature signature,
       final ClusterBy clusterBy,
       final ColumnMappings columnMappings,
+      final Map<String, VirtualColumn> clusterByVirtualColumns,
       boolean mayHaveMultiValuedClusterByFields
   )
   {
@@ -1959,19 +1988,24 @@ public class ControllerImpl implements Controller
         );
       }
 
-      // DimensionRangeShardSpec only handles columns that appear as-is in the output.
+      // DimensionRangeShardSpec columns may either be explicitly in the table or defined as virtual columns
       if (outputColumns.isEmpty()) {
-        return Pair.of(
-            shardColumns,
-            StringUtils.format(
-                "Using only[%d] CLUSTERED BY columns for 'range' shard specs, since the next column was not mapped to "
-                + "an output column.",
-                shardColumns.size()
-            )
-        );
+        final VirtualColumn vc = clusterByVirtualColumns.get(column.columnName());
+        if (vc != null) {
+          shardColumns.add(vc.getOutputName());
+        } else {
+          return Pair.of(
+              shardColumns,
+              StringUtils.format(
+                  "Using only[%d] CLUSTERED BY columns for 'range' shard specs, since the next column was not mapped to "
+                  + "an output column or virtual column.",
+                  shardColumns.size()
+              )
+          );
+        }
+      } else {
+        shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
       }
-
-      shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
     }
 
     return Pair.of(shardColumns, "Using 'range' shard specs with all CLUSTERED BY fields.");
@@ -1997,7 +2031,7 @@ public class ControllerImpl implements Controller
       final int shardFieldCount
   )
   {
-    final String[] array = new String[clusterBy.getColumns().size() - clusterBy.getBucketByCount()];
+    final String[] array = new String[shardFieldCount];
 
     for (int i = 0; i < shardFieldCount; i++) {
       final Object val = keyReader.read(key, clusterBy.getBucketByCount() + i);
@@ -2633,6 +2667,8 @@ public class ControllerImpl implements Controller
       final boolean mayHaveMultiValuedClusterByFields =
           !shuffleStageDef.mustGatherResultKeyStatistics()
           || queryKernel.hasStageCollectorEncounteredAnyMultiValueField(shuffleStageId);
+      final SegmentGeneratorStageProcessor segmentGeneratorStageProcessor =
+          (SegmentGeneratorStageProcessor) queryDef.getFinalStageDefinition().getProcessor();
 
       segmentsToGenerate = generateSegmentIdsWithShardSpecs(
           (DataSourceMSQDestination) querySpec.getDestination(),
@@ -2640,6 +2676,7 @@ public class ControllerImpl implements Controller
           shuffleStageDef.getClusterBy(),
           shuffleStageDef.getClusterBy().keyReader(shuffleStageDef.getSignature(), rowBasedFrameType),
           partitionBoundaries,
+          segmentGeneratorStageProcessor.getClusterByVirtualColumnMappings(),
           mayHaveMultiValuedClusterByFields,
           isShuffleStageOutputEmpty
       );

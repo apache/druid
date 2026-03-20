@@ -30,6 +30,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -71,6 +72,11 @@ public class DartWorkerRunner
    */
   @GuardedBy("this")
   private final Set<String> activeControllerHosts = new HashSet<>();
+
+  /**
+   * Used to track the time since this runner has been idle.
+   */
+  private final Stopwatch sinceLastWorkerFinished = Stopwatch.createUnstarted();
 
   /**
    * Query ID -> Worker instance.
@@ -147,6 +153,7 @@ public class DartWorkerRunner
                   holder,
                   e -> log.warn(e, "Failed to close worker[%s]", holder.worker.id())
               );
+              resetWorkerFinishTime();
               this.notifyAll();
             }
           },
@@ -196,7 +203,9 @@ public class DartWorkerRunner
   {
     final List<DartWorkerInfo> infos = new ArrayList<>();
 
+    final long idleDurationMillis;
     synchronized (this) {
+      idleDurationMillis = workerMap.isEmpty() ? sinceLastWorkerFinished.millisElapsed() : 0L;
       for (final Map.Entry<String, WorkerHolder> entry : workerMap.entrySet()) {
         final String queryId = entry.getKey();
         final WorkerHolder workerHolder = entry.getValue();
@@ -211,7 +220,22 @@ public class DartWorkerRunner
       }
     }
 
-    return new GetWorkersResponse(infos);
+    return new GetWorkersResponse(infos, idleDurationMillis);
+  }
+
+  /**
+   * Sets the finish time of the last worker to the current time. Used to track
+   * the duration for which this runner has been idle.
+   */
+  public void resetWorkerFinishTime()
+  {
+    synchronized (this) {
+      if (sinceLastWorkerFinished.isRunning()) {
+        sinceLastWorkerFinished.restart();
+      } else {
+        sinceLastWorkerFinished.start();
+      }
+    }
   }
 
   @LifecycleStart
