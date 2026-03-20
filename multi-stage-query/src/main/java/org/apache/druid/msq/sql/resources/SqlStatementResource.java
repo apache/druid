@@ -69,8 +69,8 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
@@ -136,7 +136,7 @@ public class SqlStatementResource
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final ServerConfig serverConfig;
   private final WireTransferableContext wireTransferableContext;
 
@@ -147,7 +147,7 @@ public class SqlStatementResource
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final ServerConfig serverConfig,
       final WireTransferableContext wireTransferableContext
   )
@@ -157,7 +157,7 @@ public class SqlStatementResource
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.serverConfig = serverConfig;
     this.wireTransferableContext = wireTransferableContext;
   }
@@ -202,7 +202,7 @@ public class SqlStatementResource
           sqlQuery,
           req,
           ImmutableMap.<String, Object>builder()
-                      .putAll(defaultQueryConfig.getContext())
+                      .putAll(queryConfigProvider.getContext())
                       .put(RESULT_FORMAT, sqlQuery.getResultFormat())
                       .build()
       );

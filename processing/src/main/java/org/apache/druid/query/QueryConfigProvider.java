@@ -22,13 +22,13 @@ package org.apache.druid.query;
 import java.util.Map;
 
 /**
- * Provides the default query context applied to all incoming queries before per-query overrides are merged in.
+ * Provides the default query config applied to all incoming queries before per-query overrides are merged in.
  *
  * <p>On non-broker nodes this is backed by static runtime properties ({@link DefaultQueryConfig}).
- * On brokers it is backed by {@code BrokerViewOfBrokerConfig}, which merges the static defaults with
+ * On brokers, it is backed by {@code BrokerViewOfBrokerConfig}, which merges the static defaults with
  * operator-supplied overrides pushed dynamically from the Coordinator.
  */
-public interface QueryContextProvider
+public interface QueryConfigProvider
 {
   Map<String, Object> getContext();
 }

@@ -29,7 +29,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.QueryContextProvider;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -42,12 +42,12 @@ import java.util.Map;
 /**
  * Broker view of broker dynamic configuration.
  *
- * <p>Also implements {@link QueryContextProvider} to expose the effective default query context: the
+ * <p>Also implements {@link QueryConfigProvider} to expose the effective default query context: the
  * merge of static defaults (from {@link DefaultQueryConfig}) and operator-supplied overrides
  * (from {@link BrokerDynamicConfig#getQueryContext()}). Dynamic values take precedence.
  */
 public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
-    implements QueryContextProvider
+    implements QueryConfigProvider
 {
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;

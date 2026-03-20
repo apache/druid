@@ -24,7 +24,7 @@ import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.QueryContextProvider;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -45,7 +45,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final QueryContextProvider queryContextProvider;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
@@ -60,7 +60,7 @@ public class QueryLifecycleFactory
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
-      final QueryContextProvider queryContextProvider,
+      final QueryConfigProvider queryConfigProvider,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -70,7 +70,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.queryContextProvider = queryContextProvider;
+    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -90,7 +90,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
-        queryContextProvider,
+        queryConfigProvider,
         authConfig,
         policyEnforcer,
         queryBlocklist,

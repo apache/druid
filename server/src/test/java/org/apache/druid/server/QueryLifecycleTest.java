@@ -39,7 +39,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContextProvider;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -117,9 +117,9 @@ public class QueryLifecycleTest
   @Bind
   AuthorizerMapper authzMapper;
 
-  QueryContextProvider queryConfig;
+  QueryConfigProvider queryConfig;
   @Bind(lazy = true)
-  QueryContextProvider queryContextProvider;
+  QueryConfigProvider queryConfigProvider;
 
   @Bind(lazy = true)
   AuthConfig authConfig;
@@ -150,8 +150,8 @@ public class QueryLifecycleTest
     requestLogger = EasyMock.createNiceMock(RequestLogger.class);
     authorizer = EasyMock.createMock(Authorizer.class);
     authzMapper = new AuthorizerMapper(ImmutableMap.of(AUTHORIZER, authorizer));
-    queryConfig = EasyMock.createMock(QueryContextProvider.class);
-    queryContextProvider = queryConfig;
+    queryConfig = EasyMock.createMock(QueryConfigProvider.class);
+    queryConfigProvider = queryConfig;
 
     toolChest = EasyMock.createMock(QueryToolChest.class);
     runner = EasyMock.createMock(QueryRunner.class);

@@ -37,7 +37,7 @@ import java.util.Map;
  * @see org.apache.druid.query.scan.ScanQueryConfig
  *
  */
-public class DefaultQueryConfig implements QueryContextProvider
+public class DefaultQueryConfig implements QueryConfigProvider
 {
   /**
    * Config that does nothing.

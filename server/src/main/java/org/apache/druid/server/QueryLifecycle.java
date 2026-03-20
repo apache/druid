@@ -37,8 +37,8 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContextProvider;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
@@ -97,7 +97,7 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final QueryContextProvider queryContextProvider;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final List<QueryBlocklistRule> queryBlocklist;
@@ -120,7 +120,7 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final QueryContextProvider queryContextProvider,
+      final QueryConfigProvider queryConfigProvider,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final List<QueryBlocklistRule> queryBlocklist,
@@ -134,7 +134,7 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.queryContextProvider = queryContextProvider;
+    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.queryBlocklist = queryBlocklist;
@@ -217,7 +217,7 @@ public class QueryLifecycle
     }
 
     Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        queryContextProvider.getContext(),
+        queryConfigProvider.getContext(),
         baseQuery.getContext()
     );
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
