@@ -299,7 +299,7 @@ public class CompactionJobQueue
       return false;
     }
 
-    if (CompactionStatus.State.PENDING.equals(candidate.getCurrentStatus().getState())) {
+    if (!CompactionStatus.State.PENDING.equals(candidate.getCurrentStatus().getState())) {
       throw DruidException.defensive(
           "unexpected compaction status[%s], expect PENDING.",
           candidate.getCurrentStatus().getState()

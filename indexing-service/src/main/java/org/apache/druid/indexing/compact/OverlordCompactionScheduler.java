@@ -522,14 +522,15 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public CompactionStatusDetailedStats dryRunWithConfig(ClusterCompactionConfig config)
   {
     CompactionStatusDetailedStats detailedStats = new CompactionStatusDetailedStats();
-    if (isRunning()) {
-      initState();
-      try {
-        resetCompactionJobQueue(true, config, detailedStats);
-      }
-      catch (Exception e) {
-        log.error(e, "Error processing compaction queue. Continuing schedule.");
-      }
+    if (isRunning() && isEnabled()) {
+      scheduleOnExecutor(() -> {
+        try {
+          resetCompactionJobQueue(true, config, detailedStats);
+        }
+        catch (Exception e) {
+          log.error(e, "Error processing compaction queue.");
+        }
+      }, 0L);
     }
     return detailedStats;
   }
