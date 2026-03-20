@@ -73,7 +73,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -128,7 +128,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -183,7 +183,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
@@ -229,7 +229,7 @@ public class SeekableStreamIndexTaskRunnerTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)

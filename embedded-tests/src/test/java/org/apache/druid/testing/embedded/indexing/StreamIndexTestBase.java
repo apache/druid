@@ -101,7 +101,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
         null,
         DataSchema.builder()
                   .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
                   .withDimensions(DimensionsSpec.EMPTY)
                   .build(),

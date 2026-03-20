@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
@@ -135,7 +136,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                    .tmpDir(tmp.newFolder())
                                    .schema(
                                        IncrementalIndexSchema.builder()
-                                                             .withTimestampSpec(NestedDataTestUtils.TIMESTAMP_SPEC)
+                                                             .withTimestampSpec(TimestampSpec.DEFAULT)
                                                              .withDimensionsSpec(NestedDataTestUtils.AUTO_DISCOVERY)
                                                              .withQueryGranularity(Granularities.DAY)
                                                              .withRollup(false)

@@ -20,10 +20,12 @@
 package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.parser.StatementAndSetContext;
@@ -132,6 +134,20 @@ public class SqlQueryPlus
   public List<TypedValue> parameters()
   {
     return parameters;
+  }
+
+  /**
+   * Convert parameters list to serde friendly {@link SqlParameter}
+   */
+  @Nullable
+  public List<ClientSqlParameter> sqlParameters()
+  {
+    if (parameters.isEmpty()) {
+      return null;
+    }
+    return parameters.stream()
+                     .map(p -> new ClientSqlParameter(SqlType.valueOf(p.type.typeId).toString(), p.value))
+                     .toList();
   }
 
   public AuthenticationResult authResult()
