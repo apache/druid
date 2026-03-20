@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -55,9 +56,9 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   /**
    * Pre-computed merge of {@link DefaultQueryConfig#getContext()} and
    * {@link BrokerDynamicConfig#getQueryContext()}, recomputed on each config sync.
-   * Dynamic config values override static defaults.
+   * Dynamic config values override static defaults. Volatile + ImmutableMap ensures lock-free reads.
    */
-  private volatile Map<String, Object> resolvedDefaultQueryContext;
+  private volatile ImmutableMap<String, Object> resolvedDefaultQueryContext;
 
   @Inject
   public BrokerViewOfBrokerConfig(
@@ -68,7 +69,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   )
   {
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = defaultQueryConfig.getContext();
+    this.resolvedDefaultQueryContext = ImmutableMap.copyOf(defaultQueryConfig.getContext());
     this.coordinatorClient =
         new CoordinatorClientImpl(
             clientFactory.makeClient(
@@ -88,7 +89,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = defaultQueryConfig.getContext();
+    this.resolvedDefaultQueryContext = ImmutableMap.copyOf(defaultQueryConfig.getContext());
   }
 
   @Override
@@ -111,10 +112,10 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
   {
     super.setDynamicConfig(updatedConfig);
-    resolvedDefaultQueryContext = QueryContexts.override(
+    resolvedDefaultQueryContext = ImmutableMap.copyOf(QueryContexts.override(
         defaultQueryConfig.getContext(),
         updatedConfig.getQueryContext()
-    );
+    ));
   }
 
   /**
