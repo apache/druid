@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: PR Checks
+name: "PR Commit Checks"
 
 on:
-  # pull_request_target is required so that the workflow can post comments on
-  # PRs from forks (which don't have write permissions otherwise).
-  pull_request_target:
+  pull_request:
     types: [opened, edited, synchronize, reopened]
 
 concurrency:
@@ -27,8 +25,7 @@ concurrency:
 
 jobs:
   conventional-commits:
-    permissions:
-      pull-requests: write
+    if: github.repository == 'apache/druid' && github.event.pull_request.base.ref == 'master'
     name: Verify PR title conforms to Conventional Commits
     runs-on: ubuntu-latest
     steps:
