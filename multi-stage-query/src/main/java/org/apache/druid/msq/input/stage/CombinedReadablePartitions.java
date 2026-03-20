@@ -43,6 +43,18 @@ public class CombinedReadablePartitions implements ReadablePartitions
   }
 
   @Override
+  public boolean isEmpty()
+  {
+    for (ReadablePartitions item : readablePartitions) {
+      if (!item.isEmpty()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
   public List<ReadablePartitions> split(final int maxNumSplits)
   {
     // Split each item of "readablePartitions", then combine all the 0s, all the 1s, all the 2s, etc.

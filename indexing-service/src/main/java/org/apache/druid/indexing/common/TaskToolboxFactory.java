@@ -51,6 +51,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -103,6 +104,7 @@ public class TaskToolboxFactory
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9Factory indexMergerV9Factory;
+  private final IndexMergerV10Factory indexMergerV10Factory;
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
@@ -151,6 +153,7 @@ public class TaskToolboxFactory
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       IndexMergerV9Factory indexMergerV9Factory,
+      IndexMergerV10Factory indexMergerV10Factory,
       DruidNodeAnnouncer druidNodeAnnouncer,
       @RemoteChatHandler DruidNode druidNode,
       LookupNodeService lookupNodeService,
@@ -196,6 +199,7 @@ public class TaskToolboxFactory
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.indexMergerV9Factory = indexMergerV9Factory;
+    this.indexMergerV10Factory = indexMergerV10Factory;
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
@@ -248,7 +252,7 @@ public class TaskToolboxFactory
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
-        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir))
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, true))
         .jsonMapper(jsonMapper)
         .taskWorkDir(taskWorkDir)
         .indexIO(indexIO)
@@ -256,7 +260,9 @@ public class TaskToolboxFactory
         .cacheConfig(cacheConfig)
         .cachePopulatorStats(cachePopulatorStats)
         .indexMerger(
-            indexMergerV9Factory.create(
+            config.buildV10()
+            ? indexMergerV10Factory.create()
+            : indexMergerV9Factory.create(
                 task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())
             )
         )

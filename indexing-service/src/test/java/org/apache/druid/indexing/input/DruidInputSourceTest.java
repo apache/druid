@@ -235,7 +235,7 @@ public class DruidInputSourceTest
     String metricName = "m1";
     ColumnsFilter originalColumnsFilter = ColumnsFilter.inclusionBased(ImmutableSet.of(column));
     InputRowSchema inputRowSchema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),
@@ -269,7 +269,7 @@ public class DruidInputSourceTest
     String metricName = "m1";
     ColumnsFilter originalColumnsFilter = ColumnsFilter.inclusionBased(ImmutableSet.of(column));
     InputRowSchema inputRowSchema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),

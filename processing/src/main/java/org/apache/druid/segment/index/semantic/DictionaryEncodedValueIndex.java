@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
 
 /**
  * This exposes a 'raw' view into bitmap value indexes for {@link DictionaryEncodedColumn}. This allows callers
@@ -53,6 +54,11 @@ public interface DictionaryEncodedValueIndex<T>
    */
   @Nullable
   T getValue(int index);
+
+  /**
+   * Returns an {@link Iterator} containing all the underlying values of the dictionary in order
+   */
+  Iterator<T> getValueIterator();
 
   BitmapFactory getBitmapFactory();
 }

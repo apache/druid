@@ -59,7 +59,7 @@ public class CgroupV2DiskMonitorTest
   public void testMonitor() throws IOException
   {
     final CgroupV2DiskMonitor monitor = new CgroupV2DiskMonitor(discoverer);
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(0, emitter.getNumEmittedEvents());
 

@@ -20,16 +20,16 @@
 package org.apache.druid.collections;
 
 /**
- * NonBlockingPool which is not able to allocate objects, {@link #take()} throws {@link UnsupportedOperationException}.
+ * NonBlockingPool that cannot allocate objects, {@link #take()} throws {@link UnsupportedOperationException}.
  */
-public final class DummyNonBlockingPool<T> implements NonBlockingPool<T>
+public final class DummyNonBlockingPool implements NonBlockingPool<Object>
 {
   private static final DummyNonBlockingPool INSTANCE = new DummyNonBlockingPool();
 
   @SuppressWarnings("unchecked")
   public static <T> NonBlockingPool<T> instance()
   {
-    return INSTANCE;
+    return (NonBlockingPool<T>) INSTANCE;
   }
 
   private DummyNonBlockingPool()
@@ -37,7 +37,7 @@ public final class DummyNonBlockingPool<T> implements NonBlockingPool<T>
   }
 
   @Override
-  public ResourceHolder<T> take()
+  public ResourceHolder<Object> take()
   {
     throw new UnsupportedOperationException();
   }

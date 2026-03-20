@@ -80,7 +80,7 @@ interface ExploreStateValue {
   source: string;
   showSourceQuery?: boolean;
   timezone?: Timezone;
-  where: SqlExpression;
+  where?: SqlExpression;
   moduleStates: Readonly<Record<string, ModuleState>>;
   layout?: ExploreModuleLayout;
   hideResources?: boolean;
@@ -143,7 +143,7 @@ export class ExploreState {
   public readonly source: string;
   public readonly showSourceQuery: boolean;
   public readonly timezone?: Timezone;
-  public readonly where: SqlExpression;
+  public readonly where?: SqlExpression;
   public readonly moduleStates: Readonly<Record<string, ModuleState>>;
   public readonly layout?: ExploreModuleLayout;
   public readonly hideResources: boolean;
@@ -203,7 +203,7 @@ export class ExploreState {
     };
 
     if (rename) {
-      toChange.where = renameColumnsInExpression(this.where, rename);
+      toChange.where = this.where ? renameColumnsInExpression(this.where, rename) : undefined;
       toChange.moduleStates = mapRecordOrReturn(this.moduleStates, moduleState =>
         moduleState.applyRename(rename),
       );
@@ -232,7 +232,7 @@ export class ExploreState {
   public addInitTimeFilterIfNeeded(columns: readonly Column[]): ExploreState {
     if (!this.parsedSource) return this;
     if (!QuerySource.isSingleStarQuery(this.parsedSource)) return this; // Only trigger for `SELECT * FROM ...` queries
-    if (!this.where.equals(SqlLiteral.TRUE)) return this;
+    if (this.where) return this;
 
     // Either find the `__time::TIMESTAMP` column or use the first column if it is a TIMESTAMP
     const timeColumn =
@@ -255,9 +255,9 @@ export class ExploreState {
 
   public restrictToQuerySource(querySource: QuerySource): ExploreState {
     const { where, moduleStates, helpers } = this;
-    const newWhere = querySource.restrictWhere(where);
+    const newWhere = where ? querySource.restrictWhere(where) : undefined;
     const newModuleStates = mapRecordOrReturn(moduleStates, moduleState =>
-      moduleState.restrictToQuerySource(querySource, newWhere),
+      moduleState.restrictToQuerySource(querySource, newWhere || SqlLiteral.TRUE),
     );
     const newHelpers = filterOrReturn(helpers, helper =>
       querySource.validateExpressionMeta(helper),
@@ -290,6 +290,10 @@ export class ExploreState {
 
   public getEffectiveTimezone(): Timezone {
     return this.timezone || Timezone.UTC;
+  }
+
+  public getEffectiveWhere(): SqlExpression {
+    return this.where || SqlLiteral.TRUE;
   }
 
   public applyShowColumn(column: Column, k = 0): ExploreState {
@@ -345,6 +349,5 @@ export class ExploreState {
 
 ExploreState.DEFAULT_STATE = new ExploreState({
   source: '',
-  where: SqlLiteral.TRUE,
   moduleStates: {},
 });

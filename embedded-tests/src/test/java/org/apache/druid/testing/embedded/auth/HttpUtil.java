@@ -1,0 +1,85 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.testing.embedded.auth;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.segment.TestHelper;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
+import java.net.URL;
+
+public class HttpUtil
+{
+  private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
+  private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
+
+  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url)
+  {
+    return makeRequest(
+        httpClient,
+        method,
+        url,
+        null,
+        HttpResponseStatus.OK
+    );
+  }
+
+  public static StatusResponseHolder makeRequest(
+      HttpClient httpClient,
+      HttpMethod method,
+      String url,
+      @Nullable Object content,
+      HttpResponseStatus expectedStatus
+  )
+  {
+    try {
+      Request request = new Request(method, new URL(url));
+      if (content != null) {
+        request.setContent(MediaType.APPLICATION_JSON, MAPPER.writeValueAsBytes(content));
+      }
+      StatusResponseHolder response = httpClient.go(request, RESPONSE_HANDLER).get();
+
+      if (!response.getStatus().equals(expectedStatus)) {
+        String errMsg = StringUtils.format(
+            "Unexpected status[%s] content[%s] while making request[%s] to URL[%s]",
+            response.getStatus(), response.getContent(), method, url
+        );
+        throw new ISE(errMsg);
+      }
+      return response;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private HttpUtil()
+  {
+  }
+}

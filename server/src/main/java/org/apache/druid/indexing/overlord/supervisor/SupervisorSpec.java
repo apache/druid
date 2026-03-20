@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Set;
 
@@ -37,7 +38,7 @@ import java.util.Set;
 public interface SupervisorSpec
 {
   /**
-   * Return an unique id of {@link Supervisor}.
+   * Return a unique id of {@link Supervisor}.
    */
   String getId();
 
@@ -92,10 +93,12 @@ public interface SupervisorSpec
   }
 
   /**
-   * This API is only used for informational purposes in
-   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
+   * Return source (like stream or topic name) for the supervisor
+   * This API is currently used for spec validation in {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec}
+   * and for returning the spec with source in {@link org.apache.druid.indexing.overlord.supervisor.SupervisorResource}
+   * when the spec is requested with system flag.
    *
-   * @return source like stream or topic name
+   * @return source
    */
   String getSource();
 
@@ -112,5 +115,16 @@ public interface SupervisorSpec
   default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
     // The default implementation does not do any validation checks.
+  }
+
+  /**
+   * Updates this supervisor spec by merging values from the given {@code existingSpec}.
+   * This method may be used to carry forward existing spec values when a supervisor is being resubmitted.
+   *
+   * @param existingSpec used spec to merge values from
+   */
+  default void merge(@NotNull SupervisorSpec existingSpec)
+  {
+    // No-op by default
   }
 }

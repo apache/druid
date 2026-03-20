@@ -49,7 +49,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
 
   /**
    * Resources that a {@link KafkaIndexTask} is authorized to use. Includes
-   * performing a read action on external resource of type
+   * performing a read action on an external resource of type
    */
   public static final Set<ResourceAction> INPUT_SOURCE_RESOURCES = Set.of(
       AuthorizationUtils.createExternalResourceReadAction(KafkaIndexTaskModule.SCHEME)
@@ -69,7 +69,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JsonProperty("serverPriority") @Nullable Integer serverPriority
   )
   {
     super(
@@ -80,7 +81,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        serverPriority
     );
     this.configMapper = configMapper;
 
@@ -99,11 +101,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   protected SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new KafkaIndexTaskRunner(
-        this,
-        dataSchema.getParser(),
-        lockGranularityToUse
-    );
+    return new KafkaIndexTaskRunner(this, lockGranularityToUse);
   }
 
   @Override

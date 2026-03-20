@@ -20,18 +20,13 @@
 package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
-import org.apache.druid.query.DruidMetrics;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  */
@@ -77,35 +72,6 @@ public class MonitorsConfig
     return "MonitorsConfig{" +
            "monitors=" + monitors +
            '}';
-  }
-
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(final String datasource, final String taskId)
-  {
-    final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
-    if (datasource != null) {
-      builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
-    }
-    if (taskId != null) {
-      builder.put(DruidMetrics.ID, new String[]{taskId});
-    }
-    return builder.build();
-  }
-
-  public static Map<String, String[]> extractDimensions(Properties props, List<String> dimensions)
-  {
-    Map<String, String[]> dimensionsMap = new HashMap<>();
-    for (String property : props.stringPropertyNames()) {
-      if (property.startsWith(MonitorsConfig.METRIC_DIMENSION_PREFIX)) {
-        String dimension = property.substring(MonitorsConfig.METRIC_DIMENSION_PREFIX.length());
-        if (dimensions.contains(dimension)) {
-          dimensionsMap.put(
-              dimension,
-              new String[]{props.getProperty(property)}
-          );
-        }
-      }
-    }
-    return dimensionsMap;
   }
 
   private static List<Class<? extends Monitor>> getMonitorsFromNames(List<String> monitorNames)

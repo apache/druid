@@ -32,7 +32,11 @@ import java.util.Objects;
  */
 public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<PartitionChunk<T>>
 {
-  private final OvershadowableManager<T> overshadowableManager;
+  /**
+   * Contents of this holder. Begins life as a {@link SimplePartitionHolderContents}, then changes to
+   * {@link OvershadowableManager} if any overshadowables with minor versions are encountered.
+   */
+  private PartitionHolderContents<T> contents = new SimplePartitionHolderContents<>();
 
   private short maxMinorVersion;
 
@@ -41,7 +45,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
   )
   {
     return new PartitionHolder<>(
-        OvershadowableManager.copyVisible(partitionHolder.overshadowableManager),
+        partitionHolder.contents.copyVisible(),
         partitionHolder.maxMinorVersion
     );
   }
@@ -49,34 +53,40 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
   public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
   {
     return new PartitionHolder<>(
-        OvershadowableManager.deepCopy(partitionHolder.overshadowableManager),
+        partitionHolder.contents.deepCopy(),
         partitionHolder.maxMinorVersion
     );
   }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
-    this.overshadowableManager = new OvershadowableManager<>();
     add(initialChunk);
   }
 
   public PartitionHolder(List<PartitionChunk<T>> initialChunks)
   {
-    this.overshadowableManager = new OvershadowableManager<>();
     for (PartitionChunk<T> chunk : initialChunks) {
       add(chunk);
     }
   }
 
-  protected PartitionHolder(OvershadowableManager<T> overshadowableManager, short maxMinorVersion)
+  /**
+   * Constructor for situations where the caller already has a {@link PartitionHolderContents}. Generally used for
+   * copying. Also used for tests.
+   */
+  public PartitionHolder(PartitionHolderContents<T> contents, short maxMinorVersion)
   {
-    this.overshadowableManager = overshadowableManager;
+    this.contents = contents;
     this.maxMinorVersion = maxMinorVersion;
   }
 
   public boolean add(PartitionChunk<T> chunk)
   {
-    boolean added = overshadowableManager.addChunk(chunk);
+    if (chunk.getObject().getMinorVersion() != 0 && contents instanceof SimplePartitionHolderContents) {
+      // Swap simple map for an OvershadowableManager when minor versions are encountered.
+      contents = OvershadowableManager.fromSimple((SimplePartitionHolderContents<T>) contents);
+    }
+    boolean added = contents.addChunk(chunk);
     if (added && chunk.getObject().getMinorVersion() > maxMinorVersion) {
       maxMinorVersion = chunk.getObject().getMinorVersion();
     }
@@ -95,17 +105,17 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
   @Nullable
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    return overshadowableManager.removeChunk(chunk);
+    return contents.removeChunk(chunk);
   }
 
   public boolean isEmpty()
   {
-    return overshadowableManager.isEmpty();
+    return contents.isEmpty();
   }
 
   public boolean isComplete()
   {
-    if (overshadowableManager.isEmpty()) {
+    if (contents.isEmpty()) {
       return false;
     }
 
@@ -118,7 +128,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     }
 
     if (curr.isEnd()) {
-      return overshadowableManager.isComplete();
+      return contents.areVisibleChunksConsistent();
     }
 
     while (iter.hasNext()) {
@@ -128,7 +138,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
       }
 
       if (next.isEnd()) {
-        return overshadowableManager.isComplete();
+        return contents.areVisibleChunksConsistent();
       }
       curr = next;
     }
@@ -138,18 +148,18 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 
   public PartitionChunk<T> getChunk(final int partitionNum)
   {
-    return overshadowableManager.getChunk(partitionNum);
+    return contents.getChunk(partitionNum);
   }
 
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return overshadowableManager.visibleChunksIterator();
+    return contents.visibleChunksIterator();
   }
 
   public List<PartitionChunk<T>> getOvershadowed()
   {
-    return overshadowableManager.getOvershadowedChunks();
+    return contents.getOvershadowedChunks();
   }
 
   public Iterable<T> payloads()
@@ -167,20 +177,20 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
       return false;
     }
     PartitionHolder<?> that = (PartitionHolder<?>) o;
-    return Objects.equals(overshadowableManager, that.overshadowableManager);
+    return Objects.equals(contents, that.contents);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(overshadowableManager);
+    return Objects.hash(contents);
   }
 
   @Override
   public String toString()
   {
     return "PartitionHolder{" +
-           "overshadowableManager=" + overshadowableManager +
+           "contents=" + contents +
            '}';
   }
 

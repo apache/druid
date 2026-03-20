@@ -653,6 +653,37 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testSumArrayElement()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test_datasource")
+                                  .intervals(Collections.singletonList(Intervals.ETERNITY))
+                                  .aggregators(
+                                      new CountAggregatorFactory("count"),
+                                      new LongSumAggregatorFactory("sumNestedVariantNumericArrayElement", "v0")
+                                  )
+                                  .virtualColumns(
+                                      new NestedFieldVirtualColumn("obj", "$.c[1]", "v0", ColumnType.LONG)
+                                  )
+                                  .context(getContext())
+                                  .build();
+    runResults(
+        query,
+        ImmutableList.of(
+            new Result<>(
+                DateTimes.of("2023-01-01T00:00:00.000Z"),
+                new TimeseriesResultValue(
+                    ImmutableMap.<String, Object>builder()
+                                .put("count", 14L)
+                                .put("sumNestedVariantNumericArrayElement", 246L)
+                                .build()
+                )
+            )
+        )
+    );
+  }
+
 
   private void runResults(
       TimeseriesQuery timeseriesQuery,

@@ -20,57 +20,60 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.CpuAcct;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.joda.time.DateTime;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 {
   private static final Logger log = new Logger(CpuAcctDeltaMonitor.class);
+  private static final String USE_CGROUPS_V2_MESSAGE = StringUtils.format(
+      "%s doest not function correctly on cgroups v2. Please use %s instead.",
+      CpuAcctDeltaMonitor.class.getSimpleName(),
+      CgroupV2CpuMonitor.class.getSimpleName()
+  );
   private final AtomicReference<SnapshotHolder> priorSnapshot = new AtomicReference<>(null);
-  private final Map<String, String[]> dimensions;
 
   private final CgroupDiscoverer cgroupDiscoverer;
+  private final boolean isRunningOnCgroupsV2;
 
   public CpuAcctDeltaMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
-  public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions)
+  public CpuAcctDeltaMonitor(final String feed)
   {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(feed, ProcSelfCgroupDiscoverer.autoCgroupDiscoverer());
   }
 
-  public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
-  {
-    this(feed, dimensions, new ProcSelfCgroupDiscoverer());
-  }
-
-  public CpuAcctDeltaMonitor(
-      String feed,
-      Map<String, String[]> dimensions,
-      CgroupDiscoverer cgroupDiscoverer
-  )
+  public CpuAcctDeltaMonitor(String feed, CgroupDiscoverer cgroupDiscoverer)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
     this.cgroupDiscoverer = Preconditions.checkNotNull(cgroupDiscoverer, "cgroupDiscoverer required");
+
+    isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
+    if (isRunningOnCgroupsV2) {
+      log.warn(USE_CGROUPS_V2_MESSAGE);
+    }
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    if (isRunningOnCgroupsV2) {
+      log.warn(USE_CGROUPS_V2_MESSAGE);
+      return false;
+    }
     final CpuAcct cpuAcct = new CpuAcct(cgroupDiscoverer);
     final CpuAcct.CpuAcctMetric snapshot = cpuAcct.snapshot();
     final long nanoTime = System.nanoTime(); // Approx time... may be influenced by an unlucky GC
@@ -96,12 +99,12 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
     for (int i = 0; i < snapshot.cpuCount(); ++i) {
       final ServiceMetricEvent.Builder builderUsr = builder()
           .setDimension("cpuName", Integer.toString(i))
-          .setDimension("cpuTime", "usr");
+          .setDimension("cpuTime", "usr")
+          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
       final ServiceMetricEvent.Builder builderSys = builder()
           .setDimension("cpuName", Integer.toString(i))
-          .setDimension("cpuTime", "sys");
-      MonitorUtils.addDimensionsToBuilder(builderUsr, dimensions);
-      MonitorUtils.addDimensionsToBuilder(builderSys, dimensions);
+          .setDimension("cpuTime", "sys")
+          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
       emitter.emit(builderUsr.setCreatedTime(dateTime).setMetric(
           "cgroup/cpu_time_delta_ns",
           snapshot.usrTime(i) - priorSnapshotHolder.metric.usrTime(i)

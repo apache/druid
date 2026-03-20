@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
@@ -30,7 +31,12 @@ public class SupervisorReport<T>
   private final DateTime generationTime;
   private final T payload;
 
-  public SupervisorReport(String id, DateTime generationTime, T payload)
+  @JsonCreator
+  public SupervisorReport(
+      @JsonProperty("id") String id,
+      @JsonProperty("generationTime") DateTime generationTime,
+      @JsonProperty("payload") T payload
+  )
   {
     this.id = id;
     this.generationTime = generationTime;

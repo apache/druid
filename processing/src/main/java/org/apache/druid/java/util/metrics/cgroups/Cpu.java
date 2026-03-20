@@ -85,7 +85,7 @@ public class Cpu
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_SHARES_FILE, -1),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_QUOTA_FILE, 0),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_PERIOD_FILE, 0),
-        systemJiffies, userJiffies
+        systemJiffies, userJiffies, -1, -1, -1
     );
   }
 
@@ -108,14 +108,32 @@ public class Cpu
     // Maps to system value at cpuacct.stat
     private final long systemJiffies;
 
-    CpuMetrics(long shares, long quotaUs, long periodUs, long systemJiffis, long userJiffies)
+    private final long userUs;
+    private final long systemUs;
+    private final long totalUs;
+
+
+    CpuMetrics(
+        long shares,
+        long quotaUs,
+        long periodUs,
+        long systemJiffis,
+        long userJiffies,
+        long userUs,
+        long systemUs,
+        long totalUs
+    )
     {
       this.shares = shares;
       this.quotaUs = quotaUs;
       this.periodUs = periodUs;
       this.userJiffies = userJiffies;
       this.systemJiffies = systemJiffis;
+      this.userUs = userUs;
+      this.systemUs = systemUs;
+      this.totalUs = totalUs;
     }
+
 
     public final long getShares()
     {
@@ -144,7 +162,25 @@ public class Cpu
 
     public long getTotalJiffies()
     {
+      if (userJiffies == -1 && systemJiffies == -1) {
+        return -1;
+      }
       return userJiffies + systemJiffies;
+    }
+
+    public long getUserUs()
+    {
+      return userUs;
+    }
+
+    public long getSystemUs()
+    {
+      return systemUs;
+    }
+
+    public long getTotalUs()
+    {
+      return totalUs;
     }
   }
 }

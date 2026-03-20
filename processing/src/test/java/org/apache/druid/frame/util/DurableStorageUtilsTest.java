@@ -19,9 +19,10 @@
 
 package org.apache.druid.frame.util;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Set;
 
 public class DurableStorageUtilsTest
 {
@@ -52,26 +53,25 @@ public class DurableStorageUtilsTest
   @Test
   public void isQueryResultFileActive()
   {
-
     Assert.assertTrue(DurableStorageUtils.isQueryResultFileActive(
-        DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        ImmutableSet.of("123")
+        DurableStorageUtils.QUERY_RESULTS_DIR + "/controller_123/result",
+        Set.of("123")
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
-        DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
-        ImmutableSet.of("")
+        DurableStorageUtils.QUERY_RESULTS_DIR + "/controller_456/result",
+        Set.of("123")
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/",
-        ImmutableSet.of("123")
+        Set.of("123")
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         null,
-        ImmutableSet.of("123")
+        Set.of("123")
     ));
     Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
         DurableStorageUtils.QUERY_RESULTS_DIR,
-        ImmutableSet.of("123")
+        Set.of("123")
     ));
   }
 

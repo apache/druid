@@ -24,7 +24,7 @@ description: Reference for the configuration options in the ingestion spec.
   ~ under the License.
   -->
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). Other than with SQL-based ingestion, use an _ingestion spec_ to configure your ingestion.
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch uses a one-time [task](tasks.md). Other than with SQL-based ingestion, use an _ingestion spec_ to configure your ingestion.
 
 Ingestion specs consists of three main components:
 
@@ -102,10 +102,6 @@ available in Druid's [web console](../operations/web-console.md). Druid's visual
 
 ## `dataSchema`
 
-:::info
- The `dataSchema` spec has been changed in 0.17.0. The new spec is supported by all ingestion methods
-except for _Hadoop_ ingestion. See the [Legacy `dataSchema` spec](#legacy-dataschema-spec) for the old spec.
-:::
 
 The `dataSchema` is a holder for the following components:
 
@@ -396,12 +392,51 @@ The `filter` conditionally filters input rows during ingestion. Only rows that p
 ingested. Any of Druid's standard [query filters](../querying/filters.md) can be used. Note that within a
 `transformSpec`, the `transforms` are applied before the `filter`, so the filter can refer to a transform.
 
-### Legacy `dataSchema` spec
+### Projections
+
+Projections are ingestion/compaction time aggregations that Druid computes on a subset of dimensions and metrics of a segment. They are stored within a segment. The pre-aggregated data reduces the number of rows the query engine needs to process when you run a query. This can speed up queries for query shapes that match a projection.
+
+Define projections for a new data source in the `projectionsSpec` block during ingestion. To add projections to an existing data source, see [create them afterwards](../querying/projections.md#manually-add-a-projection).
 
 :::info
- The `dataSchema` spec has been changed in 0.17.0. The new spec is supported by all ingestion methods
-except for _Hadoop_ ingestion. See [`dataSchema`](#dataschema) for the new spec.
+Projections you define become a dimension for your datasource. To remove a projection from your datasource, you need to reingest the data with the projection removed. Alternatively, you can use a query context parameter to not use projections for a specific query.
 :::
+
+```json
+"projectionsSpec": {
+  "projections": [
+    {
+      "name": "daily_channel_summary",
+      "dimensions": [
+        "channel"
+        ],
+      "granularity": "DAY",
+      "metrics": [
+        { 
+          "type": "longSum", 
+          "name": "total_added", 
+          "fieldName": "added" 
+          },
+        { "type": "longSum", 
+        "name": "total_deleted", 
+        "fieldName": "deleted" 
+        },
+        { "type": "longSum", 
+        "name": "total_delta", 
+        "fieldName": "delta" 
+        },
+        { 
+          "type": "cardinality", 
+          "name": "distinct_users", 
+          "fieldName": "user" 
+          }
+      ]
+    }
+  ]
+}
+```
+
+### Legacy `dataSchema` spec
 
 The legacy `dataSchema` spec has below two more components in addition to the ones listed in the [`dataSchema`](#dataschema) section above.
 
@@ -410,8 +445,8 @@ The legacy `dataSchema` spec has below two more components in addition to the on
 #### `parser` (Deprecated)
 
 In legacy `dataSchema`, the `parser` is located in the `dataSchema` → `parser` and is responsible for configuring a wide variety of
-items related to parsing input records. The `parser` is deprecated and it is highly recommended to use `inputFormat` instead.
-For details about `inputFormat` and supported `parser` types, see the ["Data formats" page](data-formats.md).
+items related to parsing input records. The `parser` is only supported by Hadoop ingestion, and is deprecated.
+For details about supported `parser` types, see the ["Data formats" page](data-formats.md).
 
 For details about major components of the `parseSpec`, refer to their subsections:
 
@@ -457,8 +492,7 @@ See [Flatten spec](./data-formats.md#flattenspec) for more details.
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
 filesystem, or any other supported source system. The `inputFormat` property applies to all
-[ingestion method](./index.md#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
-uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
+[ingestion method](./index.md#ingestion-methods).
 The rest of `ioConfig` is specific to each individual ingestion method.
 An example `ioConfig` to read JSON data is:
 
@@ -483,13 +517,13 @@ The following table lists the common tuning properties shared among ingestion me
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
+|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `kafka`, and `kinesis`.||
 |maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
 |maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), and [Native batch](native-batch.md#tuningconfig).||
 
 The following example shows a `tuningConfig` object that sets all of the shared common properties to their defaults:
 
@@ -525,16 +559,10 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 
 #### Front coding
 
-:::info
-Front coding is an [experimental feature](../development/experimental.md).
-:::
-
-Druid encodes string columns into dictionaries for better compression.
-Front coding is an incremental encoding strategy that lets you store STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+Druid stores STRING columns using dictionary encoding for better compression, where each string value is added to a lexicographically sorted dictionary and the actual column just stores a pointer to a dictionary entry.
+Front coding is an optional incremental encoding strategy that lets you further compress STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
+Front-coded dictionaries can reduce storage and improve performance by optimizing values with a shared common prefix to avoid storing duplicate data.
 For example, if you are tracking website visits, most URLs start with `https://domain.xyz/`, and front coding is able to exploit this pattern for more optimal compression when storing such datasets.
-Druid performs the optimization automatically, which means that the performance of string columns is generally not affected when they don't match the front-coded pattern.
-Consequently, you can enable this feature universally without having to know the underlying data shapes of the columns.
 
 You can use front coding with all types of ingestion.
 
@@ -548,7 +576,7 @@ To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontC
 You can specify the following optional properties:
 
 * `bucketSize`: Number of values to place in a bucket to perform delta encoding. Setting this property instructs indexing tasks to write segments using compressed dictionaries of the specified bucket size. You can set it to any power of 2 less than or equal to 128. `bucketSize` defaults to 4.
-* `formatVersion`: Specifies which front coding version to use. Options are 0 and 1 (supported for Druid versions 26.0.0 and higher). `formatVersion` defaults to 0. For faster speeds and smaller storage sizes, set `formatVersion` to 1. After setting `formatVersion` to 1, you can no longer downgrade to Druid 25.0.0 seamlessly. To downgrade to Druid 25.0.0, you must re-ingest your data with the `formatVersion` property set to 0.
+* `formatVersion`: Specifies which front coding version to use. Options are 0 and 1 (supported for Druid versions 26.0.0 and higher). `formatVersion` defaults to 1.
 
 For example:
 
@@ -558,7 +586,7 @@ For example:
     "stringDictionaryEncoding": {
       "type":"frontCoded",
       "bucketSize": 4,
-      "formatVersion": 0
+      "formatVersion": 1
     }
   }
 }

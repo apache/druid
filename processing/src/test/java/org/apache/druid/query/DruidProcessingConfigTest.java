@@ -118,6 +118,24 @@ public class DruidProcessingConfigTest
   }
 
   @Test
+  public void testParallelPoolInitDefaultIsFalse()
+  {
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assert.assertFalse(config.isParallelMemoryPoolInit());
+  }
+
+  @Test
+  public void testParallelPoolInitEnabled()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.parallelPoolInit", "true");
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE, props);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assert.assertTrue(config.isParallelMemoryPoolInit());
+  }
+
+  @Test
   public void testInvalidSizeBytes()
   {
     Properties props = new Properties();

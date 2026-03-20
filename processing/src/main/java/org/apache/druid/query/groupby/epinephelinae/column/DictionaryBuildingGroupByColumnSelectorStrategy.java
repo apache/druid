@@ -110,7 +110,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     );
   }
 
-  private static class UniValueDimensionIdCodec implements DimensionIdCodec<Object>
+  public static class UniValueDimensionIdCodec implements DimensionIdCodec<Object>
   {
     /**
      * Dictionary for mapping the dimension value to an index. i-th position in the dictionary holds the value represented

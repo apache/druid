@@ -74,7 +74,8 @@ public class DartSqlClientImplTest
                 "",
                 "",
                 DateTimes.of("2000"),
-                ControllerHolder.State.RUNNING.toString()
+                ControllerHolder.State.RUNNING.toString(),
+                null
             )
         )
     );
@@ -86,7 +87,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, false);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
@@ -103,7 +104,8 @@ public class DartSqlClientImplTest
                 "",
                 "",
                 DateTimes.of("2000"),
-                ControllerHolder.State.RUNNING.toString()
+                ControllerHolder.State.RUNNING.toString(),
+                null
             )
         )
     );
@@ -115,7 +117,37 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(true);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(true, false);
+    Assertions.assertEquals(getQueriesResponse, result.get());
+  }
+
+  @Test
+  public void test_getMessages_includeComplete() throws Exception
+  {
+    final GetQueriesResponse getQueriesResponse = new GetQueriesResponse(
+        ImmutableList.of(
+            new DartQueryInfo(
+                "sid",
+                "did",
+                "SELECT 1",
+                "localhost:1001",
+                "",
+                "",
+                DateTimes.of("2000"),
+                ControllerHolder.State.RUNNING.toString(),
+                null
+            )
+        )
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/queries?includeComplete"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(getQueriesResponse)
+    );
+
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, true);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 }

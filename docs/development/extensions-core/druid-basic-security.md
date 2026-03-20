@@ -105,7 +105,7 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassw
 # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
 druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-# If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
+# If true and the request credential doesn't exist in this credentials store, the request proceeds to the next Authenticator in the chain.
 druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```

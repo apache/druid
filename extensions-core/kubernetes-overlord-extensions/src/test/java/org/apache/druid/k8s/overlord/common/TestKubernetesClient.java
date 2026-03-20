@@ -26,7 +26,7 @@ public class TestKubernetesClient implements KubernetesClientApi
 
   private final KubernetesClient client;
 
-  public TestKubernetesClient(KubernetesClient client)
+  public TestKubernetesClient(KubernetesClient client, String namespace)
   {
     this.client = client;
   }

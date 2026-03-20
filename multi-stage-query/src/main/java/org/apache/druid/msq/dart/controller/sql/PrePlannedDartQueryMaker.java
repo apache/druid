@@ -125,8 +125,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
         querySpec.getQuery(),
         plannerContext.getJsonMapper(),
         dartQueryMaker.queryKitSpecFactory.makeQueryKitSpec(
-            QueryKitBasedMSQPlanner
-                .makeQueryControllerToolKit(querySpec.getContext(), plannerContext.getJsonMapper()),
+            dartQueryMaker.queryKit,
             dartQueryId,
             querySpec.getTuningConfig(),
             querySpec.getContext()

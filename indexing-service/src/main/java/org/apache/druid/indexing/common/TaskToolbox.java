@@ -96,8 +96,8 @@ public class TaskToolbox
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   /**
    * Using Provider, not {@link QueryRunnerFactoryConglomerate} directly, to not require {@link
-   * org.apache.druid.indexing.overlord.TaskRunner} implementations that create TaskToolboxes to inject query stuff eagerly,
-   * because it may be unavailable, e. g. for batch tasks running in Spark or Hadoop.
+   * org.apache.druid.indexing.overlord.TaskRunner} implementations that create TaskToolboxes to inject query stuff
+   * eagerly, because it may be unavailable in extension task types
    */
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   /**
@@ -358,6 +358,9 @@ public class TaskToolbox
     return jsonMapper;
   }
 
+  /**
+   * Returns a {@link SegmentCacheManager} in virtual storage mode.
+   */
   public SegmentCacheManager getSegmentCacheManager()
   {
     return segmentCacheManager;

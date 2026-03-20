@@ -64,9 +64,7 @@ public class MemoryTest
   @Test
   public void testWontCrash()
   {
-    final Memory memory = new Memory((cgroup) -> {
-      throw new RuntimeException("shouldContinue");
-    });
+    final Memory memory = new Memory(TestUtils.exceptionThrowingDiscoverer());
     final Memory.MemoryStat stat = memory.snapshot("memory.usage_in_bytes", "memory.limit_in_bytes");
     Assert.assertEquals(ImmutableMap.of(), stat.getNumaMemoryStats());
     Assert.assertEquals(ImmutableMap.of(), stat.getMemoryStats());

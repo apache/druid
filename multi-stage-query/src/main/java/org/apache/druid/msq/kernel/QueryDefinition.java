@@ -35,7 +35,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

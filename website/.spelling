@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -218,12 +219,14 @@ pull-deps
 RDBMS
 RDDs
 RDS
+RoleBinding
 ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
 Rackspace
 Redis
+residualFilterMode
 S3
 SAS
 SDK
@@ -447,6 +450,7 @@ namespaced
 namespaces
 natively
 netflow
+node_roles
 nondescriptive
 nonfinalized
 non-null
@@ -526,6 +530,7 @@ reindexing
 reingest
 reingesting
 reingestion
+resync
 repo
 requireSSL
 rollup
@@ -539,6 +544,7 @@ searchable
 secondaryPartitionPruning
 seekable
 seekable-stream
+service_name
 servlet
 setProcessingThreadNames
 sigterm
@@ -558,6 +564,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -677,6 +684,7 @@ PT5M
 SCHEMA_NAME
 SCHEMA_OWNER
 SERVER_SEGMENTS
+SERVER_PROPERTIES
 SMALLINT
 SQL_PATH
 STRING_AGG
@@ -716,6 +724,8 @@ is_realtime
 java.sql.Types
 last_compaction_state
 max_size
+available_processors
+total_memory
 num_replicas
 num_rows
 num_segments
@@ -752,6 +762,8 @@ granularity_string
 QueryKit
 # MSQ report fields
 taskId
+taskGroupId
+movingAverages
 multiStageQuery.taskId
 multiStageQuery.payload.status
 multiStageQuery.payload.status.status
@@ -947,15 +959,12 @@ druid_cache_total
 druid_hits
 druid_query
 historical001
-HadoopTuningConfig
 TuningConfig
 base-dataSource
 baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-druid.extensions.hadoopDependenciesDir
-hadoopDependencyCoordinates
 maxTaskCount
 metricsSpec
 queryType
@@ -1010,7 +1019,6 @@ postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
-HadoopDruidIndexer
 LzoThriftBlock
 SequenceFile
 classname
@@ -1124,6 +1132,7 @@ Env
 POD_NAME
 POD_NAMESPACE
 ConfigMap
+ConfigMaps
 PT17S
 GCS
 gcs-connector
@@ -1377,7 +1386,6 @@ windowPeriod
 2012-01-07T00
 500MB
 CombineTextInputFormat
-HadoopIndexTask
 InputFormat
 InputSplit
 JobHistory
@@ -1737,7 +1745,6 @@ mapred-default
 mapred-site
 sbt
 scala-2
-org.apache.hadoop
 proxy.com.
 remoteRepository
 JBOD
@@ -1813,6 +1820,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1830,6 +1838,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs
@@ -1876,6 +1885,7 @@ minTopNThreshold
 parallelMergeInitialYieldRows
 parallelMergeParallelism
 parallelMergeSmallBatchRows
+parallelPoolInit
 populateCache
 populateResultLevelCache
 queryId
@@ -1965,8 +1975,8 @@ srcPort
 common_runtime_properties
 druid.extensions.directory
 druid.extensions.loadList
-druid.hadoop.security.kerberos.keytab
 druid.hadoop.security.kerberos.principal
+druid.hadoop.security.kerberos.keytab
 druid.indexer.logs.directory
 druid.indexer.logs.type
 druid.storage.storageDirectory
@@ -2005,7 +2015,6 @@ File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
 GCE
-HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost
@@ -2439,12 +2448,15 @@ ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
+SPECTATOR_PERCENTILE
+SPECTATOR_COUNT
 PercentileBuckets
 spectatorHistogram
 spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+countSpectatorHistogram
 
 - ../docs/development/extensions-contrib/ddsketch-quantiles.md
 quantilesFromDDSketch

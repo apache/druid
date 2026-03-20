@@ -30,8 +30,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.LowestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -251,6 +253,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         "localhost:5",
         null,
         10000000L,
+        null,
         ServerType.BROKER,
         "default_tier",
         0
@@ -548,6 +551,88 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews(null, Collections.emptySet(), true);
   }
 
+  @Test
+  public void testDifferentTierStrategiesForHistoricalAndRealtimeServers() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(7);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    // Setup a Broker with LowestPriority strategy for historicals and HighestPriority for realtime
+    setupViews(
+        new LowestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+
+    // Setup multiple historicals with different priorities and realtime servers
+    final DruidServer historicalLowPriority = setupHistoricalServer("tier1", "historical-low:1", 0);
+    final DruidServer historicalHighPriority = setupHistoricalServer("tier1", "historical-high:2", 10);
+    final DruidServer realtimeLowPriority = setupDruidServer(ServerType.INDEXER_EXECUTOR, null, "realtime-low:3", 0);
+    final DruidServer realtimeHighPriority = setupDruidServer(ServerType.INDEXER_EXECUTOR, null, "realtime-high:4", 10);
+
+    // Segment 1: only on historicals with different priorities
+    final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
+    announceSegmentForServer(historicalLowPriority, segment1, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(historicalHighPriority, segment1, zkPathsConfig, jsonMapper);
+
+    // Segment 2: only on realtime with different priorities
+    final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
+    announceSegmentForServer(realtimeLowPriority, segment2, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(realtimeHighPriority, segment2, zkPathsConfig, jsonMapper);
+
+    // Segment 3: on both historical and realtime, but pick should prefer historical
+    final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
+    announceSegmentForServer(historicalHighPriority, segment3, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(realtimeLowPriority, segment3, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(realtimeHighPriority, segment3, zkPathsConfig, jsonMapper);
+
+    // Wait for the segments to be added
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    // Get the timeline for the datasource
+    TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
+        new TableDataSource(segment1.getDataSource())
+    ).get();
+
+    // Test segment 1: should pick the lowest priority historical (priority 0)
+    List<TimelineObjectHolder<String, ServerSelector>> holders1 = timeline.lookup(segment1.getInterval());
+    Assert.assertEquals(1, holders1.size());
+    ServerSelector selector1 = holders1.get(0).getObject().iterator().next().getObject();
+    Assert.assertEquals(segment1, selector1.getSegment());
+
+    // Historical LowestPriorityTierSelectorStrategy should pick the historical servers low and high in order
+    Assert.assertEquals(historicalLowPriority, selector1.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
+    Assert.assertEquals(List.of(historicalLowPriority.getMetadata()), selector1.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(List.of(historicalLowPriority.getMetadata(), historicalHighPriority.getMetadata()), selector1.getAllServers(CloneQueryMode.EXCLUDECLONES));
+
+    // Test segment 2: should pick the highest priority realtime (priority 10)
+    List<TimelineObjectHolder<String, ServerSelector>> holders2 = timeline.lookup(segment2.getInterval());
+    Assert.assertEquals(1, holders2.size());
+    ServerSelector selector2 = holders2.get(0).getObject().iterator().next().getObject();
+    Assert.assertEquals(segment2, selector2.getSegment());
+
+    // Realtime HighestPriorityTierSelectorStrategy for realtime should pick the realtime servers high and low in order
+    Assert.assertEquals(realtimeHighPriority, selector2.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
+    Assert.assertEquals(List.of(realtimeHighPriority.getMetadata()), selector2.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(List.of(realtimeHighPriority.getMetadata(), realtimeLowPriority.getMetadata()), selector2.getAllServers(CloneQueryMode.EXCLUDECLONES));
+
+    // Test segment 3: when both historical and realtime exist, historical is preferred
+    // and should pick based on historical strategy (lowest priority = 10)
+    List<TimelineObjectHolder<String, ServerSelector>> holders3 = timeline.lookup(segment3.getInterval());
+    Assert.assertEquals(1, holders3.size());
+    ServerSelector selector3 = holders3.get(0).getObject().iterator().next().getObject();
+    Assert.assertEquals(segment3, selector3.getSegment());
+
+    // Should prefer historical over realtime servers and in order
+    Assert.assertEquals(historicalHighPriority, selector3.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
+    Assert.assertEquals(List.of(historicalHighPriority.getMetadata()), selector3.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(
+        List.of(historicalHighPriority.getMetadata(), realtimeHighPriority.getMetadata(), realtimeLowPriority.getMetadata()),
+        selector3.getAllServers(CloneQueryMode.EXCLUDECLONES)
+    );
+  }
+
   /**
    * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.
    */
@@ -566,6 +651,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         name,
         null,
         1000000,
+        null,
         serverType,
         tier,
         priority
@@ -614,7 +700,40 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews(null, null, true);
   }
 
-  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks)
+  private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy) throws Exception
+  {
+    setupViews(historicalStrategy, realtimeStrategy, new BrokerSegmentWatcherConfig());
+  }
+
+  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws Exception
+  {
+    setupViews(
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public Set<String> getWatchedTiers()
+          {
+            return watchedTiers;
+          }
+
+          @Override
+          public boolean isWatchRealtimeTasks()
+          {
+            return watchRealtimeTasks;
+          }
+
+          @Override
+          public Set<String> getIgnoredTiers()
+          {
+            return ignoredTiers;
+          }
+        }
+    );
+  }
+
+  private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy, BrokerSegmentWatcherConfig brokerSegmentWatcherConfig)
       throws Exception
   {
     baseView = new BatchServerInventoryView(
@@ -700,28 +819,10 @@ public class BrokerServerViewTest extends CuratorTestBase
     brokerServerView = new BrokerServerView(
         druidClientFactory,
         baseView,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        historicalStrategy,
+        realtimeStrategy,
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
-        {
-          @Override
-          public Set<String> getWatchedTiers()
-          {
-            return watchedTiers;
-          }
-
-          @Override
-          public boolean isWatchRealtimeTasks()
-          {
-            return watchRealtimeTasks;
-          }
-
-          @Override
-          public Set<String> getIgnoredTiers()
-          {
-            return ignoredTiers;
-          }
-        },
+        brokerSegmentWatcherConfig,
         brokerViewOfCoordinatorConfig
     );
 

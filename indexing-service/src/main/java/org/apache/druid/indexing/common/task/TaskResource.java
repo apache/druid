@@ -42,7 +42,7 @@ public class TaskResource
   }
 
   /**
-   * Returns availability group ID of this task. Tasks the same availability group cannot be assigned to the same
+   * Returns availability group ID of this task. Tasks of the same availability group cannot be assigned to the same
    * worker. If tasks do not have this restriction, a common convention is to set the availability group ID to the
    * task ID.
    *

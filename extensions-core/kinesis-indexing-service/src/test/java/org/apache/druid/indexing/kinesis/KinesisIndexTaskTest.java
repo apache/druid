@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,7 +36,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -68,9 +66,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -82,9 +77,11 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -99,11 +96,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -137,9 +137,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
       createRecord("1", "3", kjb("2011", "d", "y", "10", "20.0", "1.0")),
       createRecord("1", "4", kjb("2011", "e", "y", "10", "20.0", "1.0")),
       createRecord("1", "5", kjb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
-      createRecord("1", "6", new KinesisRecordEntity(new Record().withData(new ByteEntity(StringUtils.toUtf8("unparseable")).getBuffer()))),
-      createRecord("1", "7", new KinesisRecordEntity(new Record().withData(new ByteEntity(StringUtils.toUtf8("")).getBuffer()))),
-      createRecord("1", "8", new KinesisRecordEntity(new Record().withData(new ByteEntity(StringUtils.toUtf8("{}")).getBuffer()))),
+      createRecord("1", "6", new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("unparseable"))))),
+      createRecord("1", "7", new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8(""))))),
+      createRecord("1", "8", new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))),
       createRecord("1", "9", kjb("2013", "f", "y", "10", "20.0", "1.0")),
       createRecord("1", "10", kjb("2049", "f", "y", "notanumber", "20.0", "1.0")),
       createRecord("1", "11", kjb("2049", "f", "y", "10", "notanumber", "1.0")),
@@ -167,7 +167,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   );
 
   private static KinesisRecordSupplier recordSupplier;
-  private static ServiceEmitter emitter;
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -193,13 +192,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @BeforeClass
   public static void setupClass()
   {
-    emitter = new ServiceEmitter(
-        "service",
-        "host",
-        new NoopEmitter()
-    );
-    emitter.start();
-    EmittingLogger.registerEmitter(emitter);
     taskExec = MoreExecutors.listeningDecorator(
         Executors.newCachedThreadPool(
             Execs.makeThreadFactory("kinesis-task-test-%d")
@@ -251,7 +243,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     taskExec.shutdown();
     taskExec.awaitTermination(20, TimeUnit.MINUTES);
-    emitter.close();
   }
 
   private void waitUntil(KinesisIndexTask task, Predicate<KinesisIndexTask> predicate)
@@ -276,7 +267,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         record.getPartitionId(),
         record.getSequenceNumber(),
         record.getData().stream()
-              .map(entity -> new KinesisRecordEntity(new Record().withData(entity.getBuffer())))
+              .map(entity -> new KinesisRecordEntity(buildKinesisClientRecord(entity.getBuffer())))
               .collect(Collectors.toList())
     );
   }
@@ -355,6 +346,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 120_000L)
@@ -387,7 +385,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
+        DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4")
     );
@@ -426,7 +424,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     replayAll();
 
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withDimensionsSpec(
+        DATA_SCHEMA.withDimensionsSpec(
             new DimensionsSpec(
                 ImmutableList.of(
                     new StringDimensionSchema("dim1"),
@@ -455,59 +453,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
   }
 
-  @Test(timeout = 120_000L)
-  public void testRunAfterDataInsertedWithLegacyParser() throws Exception
-  {
-    recordSupplier.assign(EasyMock.anyObject());
-    EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
-
-    recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
-    EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
-            .andReturn(clone(RECORDS, 2, 5)).once();
-
-    recordSupplier.close();
-    EasyMock.expectLastCall().once();
-
-    replayAll();
-
-    final KinesisIndexTask task = createTask(
-        OLD_DATA_SCHEMA,
-        ImmutableMap.of(SHARD_ID1, "2"),
-        ImmutableMap.of(SHARD_ID1, "4")
-    );
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    verifyAll();
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 5))
-                                     .totalProcessed(3));
-
-    // Check published metadata and segments in deep storage
-    assertEqualsExceptVersion(
-        ImmutableList.of(
-            sdd("2010/P1D", 0, ImmutableList.of("c")),
-            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
-        ),
-        publishedDescriptors()
-    );
-    Assert.assertEquals(
-        new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
-        ),
-        newDataSchemaMetadata()
-    );
-  }
-
   DataSourceMetadata newDataSchemaMetadata()
   {
-    return metadataStorageCoordinator.retrieveDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource());
+    return metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource());
   }
 
   @Test(timeout = 120_000L)
@@ -622,7 +570,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(startPartitions)
             )
@@ -714,7 +662,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(STREAM, startOffsets, Collections.emptySet())
@@ -725,7 +673,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(STREAM, currentOffsets, currentOffsets.keySet()))
@@ -752,6 +700,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, endOffsets)),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(6, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(5, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
@@ -801,7 +756,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(2).totalProcessed(3));
+                                     .thrownAwayByReason(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -864,7 +819,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(2).totalProcessed(3));
+                                     .thrownAwayByReason(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -902,7 +857,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     replayAll();
 
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
@@ -923,7 +878,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(4).totalProcessed(1));
+                                     .thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());
@@ -1031,6 +986,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
@@ -1194,6 +1155,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
     Assert.assertNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1201,7 +1164,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, 763,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 4,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1284,6 +1248,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
     Assert.assertNotNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1291,7 +1257,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1456,7 +1423,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KinesisIndexTask task1 = createTask(
         0,
         null,
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4"),
         false
@@ -1464,7 +1431,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KinesisIndexTask task2 = createTask(
         1,
         null,
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         ImmutableMap.of(SHARD_ID1, "3"),
         ImmutableMap.of(SHARD_ID1, "9"),
         false
@@ -1936,7 +1903,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KinesisIndexTask task = createTask(
         "task1",
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         new KinesisIndexTaskIOConfig(
             0,
             "sequence0",
@@ -2095,7 +2062,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KinesisIndexTask task = createTask(
         "task1",
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         new KinesisIndexTaskIOConfig(
             0,
             "sequence0",
@@ -2328,7 +2295,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
       Map<String, String> endSequenceNumbers
   ) throws JsonProcessingException
   {
-    return createTask(groupId, taskId, NEW_DATA_SCHEMA, startSequenceNumbers, endSequenceNumbers, true);
+    return createTask(groupId, taskId, DATA_SCHEMA, startSequenceNumbers, endSequenceNumbers, true);
   }
 
   private KinesisIndexTask createTask(
@@ -2343,7 +2310,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private KinesisIndexTask createTask(KinesisIndexTaskIOConfig ioConfig)
       throws JsonProcessingException
   {
-    return createTask(null, NEW_DATA_SCHEMA, ioConfig, null);
+    return createTask(null, DATA_SCHEMA, ioConfig, null);
   }
 
   private KinesisIndexTask createTask(
@@ -2419,7 +2386,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
+    return DataSchema.builder(dataSchema).build();
   }
 
   @Override
@@ -2481,7 +2448,17 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
       String met1
   )
   {
-    return new KinesisRecordEntity(new Record().withData(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1).getBuffer()));
+    return new KinesisRecordEntity(buildKinesisClientRecord(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1).getBuffer()));
+  }
+
+  private static KinesisClientRecord buildKinesisClientRecord(ByteBuffer data)
+  {
+    return KinesisClientRecord.builder()
+        .data(data)
+        .partitionKey("key")
+        .sequenceNumber("0")
+        .approximateArrivalTimestamp(Instant.now())
+        .build();
   }
 
   @JsonTypeName("index_kinesis")
@@ -2510,7 +2487,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           ioConfig,
           context,
           false,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          null
       );
     }
 

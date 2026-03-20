@@ -19,10 +19,9 @@
 import { Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import type { ReactNode } from 'react';
 import React from 'react';
-import type { Filter } from 'react-table';
 
-import type { FilterMode } from '../../react-table';
-import { addOrUpdateFilter, combineModeAndNeedle, filterModeToIcon } from '../../react-table';
+import type { FilterMode, TableFilters } from '../../utils/table-filters';
+import { TableFilter } from '../../utils/table-filters';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';
@@ -33,8 +32,8 @@ const FILTER_MODES_NO_COMPARISONS: FilterMode[] = ['=', '!='];
 export interface TableFilterableCellProps {
   field: string;
   value: string;
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   enableComparisons?: boolean;
   children?: ReactNode;
   displayValue?: string;
@@ -57,15 +56,10 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
               {(enableComparisons ? FILTER_MODES : FILTER_MODES_NO_COMPARISONS).map((mode, i) => (
                 <MenuItem
                   key={i}
-                  icon={filterModeToIcon(mode)}
+                  icon={TableFilter.modeToIcon(mode)}
                   text={displayValue ?? value}
                   onClick={() =>
-                    onFiltersChange(
-                      addOrUpdateFilter(filters, {
-                        id: field,
-                        value: combineModeAndNeedle(mode, value),
-                      }),
-                    )
+                    onFiltersChange(filters.addOrUpdate(new TableFilter(field, mode, value)))
                   }
                 />
               ))}

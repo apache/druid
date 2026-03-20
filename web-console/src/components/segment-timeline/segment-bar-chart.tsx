@@ -72,7 +72,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
           .addSelect(F.sum(C('num_rows')).as('rows'))
           .toString();
 
-        return (await queryDruidSql({ query }, signal)).map(sr => {
+        return (await queryDruidSql({ query, context: { engine: 'native' } }, signal)).map(sr => {
           const start = new Date(sr.start);
           const end = new Date(sr.end);
 

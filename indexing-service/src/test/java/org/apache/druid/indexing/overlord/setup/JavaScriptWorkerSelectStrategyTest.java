@@ -58,10 +58,10 @@ public class JavaScriptWorkerSelectStrategyTest
       + " var worker = sortedWorkers[i];\n"
       + "  var zkWorker = zkWorkers.get(worker);\n"
       + "  if (zkWorker.canRunTask(task, parallelIndexTaskSlotRatio) && zkWorker.isValidVersion(minWorkerVer)) {\n"
-      + "    if (task.getType() == 'index_hadoop' && batch_workers.contains(worker)) {\n"
+      + "    if (task.getType() == 'index_parallel' && batch_workers.contains(worker)) {\n"
       + "      return worker;\n"
       + "    } else {\n"
-      + "      if (task.getType() != 'index_hadoop' && !batch_workers.contains(worker)) {\n"
+      + "      if (task.getType() != 'index_parallel' && !batch_workers.contains(worker)) {\n"
       + "        return worker;\n"
       + "      }\n"
       + "    }\n"
@@ -125,7 +125,7 @@ public class JavaScriptWorkerSelectStrategyTest
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     // batch tasks should be sent to worker1
     Assert.assertEquals(worker1, workerForBatchTask);
@@ -164,7 +164,7 @@ public class JavaScriptWorkerSelectStrategyTest
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
@@ -187,7 +187,7 @@ public class JavaScriptWorkerSelectStrategyTest
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
@@ -211,7 +211,7 @@ public class JavaScriptWorkerSelectStrategyTest
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask);
 

@@ -27,11 +27,15 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DataSegmentAndDescriptor;
+import org.apache.druid.query.LeafSegmentsBundle;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
@@ -46,6 +50,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -126,14 +131,84 @@ public class SegmentManager
   }
 
   /**
+   * Given a list of {@link DataSegmentAndDescriptor} produce a {@link LeafSegmentsBundle} which partitions segments
+   * into cached, loadable, or missing segments. This gives callers the flexibilty to decide to perform operations
+   * on segments which are already cached prior to or alongside the operation to load any segments which are not already
+   * present in the cache on demand.
+   * <p>
+   * What this means mechanically, is that for each {@link DataSegmentAndDescriptor} we check if it is already cached
+   * with {@link #acquireCachedSegment(DataSegment)} to add to {@link LeafSegmentsBundle#cachedSegments}, else if
+   * {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to {@link LeafSegmentsBundle#loadableSegments} or
+   * {@link LeafSegmentsBundle#missingSegments} if not.
+   * <p>
+   * The segments in {@link LeafSegmentsBundle#loadableSegments} can be retrieved with
+   * {@link #acquireSegment(DataSegment)} to ensure they are loaded from deep storage.
+   */
+  public LeafSegmentsBundle getSegmentsBundle(
+      List<DataSegmentAndDescriptor> segments,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    // Closer to collect everything that needs to be cleaned up in the event of failure. If we make it
+    // out of this function, closing the segment references is the caller's responsibility.
+    final Closer safetyNet = Closer.create();
+    try {
+      final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
+      final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
+      final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
+      for (final DataSegmentAndDescriptor segment : segments) {
+        final DataSegment dataSegment = segment.getDataSegment();
+        if (dataSegment == null) {
+          missingSegments.add(segment.getDescriptor());
+          continue;
+        }
+        final Optional<Segment> ref = acquireCachedSegment(dataSegment);
+        if (ref.isPresent()) {
+          try {
+            final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
+            segmentReferences.add(
+                new SegmentReference(
+                    segment.getDescriptor(),
+                    mapped,
+                    null
+                )
+            );
+          }
+          catch (Throwable t) {
+            // If applying the mapFn failed, attach the base segment to the closer and rethrow
+            ref.ifPresent(safetyNet::register);
+            throw t;
+          }
+        } else if (canLoadSegmentOnDemand(dataSegment)) {
+          loadableSegments.add(segment);
+        } else {
+          missingSegments.add(segment.getDescriptor());
+        }
+      }
+      return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+    }
+  }
+
+  /**
    * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
    * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
    * {@link #acquireSegment(DataSegment)} instead.
    */
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  {
+    return cacheManager.acquireCachedSegment(segmentId);
+  }
+
+  /**
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId)} that accepts a {@link DataSegment}.
+   */
   public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
-    return cacheManager.acquireCachedSegment(dataSegment);
+    return acquireCachedSegment(dataSegment.getId());
   }
 
   /**
@@ -145,7 +220,7 @@ public class SegmentManager
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     return cacheManager.acquireSegment(dataSegment);
   }
@@ -260,7 +335,7 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment);
+            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment.getId());
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -327,13 +402,13 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
+                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
                 long numberOfRows = oldSegment.map(segment -> {
+                  closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }
-                  CloseableUtils.closeAndWrapExceptions(segment);
                   return 0;
                 }).orElse(0);
 
@@ -373,6 +448,16 @@ public class SegmentManager
   public boolean canHandleSegments()
   {
     return cacheManager.canHandleSegments();
+  }
+
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return cacheManager.canLoadSegmentsOnDemand();
+  }
+
+  public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
+  {
+    return cacheManager.canLoadSegmentOnDemand(dataSegment);
   }
 
   /**

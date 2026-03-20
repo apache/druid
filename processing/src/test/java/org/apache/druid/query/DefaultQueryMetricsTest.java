@@ -48,7 +48,7 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultQueryMetricsQuery()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
@@ -75,8 +75,8 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
@@ -144,7 +144,7 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
   @Test
   public void testVectorizedDimensionInMetrics()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
     queryMetrics.vectorized(true);
     queryMetrics.reportSegmentTime(0).emit(serviceEmitter);
@@ -152,8 +152,8 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(7, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals("query/segment/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
     Assert.assertEquals(true, actualEvent.get("vectorized"));

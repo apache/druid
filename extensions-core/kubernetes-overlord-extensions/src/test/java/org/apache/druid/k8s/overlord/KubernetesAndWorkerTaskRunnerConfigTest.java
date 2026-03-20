@@ -21,8 +21,8 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -37,8 +37,8 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
         KubernetesAndWorkerTaskRunnerConfig.class
     );
 
-    Assert.assertEquals("worker", config.getRunnerStrategy());
-    Assert.assertEquals("remote", config.getWorkerType());
+    Assertions.assertEquals("worker", config.getRunnerStrategy());
+    Assertions.assertEquals("remote", config.getWorkerType());
   }
 
   @Test
@@ -46,6 +46,6 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
   {
     KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
 
-    Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, config.getRunnerStrategy());
+    Assertions.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, config.getRunnerStrategy());
   }
 }

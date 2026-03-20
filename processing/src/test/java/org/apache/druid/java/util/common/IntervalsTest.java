@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class IntervalsTest
 {
@@ -122,6 +123,38 @@ public class IntervalsTest
   {
     DruidExceptionMatcher.invalidInput().assertThrowsAndMatches(
         () -> Intervals.of("invalid string")
+    );
+  }
+
+  @Test
+  public void testComplementOf()
+  {
+    Assert.assertEquals(
+        List.of(),
+        Intervals.complementOf(Intervals.ETERNITY)
+    );
+
+    testComplementOf("2020/P1Y");
+    testComplementOf("2001/2001-01");
+    testComplementOf("2001-01-02/2001-02");
+  }
+
+  private void testComplementOf(String interval)
+  {
+    final Interval testInterval = Intervals.of(interval);
+    final List<Interval> complement = List.of(
+        new Interval(DateTimes.MIN, testInterval.getStart()),
+        new Interval(testInterval.getEnd(), DateTimes.MAX)
+    );
+    Assert.assertEquals(
+        complement,
+        Intervals.complementOf(testInterval)
+    );
+    Assert.assertEquals(
+        Intervals.ONLY_ETERNITY,
+        JodaUtils.condenseIntervals(
+            List.of(complement.get(0), complement.get(1), testInterval)
+        )
     );
   }
 }

@@ -32,6 +32,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -41,6 +44,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -61,6 +65,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
@@ -74,6 +80,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -130,8 +137,8 @@ public class MSQCompactionRunnerTest
                                  new LongSumAggregatorFactory(LONG_DIMENSION.getName(), LONG_DIMENSION.getName())
                              )
                              .build();
-  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
-      COMPACTION_INTERVAL,
+  private static final Map<QuerySegmentSpec, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
+      new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)),
       new CombinedDataSchema(
           DATA_SOURCE,
           new TimestampSpec(TIMESTAMP_COLUMN, null, null),
@@ -140,19 +147,6 @@ public class MSQCompactionRunnerTest
           null,
           null,
           null,
-          ImmutableSet.of(MV_STRING_DIMENSION.getName())
-      )
-  );
-  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS_WITH_PROJECTION = ImmutableMap.of(
-      COMPACTION_INTERVAL,
-      new CombinedDataSchema(
-          DATA_SOURCE,
-          new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-          new DimensionsSpec(DIMENSIONS),
-          null,
-          null,
-          null,
-          ImmutableList.of(PROJECTION_SPEC),
           ImmutableSet.of(MV_STRING_DIMENSION.getName())
       )
   );
@@ -163,15 +157,19 @@ public class MSQCompactionRunnerTest
   private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(
       JSON_MAPPER,
       TestExprMacroTable.INSTANCE,
-      null
+      new CoreInjectorBuilder(new StartupInjectorBuilder().forTests().build()).addModules(
+          new EscalatorModule(),
+          new AuthorizerMapperModule(),
+          new PolicyModule()
+      ).build()
   );
   private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(STRING_DIMENSION.getName());
 
   @Test
   public void testMultipleDisjointCompactionIntervalsAreInvalid()
   {
-    Map<Interval, DataSchema> intervalDataschemas = new HashMap<>(INTERVAL_DATASCHEMAS);
-    intervalDataschemas.put(Intervals.of("2017-07-01/2018-01-01"), null);
+    Map<QuerySegmentSpec, DataSchema> intervalDataschemas = new HashMap<>(INTERVAL_DATASCHEMAS);
+    intervalDataschemas.put(new MultipleIntervalSegmentSpec(List.of(Intervals.of("2017-07-01/2018-01-01"))), null);
     CompactionTask compactionTask = createCompactionTask(
         new HashedPartitionsSpec(3, null, ImmutableList.of("dummy")),
         null,
@@ -234,7 +232,7 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-string partition dimension[long_dim] of type[long] not supported with 'range' partition spec",
+        "MSQ: Non-string partition dimension[long_dim] of type[LONG] not supported with 'range' partition spec",
         validationResult.getReason()
     );
   }
@@ -391,7 +389,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
@@ -475,7 +473,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     LegacyMSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
@@ -524,7 +522,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
@@ -610,7 +608,7 @@ public class MSQCompactionRunnerTest
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
         taskCreatedWithTransformSpec,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
     );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
@@ -676,7 +674,7 @@ public class MSQCompactionRunnerTest
   )
   {
     CompactionTransformSpec transformSpec =
-        new CompactionTransformSpec(dimFilter);
+        new CompactionTransformSpec(dimFilter, null);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
         null
@@ -688,7 +686,7 @@ public class MSQCompactionRunnerTest
     context.putAll(contextParams);
 
     builder
-        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
+        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null), true)
         .tuningConfig(createTuningConfig(
             indexSpec,
             partitionsSpec == null ? new DynamicPartitionsSpec(100, null) : partitionsSpec
@@ -762,7 +760,7 @@ public class MSQCompactionRunnerTest
   {
     return new MSQTuningConfig(
         1,
-        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
+        MultiStageQueryContext.DEFAULT_MAX_ROWS_IN_MEMORY,
         MAX_ROWS_PER_SEGMENT,
         null,
         createIndexSpec()

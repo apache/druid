@@ -19,20 +19,12 @@
 
 package org.apache.druid.msq.input.stage;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.indexing.CountingReadableFrameChannel;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.msq.input.PhysicalInputSlice;
 
-import java.io.IOException;
+import java.util.Collections;
 import java.util.function.Consumer;
 
 /**
@@ -40,24 +32,15 @@ import java.util.function.Consumer;
  */
 public class StageInputSliceReader implements InputSliceReader
 {
-  private final String queryId;
-  private final InputChannels inputChannels;
+  public static final StageInputSliceReader INSTANCE = new StageInputSliceReader();
 
-  public StageInputSliceReader(String queryId, InputChannels inputChannels)
+  private StageInputSliceReader()
   {
-    this.queryId = queryId;
-    this.inputChannels = inputChannels;
+    // Singleton.
   }
 
   @Override
-  public int numReadableInputs(final InputSlice slice)
-  {
-    final StageInputSlice stageInputSlice = (StageInputSlice) slice;
-    return Iterables.size(stageInputSlice.getPartitions());
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
@@ -65,32 +48,6 @@ public class StageInputSliceReader implements InputSliceReader
   )
   {
     final StageInputSlice stageInputSlice = (StageInputSlice) slice;
-    final StageId stageId = new StageId(queryId, stageInputSlice.getStageNumber());
-    final FrameReader frameReader = inputChannels.frameReader(stageInputSlice.getStageNumber());
-
-    return ReadableInputs.channels(
-        () -> Iterators.transform(
-            stageInputSlice.getPartitions().iterator(),
-            partition -> {
-              final StagePartition stagePartition = new StagePartition(stageId, partition.getPartitionNumber());
-
-              try {
-                return ReadableInput.channel(
-                    new CountingReadableFrameChannel(
-                        inputChannels.openChannel(stagePartition),
-                        counters.channel(CounterNames.inputChannel(inputNumber)),
-                        stagePartition.getPartitionNumber()
-                    ),
-                    frameReader,
-                    stagePartition
-                );
-              }
-              catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            }
-        ),
-        frameReader
-    );
+    return new PhysicalInputSlice(stageInputSlice.getPartitions(), Collections.emptyList(), Collections.emptyList());
   }
 }

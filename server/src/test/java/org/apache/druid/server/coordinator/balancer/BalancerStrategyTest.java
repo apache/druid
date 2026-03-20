@@ -83,7 +83,16 @@ public class BalancerStrategyTest
   public void findNewSegmentHomeReplicatorNotEnoughSpace()
   {
     final ServerHolder serverHolder = new ServerHolder(
-        new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new DruidServer(
+            "server1",
+            "host1",
+            null,
+            10L,
+            null,
+            ServerType.HISTORICAL,
+            DruidServer.DEFAULT_TIER,
+            0
+        ).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
     Assert.assertFalse(
         balancerStrategy.findServersToLoadSegment(
@@ -97,12 +106,12 @@ public class BalancerStrategyTest
   public void findNewSegmentHomeReplicatorNotEnoughNodesForReplication()
   {
     final ServerHolder serverHolder1 = new ServerHolder(
-        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+        new DruidServer("server1", "host1", null, 1000L, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
 
     final ServerHolder serverHolder2 = new ServerHolder(
-        new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+        new DruidServer("server2", "host2", null, 1000L, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
 
@@ -118,7 +127,16 @@ public class BalancerStrategyTest
   public void findNewSegmentHomeReplicatorEnoughSpace()
   {
     final ServerHolder serverHolder = new ServerHolder(
-        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).toImmutableDruidServer(),
+        new DruidServer(
+            "server1",
+            "host1",
+            null,
+            1000L,
+            null,
+            ServerType.HISTORICAL,
+            DruidServer.DEFAULT_TIER,
+            0
+        ).toImmutableDruidServer(),
         new TestLoadQueuePeon());
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);

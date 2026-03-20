@@ -137,6 +137,19 @@ public class Metadata
     return projections;
   }
 
+  public Metadata withDimensionOrder(List<OrderBy> ordering)
+  {
+    return new Metadata(
+        container,
+        aggregators,
+        timestampSpec,
+        queryGranularity,
+        rollup,
+        ordering,
+        projections
+    );
+  }
+
   public Metadata withProjections(List<AggregateProjectionMetadata> projections)
   {
     return new Metadata(

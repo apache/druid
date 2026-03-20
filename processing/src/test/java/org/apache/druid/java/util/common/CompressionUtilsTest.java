@@ -26,6 +26,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingInputStream;
 import com.google.common.io.Files;
+import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
@@ -33,6 +34,7 @@ import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStr
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -407,6 +409,46 @@ public class CompressionUtilsTest
   }
 
   @Test
+  public void testGoodLz4CompressUncompressDirectory() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testGoodLz4CompressUncompressDirectory");
+    final File lz4File = new File(tmpDir, "compressionUtilTest.lz4");
+
+    try (final OutputStream out = new FileOutputStream(lz4File)) {
+      CompressionUtils.Format.LZ4.compressDirectory(testDir, out);
+    }
+
+    final File newDir = new File(tmpDir, "newDir");
+    Assert.assertTrue(newDir.mkdir());
+
+    final FileUtils.FileCopyResult result;
+    try (final InputStream in = new FileInputStream(lz4File)) {
+      result = CompressionUtils.Format.LZ4.decompressDirectory(in, newDir);
+    }
+
+    verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
+  }
+
+  @Test
+  public void testDecompressLz4() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testDecompressLz4");
+    final File lz4File = new File(tmpDir, testFile.getName() + ".lz4");
+    Assert.assertFalse(lz4File.exists());
+
+    try (
+        final OutputStream out = new LZ4BlockOutputStream(new FileOutputStream(lz4File));
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
+    }
+
+    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(lz4File), lz4File.getName())) {
+      assertGoodDataStream(inputStream);
+    }
+  }
+
+  @Test
   public void testGoodGZStream() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodGZStream");
@@ -551,8 +593,9 @@ public class CompressionUtilsTest
   }
 
   // If this ever passes, er... fails to fail... then the bug is fixed
-  @Test(expected = AssertionError.class)
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
+  @Test(expected = AssertionError.class)
+  @Ignore("This test fails in JDK 21, looks like the bug was fixed in 21.0.9 at least.")
   public void testGunzipBug() throws IOException
   {
     final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);

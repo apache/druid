@@ -24,8 +24,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -45,10 +45,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryResult;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
+import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -56,10 +56,10 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -166,20 +166,40 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
-      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
+      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
+      if (segmentReference == null) {
+        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
+      }
 
-      final Sequence<ResultRow> rowSequence =
-          groupingEngine.process(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
-              mappedSegment.as(TimeBoundaryInspector.class),
-              bufferPool,
-              null
-          );
+      final Segment segment = segmentReference.getSegmentReference().orElse(null);
+      if (segment == null) {
+        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
+      }
+
+      if (segmentHolder.getInputCounters() != null) {
+        final int rowCount = getSegmentRowCount(segmentReference);
+        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
+      }
+
+      final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
+
+      final Sequence<ResultRow> rowSequence;
+      if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
+        // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
+        rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));
+      } else {
+        // Resolve this query using a cursor.
+        rowSequence = groupingEngine.process(
+            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+            Objects.requireNonNull(segment.as(CursorFactory.class)),
+            tbi,
+            bufferPool,
+            null
+        );
+      }
 
       resultYielder = Yielders.each(rowSequence);
     }
@@ -203,9 +223,9 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       closeAndDiscardResultYielder();
 
       if (inputChannel.canRead()) {
-        final Frame frame = inputChannel.read();
+        final Frame frame = inputChannel.readFrame();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
-        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
+        final Segment mappedSegment = mapUnmanagedSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(
@@ -279,7 +299,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (frameWriter != null && frameWriter.getNumRows() > 0) {
       final Frame frame = Frame.wrap(frameWriter.toByteArray());
-      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      Iterables.getOnlyElement(outputChannels()).write(frame);
       frameWriter.close();
       frameWriter = null;
     }

@@ -77,6 +77,14 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageLoadThreads")
   private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
+  /**
+   * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
+   * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
+   * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
+   */
+  @JsonProperty("virtualStorageIsEphemeral")
+  private boolean virtualStorageIsEphemeral = false;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -154,13 +162,28 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
-  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  public boolean isVirtualStorageEphemeral()
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
-    return retVal;
+    return virtualStorageIsEphemeral;
+  }
+
+  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
+  {
+    this.locations = Lists.newArrayList(locations);
+    return this;
+  }
+
+  /**
+   * Sets {@link #virtualStorage} and {@link #virtualStorageIsEphemeral}.
+   */
+  public SegmentLoaderConfig setVirtualStorage(
+      boolean virtualStorage,
+      boolean virtualStorageFabricEphemeral
+  )
+  {
+    this.virtualStorage = virtualStorage;
+    this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
+    return this;
   }
 
   /**
@@ -193,8 +216,9 @@ public class SegmentLoaderConfig
            ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
            ", statusQueueMaxSize=" + statusQueueMaxSize +
-           ", useVirtualStorageFabric=" + virtualStorage +
-           ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorage=" + virtualStorage +
+           ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

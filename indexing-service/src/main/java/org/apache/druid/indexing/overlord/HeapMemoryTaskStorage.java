@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.error.EntryAlreadyExists;
@@ -43,6 +42,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -187,33 +187,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  public List<TaskInfo> getRecentlyCreatedAlreadyFinishedTaskInfo(CompleteTaskLookup taskLookup)
-  {
-    final Ordering<TaskInfo> createdDateDesc = new Ordering<TaskInfo>()
-    {
-      @Override
-      public int compare(TaskInfo a, TaskInfo b)
-      {
-        return a.getCreatedTime().compareTo(b.getCreatedTime());
-      }
-    }.reverse();
-
-    return getRecentlyCreatedAlreadyFinishedTaskInfoSince(
-        taskLookup.getTasksCreatedPriorTo(),
-        taskLookup.getMaxTaskStatuses(),
-        createdDateDesc
-    );
-  }
-
   /**
    * NOTE: This method is racy as it searches for complete tasks and active tasks separately outside a lock.
    * This method should be used only for testing.
    */
   @Override
-  public List<TaskInfo> getTaskInfos(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String datasource
-  )
+  public List<TaskInfo> getTaskInfos(Map<TaskLookupType, TaskLookup> taskLookups, @Nullable String datasource)
   {
     final List<TaskInfo> tasks = new ArrayList<>();
     final Map<TaskLookupType, TaskLookup> processedTaskLookups =
@@ -224,7 +203,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     processedTaskLookups.forEach((type, lookup) -> {
       if (type == TaskLookupType.COMPLETE) {
-        tasks.addAll(getRecentlyCreatedAlreadyFinishedTaskInfo((CompleteTaskLookup) lookup));
+        CompleteTaskLookup completed = (CompleteTaskLookup) lookup;
+        tasks.addAll(getCompletedTasksInfo(completed.getTasksCreatedPriorTo(), completed.getMaxTaskStatuses()));
       } else {
         tasks.addAll(getActiveTaskInfo(datasource));
       }
@@ -244,21 +224,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
                                                 .collect(Collectors.toList());
   }
 
-  private List<TaskInfo> getRecentlyCreatedAlreadyFinishedTaskInfoSince(
-      DateTime start,
-      @Nullable Integer n,
-      Ordering<TaskInfo> createdDateDesc
-  )
+  @Override
+  public List<TaskInfo> getCompletedTasksInfo(DateTime start, @Nullable Integer n)
   {
     Stream<TaskInfo> stream = tasks
         .values()
         .stream()
         .filter(taskInfo -> taskInfo.getStatus().isComplete() && taskInfo.getCreatedTime().isAfter(start))
-        .sorted(createdDateDesc);
+        .sorted(Comparator.comparing(TaskInfo::getCreatedTime).reversed());
     if (n != null) {
       stream = stream.limit(n);
     }
-    return stream.collect(Collectors.toUnmodifiableList());
+    return stream.toList();
   }
 
   @Override

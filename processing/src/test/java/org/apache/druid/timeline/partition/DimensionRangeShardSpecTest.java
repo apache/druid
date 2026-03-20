@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,15 +51,30 @@ public class DimensionRangeShardSpecTest
     setDimensions("dim1", "dim2");
 
     final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new DimensionRangeShardSpec(dimensions, null, StringTuple.create("India", "Delhi"), 1, 1),
         new DimensionRangeShardSpec(
             dimensions,
+            VirtualColumns.EMPTY,
+            null,
+            StringTuple.create("India", "Delhi"),
+            1,
+            1
+        ),
+        new DimensionRangeShardSpec(
+            dimensions,
+            VirtualColumns.EMPTY,
             StringTuple.create("India", "Delhi"),
             StringTuple.create("Spain", "Valencia"),
             2,
             1
         ),
-        new DimensionRangeShardSpec(dimensions, StringTuple.create("Spain", "Valencia"), null, 3, 1)
+        new DimensionRangeShardSpec(
+            dimensions,
+            VirtualColumns.EMPTY,
+            StringTuple.create("Spain", "Valencia"),
+            null,
+            3,
+            1
+        )
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
@@ -143,6 +159,7 @@ public class DimensionRangeShardSpecTest
 
     final DimensionRangeShardSpec shard0 = new DimensionRangeShardSpec(
         dimensions,
+        VirtualColumns.EMPTY,
         null,
         StringTuple.create("India", null),
         1,
@@ -151,6 +168,7 @@ public class DimensionRangeShardSpecTest
 
     final DimensionRangeShardSpec shard1 = new DimensionRangeShardSpec(
         dimensions,
+        VirtualColumns.EMPTY,
         StringTuple.create("India", null),
         StringTuple.create("Spain", "Valencia"),
         10,
@@ -159,6 +177,7 @@ public class DimensionRangeShardSpecTest
 
     final DimensionRangeShardSpec shard2 = new DimensionRangeShardSpec(
         dimensions,
+        VirtualColumns.EMPTY,
         StringTuple.create("Spain", "Valencia"),
         StringTuple.create("Tokyo", null),
         10,
@@ -167,6 +186,7 @@ public class DimensionRangeShardSpecTest
 
     final DimensionRangeShardSpec shard3 = new DimensionRangeShardSpec(
         dimensions,
+        VirtualColumns.EMPTY,
         StringTuple.create("Tokyo", null),
         null,
         100,
@@ -202,7 +222,7 @@ public class DimensionRangeShardSpecTest
     final RangeSet<String> universalSet = TreeRangeSet.create();
     universalSet.add(Range.all());
 
-    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
 
     // {Mars} * {Zoo, Zuu} * {Blah, Random}
@@ -265,7 +285,7 @@ public class DimensionRangeShardSpecTest
     final RangeSet<String> universalSet = TreeRangeSet.create();
     universalSet.add(Range.all());
 
-    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
 
     // (-INF, INF) * (-INF, INF) * (-INF, INF)
@@ -345,7 +365,7 @@ public class DimensionRangeShardSpecTest
     final RangeSet<String> universalSet = TreeRangeSet.create();
     universalSet.add(Range.all());
 
-    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
 
     // (-INF, INF) * (-INF, INF) * (-INF, INF)
@@ -442,7 +462,7 @@ public class DimensionRangeShardSpecTest
     final RangeSet<String> universalSet = TreeRangeSet.create();
     universalSet.add(Range.all());
 
-    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
 
     // (-INF, Earth) U (Earth, INF) * (-INF, INF) * (-INF, INF)
@@ -504,7 +524,7 @@ public class DimensionRangeShardSpecTest
     final RangeSet<String> universalSet = TreeRangeSet.create();
     universalSet.add(Range.all());
 
-    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
 
     // {Earth} U {Mars} * (USA, INF) * (-INF, INF)

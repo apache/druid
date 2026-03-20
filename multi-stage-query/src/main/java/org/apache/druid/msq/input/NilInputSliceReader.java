@@ -20,6 +20,7 @@
 package org.apache.druid.msq.input;
 
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 
 import java.util.Collections;
 import java.util.function.Consumer;
@@ -37,19 +38,13 @@ public class NilInputSliceReader implements InputSliceReader
   }
 
   @Override
-  public int numReadableInputs(InputSlice slice)
-  {
-    return 0;
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
       final Consumer<Throwable> warningPublisher
   )
   {
-    return ReadableInputs.segments(Collections.emptyList());
+    return new PhysicalInputSlice(ReadablePartitions.empty(), Collections.emptyList(), Collections.emptyList());
   }
 }

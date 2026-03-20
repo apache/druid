@@ -144,7 +144,9 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.partition",
+        "kafka.new.offset"
     );
   }
 
@@ -183,7 +185,9 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.partition",
+        "kafka.new.offset"
     );
     Assert.assertEquals(format, kif);
 
@@ -419,7 +423,8 @@ public class KafkaInputFormatTest
             false,
             false
         ),
-        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic."
+        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic.",
+        "kafka.new.partition", "kafka.new.offset"
     );
 
     final InputEntityReader reader = localFormat.createReader(
@@ -648,6 +653,7 @@ public class KafkaInputFormatTest
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
+                "kafka.new.partition",
                 "root_baz",
                 "o",
                 "bar",
@@ -656,6 +662,7 @@ public class KafkaInputFormatTest
                 "jq_omg",
                 "jq_omg2",
                 "baz",
+                "kafka.new.offset",
                 "root_baz2",
                 "kafka.newheader.encoding",
                 "path_omg2"
@@ -714,7 +721,9 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.partition",
+        "kafka.new.offset"
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -812,7 +821,9 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.partition",
+        "kafka.new.offset"
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -913,12 +924,14 @@ public class KafkaInputFormatTest
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
+                "kafka.new.partition",
                 "root_baz",
                 "o",
                 "path_omg",
                 "jq_omg",
                 "jq_omg2",
                 "baz",
+                "kafka.new.offset",
                 "root_baz2",
                 "kafka.newheader.encoding",
                 "path_omg2"

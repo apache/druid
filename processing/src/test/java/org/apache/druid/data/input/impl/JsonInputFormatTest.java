@@ -130,14 +130,14 @@ public class JsonInputFormatTest
   public void testEquals()
   {
     EqualsVerifier.forClass(JsonInputFormat.class)
-              .usingGetClass()
-              .withPrefabValues(
-              ObjectMapper.class,
-              new ObjectMapper(),
-              new ObjectMapper()
-              )
-              .withIgnoredFields("objectMapper")
-              .verify();
+                  .usingGetClass()
+                  .withPrefabValues(
+                      ObjectMapper.class,
+                      new ObjectMapper(),
+                      new ObjectMapper()
+                  )
+                  .withIgnoredFields("objectMapper")
+                  .verify();
   }
 
   @Test

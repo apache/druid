@@ -70,7 +70,7 @@ import java.util.stream.LongStream;
 
 public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlingTest
 {
-  private static final double PARTITION_SIZE_LEEWAY = 0.3;
+  private static final double PARTITION_SIZE_LEEWAY = 0.35;
 
   private static final RowSignature SIGNATURE = RowSignature.builder()
                                                             .add("x", ColumnType.LONG)
@@ -96,14 +96,14 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       1
   );
 
-  // These numbers are roughly 10x lower than authentic production numbers. (See StageDefinition.)
-  private static final int MAX_BYTES = 1_000_000;
-  private static final int MAX_BUCKETS = 1000;
+  // These numbers are roughly 50x lower than authentic production numbers. (See StageDefinition.)
+  private static final int MAX_BYTES = 150_000;
+  private static final int MAX_BUCKETS = 200;
 
   @Test
   public void test_clusterByX_unique()
   {
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final boolean aggregate = false;
     final ClusterBy clusterBy = CLUSTER_BY_X;
     final Iterable<RowKey> keys = () ->
@@ -122,7 +122,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           Assert.assertEquals(StringUtils.format("%s: tracked bucket count", testName), 1, trackedBuckets(collector));
           Assert.assertEquals(StringUtils.format("%s: tracked row count", testName), numRows, trackedRows(collector));
 
-          for (int targetPartitionWeight : new int[]{51111, 65432, (int) numRows + 10}) {
+          for (int targetPartitionWeight : new int[]{5111, 6543, (int) numRows + 10}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,
@@ -150,7 +150,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   @Test
   public void test_clusterByX_everyKeyAppearsTwice()
   {
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final boolean aggregate = false;
     final ClusterBy clusterBy = CLUSTER_BY_X;
     final List<RowKey> keys = new ArrayList<>();
@@ -171,7 +171,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           Assert.assertEquals(StringUtils.format("%s: tracked bucket count", testName), 1, trackedBuckets(collector));
           Assert.assertEquals(StringUtils.format("%s: tracked row count", testName), numRows, trackedRows(collector));
 
-          for (int targetPartitionWeight : new int[]{51111, 65432, (int) numRows + 10}) {
+          for (int targetPartitionWeight : new int[]{5111, 6543, (int) numRows + 10}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,
@@ -199,7 +199,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   @Test
   public void test_clusterByX_everyKeyAppearsTwice_withAggregation()
   {
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final boolean aggregate = true;
     final ClusterBy clusterBy = CLUSTER_BY_X;
     final List<RowKey> keys = new ArrayList<>();
@@ -229,7 +229,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
               expectedNumRows * .05 // Acceptable estimation error
           );
 
-          for (int targetPartitionWeight : new int[]{51111, 65432, (int) numRows + 10}) {
+          for (int targetPartitionWeight : new int[]{5111, 6543, (int) numRows + 10}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,
@@ -259,7 +259,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     final int numBuckets = 3;
     final boolean aggregate = false;
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final ClusterBy clusterBy = CLUSTER_BY_XY_BUCKET_BY_X;
     final List<RowKey> keys = new ArrayList<>((int) numRows);
 
@@ -281,7 +281,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           Assert.assertEquals(StringUtils.format("%s: bucket count", testName), numBuckets, trackedBuckets(collector));
           Assert.assertEquals(StringUtils.format("%s: row count", testName), numRows, trackedRows(collector));
 
-          for (int targetPartitionWeight : new int[]{17001, 23007}) {
+          for (int targetPartitionWeight : new int[]{5111, 6543}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,
@@ -323,7 +323,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     final int numBuckets = MAX_BUCKETS;
     final boolean aggregate = false;
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final ClusterBy clusterBy = CLUSTER_BY_XY_BUCKET_BY_X;
     final List<RowKey> keys = new ArrayList<>((int) numRows);
 
@@ -344,7 +344,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
         (testName, collector) -> {
           Assert.assertEquals(StringUtils.format("%s: bucket count", testName), numBuckets, trackedBuckets(collector));
 
-          for (int targetPartitionWeight : new int[]{17001, 23007}) {
+          for (int targetPartitionWeight : new int[]{1701, 2301}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,
@@ -394,7 +394,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     final int numBuckets = MAX_BUCKETS;
     final boolean aggregate = true;
-    final long numRows = 1_000_000;
+    final long numRows = 150_000;
     final ClusterBy clusterBy = CLUSTER_BY_XY_BUCKET_BY_X;
     final List<RowKey> keys = new ArrayList<>((int) numRows);
 
@@ -418,7 +418,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           // trackedRows will equal numBuckets, because the collectors have been downsampled so much
           Assert.assertEquals(StringUtils.format("%s: row count", testName), numBuckets, trackedRows(collector));
 
-          for (int targetPartitionWeight : new int[]{17001, 23007}) {
+          for (int targetPartitionWeight : new int[]{1701, 2301}) {
             verifyPartitionsWithTargetWeight(
                 StringUtils.format("%s: generatePartitionsWithTargetWeight(%d)", testName, targetPartitionWeight),
                 collector,

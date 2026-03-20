@@ -303,6 +303,297 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
+## Broker dynamic configuration
+
+Broker dynamic configuration is managed through the Coordinator but consumed by Brokers.
+These settings control broker behavior such as query blocking rules.
+
+### Get broker dynamic configuration
+
+Retrieves the current Broker dynamic configuration. Returns a JSON object with the dynamic configuration properties.
+
+#### URL
+
+`GET` `/druid/coordinator/v1/broker/config`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="25" label="200 SUCCESS">
+
+
+*Successfully retrieved broker dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="26" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config"
+```
+
+</TabItem>
+<TabItem value="27" label="HTTP">
+
+
+```HTTP
+GET /druid/coordinator/v1/broker/config HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+{
+  "queryBlocklist": [
+    {
+      "ruleName": "block-expensive-scans",
+      "dataSources": ["large_table"],
+      "queryTypes": ["scan"]
+    }
+  ]
+}
+```
+
+</details>
+
+### Update broker dynamic configuration
+
+Updates the Broker dynamic configuration.
+
+#### URL
+
+`POST` `/druid/coordinator/v1/broker/config`
+
+#### Header parameters
+
+The endpoint supports a set of optional header parameters to populate the audit log information.
+
+* `X-Druid-Author`
+  * Type: String
+  * Author making the config change.
+
+* `X-Druid-Comment`
+  * Type: String
+  * Comment describing the change.
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="28" label="200 SUCCESS">
+
+
+*Successfully updated configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="29" label="cURL">
+
+
+```shell
+curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
+-H "Content-Type: application/json" \
+-H "X-Druid-Author: admin" \
+-H "X-Druid-Comment: Add query blocklist rules" \
+-d '{
+  "queryBlocklist": [
+    {
+      "ruleName": "block-expensive-scans",
+      "dataSources": ["large_table", "huge_dataset"],
+      "queryTypes": ["scan"]
+    },
+    {
+      "ruleName": "block-debug-queries",
+      "contextMatches": {
+        "debug": "true"
+      }
+    }
+  ]
+}'
+```
+
+</TabItem>
+<TabItem value="30" label="HTTP">
+
+
+```HTTP
+POST /druid/coordinator/v1/broker/config HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+X-Druid-Author: admin
+X-Druid-Comment: Add query blocklist rules
+
+{
+  "queryBlocklist": [
+    {
+      "ruleName": "block-expensive-scans",
+      "dataSources": ["large_table", "huge_dataset"],
+      "queryTypes": ["scan"]
+    },
+    {
+      "ruleName": "block-debug-queries",
+      "contextMatches": {
+        "debug": "true"
+      }
+    }
+  ]
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` message code and an empty response body.
+
+### Broker dynamic configuration properties
+
+The following table shows the dynamic configuration properties for the Broker.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
+
+#### Query blocklist rules
+
+Query blocklist rules allow you to block specific queries based on datasource, query type, and/or query context parameters. This feature is useful for preventing expensive or problematic queries from impacting cluster performance.
+
+Each rule in the `queryBlocklist` array is a JSON object with the following properties:
+
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
+|`ruleName`|Unique name identifying this blocklist rule. Used in error messages when queries are blocked.|Yes|N/A|
+|`dataSources`|List of datasource names to match. A query matches if it references any datasource in this list.|No|Matches all datasources|
+|`queryTypes`|List of query types to match (e.g., `scan`, `timeseries`, `groupBy`, `topN`). A query matches if its type is in this list.|No|Matches all query types|
+|`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
+
+**Rule matching behavior:**
+
+- A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
+- If any criterion is omitted, empty or null, it matches everything (e.g., omitting `queryTypes` or setting it to null matches all query types)
+- For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
+- At least one criterion must be specified per rule to prevent accidentally blocking all queries
+- A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
+
+> **Note:** Query blocking is best-effort. Queries may not be blocked in certain cases, such as when a Broker has recently started and hasn't received the config yet, or if the Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every 1 minute) and also receive push updates from the Coordinator for immediate propagation.
+
+**Error response:**
+
+When a query is blocked, the Broker returns an HTTP 403 error with a message indicating the query ID and the rule that blocked it:
+
+```json
+{
+  "error": "Forbidden",
+  "errorMessage": "Query[abc-123-def] blocked by rule[block-expensive-scans]",
+  "persona": "USER",
+  "category": "FORBIDDEN"
+}
+```
+
+### Get broker dynamic configuration history
+
+Retrieves the history of changes to Broker dynamic configuration over an interval of time. Returns an empty array if there are no history records available.
+
+#### URL
+
+`GET` `/druid/coordinator/v1/broker/config/history`
+
+#### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results.
+
+* `interval`
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Coordinator.
+
+* `count`
+  * Type: Integer
+  * Limit the number of results to the last `n` entries.
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="31" label="200 SUCCESS">
+
+
+*Successfully retrieved history*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="32" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config/history?count=10"
+```
+
+</TabItem>
+<TabItem value="33" label="HTTP">
+
+
+```HTTP
+GET /druid/coordinator/v1/broker/config/history?count=10 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+[
+  {
+    "key": "broker.config",
+    "type": "broker.config",
+    "auditInfo": {
+      "author": "admin",
+      "comment": "Add query blocklist rules",
+      "ip": "127.0.0.1"
+    },
+    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}]}",
+    "auditTime": "2024-03-06T12:00:00.000Z"
+  }
+]
+```
+
+</details>
+
 ## Overlord dynamic configuration
 
 The Overlord has dynamic configurations to tune how Druid assigns tasks to workers.

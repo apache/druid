@@ -84,7 +84,7 @@ public class OvershadowableManagerTest
     // standby chunk
     manager.addChunk(newNonRootChunk(2, 4, 1, 3));
 
-    OvershadowableManager<OvershadowableInteger> copy = OvershadowableManager.copyVisible(manager);
+    OvershadowableManager<OvershadowableInteger> copy = manager.copyVisible();
     Assert.assertTrue(copy.getOvershadowedChunks().isEmpty());
     Assert.assertTrue(copy.getStandbyChunks().isEmpty());
     Assert.assertEquals(
@@ -112,7 +112,7 @@ public class OvershadowableManagerTest
     // standby chunk
     manager.addChunk(newNonRootChunk(2, 4, 1, 3));
 
-    OvershadowableManager<OvershadowableInteger> copy = OvershadowableManager.deepCopy(manager);
+    OvershadowableManager<OvershadowableInteger> copy = manager.deepCopy();
     Assert.assertEquals(manager, copy);
   }
 
@@ -223,14 +223,14 @@ public class OvershadowableManagerTest
     PartitionChunk<OvershadowableInteger> chunk = newRootChunk();
     Assert.assertTrue(addVisibleToManager(chunk));
     assertManagerState();
-    Assert.assertTrue(manager.isComplete());
+    Assert.assertTrue(manager.areVisibleChunksConsistent());
     // Add a duplicate
     Assert.assertFalse(manager.addChunk(chunk));
     // Add a new one
     chunk = newRootChunk();
     Assert.assertTrue(addVisibleToManager(chunk));
     assertManagerState();
-    Assert.assertTrue(manager.isComplete());
+    Assert.assertTrue(manager.areVisibleChunksConsistent());
   }
 
   @Test
@@ -241,17 +241,17 @@ public class OvershadowableManagerTest
     PartitionChunk<OvershadowableInteger> chunk = newNonRootChunk(10, 12, 1, 3);
     Assert.assertTrue(addVisibleToManager(chunk));
     assertManagerState();
-    Assert.assertFalse(manager.isComplete());
+    Assert.assertFalse(manager.areVisibleChunksConsistent());
     // Add a new one, atomicUpdateGroup is still not full
     chunk = newNonRootChunk(10, 12, 1, 3);
     Assert.assertTrue(addVisibleToManager(chunk));
     assertManagerState();
-    Assert.assertFalse(manager.isComplete());
+    Assert.assertFalse(manager.areVisibleChunksConsistent());
     // Add a new one, now atomicUpdateGroup is full
     chunk = newNonRootChunk(10, 12, 1, 3);
     Assert.assertTrue(addVisibleToManager(chunk));
     assertManagerState();
-    Assert.assertTrue(manager.isComplete());
+    Assert.assertTrue(manager.areVisibleChunksConsistent());
 
     // Add a new one to the full group
     expectedException.expect(IllegalStateException.class);

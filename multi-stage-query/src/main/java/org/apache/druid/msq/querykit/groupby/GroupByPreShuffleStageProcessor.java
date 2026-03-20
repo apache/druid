@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -28,15 +29,27 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonTypeName("groupByPreShuffle")
 public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
 {
   private final GroupByQuery query;
+
+  @JacksonInject
+  @Nullable
+  private GroupingEngine groupingEngine;
 
   @JsonCreator
   public GroupByPreShuffleStageProcessor(@JsonProperty("query") GroupByQuery query)
@@ -62,13 +75,70 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
   {
     return new GroupByPreShuffleFrameProcessor(
         query,
-        frameContext.groupingEngine(),
+        groupingEngine,
         frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  protected List<PhysicalInputSlice> filterBaseInput(final List<PhysicalInputSlice> slices)
+  {
+    if (!GroupByTimeBoundaryUtils.isTimeBoundaryQuery(query)) {
+      return slices;
+    }
+
+    // This is a time-boundary style query (see GroupByTimeBoundaryUtils.isTimeBoundaryQuery).
+    // This means we can look at just the earliest (for min) and latest (for max) segments,
+    // ignoring the ones in the middle.
+    final boolean needsMin = GroupByTimeBoundaryUtils.needsMinTime(query);
+    final boolean needsMax = GroupByTimeBoundaryUtils.needsMaxTime(query);
+
+    final List<PhysicalInputSlice> filteredSlices = new ArrayList<>(slices.size());
+
+    for (final PhysicalInputSlice slice : slices) {
+      final List<LoadableSegment> segments = slice.getLoadableSegments();
+
+      if (segments.size() <= 1) {
+        filteredSlices.add(slice);
+        continue;
+      }
+
+      // Find the earliest and latest intervals by start time.
+      Interval minInterval = null;
+      Interval maxInterval = null;
+
+      for (final LoadableSegment segment : segments) {
+        final Interval interval = segment.descriptor().getInterval();
+        if (needsMin) {
+          if (minInterval == null || interval.getStart().isBefore(minInterval.getStart())) {
+            minInterval = interval;
+          }
+        }
+        if (needsMax) {
+          if (maxInterval == null || interval.getEnd().isAfter(maxInterval.getEnd())) {
+            maxInterval = interval;
+          }
+        }
+      }
+
+      // Keep only segments whose interval overlaps with the earliest or latest interval.
+      final List<LoadableSegment> kept = new ArrayList<>();
+      for (final LoadableSegment segment : segments) {
+        final Interval segmentInterval = segment.descriptor().getInterval();
+        if ((minInterval != null && segmentInterval.overlaps(minInterval))
+            || (maxInterval != null && segmentInterval.overlaps(maxInterval))) {
+          kept.add(segment);
+        }
+      }
+
+      filteredSlices.add(new PhysicalInputSlice(slice.getReadablePartitions(), kept, slice.getQueryableServers()));
+    }
+
+    return filteredSlices;
   }
 
   @Override

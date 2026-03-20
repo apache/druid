@@ -30,6 +30,7 @@ import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -47,6 +49,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
@@ -63,16 +66,29 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -142,7 +158,7 @@ public class MSQCompactionRunner implements CompactionRunner
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalToDataSchemaMap
+      Map<QuerySegmentSpec, DataSchema> intervalToDataSchemaMap
   )
   {
     if (intervalToDataSchemaMap.size() > 1) {
@@ -160,7 +176,10 @@ public class MSQCompactionRunner implements CompactionRunner
       validationResults.add(
           ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
               compactionTask.getTuningConfig().getPartitionsSpec(),
-              dataSchema.getDimensionsSpec().getDimensions()
+              dataSchema.getDimensionsSpec().getDimensions(),
+              compactionTask.getTransformSpec() == null
+              ? VirtualColumns.EMPTY
+              : compactionTask.getTransformSpec().getVirtualColumns()
           )
       );
       validationResults.add(
@@ -223,11 +242,11 @@ public class MSQCompactionRunner implements CompactionRunner
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemas,
+      Map<QuerySegmentSpec, DataSchema> inputSchemas,
       TaskToolbox taskToolbox
   ) throws Exception
   {
-    List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, intervalDataSchemas);
+    List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, inputSchemas);
 
     if (msqControllerTasks.isEmpty()) {
       String msg = StringUtils.format(
@@ -246,23 +265,26 @@ public class MSQCompactionRunner implements CompactionRunner
 
   public List<MSQControllerTask> createMsqControllerTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemas
+      Map<QuerySegmentSpec, DataSchema> inputSchemas
   ) throws JsonProcessingException
   {
     final List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
 
-    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalDataSchemas.entrySet()) {
+    for (Map.Entry<QuerySegmentSpec, DataSchema> inputSchema : inputSchemas.entrySet()) {
       Query<?> query;
-      Interval interval = intervalDataSchema.getKey();
-      DataSchema dataSchema = intervalDataSchema.getValue();
-      Map<String, VirtualColumn> inputColToVirtualCol = getVirtualColumns(dataSchema, interval);
+      QuerySegmentSpec segmentSpec = inputSchema.getKey();
+      DataSchema dataSchema = inputSchema.getValue();
+      Map<String, VirtualColumn> inputColToVirtualCol =
+          getVirtualColumns(dataSchema, JodaUtils.umbrellaInterval(segmentSpec.getIntervals()), compactionTask.getTransformSpec());
 
       if (isGroupBy(dataSchema)) {
-        query = buildGroupByQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
+        query = buildGroupByQuery(compactionTask, segmentSpec, dataSchema, inputColToVirtualCol);
       } else {
-        query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
+        query = buildScanQuery(compactionTask, segmentSpec, dataSchema, inputColToVirtualCol);
       }
+
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
       DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
@@ -327,7 +349,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
     // value specified by user.
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getMaxRowsInMemory(compactionTaskContext);
     final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(compactionTaskContext);
 
     Integer rowsPerSegment = getRowsPerSegment(compactionTask);
@@ -370,37 +392,97 @@ public class MSQCompactionRunner implements CompactionRunner
     return rowSignatureBuilder.build();
   }
 
+  /**
+   * Creates a {@link DataSource} and uses 'system' {@link AuthorizationResult} using an {@link Escalator} and
+   * {@link AuthorizerMapper} and applies any resulting {@link org.apache.druid.query.policy.Policy} to it using
+   * {@link DataSource#withPolicies(Map, PolicyEnforcer)}
+   */
+  private DataSource getInputDataSource(String name)
+  {
+    TableDataSource dataSource = new TableDataSource(name);
+    final Escalator escalator = injector.getInstance(Escalator.class);
+    if (escalator != null) {
+      final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+      final PolicyEnforcer policyEnforcer = injector.getInstance(PolicyEnforcer.class);
+      final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+          escalator.createEscalatedAuthenticationResult(),
+          List.of(new ResourceAction(new Resource(name, ResourceType.DATASOURCE), Action.READ)),
+          authorizerMapper
+      );
+      return dataSource.withPolicies(authResult.getPolicyMap(), policyEnforcer);
+    }
+    return dataSource;
+  }
+
   private static List<DimensionSpec> getAggregateDimensions(
       DataSchema dataSchema,
-      Map<String, VirtualColumn> inputColToVirtualCol
+      Map<String, VirtualColumn> inputColToVirtualCol,
+      List<OrderByColumnSpec> orderBy
   )
   {
-    List<DimensionSpec> dimensionSpecs = new ArrayList<>();
+    List<DimensionSpec> dimensions = new ArrayList<>();
 
-    if (isQueryGranularityEmptyOrNone(dataSchema)) {
-      // Dimensions in group-by aren't allowed to have time column name as the output name.
-      dimensionSpecs.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
-    } else {
-      // The changed granularity would result in a new virtual column that needs to be aggregated upon.
-      dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+    // build a RowSignature of non-virtual column dimensions of the dataschema to use to resolve virtual column types
+    RowSignature.Builder baseBuilder = RowSignature.builder().addTimeColumn();
+    for (DimensionSchema schema : dataSchema.getDimensionsSpec().getDimensions()) {
+      if (inputColToVirtualCol.containsKey(schema.getName())) {
+        continue;
+      }
+      baseBuilder.add(schema.getName(), schema.getColumnType());
     }
-    // If virtual columns are created from dimensions, replace dimension columns names with virtual column names.
-    dimensionSpecs.addAll(
-        dataSchema.getDimensionsSpec().getDimensions().stream()
-                  .map(dim -> {
-                    String dimension = dim.getName();
-                    ColumnType colType = dim.getColumnType();
-                    if (inputColToVirtualCol.containsKey(dim.getName())) {
-                      VirtualColumn virtualColumn = inputColToVirtualCol.get(dimension);
-                      dimension = virtualColumn.getOutputName();
-                      if (virtualColumn instanceof ExpressionVirtualColumn) {
-                        colType = ((ExpressionVirtualColumn) virtualColumn).getOutputType();
-                      }
-                    }
-                    return new DefaultDimensionSpec(dimension, dimension, colType);
-                  })
-                  .collect(Collectors.toList()));
-    return dimensionSpecs;
+    final RowSignature baseSignature = baseBuilder.build();
+    // and virtualized inspector from base signature
+    final ColumnInspector inspector = new VirtualizedColumnInspector(
+        baseSignature,
+        VirtualColumns.create(inputColToVirtualCol.values())
+    );
+
+    // if schema is not time-sorted, the time column will be in the dimensions list, otherwise add time dimension first
+    if (dataSchema.getDimensionsSpec().getSchema(ColumnHolder.TIME_COLUMN_NAME) == null) {
+      if (isQueryGranularityEmptyOrNone(dataSchema)) {
+        // Dimensions in group-by aren't allowed to have time column name as the output name.
+        dimensions.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+      } else {
+        // The changed granularity would result in a new virtual column that needs to be aggregated upon.
+        dimensions.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+      }
+    }
+
+    // If dimensions point to virtual columns, replace dimension columns names with virtual column names.
+    for (DimensionSchema schema : dataSchema.getDimensionsSpec().getDimensions()) {
+      String dimension = schema.getName();
+      ColumnType colType = schema.getColumnType();
+      VirtualColumn vc = inputColToVirtualCol.get(dimension);
+      if (vc != null) {
+        dimension = vc.getOutputName();
+        if (vc instanceof ExpressionVirtualColumn) {
+          colType = ((ExpressionVirtualColumn) vc).getOutputType();
+        } else {
+          colType = ColumnType.fromCapabilities(vc.capabilities(inspector, vc.getOutputName()));
+        }
+      }
+      dimensions.add(new DefaultDimensionSpec(dimension, dimension, colType));
+    }
+
+    // if any orderby columns refer to a virtual column that was not explicitly a dimension, add it to the list
+    // this is not really optimal, but it works without requiring any conversion between virtualcolumns and
+    // postaggregators which doesn't really exist here
+    for (OrderByColumnSpec order : orderBy) {
+      if (dataSchema.getDimensionsSpec().getSchema(order.getDimension()) != null) {
+        continue;
+      }
+      VirtualColumn vc = inputColToVirtualCol.get(order.getDimension());
+      if (vc != null) {
+        dimensions.add(
+            new DefaultDimensionSpec(
+                vc.getOutputName(),
+                order.getDimension(),
+                ColumnType.fromCapabilities(vc.capabilities(baseSignature, vc.getOutputName()))
+            )
+        );
+      }
+    }
+    return dimensions;
   }
 
   private static ColumnMappings getColumnMappings(DataSchema dataSchema)
@@ -425,11 +507,13 @@ public class MSQCompactionRunner implements CompactionRunner
                   .map(dim -> dim.getName().equals(ColumnHolder.TIME_COLUMN_NAME)
                               ? timeColumnMapping
                               : new ColumnMapping(dim.getName(), dim.getName()))
-                  .collect(Collectors.toList())
+                  .toList()
     );
-    columnMappings.addAll(Arrays.stream(dataSchema.getAggregators())
-                                .map(agg -> new ColumnMapping(agg.getName(), agg.getName()))
-                                .collect(Collectors.toList()));
+    columnMappings.addAll(
+        Arrays.stream(dataSchema.getAggregators())
+              .map(agg -> new ColumnMapping(agg.getName(), agg.getName()))
+              .toList()
+    );
     return new ColumnMappings(columnMappings);
   }
 
@@ -457,38 +541,51 @@ public class MSQCompactionRunner implements CompactionRunner
     return queryContext;
   }
 
-  private static Query<?> buildScanQuery(
+  private Query<?> buildScanQuery(
       CompactionTask compactionTask,
-      Interval interval,
+      QuerySegmentSpec segmentSpec,
       DataSchema dataSchema,
       Map<String, VirtualColumn> inputColToVirtualCol
   )
   {
-    RowSignature rowSignature = getRowSignature(dataSchema);
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
-    Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
-        .dataSource(dataSchema.getDataSource())
-        .columns(rowSignature.getColumnNames())
-        .virtualColumns(virtualColumns)
-        .columnTypes(rowSignature.getColumnTypes())
-        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
-        .filters(dataSchema.getTransformSpec().getFilter())
-        .context(buildQueryContext(compactionTask.getContext(), dataSchema));
+    RowSignature baseRowSignature = getRowSignature(dataSchema);
+    final List<String> columns = new ArrayList<>(baseRowSignature.getColumnNames());
+    final List<OrderBy> orderBys;
 
+    RowSignature.Builder rowSignatureWithOrderByBuilder = RowSignature.builder().addAll(baseRowSignature);
+
+    // when clustering by a virtual column, we might need to add the virtual column to columns list and row signature
     if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
       List<OrderByColumnSpec> orderByColumnSpecs = getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec());
+      orderBys = new ArrayList<>();
+      for (OrderByColumnSpec spec : orderByColumnSpecs) {
+        orderBys.add(new OrderBy(spec.getDimension(), Order.fromString(spec.getDirection().toString())));
 
-      scanQueryBuilder.orderBy(
-          orderByColumnSpecs
-              .stream()
-              .map(orderByColumnSpec ->
-                       new OrderBy(
-                           orderByColumnSpec.getDimension(),
-                           Order.fromString(orderByColumnSpec.getDirection().toString())
-                       ))
-              .collect(Collectors.toList())
-      );
+        final VirtualColumn vc = inputColToVirtualCol.get(spec.getDimension());
+        if (vc != null) {
+          columns.add(spec.getDimension());
+          final ColumnCapabilities capabilities = vc.capabilities(baseRowSignature, vc.getOutputName());
+          DruidException.conditionalDefensive(
+              capabilities != null,
+              "virtual column[%s] has null capabilities, cannot determine output type",
+              vc.getOutputName()
+          );
+          rowSignatureWithOrderByBuilder.add(spec.getDimension(), capabilities.toColumnType());
+        }
+      }
+    } else {
+      orderBys = null;
     }
+
+    Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
+        .dataSource(getInputDataSource(dataSchema.getDataSource()))
+        .intervals(segmentSpec)
+        .filters(dataSchema.getTransformSpec().getFilter())
+        .virtualColumns(VirtualColumns.create(inputColToVirtualCol.values()))
+        .columns(columns)
+        .columnTypes(rowSignatureWithOrderByBuilder.build().getColumnTypes())
+        .orderBy(orderBys)
+        .context(buildQueryContext(compactionTask.getContext(), dataSchema));
     return scanQueryBuilder.build();
   }
 
@@ -524,7 +621,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * grouping on them without unnesting.</li>
    * </ul>
    */
-  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
+  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval, CompactionTransformSpec compactionTransformSpec)
   {
     Map<String, VirtualColumn> inputColToVirtualCol = new HashMap<>();
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
@@ -585,26 +682,32 @@ public class MSQCompactionRunner implements CompactionRunner
         );
       }
     }
+
+    if (compactionTransformSpec != null && compactionTransformSpec.getVirtualColumns() != null) {
+      for (VirtualColumn vc : compactionTransformSpec.getVirtualColumns().getVirtualColumns()) {
+        inputColToVirtualCol.put(vc.getOutputName(), vc);
+      }
+    }
+
     return inputColToVirtualCol;
   }
 
   private Query<?> buildGroupByQuery(
       CompactionTask compactionTask,
-      Interval interval,
+      QuerySegmentSpec segmentSpec,
       DataSchema dataSchema,
       Map<String, VirtualColumn> inputColToVirtualCol
   )
   {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
-
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
+    VirtualColumns virtualColumns = VirtualColumns.create(inputColToVirtualCol.values());
 
     // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
     // This is safe since input column names no longer exist at post-aggregation stage.
     List<PostAggregator> postAggregators =
         inputColToVirtualCol.entrySet()
                             .stream()
-                            .filter(entry -> !entry.getKey().equals(ColumnHolder.TIME_COLUMN_NAME))
+                            .filter(entry -> entry.getValue().getOutputName().startsWith(ARRAY_VIRTUAL_COLUMN_PREFIX))
                             .map(
                                 entry ->
                                     new ExpressionPostAggregator(
@@ -617,20 +720,25 @@ public class MSQCompactionRunner implements CompactionRunner
                             )
                             .collect(Collectors.toList());
 
-    GroupByQuery.Builder builder = new GroupByQuery.Builder()
-        .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(virtualColumns)
-        .setDimFilter(dimFilter)
-        .setGranularity(new AllGranularity())
-        .setDimensions(getAggregateDimensions(dataSchema, inputColToVirtualCol))
-        .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
-        .setPostAggregatorSpecs(postAggregators)
-        .setContext(buildQueryContext(compactionTask.getContext(), dataSchema))
-        .setInterval(interval);
-
+    final List<OrderByColumnSpec> orderBy;
     if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
-      getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec()).forEach(builder::addOrderByColumn);
+      orderBy = getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec());
+    } else {
+      orderBy = List.of();
     }
+
+    GroupByQuery.Builder builder = new GroupByQuery.Builder()
+        .setDataSource(getInputDataSource(compactionTask.getDataSource()))
+        .setQuerySegmentSpec(segmentSpec)
+        .setGranularity(new AllGranularity())
+        .setDimFilter(dimFilter)
+        .setVirtualColumns(virtualColumns)
+        .setDimensions(getAggregateDimensions(dataSchema, inputColToVirtualCol, orderBy))
+        .setAggregatorSpecs(dataSchema.getAggregators())
+        .setPostAggregatorSpecs(postAggregators)
+        .setOrderByColumns(orderBy)
+        .setContext(buildQueryContext(compactionTask.getContext(), dataSchema));
+
     return builder.build();
   }
 
@@ -683,40 +791,57 @@ public class MSQCompactionRunner implements CompactionRunner
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] MSQControllerTask specs", totalNumSpecs);
 
+    TaskStatus firstFailure = null;
     int failCnt = 0;
 
-    for (MSQControllerTask eachTask : tasks) {
-      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachTask);
-      if (!currentSubTaskHolder.setTask(eachTask)) {
+    for (int taskCnt = 0; taskCnt < tasks.size(); taskCnt++) {
+      final MSQControllerTask task = tasks.get(taskCnt);
+      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task);
+      if (!currentSubTaskHolder.setTask(task)) {
         String errMsg = "Task was asked to stop. Finish as failed.";
-        log.info(errMsg);
+        log.info("%s", errMsg);
         return TaskStatus.failure(compactionTaskId, errMsg);
       }
       try {
-        if (eachTask.isReady(toolbox.getTaskActionClient())) {
-          log.info("Running MSQControllerTask: " + json);
-          final TaskStatus eachResult = eachTask.run(toolbox);
-          if (!eachResult.isSuccess()) {
+        if (task.isReady(toolbox.getTaskActionClient())) {
+          log.info("Running MSQControllerTask number[%d]: %s", taskCnt, json);
+          final TaskStatus taskStatus = task.run(toolbox);
+          if (!taskStatus.isSuccess()) {
             failCnt++;
-            log.warn("Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+            log.warn("Failed to run MSQControllerTask number[%d]: %s", taskCnt, taskStatus.getErrorMsg());
+            if (firstFailure == null) {
+              firstFailure = taskStatus;
+            }
           }
         } else {
           failCnt++;
-          log.warn("MSQControllerTask is not ready: [%s].\nTrying the next MSQControllerTask.", json);
+          log.warn("MSQControllerTask number[%d] is not ready.", taskCnt);
         }
       }
       catch (Exception e) {
         failCnt++;
-        log.warn(e, "Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+        log.warn(e, "Failed to run MSQControllerTask number[%d].", taskCnt);
       }
     }
-    String msg = StringUtils.format(
+
+    log.info(
         "Ran [%d] MSQControllerTasks, [%d] succeeded, [%d] failed",
         totalNumSpecs,
         totalNumSpecs - failCnt,
         failCnt
     );
-    log.info(msg);
-    return failCnt == 0 ? TaskStatus.success(compactionTaskId) : TaskStatus.failure(compactionTaskId, msg);
+
+    if (failCnt == 0) {
+      return TaskStatus.success(compactionTaskId);
+    } else if (firstFailure != null && failCnt == 1) {
+      return TaskStatus.failure(compactionTaskId, firstFailure.getErrorMsg());
+    } else {
+      final StringBuilder msgBuilder =
+          new StringBuilder().append(failCnt).append("/").append(totalNumSpecs).append(" jobs failed");
+      if (firstFailure != null) {
+        msgBuilder.append("; first failure was: ").append(firstFailure.getErrorMsg());
+      }
+      return TaskStatus.failure(compactionTaskId, msgBuilder.toString());
+    }
   }
 }

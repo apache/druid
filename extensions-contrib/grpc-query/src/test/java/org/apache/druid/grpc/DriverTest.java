@@ -27,6 +27,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.grpc.server.QueryDriver;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -58,7 +59,8 @@ public class DriverTest extends BaseCalciteQueryTest
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
         Map.of(),
-        sqlTestFramework.queryLifecycleFactory()
+        sqlTestFramework.queryLifecycleFactory(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 

@@ -19,9 +19,8 @@
 
 package org.apache.druid.discovery;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,7 +29,7 @@ import org.junit.Test;
  */
 public class DataNodeServiceTest
 {
-  private final ObjectMapper mapper = DruidServiceTestUtils.newJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws Exception
@@ -38,6 +37,7 @@ public class DataNodeServiceTest
     DruidService expected = new DataNodeService(
         "tier",
         100,
+        50L,
         ServerType.HISTORICAL,
         1
     );
@@ -48,100 +48,5 @@ public class DataNodeServiceTest
     );
 
     Assert.assertEquals(expected, actual);
-  }
-
-  @Test
-  public void testDeserializeWithDeprecatedServerTypeProperty() throws Exception
-  {
-    String json = "{\n"
-                  + "  \"type\" : \"dataNodeService\",\n"
-                  + "  \"tier\" : \"tier\",\n"
-                  + "  \"maxSize\" : 100,\n"
-                  + "  \"type\" : \"historical\",\n"
-                  + "  \"priority\" : 1\n"
-                  + "}";
-
-    DruidService actual = mapper.readValue(
-        json,
-        DruidService.class
-    );
-
-    Assert.assertEquals(
-        new DataNodeService(
-            "tier",
-            100,
-            ServerType.HISTORICAL,
-            1
-        ),
-        actual
-    );
-  }
-
-  @Test
-  public void testDeserializeWithServerTypeProperty() throws Exception
-  {
-    String json = "{\n"
-                  + "  \"type\" : \"dataNodeService\",\n"
-                  + "  \"tier\" : \"tier\",\n"
-                  + "  \"maxSize\" : 100,\n"
-                  + "  \"serverType\" : \"historical\",\n"
-                  + "  \"priority\" : 1\n"
-                  + "}";
-
-    DruidService actual = mapper.readValue(
-        json,
-        DruidService.class
-    );
-
-    Assert.assertEquals(
-        new DataNodeService(
-            "tier",
-            100,
-            ServerType.HISTORICAL,
-            1
-        ),
-        actual
-    );
-  }
-
-  @Test
-  public void testSerdeDeserializeWithBothDeprecatedAndNewServerTypes() throws Exception
-  {
-    String json = "{\n"
-                  + "  \"type\" : \"dataNodeService\",\n"
-                  + "  \"tier\" : \"tier\",\n"
-                  + "  \"maxSize\" : 100,\n"
-                  + "  \"type\" : \"historical\",\n"
-                  + "  \"serverType\" : \"historical\",\n"
-                  + "  \"priority\" : 1\n"
-                  + "}";
-
-    DruidService actual = mapper.readValue(
-        json,
-        DruidService.class
-    );
-
-    Assert.assertEquals(
-        new DataNodeService(
-            "tier",
-            100,
-            ServerType.HISTORICAL,
-            1
-        ),
-        actual
-    );
-  }
-
-  @Test
-  public void testSerializeSubtypeKeyShouldAppearFirstInJson() throws JsonProcessingException
-  {
-    final DataNodeService dataNodeService = new DataNodeService(
-        "tier",
-        100,
-        ServerType.HISTORICAL,
-        1
-    );
-    final String json = mapper.writeValueAsString(dataNodeService);
-    Assert.assertTrue(json.startsWith(StringUtils.format("{\"type\":\"%s\"", DataNodeService.DISCOVERY_SERVICE_KEY)));
   }
 }

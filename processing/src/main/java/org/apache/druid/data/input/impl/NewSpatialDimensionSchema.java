@@ -70,6 +70,12 @@ public class NewSpatialDimensionSchema extends DimensionSchema
   }
 
   @Override
+  public boolean canBeMultiValued()
+  {
+    return true;
+  }
+
+  @Override
   public DimensionHandler getDimensionHandler()
   {
     return new StringDimensionHandler(getName(), getMultiValueHandling(), hasBitmapIndex(), true);

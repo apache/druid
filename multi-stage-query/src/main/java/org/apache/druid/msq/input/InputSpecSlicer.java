@@ -19,6 +19,9 @@
 
 package org.apache.druid.msq.input;
 
+import org.apache.druid.query.filter.SegmentPruner;
+
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -28,7 +31,7 @@ import java.util.List;
 public interface InputSpecSlicer
 {
   /**
-   * Whether {@link #sliceDynamic(InputSpec, int, int, long)} is usable for a given {@link InputSpec}.
+   * Whether {@link #sliceDynamic(InputSpec, SegmentPruner, int, int, long)} is usable for a given {@link InputSpec}.
    */
   boolean canSliceDynamic(InputSpec inputSpec);
 
@@ -39,7 +42,7 @@ public interface InputSpecSlicer
    * This method creates as many slices as possible while staying at or under maxNumSlices. For example, if a spec
    * contains 8 files, and maxNumSlices is 10, then 8 slices will be created.
    */
-  List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices);
+  List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices);
 
   /**
    * Slice a spec based on a particular maximum number of files and bytes per slice.
@@ -58,5 +61,11 @@ public interface InputSpecSlicer
    *
    * @throws UnsupportedOperationException if {@link #canSliceDynamic(InputSpec)} returns false
    */
-  List<InputSlice> sliceDynamic(InputSpec inputSpec, int maxNumSlices, int maxFilesPerSlice, long maxBytesPerSlice);
+  List<InputSlice> sliceDynamic(
+      InputSpec inputSpec,
+      @Nullable SegmentPruner segmentPruner,
+      int maxNumSlices,
+      int maxFilesPerSlice,
+      long maxBytesPerSlice
+  );
 }

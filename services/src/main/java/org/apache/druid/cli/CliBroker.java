@@ -28,6 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -37,8 +38,10 @@ import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
+import org.apache.druid.client.selector.PooledTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.PreferredTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
+import org.apache.druid.client.selector.StrictTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
@@ -155,13 +158,15 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.preferred", PreferredTierSelectorStrategyConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.select.tier.strict", StrictTierSelectorStrategyConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.select.tier.pooled", PooledTierSelectorStrategyConfig.class);
+
           JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
 
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
@@ -180,6 +185,7 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(BrokerViewOfCoordinatorConfig.class).in(ManageLifecycle.class);
+          binder.bind(BrokerViewOfBrokerConfig.class).in(ManageLifecycle.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);
@@ -210,7 +216,8 @@ public class CliBroker extends ServerRunnable
         new MSQSqlModule(),
         new SqlTaskModule(),
         new DartControllerModule(),
-        new DartControllerMemoryManagementModule()
+        new DartControllerMemoryManagementModule(),
+        new BrokerRealtimeSelectorModule()
     );
   }
 }

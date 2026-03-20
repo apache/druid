@@ -106,10 +106,11 @@ class StorageLocationTest
     location.release(entry2);
     location.release(entry3);
     location.release(entry4);
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -133,10 +134,11 @@ class StorageLocationTest
     location.release(entry3);
     location.release(entry2);
     location.release(entry1);
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -167,12 +169,13 @@ class StorageLocationTest
       location.release(entry);
       entries.remove(toRemove);
     }
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
-    Assertions.assertEquals(0, location.currentSizeBytes());
-    Assertions.assertEquals(0, location.currentWeakSizeBytes());
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
+    Assertions.assertEquals(100, location.currentSizeBytes());
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
   }
 
   @Test
@@ -364,6 +367,33 @@ class StorageLocationTest
     }
 
     Assertions.assertEquals(0, loc.getActiveWeakHolds());
+  }
+
+  @Test
+  public void testReclaimRestoreDoesNotCreateZombieEntries()
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 10);
+    CacheEntry entry2 = new TestCacheEntry("2", 90);
+    CacheEntry entry3 = new TestCacheEntry("3", 20);
+
+    location.reserveWeak(entry1);
+    // hold entry2 so it cannot be evicted by reclaim
+    StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
+        entry2.getId(),
+        () -> entry2
+    );
+
+    // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
+    // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
+    // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
+    // thrown.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    hold2.close();
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})

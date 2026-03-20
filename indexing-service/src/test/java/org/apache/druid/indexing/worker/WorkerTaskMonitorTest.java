@@ -204,6 +204,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
+                null,
                 new NoopTestTaskReportFileWriter(),
                 null,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,

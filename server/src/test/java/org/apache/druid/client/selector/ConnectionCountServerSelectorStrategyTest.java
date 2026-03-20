@@ -83,6 +83,7 @@ public class ConnectionCountServerSelectorStrategyTest
             "localhost",
             null,
             0,
+            null,
             ServerType.HISTORICAL,
             DruidServer.DEFAULT_TIER,
             0

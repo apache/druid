@@ -451,7 +451,7 @@ public class MarkEternityTombstonesAsUnusedTest
 
   private DruidCoordinatorRuntimeParams initializeServerAndGetParams(final ImmutableList<DataSegment> segments)
   {
-    final DruidServer druidServer = new DruidServer("", "", "", 0L, ServerType.fromString("broker"), "", 0);
+    final DruidServer druidServer = new DruidServer("", "", "", 0L, null, ServerType.fromString("broker"), "", 0);
     for (final DataSegment segment : segments) {
       segmentsMetadataManager.addSegment(segment);
       druidServer.addDataSegment(segment);

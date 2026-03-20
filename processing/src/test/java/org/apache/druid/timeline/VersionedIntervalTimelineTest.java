@@ -27,7 +27,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
+import org.apache.druid.timeline.partition.OvershadowableManager;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.PartitionHolderContents;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1474,17 +1476,16 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
 
     final List<TimelineObjectHolder<String, OvershadowableInteger>> holders = timeline.lookup(interval);
 
+    final PartitionHolderContents<OvershadowableInteger> expectedContents = new OvershadowableManager<>();
+    expectedContents.addChunk(makeNumbered("1", 0, 0));
+    expectedContents.addChunk(makeNumbered("1", 1, 0));
+
     Assert.assertEquals(
         ImmutableList.of(
             new TimelineObjectHolder<>(
                 interval,
                 "1",
-                new PartitionHolder<>(
-                    ImmutableList.of(
-                        makeNumbered("1", 0, 0),
-                        makeNumbered("1", 1, 0)
-                    )
-                )
+                new PartitionHolder<>(expectedContents, (short) 0)
             )
         ),
         holders
@@ -1646,6 +1647,27 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
             makeNumbered("2", 1, 3, 0).getObject()
         ),
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2019-01-01/2019-01-04"), Partitions.INCOMPLETE_OK)
+    );
+  }
+
+  @Test
+  public void testLargePartitionNumbers()
+  {
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 1, 1));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 100000, 2));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", Integer.MAX_VALUE, 3));
+
+    final Iterable<OvershadowableInteger> allObjects = ImmutableList.copyOf(
+        VersionedIntervalTimeline.getAllObjects(timeline.lookup(Intervals.of("2011-01-02T02/2011-01-04")))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            new OvershadowableInteger("1", 1, 1),
+            new OvershadowableInteger("1", 100000, 2),
+            new OvershadowableInteger("1", Integer.MAX_VALUE, 3)
+        ),
+        allObjects
     );
   }
 }

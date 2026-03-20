@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -199,9 +200,12 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      walker = super.addSegmentsToWalker(walker);
+      walker = super.addSegmentsToWalker(walker, jsonMapper);
       TestDataBuilder.attachIndexesForBenchmarkDatasource(walker);
       return walker;
     }

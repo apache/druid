@@ -51,7 +51,7 @@ public class DefaultGroupByQueryMetricsTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultGroupByQueryMetricsQuery()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -78,8 +78,8 @@ public class DefaultGroupByQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals(QueryRunnerTestHelper.DATA_SOURCE, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     Interval expectedInterval = Intervals.of("2011-04-02/2011-04-04");

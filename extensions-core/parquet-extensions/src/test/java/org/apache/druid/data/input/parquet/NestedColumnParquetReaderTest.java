@@ -48,7 +48,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("nestedData"),
@@ -87,7 +87,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(transformingReader);
-    Assert.assertEquals(FlattenSpecParquetInputTest.TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
     Assert.assertEquals(1L, rows.get(0).getRaw("t_nestedData_dim3"));
     Assert.assertEquals("d2v1", rows.get(0).getRaw("t_nestedData_dim2"));
     Assert.assertEquals(ImmutableList.of("listDim1v1", "listDim1v2"), rows.get(0).getRaw("t_nestedData_listDim"));
@@ -102,7 +102,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/nullable_list.snappy.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a1"),
@@ -168,7 +168,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(false).build(),
         ColumnsFilter.all(),
         null
@@ -182,7 +182,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals(ImmutableList.of("dim1", "metric1"), rows.get(0).getDimensions());
-    Assert.assertEquals(FlattenSpecParquetInputTest.TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
     Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
     Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
     Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
@@ -205,7 +205,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
         null
@@ -219,7 +219,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals(ImmutableList.of("nestedData", "dim1", "metric1"), rows.get(0).getDimensions());
-    Assert.assertEquals(FlattenSpecParquetInputTest.TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
     Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
     Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
     Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));

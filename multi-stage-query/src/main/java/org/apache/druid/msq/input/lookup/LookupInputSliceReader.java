@@ -19,25 +19,24 @@
 
 package org.apache.druid.msq.input.lookup;
 
-import com.google.common.collect.Iterators;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.input.AdaptedLoadableSegment;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.function.Consumer;
 
@@ -57,13 +56,7 @@ public class LookupInputSliceReader implements InputSliceReader
   }
 
   @Override
-  public int numReadableInputs(InputSlice slice)
-  {
-    return 1;
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
@@ -72,39 +65,39 @@ public class LookupInputSliceReader implements InputSliceReader
   {
     final String lookupName = ((LookupInputSlice) slice).getLookupName();
 
-    return ReadableInputs.segments(
-        () -> Iterators.singletonIterator(
-            ReadableInput.segment(
-                new SegmentWithDescriptor(
-                    () -> {
-                      final Iterable<Segment> segments =
-                          segmentWrangler.getSegmentsForIntervals(
-                              new LookupDataSource(lookupName),
-                              Intervals.ONLY_ETERNITY
-                          );
+    final Iterable<Segment> segments =
+        segmentWrangler.getSegmentsForIntervals(
+            new LookupDataSource(lookupName),
+            Intervals.ONLY_ETERNITY
+        );
 
-                      final Iterator<Segment> segmentIterator = segments.iterator();
-                      if (!segmentIterator.hasNext()) {
-                        throw new ISE("Lookup[%s] is not loaded", lookupName);
-                      }
+    final Iterator<Segment> segmentIterator = segments.iterator();
+    if (!segmentIterator.hasNext()) {
+      throw new ISE("Lookup[%s] is not loaded", lookupName);
+    }
 
-                      final Segment segment = segmentIterator.next();
-                      if (segmentIterator.hasNext()) {
-                        // LookupSegmentWrangler always returns zero or one segments, so this code block can't
-                        // happen. That being said: we'll program defensively anyway.
-                        CloseableUtils.closeAndSuppressExceptions(
-                            segment,
-                            e -> log.warn(e, "Failed to close segment for lookup[%s]", lookupName)
-                        );
-                        throw new ISE("Lookup[%s] has multiple segments; cannot read", lookupName);
-                      }
+    final Segment segment = segmentIterator.next();
+    if (segmentIterator.hasNext()) {
+      // LookupSegmentWrangler always returns zero or one segments, so this code block can't
+      // happen. That being said: we'll program defensively anyway.
+      CloseableUtils.closeAndSuppressExceptions(
+          segment,
+          e -> log.warn(e, "Failed to close segment for lookup[%s]", lookupName)
+      );
+      throw new ISE("Lookup[%s] has multiple segments; cannot read", lookupName);
+    }
 
-                      return ResourceHolder.fromCloseable(new CompleteSegment(null, segment));
-                    },
-                    new RichSegmentDescriptor(SegmentId.dummy(lookupName).toDescriptor(), null)
-                )
-            )
-        )
+    final LoadableSegment loadableSegment = AdaptedLoadableSegment.create(
+        segment,
+        Intervals.ETERNITY,
+        StringUtils.format("lookup[%s]", lookupName),
+        counters.channel(CounterNames.inputChannel(inputNumber))
+    );
+
+    return new PhysicalInputSlice(
+        ReadablePartitions.empty(),
+        Collections.singletonList(loadableSegment),
+        Collections.emptyList()
     );
   }
 }

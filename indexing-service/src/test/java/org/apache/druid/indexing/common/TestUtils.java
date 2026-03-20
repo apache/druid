@@ -39,7 +39,7 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -68,6 +68,7 @@ public class TestUtils
 
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9Factory indexMergerV9Factory;
+  private final IndexMergerV10Factory indexMergerV10Factory;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
@@ -76,6 +77,11 @@ public class TestUtils
     this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(jsonMapper, ColumnConfig.DEFAULT);
     indexMergerV9Factory = new IndexMergerV9Factory(
+        jsonMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
+    this.indexMergerV10Factory = new IndexMergerV10Factory(
         jsonMapper,
         indexIO,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
@@ -121,14 +127,14 @@ public class TestUtils
     return jsonMapper;
   }
 
-  public IndexMergerV9 getTestIndexMergerV9()
-  {
-    return indexMergerV9Factory.create(true);
-  }
-
   public IndexMergerV9Factory getIndexMergerV9Factory()
   {
     return indexMergerV9Factory;
+  }
+
+  public IndexMergerV10Factory getIndexMergerV10Factory()
+  {
+    return indexMergerV10Factory;
   }
 
   public IndexIO getTestIndexIO()

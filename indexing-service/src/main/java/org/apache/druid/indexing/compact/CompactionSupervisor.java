@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Supervisor for compaction of a single datasource.
@@ -51,6 +53,31 @@ public class CompactionSupervisor implements Supervisor
     this.dataSource = supervisorSpec.getSpec().getDataSource();
   }
 
+  public CompactionSupervisorSpec getSpec()
+  {
+    return supervisorSpec;
+  }
+
+  /**
+   * Checks if this supervisor is ready to create jobs in the current run of the
+   * scheduler.
+   */
+  public boolean shouldCreateJobs()
+  {
+    return !supervisorSpec.isSuspended();
+  }
+
+  /**
+   * Creates compaction jobs for this supervisor.
+   */
+  public List<CompactionJob> createJobs(
+      DruidInputSource inputSource,
+      CompactionJobParams jobParams
+  )
+  {
+    return supervisorSpec.getTemplate().createCompactionJobs(inputSource, jobParams);
+  }
+
   @Override
   public void start()
   {
@@ -66,7 +93,7 @@ public class CompactionSupervisor implements Supervisor
       );
     } else {
       log.info("Starting compaction for dataSource[%s].", dataSource);
-      scheduler.startCompaction(dataSource, supervisorSpec.getSpec());
+      scheduler.startCompaction(dataSource, this);
     }
   }
 

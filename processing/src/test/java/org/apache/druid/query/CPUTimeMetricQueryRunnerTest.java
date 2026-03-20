@@ -41,7 +41,7 @@ public class CPUTimeMetricQueryRunnerTest
   @Test
   public void testCpuTimeMetric()
   {
-    final StubServiceEmitter emitter = new StubServiceEmitter("s", "h");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     final AtomicLong accumulator = new AtomicLong();
 
     final List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(

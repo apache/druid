@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -427,6 +428,13 @@ public class CloseableUtilsTest
     // Second exception
     Assert.assertEquals(1, e.getSuppressed().length);
     Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(AssertionError.class));
+  }
+
+  @Test
+  public void test_forIterable_quietly() throws IOException
+  {
+    CloseableUtils.forIterable(List.of(quietCloseable, quietCloseable2)).close();
+    assertClosed(quietCloseable, quietCloseable2);
   }
 
   private static void assertClosed(final TestCloseable... closeables)

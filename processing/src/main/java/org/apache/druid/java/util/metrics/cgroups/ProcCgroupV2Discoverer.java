@@ -58,4 +58,22 @@ public class ProcCgroupV2Discoverer extends ProcCgroupDiscoverer
 
     throw new RE("Cgroup location not found");
   }
+
+  @Override
+  public Cpu.CpuMetrics getCpuMetrics()
+  {
+    return new CpuV2(this).snapshot();
+  }
+
+  @Override
+  public CpuSet.CpuSetMetric getCpuSetMetrics()
+  {
+    return new CpuSetV2(this).snapshot();
+  }
+
+  @Override
+  public CgroupVersion getCgroupVersion()
+  {
+    return CgroupVersion.V2;
+  }
 }

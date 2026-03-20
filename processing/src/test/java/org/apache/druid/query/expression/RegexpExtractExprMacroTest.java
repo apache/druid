@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,6 +47,23 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
     eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.nilBindings());
+  }
+
+  @Test
+  public void testInvalidRegexpExtractPattern()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->
+            eval(
+                "regexp_extract('pod-1234-node', '[ab-0-9]')",
+                InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "An invalid pattern [[ab-0-9]] was provided for the [regexp_extract] function,"
+            + " error: [Illegal character range near index 4"
+        )
+    );
   }
 
   @Test

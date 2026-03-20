@@ -254,7 +254,8 @@ public abstract class QueryResultPusher
     incrementQueryCounterForException(e);
 
     if (resultsWriter != null) {
-      resultsWriter.recordFailure(e);
+      final long bytesWritten = accumulator != null ? accumulator.getNumBytesSent() : 0;
+      resultsWriter.recordFailure(e, bytesWritten);
 
       if (accumulator != null && accumulator.isInitialized()) {
         // We already started sending a response when we got the error message.  In this case we write the exception
@@ -361,7 +362,7 @@ public abstract class QueryResultPusher
 
     void recordSuccess(long numBytes);
 
-    void recordFailure(Exception e);
+    void recordFailure(Exception e, long bytesWritten);
   }
 
   public interface Writer extends Closeable

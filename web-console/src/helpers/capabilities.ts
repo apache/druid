@@ -233,7 +233,7 @@ export class Capabilities {
             {
               query: FUNCTION_SQL,
               resultFormat: 'array',
-              context: { timeout: Capabilities.STATUS_TIMEOUT },
+              context: { engine: 'native', timeout: Capabilities.STATUS_TIMEOUT },
             },
             { timeout: Capabilities.STATUS_TIMEOUT },
           )

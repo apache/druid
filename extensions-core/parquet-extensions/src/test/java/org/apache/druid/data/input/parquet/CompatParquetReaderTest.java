@@ -37,9 +37,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Duplicate of {@link CompatParquetInputTest} but for {@link ParquetReader} instead of Hadoop
- */
 public class CompatParquetReaderTest extends BaseParquetReaderTest
 {
   @Test

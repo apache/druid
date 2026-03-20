@@ -21,6 +21,7 @@ package org.apache.druid.utils;
 
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import com.sun.management.OperatingSystemMXBean;
 
 import java.io.File;
 import java.lang.management.ManagementFactory;
@@ -44,6 +45,7 @@ public class JvmUtils
   private static RuntimeInfo RUNTIME_INFO = new RuntimeInfo();
 
   private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
+  private static final OperatingSystemMXBean OPERATING_SYSTEM_MX_BEAN = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
   private static int computeMajorVersion()
   {
@@ -138,5 +140,16 @@ public class JvmUtils
         }
     ).collect(Collectors.toList());
     return jobURLs;
+  }
+
+  /**
+   * Get the total memory of the machine it is running on. This function is container aware.
+   * If the machine is running in a container, the function will return the total memory of the container.
+   * If the machine is not running in a container, the function will return the total memory of the machine.
+   * @return the total memory of the machine it is running on in bytes.
+   */
+  public static long getTotalMemory()
+  {
+    return OPERATING_SYSTEM_MX_BEAN.getTotalPhysicalMemorySize();
   }
 }

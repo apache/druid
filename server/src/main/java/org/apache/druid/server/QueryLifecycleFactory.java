@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -31,6 +32,10 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -44,6 +49,7 @@ public class QueryLifecycleFactory
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
 
   @Inject
   public QueryLifecycleFactory(
@@ -55,7 +61,8 @@ public class QueryLifecycleFactory
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<DefaultQueryConfig> queryConfigSupplier
+      final Supplier<DefaultQueryConfig> queryConfigSupplier,
+      @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -67,10 +74,19 @@ public class QueryLifecycleFactory
     this.defaultQueryConfig = queryConfigSupplier.get();
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
   }
 
   public QueryLifecycle factorize()
   {
+    // Extract query blocklist from broker config, or use empty list if not on broker
+    final List<QueryBlocklistRule> queryBlocklist;
+    if (brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null) {
+      queryBlocklist = brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist();
+    } else {
+      queryBlocklist = Collections.emptyList();
+    }
+
     return new QueryLifecycle(
         conglomerate,
         texasRanger,
@@ -81,6 +97,7 @@ public class QueryLifecycleFactory
         defaultQueryConfig,
         authConfig,
         policyEnforcer,
+        queryBlocklist,
         System.currentTimeMillis(),
         System.nanoTime()
     );

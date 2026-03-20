@@ -19,17 +19,6 @@
 
 package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeInstancesResult;
-import com.amazonaws.services.ec2.model.Filter;
-import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.InstanceNetworkInterfaceSpecification;
-import com.amazonaws.services.ec2.model.Placement;
-import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
-import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -41,6 +30,18 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.Filter;
+import software.amazon.awssdk.services.ec2.model.Instance;
+import software.amazon.awssdk.services.ec2.model.InstanceNetworkInterfaceSpecification;
+import software.amazon.awssdk.services.ec2.model.InstanceType;
+import software.amazon.awssdk.services.ec2.model.Placement;
+import software.amazon.awssdk.services.ec2.model.Reservation;
+import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.RunInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.TerminateInstancesRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +57,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   private final int minNumWorkers;
   private final int maxNumWorkers;
   private final EC2EnvironmentConfig envConfig;
-  private final AmazonEC2 amazonEC2Client;
+  private final Ec2Client amazonEC2Client;
   private final SimpleWorkerProvisioningConfig config;
 
   @JsonCreator
@@ -64,7 +65,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       @JsonProperty("minNumWorkers") int minNumWorkers,
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("envConfig") EC2EnvironmentConfig envConfig,
-      @JacksonInject AmazonEC2 amazonEC2Client,
+      @JacksonInject Ec2Client amazonEC2Client,
       @JacksonInject SimpleWorkerProvisioningConfig config
   )
   {
@@ -115,49 +116,49 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
         }
       }
 
-      RunInstancesRequest request = new RunInstancesRequest(
-          workerConfig.getAmiId(),
-          workerConfig.getMinInstances(),
-          workerConfig.getMaxInstances()
-      )
-          .withInstanceType(workerConfig.getInstanceType())
-          .withPlacement(new Placement(envConfig.getAvailabilityZone()))
-          .withKeyName(workerConfig.getKeyName())
-          .withIamInstanceProfile(
+      RunInstancesRequest.Builder requestBuilder = RunInstancesRequest.builder()
+          .imageId(workerConfig.getAmiId())
+          .minCount(workerConfig.getMinInstances())
+          .maxCount(workerConfig.getMaxInstances())
+          .instanceType(InstanceType.fromValue(workerConfig.getInstanceType()))
+          .placement(Placement.builder().availabilityZone(envConfig.getAvailabilityZone()).build())
+          .keyName(workerConfig.getKeyName())
+          .iamInstanceProfile(
               workerConfig.getIamProfile() == null
               ? null
               : workerConfig.getIamProfile().toIamInstanceProfileSpecification()
           )
-          .withUserData(userDataBase64);
+          .userData(userDataBase64);
 
       // InstanceNetworkInterfaceSpecification.getAssociatePublicIpAddress may be
       // true or false by default in EC2, depending on the subnet.
       // Setting EC2NodeData.getAssociatePublicIpAddress explicitly will use that value instead,
       // leaving it null uses the EC2 default.
       if (workerConfig.getAssociatePublicIpAddress() != null) {
-        request.withNetworkInterfaces(
-            new InstanceNetworkInterfaceSpecification()
-                .withAssociatePublicIpAddress(workerConfig.getAssociatePublicIpAddress())
-                .withSubnetId(workerConfig.getSubnetId())
-                .withGroups(workerConfig.getSecurityGroupIds())
-                .withDeviceIndex(0)
+        requestBuilder.networkInterfaces(
+            InstanceNetworkInterfaceSpecification.builder()
+                .associatePublicIpAddress(workerConfig.getAssociatePublicIpAddress())
+                .subnetId(workerConfig.getSubnetId())
+                .groups(workerConfig.getSecurityGroupIds())
+                .deviceIndex(0)
+                .build()
         );
       } else {
-        request
-            .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
-            .withSubnetId(workerConfig.getSubnetId());
+        requestBuilder
+            .securityGroupIds(workerConfig.getSecurityGroupIds())
+            .subnetId(workerConfig.getSubnetId());
       }
 
-      final RunInstancesResult result = amazonEC2Client.runInstances(request);
+      final RunInstancesResponse result = amazonEC2Client.runInstances(requestBuilder.build());
 
       final List<String> instanceIds = Lists.transform(
-          result.getReservation().getInstances(),
+          result.instances(),
           new Function<>()
           {
             @Override
             public String apply(Instance input)
             {
-              return input.getInstanceId();
+              return input.instanceId();
             }
           }
       );
@@ -166,13 +167,13 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 
       return new AutoScalingData(
           Lists.transform(
-              result.getReservation().getInstances(),
+              result.instances(),
               new Function<>()
               {
                 @Override
                 public String apply(Instance input)
                 {
-                  return input.getInstanceId();
+                  return input.instanceId();
                 }
               }
           )
@@ -192,16 +193,20 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       return new AutoScalingData(new ArrayList<>());
     }
 
-    DescribeInstancesResult result = amazonEC2Client.describeInstances(
-        new DescribeInstancesRequest()
-            .withFilters(
-                new Filter("private-ip-address", ips)
+    DescribeInstancesResponse result = amazonEC2Client.describeInstances(
+        DescribeInstancesRequest.builder()
+            .filters(
+                Filter.builder()
+                    .name("private-ip-address")
+                    .values(ips)
+                    .build()
             )
+            .build()
     );
 
     List<Instance> instances = new ArrayList<>();
-    for (Reservation reservation : result.getReservations()) {
-      instances.addAll(reservation.getInstances());
+    for (Reservation reservation : result.reservations()) {
+      instances.addAll(reservation.instances());
     }
 
     try {
@@ -213,7 +218,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
                 @Override
                 public String apply(Instance input)
                 {
-                  return input.getInstanceId();
+                  return input.instanceId();
                 }
               }
           )
@@ -236,7 +241,9 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
     try {
       log.info("Terminating instances[%s]", ids);
       amazonEC2Client.terminateInstances(
-          new TerminateInstancesRequest(ids)
+          TerminateInstancesRequest.builder()
+              .instanceIds(ids)
+              .build()
       );
 
       return new AutoScalingData(ids);
@@ -260,8 +267,10 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           public Iterable<Reservation> apply(List<String> input)
           {
             return amazonEC2Client.describeInstances(
-                new DescribeInstancesRequest().withFilters(new Filter("private-ip-address", input))
-            ).getReservations();
+                DescribeInstancesRequest.builder()
+                    .filters(Filter.builder().name("private-ip-address").values(input).build())
+                    .build()
+            ).reservations();
           }
         })
         .transformAndConcat(new Function<Reservation, Iterable<Instance>>()
@@ -269,7 +278,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           @Override
           public Iterable<Instance> apply(Reservation reservation)
           {
-            return reservation.getInstances();
+            return reservation.instances();
           }
         })
         .transform(new Function<Instance, String>()
@@ -277,7 +286,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           @Override
           public String apply(Instance instance)
           {
-            return instance.getInstanceId();
+            return instance.instanceId();
           }
         }).toList();
 
@@ -298,8 +307,10 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           public Iterable<Reservation> apply(List<String> input)
           {
             return amazonEC2Client.describeInstances(
-                new DescribeInstancesRequest().withFilters(new Filter("instance-id", input))
-            ).getReservations();
+                DescribeInstancesRequest.builder()
+                    .filters(Filter.builder().name("instance-id").values(input).build())
+                    .build()
+            ).reservations();
           }
         })
         .transformAndConcat(new Function<Reservation, Iterable<Instance>>()
@@ -307,7 +318,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           @Override
           public Iterable<Instance> apply(Reservation reservation)
           {
-            return reservation.getInstances();
+            return reservation.instances();
           }
         })
         .transform(new Function<Instance, String>()
@@ -315,7 +326,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
           @Override
           public String apply(Instance instance)
           {
-            return instance.getPrivateIpAddress();
+            return instance.privateIpAddress();
           }
         }).toList();
 

@@ -29,6 +29,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public final class Intervals
 {
@@ -165,6 +166,26 @@ public final class Intervals
     }
 
     return null;
+  }
+
+  /**
+   * @return List of intervals which when added to the given interval create
+   * {@link Intervals#ETERNITY}.
+   */
+  public static List<Interval> complementOf(Interval interval)
+  {
+    if (isEternity(interval)) {
+      return List.of();
+    } else if (DateTimes.MIN.equals(interval.getStart())) {
+      return List.of(new Interval(interval.getEnd(), DateTimes.MAX));
+    } else if (DateTimes.MAX.equals(interval.getEnd())) {
+      return List.of(new Interval(DateTimes.MIN, interval.getStart()));
+    } else {
+      return List.of(
+          new Interval(DateTimes.MIN, interval.getStart()),
+          new Interval(interval.getEnd(), DateTimes.MAX)
+      );
+    }
   }
 
   private Intervals()

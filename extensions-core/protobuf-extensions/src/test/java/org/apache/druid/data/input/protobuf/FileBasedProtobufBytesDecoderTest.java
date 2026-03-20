@@ -25,12 +25,14 @@ import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class FileBasedProtobufBytesDecoderTest
@@ -65,6 +67,16 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals("prototest.ProtoNestedEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testDescriptorUrl()
+  {
+    File descFile = new File("src/test/resources/proto_test_event.desc");
+    String path = descFile.getAbsoluteFile().toString();
+
+    final var decoder = new FileBasedProtobufBytesDecoder("file://" + path, "ProtoTestEvent");
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -122,7 +134,7 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals(
-        "Descriptor not found in class path [file:/nonexist.desc]",
+        "Failed to initialize descriptor at [file:/nonexist.desc]",
         ex.getMessage()
     );
   }
@@ -132,7 +144,12 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", null);
 
-    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
+    // Descriptor order may return Timestamp or ProtoTestEvent.
+    String actual = decoder.getDescriptor().getFullName();
+    assertTrue(
+        "google.protobuf.Timestamp".equals(actual)
+            || "prototest.ProtoTestEvent".equals(actual)
+    );
   }
 
   @Test

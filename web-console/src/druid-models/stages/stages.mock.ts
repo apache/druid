@@ -215,13 +215,6 @@ export const STAGES = new Stages(
             type: 'table',
             dataSource: 'kttm_simple',
             intervals: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
-            filter: {
-              type: 'equals',
-              column: 'os',
-              matchValueType: 'STRING',
-              matchValue: 'iOS',
-            },
-            filterFields: ['os'],
           },
           {
             type: 'stage',

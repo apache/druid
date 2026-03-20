@@ -31,7 +31,8 @@ public interface Monitor
   void stop();
 
   /**
-   * Emit metrics using the given emitter.
+   * Emit metrics using the given emitter. May be called from two separate threads: the scheduling thread and
+   * a lifecycle thread that is shutting down monitors. Therefore, this method must be thread-safe.
    *
    * @return true if this monitor needs to continue monitoring. False otherwise.
    */

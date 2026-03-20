@@ -161,14 +161,14 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
       }
 
       @Override
-      public void recordFailure(Exception e)
+      public void recordFailure(Exception e, long bytesWritten)
       {
         if (QueryLifecycle.shouldLogStackTrace(e, sqlQuery.queryContext())) {
           log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
         } else {
           log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
         }
-        stmt.reporter().failed(e);
+        stmt.reporter().failed(e, bytesWritten);
       }
 
       @Override

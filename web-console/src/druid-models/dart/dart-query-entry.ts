@@ -24,5 +24,5 @@ export interface DartQueryEntry {
   authenticator: string;
   identity: string;
   startTime: string;
-  state: 'ACCEPTED' | 'RUNNING' | 'CANCELED';
+  state: 'ACCEPTED' | 'RUNNING' | 'CANCELED' | 'SUCCESS' | 'FAILED';
 }

@@ -23,14 +23,7 @@ order by 1;
     "input" : [ {
       "type" : "table",
       "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "inType",
-        "column" : "cityName",
-        "matchValueType" : "STRING",
-        "sortedValues" : [ "Aarhus", "New York" ]
-      },
-      "filterFields" : [ "cityName" ]
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",

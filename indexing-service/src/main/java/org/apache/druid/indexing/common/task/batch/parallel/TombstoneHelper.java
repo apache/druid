@@ -181,6 +181,7 @@ public class TombstoneHelper
 
   /**
    * See the method body for an example and an indepth explanation as to how the replace interval is created
+   *
    * @param intervalsToDrop    Empty intervals in the query that need to be dropped. They should be aligned with the
    *                           replaceGranularity
    * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data.
@@ -278,7 +279,8 @@ public class TombstoneHelper
                    .version(version)
                    .shardSpec(shardSpec)
                    .loadSpec(tombstoneLoadSpec) // load spec is special for tombstone
-                   .size(1); // in case coordinator segment balancing chokes with zero size
+                   .size(1) // in case coordinator segment balancing chokes with zero size
+                   .totalRows(0);
 
     return dataSegmentBuilder.build();
 
@@ -291,8 +293,8 @@ public class TombstoneHelper
    * For a datasource having segments for 2020-01-01/2020-12-31 and 2022-01-01/2022-12-31, this method would return
    * the segment 2020-01-01/2020-12-31 if the input intervals asked for the segment between 2019 and 2021.
    *
-   * @param inputIntervals   Intervals corresponding to the task
-   * @param dataSource       Datasource corresponding to the task
+   * @param inputIntervals Intervals corresponding to the task
+   * @param dataSource     Datasource corresponding to the task
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */

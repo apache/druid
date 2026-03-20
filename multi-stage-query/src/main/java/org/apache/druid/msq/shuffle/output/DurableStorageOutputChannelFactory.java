@@ -27,6 +27,7 @@ import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
@@ -48,6 +49,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
   protected final StorageConnector storageConnector;
   protected final File tmpDir;
   protected final ExecutorService remoteInputStreamPool;
+  protected final WireTransferableContext wireTransferableContext;
 
   public DurableStorageOutputChannelFactory(
       final String controllerTaskId,
@@ -56,7 +58,8 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
       final String taskId,
       final int frameSize,
       final StorageConnector storageConnector,
-      final File tmpDir
+      final File tmpDir,
+      final WireTransferableContext wireTransferableContext
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
@@ -68,6 +71,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     this.tmpDir = Preconditions.checkNotNull(tmpDir, "tmpDir is null");
     this.remoteInputStreamPool =
         Executors.newCachedThreadPool(Execs.makeThreadFactory("-remote-fetcher-%d"));
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   /**
@@ -82,7 +86,8 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
       final int frameSize,
       final StorageConnector storageConnector,
       final File tmpDir,
-      final boolean isQueryResults
+      final boolean isQueryResults,
+      final WireTransferableContext wireTransferableContext
   )
   {
     if (isQueryResults) {
@@ -93,7 +98,8 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
           taskId,
           frameSize,
           storageConnector,
-          tmpDir
+          tmpDir,
+          wireTransferableContext
       );
     } else {
       return new DurableStorageTaskOutputChannelFactory(
@@ -103,7 +109,8 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
           taskId,
           frameSize,
           storageConnector,
-          tmpDir
+          tmpDir,
+          wireTransferableContext
       );
     }
   }
@@ -139,8 +146,12 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     final String fileName = getFileNameWithPathForPartition(partitionNumber);
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
-      FrameFileWriter.open(Channels.newChannel(storageConnector.write(fileName)), null, ByteTracker.unboundedTracker())
-                     .close();
+      FrameFileWriter.open(
+          Channels.newChannel(storageConnector.write(fileName)),
+          null,
+          ByteTracker.unboundedTracker(),
+          wireTransferableContext
+      ).close();
       return OutputChannel.nil(partitionNumber);
     }
     catch (IOException e) {

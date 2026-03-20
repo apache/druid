@@ -52,14 +52,12 @@ import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.msq.dart.worker.DartDataSegmentProvider;
 import org.apache.druid.msq.dart.worker.DartDataServerQueryHandlerFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -102,11 +100,6 @@ public class DartWorkerModule implements DruidModule
 
       binder.bind(DartWorkerContextFactory.class)
             .to(DartWorkerContextFactoryImpl.class)
-            .in(LazySingleton.class);
-
-      binder.bind(DataSegmentProvider.class)
-            .annotatedWith(Dart.class)
-            .to(DartDataSegmentProvider.class)
             .in(LazySingleton.class);
 
       binder.bind(ResourcePermissionMapper.class)

@@ -79,7 +79,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     segmentsMetadataManager.addSegment(segmentV2);
 
     final ImmutableDruidServer druidServer =
-        new DruidServer("", "", "", 0L, ServerType.fromString(serverType), "", 0)
+        new DruidServer("", "", "", 0L, null, ServerType.fromString(serverType), "", 0)
             .addDataSegment(segmentV1)
             .addDataSegment(segmentV2)
             .toImmutableDruidServer();

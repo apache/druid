@@ -53,6 +53,7 @@ import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +89,7 @@ public class VirtualColumns implements Cacheable
   }
 
   @JsonCreator
-  public static VirtualColumns create(@Nullable List<VirtualColumn> virtualColumns)
+  public static VirtualColumns create(@Nullable Collection<VirtualColumn> virtualColumns)
   {
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;

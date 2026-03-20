@@ -126,7 +126,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           element: (
             <InputGroup
               value={(value as string) || ''}
-              onChange={e => onValueChange(e.target.value)}
+              onChange={e => onValueChange(e.target.value.trimStart())}
               placeholder={parameter.placeholder}
               fill
             />

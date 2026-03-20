@@ -23,12 +23,6 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
 All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
 extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
 Druid datasources or external data. The permission needed depends on what the user is trying to do.

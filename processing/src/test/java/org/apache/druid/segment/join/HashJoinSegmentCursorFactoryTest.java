@@ -46,7 +46,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorFactoryTest
@@ -1295,9 +1294,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     );
 
     VirtualColumns virtualColumns = VirtualColumns.create(
-        Collections.singletonList(
-            makeExpressionVirtualColumn("concat(substring(countryIsoCode, 0, 1),'L')")
-        )
+        makeExpressionVirtualColumn("concat(substring(countryIsoCode, 0, 1),'L')")
     );
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
@@ -1347,9 +1344,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     );
 
     VirtualColumns virtualColumns = VirtualColumns.create(
-        Collections.singletonList(
-            makeExpressionVirtualColumn("concat(substring(countryIsoCode, 0, 1),'L')")
-        )
+        makeExpressionVirtualColumn("concat(substring(countryIsoCode, 0, 1),'L')")
     );
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(

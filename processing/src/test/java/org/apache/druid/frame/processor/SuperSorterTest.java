@@ -130,8 +130,8 @@ public class SuperSorterTest
           outputPartitionsFuture,
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
@@ -167,8 +167,8 @@ public class SuperSorterTest
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
@@ -203,8 +203,8 @@ public class SuperSorterTest
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
@@ -430,11 +430,11 @@ public class SuperSorterTest
       final File tempFolder = temporaryFolder.newFolder();
       final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
           ImmutableList.of(
-              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null),
-              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null)
+              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY)
           ),
           maxBytesPerFrame
-      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
+      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY);
       final RowKeyReader keyReader = clusterBy.keyReader(signature, outputFrameType);
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
@@ -451,7 +451,7 @@ public class SuperSorterTest
           clusterByPartitionsFuture,
           exec,
           FrameProcessorDecorator.NONE,
-          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null)),
+          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY)),
           makeOutputChannelFactory(outputChannelFactory),
           outputFrameType,
           maxActiveProcessors,

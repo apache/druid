@@ -100,7 +100,7 @@ public class BalancerStrategyBenchmark
       serverHolders.add(
           new ServerHolder(
               new ImmutableDruidServer(
-                  new DruidServerMetadata("id", "host", null, 10000000L, ServerType.HISTORICAL, "hot", 1),
+                  new DruidServerMetadata("id", "host", null, 10000000L, null, ServerType.HISTORICAL, "hot", 1),
                   3000L,
                   ImmutableMap.of("test", new ImmutableDruidDataSource("test", Collections.emptyMap(), segments)),
                   segments.size()

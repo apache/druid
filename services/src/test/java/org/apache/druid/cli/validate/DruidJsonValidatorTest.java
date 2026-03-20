@@ -24,6 +24,7 @@ import com.github.rvesse.airline.Cli;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -134,8 +135,8 @@ public class DruidJsonValidatorTest
         new IndexTask.IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
-                      .withObjectMapper(jsonMapper)
                       .build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),

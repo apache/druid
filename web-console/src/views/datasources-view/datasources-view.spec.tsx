@@ -18,6 +18,7 @@
 
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 
 import { DatasourcesView } from './datasources-view';
 
@@ -25,11 +26,10 @@ describe('DatasourcesView', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
-        filters={[]}
+        filters={TableFilters.empty()}
         onFiltersChange={() => {}}
         goToQuery={() => {}}
-        goToTasks={() => null}
-        goToSegments={() => {}}
+        goToView={() => {}}
         capabilities={Capabilities.FULL}
       />,
     );

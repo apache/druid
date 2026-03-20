@@ -19,50 +19,76 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Memory;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
-import java.util.Map;
-
 public class CgroupMemoryMonitor extends FeedDefiningMonitor
 {
-  final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
+  private static final Logger LOG = new Logger(CgroupMemoryMonitor.class);
+  private static final String MEMORY_USAGE_FILE = "memory.usage_in_bytes";
+  private static final String MEMORY_LIMIT_FILE = "memory.limit_in_bytes";
 
-  public CgroupMemoryMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  final CgroupDiscoverer cgroupDiscoverer;
+  private final boolean isRunningOnCgroupsV2;
+  private final CgroupV2MemoryMonitor cgroupV2MemoryMonitor;
+
+
+  public CgroupMemoryMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
+
+    // Check if we're running on cgroups v2
+    this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
+    if (isRunningOnCgroupsV2) {
+      this.cgroupV2MemoryMonitor = new CgroupV2MemoryMonitor(cgroupDiscoverer, feed);
+      LOG.info("Detected cgroups v2, using CgroupV2MemoryMonitor behavior for accurate metrics");
+    } else {
+      this.cgroupV2MemoryMonitor = null;
+    }
   }
 
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupMemoryMonitor(String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
   }
 
   public CgroupMemoryMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    if (isRunningOnCgroupsV2) {
+      return cgroupV2MemoryMonitor.doMonitor(emitter);
+    } else {
+      return parseAndEmit(emitter, cgroupDiscoverer, MEMORY_USAGE_FILE, MEMORY_LIMIT_FILE, this);
+    }
+  }
+
+  /**
+   * Common metric parser and emitter for both v1 and v2 cgroupMemory monitors.
+   */
+  public static boolean parseAndEmit(
+      ServiceEmitter emitter,
+      CgroupDiscoverer cgroupDiscoverer,
+      String memoryUsageFile,
+      String memoryLimitFile,
+      FeedDefiningMonitor feedDefiningMonitor
+  )
+  {
     final Memory memory = new Memory(cgroupDiscoverer);
-    final Memory.MemoryStat stat = memory.snapshot(memoryUsageFile(), memoryLimitFile());
-    final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    final Memory.MemoryStat stat = memory.snapshot(memoryUsageFile, memoryLimitFile);
+    final ServiceMetricEvent.Builder builder = feedDefiningMonitor.builder();
+    builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
     emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
     emitter.emit(builder.setMetric("cgroup/memory/limit/bytes", stat.getLimit()));
 
@@ -72,19 +98,10 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
       emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory/%s", key), value));
     });
     stat.getNumaMemoryStats().forEach((key, value) -> {
-      builder().setDimension("numaZone", Long.toString(key));
+      feedDefiningMonitor.builder().setDimension("numaZone", Long.toString(key));
       value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
     });
     return true;
   }
 
-  public String memoryUsageFile()
-  {
-    return "memory.usage_in_bytes";
-  }
-
-  public String memoryLimitFile()
-  {
-    return "memory.limit_in_bytes";
-  }
 }

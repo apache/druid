@@ -66,6 +66,7 @@ public class DruidServer implements Comparable<DruidServer>
         node.getHostAndPort(),
         node.getHostAndTlsPort(),
         config.getMaxSize(),
+        config.getStorageSize(),
         type,
         config.getTier(),
         DEFAULT_PRIORITY
@@ -78,12 +79,13 @@ public class DruidServer implements Comparable<DruidServer>
       @JsonProperty("host") String hostAndPort,
       @JsonProperty("hostAndTlsPort") String hostAndTlsPort,
       @JsonProperty("maxSize") long maxSize,
+      @JsonProperty("storageSize") @Nullable Long storageSize,
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") int priority
   )
   {
-    this(new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority));
+    this(new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, type, tier, priority));
   }
 
   public DruidServer(DruidServerMetadata metadata)
@@ -128,6 +130,12 @@ public class DruidServer implements Comparable<DruidServer>
   public long getMaxSize()
   {
     return metadata.getMaxSize();
+  }
+
+  @JsonProperty
+  public long getStorageSize()
+  {
+    return metadata.getStorageSize();
   }
 
   @JsonProperty
@@ -333,6 +341,7 @@ public class DruidServer implements Comparable<DruidServer>
         getHostAndPort(),
         getHostAndTlsPort(),
         getMaxSize(),
+        getStorageSize(),
         getType(),
         getTier(),
         getPriority()

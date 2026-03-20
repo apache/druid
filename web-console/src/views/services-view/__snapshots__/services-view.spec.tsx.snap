@@ -54,11 +54,13 @@ exports[`ServicesView renders data 1`] = `
           "Tier",
           "Host",
           "Port",
-          "Current size",
-          "Max size",
+          "Assigned size",
+          "Effective size",
           "Usage",
           "Start time",
           "Version",
+          "Available processors",
+          "Total memory",
           "Labels",
           "Detail",
         ]
@@ -172,7 +174,7 @@ exports[`ServicesView renders data 1`] = `
           {
             "Aggregated": [Function],
             "Cell": [Function],
-            "Header": "Current size",
+            "Header": "Assigned size",
             "accessor": "curr_size",
             "className": "padded",
             "filterable": false,
@@ -183,11 +185,11 @@ exports[`ServicesView renders data 1`] = `
           {
             "Aggregated": [Function],
             "Cell": [Function],
-            "Header": "Max size",
-            "accessor": "max_size",
+            "Header": "Effective size",
+            "accessor": "effective_size",
             "className": "padded",
             "filterable": false,
-            "id": "max_size",
+            "id": "effective_size",
             "show": true,
             "width": 100,
           },
@@ -219,6 +221,30 @@ exports[`ServicesView renders data 1`] = `
             "accessor": "version",
             "show": true,
             "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": <React.Fragment>
+              Available
+              <br />
+              processors
+            </React.Fragment>,
+            "accessor": "available_processors",
+            "className": "padded",
+            "filterable": false,
+            "show": true,
+            "width": 100,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Total memory",
+            "accessor": "total_memory",
+            "className": "padded",
+            "filterable": false,
+            "show": true,
+            "width": 120,
           },
           {
             "Aggregated": [Function],

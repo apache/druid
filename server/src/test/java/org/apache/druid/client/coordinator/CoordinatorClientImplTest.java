@@ -49,6 +49,8 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.QueryBlocklistRule;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -363,6 +365,7 @@ public class CoordinatorClientImplTest
                 "testhost:9092",
                 null,
                 1,
+                null,
                 ServerType.INDEXER_EXECUTOR,
                 "tier1",
                 0
@@ -830,5 +833,38 @@ public class CoordinatorClientImplTest
     );
 
     Assert.assertNull(coordinatorClient.updateRulesForDatasource("xyz", rules).get());
+  }
+
+  @Test
+  public void test_getBrokerDynamicConfig() throws Exception
+  {
+    final BrokerDynamicConfig brokerDynamicConfig = BrokerDynamicConfig.builder().withQueryBlocklist(
+        List.of(
+            new QueryBlocklistRule("test", Set.of("dataSource"), null, null)
+        )
+    ).build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/broker/config"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(brokerDynamicConfig)
+    );
+    Assert.assertEquals(brokerDynamicConfig, coordinatorClient.getBrokerDynamicConfig().get());
+  }
+
+  @Test
+  public void test_getBrokerDynamicConfig_backwardsCompatibleCoordinatorRequest() throws Exception
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/broker/config"),
+        new HttpResponseException(
+            new StringFullResponseHolder(
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                StandardCharsets.UTF_8
+            )
+        )
+    );
+    Assert.assertEquals(BrokerDynamicConfig.builder().build(), coordinatorClient.getBrokerDynamicConfig().get());
   }
 }

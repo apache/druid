@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -106,6 +107,16 @@ public interface TaskStorage
    * @return task status
    */
   Optional<TaskStatus> getStatus(String taskid);
+
+  /**
+   * Returns completed tasks (succeeded or failed) created after the specified time, sorted by
+   * creation time descending (most recent first).
+   *
+   * @param start minimum creation time (exclusive); only tasks created after this time are included
+   * @param n     optional limit on number of tasks to return; if null, returns all matching tasks
+   * @return list of completed task infos matching the criteria
+   */
+  List<TaskInfo> getCompletedTasksInfo(DateTime start, @Nullable Integer n);
 
   @Nullable
   TaskInfo getTaskInfo(String taskId);

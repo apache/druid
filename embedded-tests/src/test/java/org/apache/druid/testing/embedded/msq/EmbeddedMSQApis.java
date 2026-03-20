@@ -19,6 +19,9 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -29,11 +32,17 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -149,5 +158,91 @@ public class EmbeddedMSQApis
     }
 
     return taskReportPayload;
+  }
+
+  /**
+   * Gets the query report for a Dart query by its SQL query ID, fetching from a specific broker.
+   * Returns null if the query is not found.
+   *
+   * @param sqlQueryId   the SQL query ID
+   * @param targetBroker the broker to fetch the report from
+   */
+  @Nullable
+  public GetQueryReportResponse getDartQueryReport(String sqlQueryId, EmbeddedBroker targetBroker)
+  {
+    try {
+      final String responseJson = cluster.callApi().onTargetBroker(
+          targetBroker,
+          b -> b.getQueryReport(sqlQueryId, false /* allow cross-broker forwarding */)
+      );
+      return parseReportResponse(responseJson, targetBroker.bindings().jsonMapper());
+    }
+    catch (RuntimeException e) {
+      // Check if this is a 404 Not Found response
+      final Throwable cause = e.getCause();
+      if (cause instanceof HttpResponseException) {
+        if (((HttpResponseException) cause).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+          return null;
+        }
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Submits a Dart SQL query asynchronously to a specific broker.
+   *
+   * @param sql          the SQL query
+   * @param context      additional context parameters
+   * @param targetBroker the broker to submit the query to
+   *
+   * @return a future that resolves when the query completes
+   */
+  public ListenableFuture<String> submitDartSqlAsync(
+      String sql,
+      Map<String, Object> context,
+      EmbeddedBroker targetBroker
+  )
+  {
+    final Map<String, Object> fullContext = new HashMap<>(context);
+    fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+
+    return cluster.callApi().onTargetBrokerAsync(
+        targetBroker,
+        b -> b.submitSqlQuery(
+            new ClientSqlQuery(
+                sql,
+                ResultFormat.CSV.name(),
+                false,
+                false,
+                false,
+                fullContext,
+                null
+            )
+        )
+    );
+  }
+
+  /**
+   * Cancels a Dart SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId   the SQL query ID to cancel
+   * @param targetBroker the broker where the query is running
+   *
+   * @return true if the cancellation was accepted
+   */
+  public boolean cancelDartQuery(String sqlQueryId, EmbeddedBroker targetBroker)
+  {
+    return cluster.callApi().onTargetBroker(targetBroker, b -> b.cancelSqlQuery(sqlQueryId));
+  }
+
+  private static GetQueryReportResponse parseReportResponse(String responseJson, ObjectMapper jsonMapper)
+  {
+    try {
+      return jsonMapper.readValue(responseJson, GetQueryReportResponse.class);
+    }
+    catch (JsonProcessingException e) {
+      throw DruidException.defensive(e, "Failed to parse query report response[%s]", responseJson);
+    }
   }
 }

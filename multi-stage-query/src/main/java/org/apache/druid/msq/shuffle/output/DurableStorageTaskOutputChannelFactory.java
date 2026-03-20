@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
@@ -65,10 +66,20 @@ public class DurableStorageTaskOutputChannelFactory
       String taskId,
       int frameSize,
       StorageConnector storageConnector,
-      File tmpDir
+      File tmpDir,
+      WireTransferableContext wireTransferableContext
   )
   {
-    super(controllerTaskId, workerNumber, stageNumber, taskId, frameSize, storageConnector, tmpDir);
+    super(
+        controllerTaskId,
+        workerNumber,
+        stageNumber,
+        taskId,
+        frameSize,
+        storageConnector,
+        tmpDir,
+        wireTransferableContext
+    );
   }
 
   @Override
@@ -99,7 +110,8 @@ public class DurableStorageTaskOutputChannelFactory
             FrameFileWriter.open(
                 Channels.newChannel(storageConnector.write(fileName)),
                 null,
-                ByteTracker.unboundedTracker()
+                ByteTracker.unboundedTracker(),
+                wireTransferableContext
             )
         );
 
@@ -120,7 +132,8 @@ public class DurableStorageTaskOutputChannelFactory
                 storageConnector.read(fileName),
                 fileName,
                 remoteInputStreamPool,
-                false
+                false,
+                wireTransferableContext
             );
           }
           catch (IOException e) {
@@ -147,7 +160,8 @@ public class DurableStorageTaskOutputChannelFactory
             FrameFileWriter.open(
                 Channels.newChannel(countingOutputStream),
                 ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
-                ByteTracker.unboundedTracker()
+                ByteTracker.unboundedTracker(),
+                wireTransferableContext
             )
         );
 
@@ -201,7 +215,8 @@ public class DurableStorageTaskOutputChannelFactory
             frameFileFooterSupplier,
             fileName,
             remoteInputStreamPool,
-            footerFile
+            footerFile,
+            wireTransferableContext
         )
     );
   }

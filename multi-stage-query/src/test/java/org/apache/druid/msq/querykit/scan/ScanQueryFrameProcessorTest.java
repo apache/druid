@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -40,22 +39,22 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
+import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
@@ -65,6 +64,7 @@ import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -110,14 +110,22 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         1
     );
 
+    final ReferenceCountedSegmentProvider segmentReferenceProvider =
+        new ReferenceCountedSegmentProvider(new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")));
+    Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences());
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
         null,
         new DefaultObjectMapper(),
         ReadableInput.segment(
-            new SegmentWithDescriptor(
-                () -> new StupidResourceHolder<>(new CompleteSegment(null, new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")))),
-                new RichSegmentDescriptor(queryableIndex.getDataInterval(), queryableIndex.getDataInterval(), "dummy_version", 0)
+            new SegmentReferenceHolder(
+                new SegmentReference(
+                    SegmentId.dummy("test").toDescriptor(),
+                    segmentReferenceProvider.acquireReference(),
+                    null
+                ),
+                null,
+                null
             )
         ),
         SegmentMapFunction.IDENTITY,
@@ -156,6 +164,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
 
     Assert.assertEquals(Unit.instance(), retVal.get());
+    Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences()); // Segment reference was closed
   }
 
   @Test

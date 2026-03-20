@@ -221,7 +221,7 @@ public class ClientQuerySegmentWalkerTest
 
   private Closer closer;
   private QueryRunnerFactoryConglomerate conglomerate;
-  private final StubServiceEmitter emitter = new StubServiceEmitter();
+  private final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
 
   // Queries that are issued; checked by "testQuery" against its "expectedQueries" parameter.
   private final List<ExpectedQuery> issuedQueries = new ArrayList<>();
@@ -717,10 +717,10 @@ public class ClientQuerySegmentWalkerTest
                 query.withDataSource(
                     InlineDataSource.fromIterable(
                         ImmutableList.of(
-                            new Object[]{ImmutableList.of("a", "b"), 1},
-                            new Object[]{ImmutableList.of("a", "c"), 2},
-                            new Object[]{ImmutableList.of("b"), 3},
-                            new Object[]{ImmutableList.of("c"), 4}
+                            new Object[]{List.of("a", "b"), 1L},
+                            new Object[]{List.of("a", "c"), 2L},
+                            new Object[]{"b", 3L},
+                            new Object[]{"c", 4L}
                         ),
                         RowSignature.builder().add("s", null).add("n", null).build()
                     )
@@ -767,10 +767,10 @@ public class ClientQuerySegmentWalkerTest
                 query.withDataSource(
                     InlineDataSource.fromIterable(
                         ImmutableList.of(
-                            new Object[]{ImmutableList.of("a", "b"), 1},
-                            new Object[]{ImmutableList.of("a", "c"), 2},
-                            new Object[]{ImmutableList.of("b"), 3},
-                            new Object[]{ImmutableList.of("c"), 4}
+                            new Object[]{List.of("a", "b"), 1L},
+                            new Object[]{List.of("a", "c"), 2L},
+                            new Object[]{"b", 3L},
+                            new Object[]{"c", 4L}
                         ),
                         RowSignature.builder().add("s", null).add("n", null).build()
                     )

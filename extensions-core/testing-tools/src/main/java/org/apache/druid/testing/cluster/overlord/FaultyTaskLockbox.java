@@ -40,6 +40,8 @@ public class FaultyTaskLockbox extends GlobalTaskLockbox
   private static final Logger log = new Logger(FaultyTaskLockbox.class);
 
   private final ObjectMapper mapper;
+  private final TaskStorage taskStorage;
+  private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
 
   @Inject
   public FaultyTaskLockbox(
@@ -50,21 +52,30 @@ public class FaultyTaskLockbox extends GlobalTaskLockbox
   {
     super(taskStorage, metadataStorageCoordinator);
     this.mapper = mapper;
+    this.taskStorage = taskStorage;
+    this.metadataStorageCoordinator = metadataStorageCoordinator;
     log.info("Initializing FaultyTaskLockbox.");
   }
 
   @Override
-  protected void cleanupPendingSegments(Task task)
+  protected TaskLockbox createLockbox(String dataSource)
   {
-    final ClusterTestingTaskConfig testingConfig = getTestingConfig(task);
-    if (testingConfig.getMetadataConfig().isCleanupPendingSegments()) {
-      super.cleanupPendingSegments(task);
-    } else {
-      log.info(
-          "Skipping cleanup of pending segments for task[%s] since it has testing config[%s].",
-          task.getId(), testingConfig
-      );
-    }
+    return new TaskLockbox(dataSource, taskStorage, metadataStorageCoordinator)
+    {
+      @Override
+      protected void cleanupPendingSegments(Task task)
+      {
+        final ClusterTestingTaskConfig testingConfig = getTestingConfig(task);
+        if (testingConfig.getMetadataConfig().isCleanupPendingSegments()) {
+          super.cleanupPendingSegments(task);
+        } else {
+          log.info(
+              "Skipping cleanup of pending segments for task[%s] since it has testing config[%s].",
+              task.getId(), testingConfig
+          );
+        }
+      }
+    };
   }
 
   private ClusterTestingTaskConfig getTestingConfig(Task task)

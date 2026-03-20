@@ -297,6 +297,38 @@ public interface IndexMerger
 
   /**
    * Merge a collection of {@link QueryableIndex}.
+   *
+   * Only used as a convenience method in tests. In production code, use the full version
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   */
+  @VisibleForTesting
+  default File mergeQueryableIndex(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
+      DimensionsSpec dimensionsSpec,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
+  ) throws IOException
+  {
+    return mergeQueryableIndex(
+        indexes,
+        rollup,
+        metricAggs,
+        dimensionsSpec,
+        outDir,
+        indexSpec,
+        indexSpec,
+        new BaseProgressIndicator(),
+        segmentWriteOutMediumFactory,
+        maxColumnsToMerge
+    );
+  }
+
+  /**
+   * Merge a collection of {@link QueryableIndex}.
    */
   File mergeQueryableIndex(
       List<QueryableIndex> indexes,

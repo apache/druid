@@ -65,6 +65,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -99,6 +100,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final List<QueryBlocklistRule> queryBlocklist;
   private final long startMs;
   private final long startNs;
 
@@ -121,6 +123,7 @@ public class QueryLifecycle
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      final List<QueryBlocklistRule> queryBlocklist,
       final long startMs,
       final long startNs
   )
@@ -134,6 +137,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.queryBlocklist = queryBlocklist;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -310,6 +314,31 @@ public class QueryLifecycle
     }
   }
 
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    if (queryBlocklist == null || queryBlocklist.isEmpty()) {
+      return;
+    }
+
+    for (QueryBlocklistRule rule : queryBlocklist) {
+      if (rule.matches(this.baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build(
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
+                                rule.getRuleName()
+                            );
+      }
+    }
+  }
+
   private AuthorizationResult doAuthorize(
       final AuthenticationResult authenticationResult,
       final AuthorizationResult authorizationResult
@@ -322,6 +351,10 @@ public class QueryLifecycle
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
+      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+      // This ensures the exception is properly handled as an authorization failure
+      checkQueryBlocklist();
+
       transition(State.AUTHORIZING, State.AUTHORIZED);
       this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
                                                               .withPolicies(

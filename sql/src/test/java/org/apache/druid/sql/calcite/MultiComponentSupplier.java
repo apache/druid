@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Module;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -116,7 +117,10 @@ public abstract class MultiComponentSupplier implements QueryComponentSupplier
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
+  )
   {
     throw unsupportedException();
   }

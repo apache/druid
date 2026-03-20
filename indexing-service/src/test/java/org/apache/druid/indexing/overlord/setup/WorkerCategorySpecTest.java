@@ -58,7 +58,7 @@ public class WorkerCategorySpecTest
     Assert.assertTrue(workerCategorySpec.isStrong());
     Assert.assertEquals(ImmutableMap.of(
         "index_kafka",
-        new WorkerCategorySpec.CategoryConfig("c1", ImmutableMap.of("ds1", "c2"))
+        new WorkerCategorySpec.CategoryConfig("c1", ImmutableMap.of("ds1", "c2"), null)
     ), workerCategorySpec.getCategoryMap());
   }
 }

@@ -34,6 +34,7 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -126,6 +127,57 @@ public class BrokerClientImpl implements BrokerClient
           final HttpResponseStatus status = holder.getStatus();
           return status.equals(HttpResponseStatus.OK);
         }
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> updateBrokerDynamicConfig(BrokerDynamicConfig config)
+  {
+    final RequestBuilder requestBuilder =
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/broker")
+            .jsonContent(jsonMapper, config);
+
+    return FutureUtils.transform(
+        client.asyncRequest(requestBuilder, new BytesFullResponseHandler()),
+        holder -> {
+          final HttpResponseStatus status = holder.getStatus();
+          return status.equals(HttpResponseStatus.OK);
+        }
+    );
+  }
+
+  @Override
+  public ListenableFuture<String> getQueryReport(String sqlQueryId, boolean selfOnly)
+  {
+    final String path = StringUtils.format(
+        "/druid/v2/sql/queries/%s/reports%s",
+        StringUtils.urlEncode(sqlQueryId),
+        selfOnly ? "?selfOnly" : ""
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        FullResponseHolder::getContent
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> cancelSqlQuery(String sqlQueryId)
+  {
+    final String path = StringUtils.format(
+        "/druid/v2/sql/%s",
+        StringUtils.urlEncode(sqlQueryId)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> holder.getStatus().equals(HttpResponseStatus.ACCEPTED)
     );
   }
 }

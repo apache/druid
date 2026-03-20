@@ -20,8 +20,8 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -36,9 +36,9 @@ public class NonFailingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void write(FrameWithPartition frameWithPartition) throws IOException
+  public void write(RowsAndColumns rac, int partitionNumber) throws IOException
   {
-    delegate.write(frameWithPartition);
+    delegate.write(rac, partitionNumber);
   }
 
   @Override

@@ -22,19 +22,18 @@ package org.apache.druid.msq.querykit;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.segment.SegmentMapFunction;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Queue;
@@ -49,11 +48,9 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
   private static final Logger log = new Logger(BaseLeafFrameProcessorManager.class);
 
   /**
-   * Base inputs, from {@link BaseLeafStageProcessor#readBaseInputs}. Set to null by {@link #next()}
-   * once exhausted.
+   * Base inputs, from {@link BaseLeafStageProcessor#makeBaseInputQueue(List, ExecutionContext)}.
    */
-  @Nullable
-  private Iterator<ReadableInput> baseInputIterator;
+  private final ReadableInputQueue baseInputQueue;
 
   /**
    * Segment map function for this processor, from {@link BaseLeafStageProcessor#makeSegmentMapFnProcessor}.
@@ -86,8 +83,13 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
    */
   private final BaseLeafStageProcessor parentFactory;
 
+  /**
+   * Set true when {@link #next()} returns its last item.
+   */
+  private boolean noMore;
+
   BaseLeafFrameProcessorManager(
-      Iterable<ReadableInput> baseInputs,
+      ReadableInputQueue baseInputQueue,
       SegmentMapFunction segmentMapFn,
       Queue<FrameWriterFactory> frameWriterFactoryQueue,
       Queue<WritableFrameChannel> channelQueue,
@@ -95,7 +97,7 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
       BaseLeafStageProcessor parentFactory
   )
   {
-    this.baseInputIterator = baseInputs.iterator();
+    this.baseInputQueue = baseInputQueue;
     this.segmentMapFn = segmentMapFn;
     this.frameWriterFactoryQueueRef = new AtomicReference<>(frameWriterFactoryQueue);
     this.channelQueueRef = new AtomicReference<>(channelQueue);
@@ -106,32 +108,42 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
   @Override
   public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
   {
-    if (baseInputIterator == null) {
+    if (noMore) {
       // Prior call would have returned empty Optional.
       throw new NoSuchElementException();
-    } else if (baseInputIterator.hasNext()) {
-      final ReadableInput baseInput = baseInputIterator.next();
-      final FrameProcessor<Object> processor = parentFactory.makeProcessor(
-          baseInput,
-          segmentMapFn,
-          makeLazyResourceHolder(
-              channelQueueRef,
-              channel -> {
-                try {
-                  channel.close();
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-          ),
-          makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
-          frameContext
-      );
-
-      return Futures.immediateFuture(Optional.of(new ProcessorAndCallback<>(processor, null)));
     } else {
-      baseInputIterator = null;
+      baseInputQueue.start();
+    }
+
+    final ListenableFuture<ReadableInput> nextInput = baseInputQueue.nextInput();
+    if (nextInput != null) {
+      return FutureUtils.transform(
+          nextInput,
+          input -> Optional.of(
+              new ProcessorAndCallback<>(
+                  parentFactory.makeProcessor(
+                      input,
+                      segmentMapFn,
+                      makeLazyResourceHolder(
+                          channelQueueRef,
+                          channel -> {
+                            try {
+                              channel.close();
+                            }
+                            catch (IOException e) {
+                              throw new RuntimeException(e);
+                            }
+                          }
+                      ),
+                      makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
+                      frameContext
+                  ),
+                  null
+              )
+          )
+      );
+    } else {
+      noMore = true;
       return Futures.immediateFuture(Optional.empty());
     }
   }
@@ -161,6 +173,9 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
         log.warn(e, "Error encountered while closing channel for [%s]", this);
       }
     }
+
+    // Close baseInputQueue so all currently-loading segments are released.
+    baseInputQueue.close();
   }
 
   private static <T> ResourceHolder<T> makeLazyResourceHolder(

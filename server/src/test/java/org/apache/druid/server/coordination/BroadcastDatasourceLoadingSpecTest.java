@@ -63,7 +63,10 @@ public class BroadcastDatasourceLoadingSpecTest
   @Test
   public void testLoadingOnlyRequiredLookupsWithNullList()
   {
-    DruidException exception = Assert.assertThrows(DruidException.class, () -> BroadcastDatasourceLoadingSpec.loadOnly(null));
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> BroadcastDatasourceLoadingSpec.loadOnly(null)
+    );
     Assert.assertEquals("Expected non-null set of broadcast datasources to load.", exception.getMessage());
   }
 
@@ -96,8 +99,10 @@ public class BroadcastDatasourceLoadingSpecTest
         BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of("ds1", "ds2")),
         BroadcastDatasourceLoadingSpec.createFromContext(
             ImmutableMap.of(
-                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD, Arrays.asList("ds1", "ds2"),
-                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED
+                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD,
+                Arrays.asList("ds1", "ds2"),
+                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE,
+                BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED
             ),
             BroadcastDatasourceLoadingSpec.ALL
         )
@@ -108,7 +113,9 @@ public class BroadcastDatasourceLoadingSpecTest
         BroadcastDatasourceLoadingSpec.NONE,
         BroadcastDatasourceLoadingSpec.createFromContext(
             ImmutableMap.of(
-                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, BroadcastDatasourceLoadingSpec.Mode.NONE),
+                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE,
+                BroadcastDatasourceLoadingSpec.Mode.NONE
+            ),
             BroadcastDatasourceLoadingSpec.ALL
         )
     );
@@ -117,50 +124,70 @@ public class BroadcastDatasourceLoadingSpecTest
     Assert.assertEquals(
         BroadcastDatasourceLoadingSpec.ALL,
         BroadcastDatasourceLoadingSpec.createFromContext(
-            ImmutableMap.of(BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, BroadcastDatasourceLoadingSpec.Mode.ALL),
+            ImmutableMap.of(
+                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE,
+                BroadcastDatasourceLoadingSpec.Mode.ALL
+            ),
             BroadcastDatasourceLoadingSpec.NONE
         )
     );
   }
 
   @Test
-  @Parameters(
-      {
-          "NONE1",
-          "A",
-          "Random mode",
-          "all",
-          "only required",
-          "none"
-      }
-  )
+  @Parameters({
+      "NONE1",
+      "A",
+      "Random mode",
+      "all",
+      "only required",
+      "none"
+  })
   public void testSpecFromInvalidModeInContext(final String mode)
   {
-    final DruidException exception = Assert.assertThrows(DruidException.class, () -> BroadcastDatasourceLoadingSpec.createFromContext(
-        ImmutableMap.of(BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, mode), BroadcastDatasourceLoadingSpec.ALL));
-    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
-                                           BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, mode), exception.getMessage());
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> BroadcastDatasourceLoadingSpec.createFromContext(
+            ImmutableMap.of(BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, mode),
+            BroadcastDatasourceLoadingSpec.ALL
+        )
+    );
+    Assert.assertEquals(
+        StringUtils.format(
+            "Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
+            BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, mode
+        ),
+        exception.getMessage()
+    );
   }
 
 
   @Test
-  @Parameters(
-      {
-          "foo bar",
-          "foo]"
-      }
-  )
+  @Parameters({
+      "foo bar",
+      "foo]"
+  })
   public void testSpecFromInvalidBroadcastDatasourcesInContext(final Object lookupsToLoad)
   {
-    final DruidException exception = Assert.assertThrows(DruidException.class, () ->
-        BroadcastDatasourceLoadingSpec.createFromContext(
-            ImmutableMap.of(
-                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD, lookupsToLoad,
-                BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE, BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED),
-            BroadcastDatasourceLoadingSpec.ALL)
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () ->
+            BroadcastDatasourceLoadingSpec.createFromContext(
+                ImmutableMap.of(
+                    BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD,
+                    lookupsToLoad,
+                    BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCE_LOADING_MODE,
+                    BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED
+                ),
+                BroadcastDatasourceLoadingSpec.ALL
+            )
     );
-    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Please provide a comma-separated list of "
-                                           + "broadcast datasource names. For example: [\"datasourceName1\", \"datasourceName2\"]",
-                                           BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD, lookupsToLoad), exception.getMessage());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Invalid value of %s[%s]. Please provide a comma-separated list of "
+            + "broadcast datasource names. For example: [\"datasourceName1\", \"datasourceName2\"]",
+            BroadcastDatasourceLoadingSpec.CTX_BROADCAST_DATASOURCES_TO_LOAD, lookupsToLoad
+        ),
+        exception.getMessage()
+    );
   }
 }

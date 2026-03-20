@@ -22,10 +22,11 @@ import classNames from 'classnames';
 import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import type { Execution, QueryWithContext } from '../../../druid-models';
+import type { ConsoleViewId, Execution, QueryWithContext } from '../../../druid-models';
 import { getConsoleViewIcon } from '../../../druid-models';
 import { executionBackgroundStatusCheck, reattachTaskExecution } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
+import { TableFilters } from '../../../utils/table-filters';
 import { ExecutionProgressBarPane } from '../../workbench-view/execution-progress-bar-pane/execution-progress-bar-pane';
 import { ExecutionStagesPane } from '../../workbench-view/execution-stages-pane/execution-stages-pane';
 
@@ -34,8 +35,7 @@ import './ingestion-progress-dialog.scss';
 interface IngestionProgressDialogProps {
   taskId: string;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToTask(taskGroupId: string): void;
-  goToTaskGroup(taskGroupId: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   onReset(): void;
   onClose(): void;
 }
@@ -43,7 +43,7 @@ interface IngestionProgressDialogProps {
 export const IngestionProgressDialog = React.memo(function IngestionProgressDialog(
   props: IngestionProgressDialogProps,
 ) {
-  const { taskId, goToQuery, goToTask, goToTaskGroup, onReset, onClose } = props;
+  const { taskId, goToQuery, goToView, onReset, onClose } = props;
   const [showLiveReports, setShowLiveReports] = useState(false);
 
   const [insertResultState, ingestQueryManager] = useQueryManager<string, Execution, Execution>({
@@ -80,7 +80,12 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
               showLiveReports={showLiveReports}
             />
             {insertResultState.intermediate?.stages && showLiveReports && (
-              <ExecutionStagesPane execution={insertResultState.intermediate} goToTask={goToTask} />
+              <ExecutionStagesPane
+                execution={insertResultState.intermediate}
+                goToTask={(taskId: string) =>
+                  goToView('tasks', TableFilters.eq({ task_id: taskId }))
+                }
+              />
             )}
           </>
         )}
@@ -106,7 +111,10 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
                 rightIcon={IconNames.ARROW_TOP_RIGHT}
                 onClick={() => {
                   if (!insertResultState.intermediate) return;
-                  goToTaskGroup(insertResultState.intermediate.id);
+                  goToView(
+                    'tasks',
+                    TableFilters.eq({ group_id: insertResultState.intermediate.id }),
+                  );
                 }}
               />
             </>

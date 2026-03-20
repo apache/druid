@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionType;
@@ -107,13 +106,11 @@ public class ExpressionVectorSelectorsCastTest
   )
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v",
-                "cast(" + column + ", '" + ExpressionType.fromColumnType(castTo) + "')",
-                castTo,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v",
+            "cast(" + column + ", '" + ExpressionType.fromColumnType(castTo) + "')",
+            castTo,
+            TestExprMacroTable.INSTANCE
         )
     );
     final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);

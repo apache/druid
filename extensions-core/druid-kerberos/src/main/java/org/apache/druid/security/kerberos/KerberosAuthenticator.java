@@ -487,8 +487,8 @@ public class KerberosAuthenticator implements Authenticator
               KerberosUtil.getKrb5LoginModuleName(),
               AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
               options
-          ),
-          };
+          )
+      };
     }
   }
 

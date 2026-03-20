@@ -34,7 +34,7 @@ changing the granularity of the segment time interval or partitioning your
 data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
 A good starting point for this parameter is 5 million rows.
 See the Sharding section below and the "Partitioning specification" section of
-the [Batch ingestion](../ingestion/hadoop.md#partitionsspec) documentation
+the [Batch ingestion](../ingestion/native-batch.md#partitionsspec) documentation
 for more guidance.
 
 ## Segment file structure

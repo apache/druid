@@ -1311,12 +1311,13 @@ public class LookupCoordinatorManagerTest
   {
     EasyMock.reset(configManager);
 
-    EasyMock.expect(configManager.watch(
-                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-                        EasyMock.<TypeReference>anyObject(),
-                        EasyMock.<AtomicReference>isNull()
-                    )).andReturn(
-        new AtomicReference<>(Collections.emptyMap())).anyTimes();
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.<TypeReference>anyObject(),
+            EasyMock.<AtomicReference>isNull()
+        )
+    ).andReturn(new AtomicReference<>(Collections.emptyMap())).anyTimes();
 
     EasyMock.replay(configManager);
 
@@ -1414,7 +1415,8 @@ public class LookupCoordinatorManagerTest
             HostAndPort.fromParts("h1", 8080),
             HostAndPort.fromParts("h2", 8080)
         ),
-        ImmutableSet.copyOf(manager.discoverNodesInTier("tier")));
+        ImmutableSet.copyOf(manager.discoverNodesInTier("tier"))
+    );
     EasyMock.verify(lookupNodeDiscovery);
   }
 
@@ -1424,12 +1426,12 @@ public class LookupCoordinatorManagerTest
   {
     EasyMock.reset(configManager);
 
-    EasyMock.expect(configManager.watch(
-                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-                        EasyMock.<TypeReference>anyObject(),
-                        EasyMock.<AtomicReference>isNull()
-                    )).andReturn(
-        new AtomicReference<Map<String, Map<String, Map<String, Object>>>>(null)).once();
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.<TypeReference>anyObject(),
+            EasyMock.<AtomicReference>isNull()
+        )).andReturn(new AtomicReference<Map<String, Map<String, Map<String, Object>>>>(null)).once();
 
     EasyMock.expect(
         configManager.watch(

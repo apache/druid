@@ -74,6 +74,8 @@ public class IndexSpec
   private final SegmentizerFactory segmentLoader;
   @Nullable
   private final NestedCommonFormatColumnFormatSpec autoColumnFormatSpec;
+  @Nullable
+  private final CompressionStrategy metadataCompression;
 
   /**
    * Creates an IndexSpec with the given storage format settings.
@@ -82,6 +84,8 @@ public class IndexSpec
    *                                 Defaults to the bitmap type specified by the (deprecated)
    *                                 "druid.processing.bitmap.type" setting, or, if none was set, uses the default
    *                                 defined in {@link BitmapSerde} upon calling {@link #getEffectiveSpec()}
+   *
+   * @param metadataCompression      compression format for v10 metadata
    * @param dimensionCompression     compression format for dimension columns, null to use the default.
    *                                 Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY} upon calling
    *                                 {@link #getEffectiveSpec()}
@@ -109,6 +113,7 @@ public class IndexSpec
   @JsonCreator
   public IndexSpec(
       @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("metadataCompression") @Nullable CompressionStrategy metadataCompression,
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
@@ -120,6 +125,7 @@ public class IndexSpec
   )
   {
     this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.metadataCompression = metadataCompression;
     this.dimensionCompression = dimensionCompression;
     this.stringDictionaryEncoding = stringDictionaryEncoding;
     this.metricCompression = metricCompression;
@@ -135,6 +141,14 @@ public class IndexSpec
   public BitmapSerdeFactory getBitmapSerdeFactory()
   {
     return bitmapSerdeFactory;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public CompressionStrategy getMetadataCompression()
+  {
+    return metadataCompression;
   }
 
   @JsonProperty
@@ -216,6 +230,14 @@ public class IndexSpec
       bob.withBitmapSerdeFactory(new BitmapSerde.DefaultBitmapSerdeFactory());
     }
 
+    if (metadataCompression != null) {
+      bob.withMetadataCompression(metadataCompression);
+    } else if (defaultSpec.metadataCompression != null) {
+      bob.withMetadataCompression(defaultSpec.metadataCompression);
+    } else {
+      bob.withMetadataCompression(CompressionStrategy.NONE);
+    }
+
     if (dimensionCompression != null) {
       bob.withDimensionCompression(dimensionCompression);
     } else if (defaultSpec.dimensionCompression != null) {
@@ -290,6 +312,7 @@ public class IndexSpec
     }
     IndexSpec indexSpec = (IndexSpec) o;
     return Objects.equals(bitmapSerdeFactory, indexSpec.bitmapSerdeFactory) &&
+           metadataCompression == indexSpec.metadataCompression &&
            dimensionCompression == indexSpec.dimensionCompression &&
            Objects.equals(stringDictionaryEncoding, indexSpec.stringDictionaryEncoding) &&
            metricCompression == indexSpec.metricCompression &&
@@ -305,6 +328,7 @@ public class IndexSpec
   {
     return Objects.hash(
         bitmapSerdeFactory,
+        metadataCompression,
         dimensionCompression,
         stringDictionaryEncoding,
         metricCompression,
@@ -321,6 +345,7 @@ public class IndexSpec
   {
     return "IndexSpec{" +
            "bitmapSerdeFactory=" + bitmapSerdeFactory +
+           ", metadataCompression=" + metadataCompression +
            ", dimensionCompression=" + dimensionCompression +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", metricCompression=" + metricCompression +
@@ -336,6 +361,8 @@ public class IndexSpec
   {
     @Nullable
     private BitmapSerdeFactory bitmapSerdeFactory;
+    @Nullable
+    private CompressionStrategy metadataCompression;
     @Nullable
     private CompressionStrategy dimensionCompression;
     @Nullable
@@ -356,6 +383,12 @@ public class IndexSpec
     public Builder withBitmapSerdeFactory(@Nullable BitmapSerdeFactory bitmapSerdeFactory)
     {
       this.bitmapSerdeFactory = bitmapSerdeFactory;
+      return this;
+    }
+
+    public Builder withMetadataCompression(CompressionStrategy metadataCompression)
+    {
+      this.metadataCompression = metadataCompression;
       return this;
     }
 
@@ -412,6 +445,7 @@ public class IndexSpec
     {
       return new IndexSpec(
           bitmapSerdeFactory,
+          metadataCompression,
           dimensionCompression,
           stringDictionaryEncoding,
           metricCompression,

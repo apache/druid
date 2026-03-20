@@ -71,6 +71,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -133,7 +134,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -481,33 +484,46 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             Duration.standardHours(2).getStandardMinutes()
         ),
-        new KafkaIndexTaskTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        supervisor.getTuningConfig(),
+        null,
         null
     ).get(0);
     Assert.assertTrue(indexTask.getRunner() instanceof KafkaIndexTaskRunner);
+    Assert.assertNull(indexTask.getServerPriority());
+  }
+
+  @Test
+  public void testCreateIndexTasksWithServerPrioritiesToAssign() throws JsonProcessingException
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList =
+        supervisor.createIndexTasks(
+            3,
+            "seq",
+            OBJECT_MAPPER,
+            new TreeMap<>(),
+            new KafkaIndexTaskIOConfig(
+                0,
+                "seq",
+                new SeekableStreamStartSequenceNumbers<>("test", Collections.emptyMap(), Collections.emptySet()),
+                new SeekableStreamEndSequenceNumbers<>("test", Collections.emptyMap()),
+                Collections.emptyMap(),
+                null,
+                null,
+                null,
+                null,
+                INPUT_FORMAT,
+                null,
+                Duration.standardHours(2).getStandardMinutes()
+            ),
+            supervisor.getTuningConfig(),
+            null,
+            List.of(10, 20, 20)
+        );
+    Assert.assertEquals(3, taskList.size());
+    Assert.assertEquals(Integer.valueOf(10), taskList.get(0).getServerPriority());
+    Assert.assertEquals(Integer.valueOf(20), taskList.get(1).getServerPriority());
+    Assert.assertEquals(Integer.valueOf(20), taskList.get(2).getServerPriority());
   }
 
   @Test
@@ -1613,6 +1629,104 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testRequeueTaskWithServerPrioritiesWhenFailed() throws Exception
+  {
+    supervisor = getTestableSupervisor(null, 2, 2, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(1, 1, 2, 1));
+    addSomeEvents(1);
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
+
+    TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, singlePartitionMap(topic, 0, 0L, 2, 0L));
+    TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, singlePartitionMap(topic, 1, 0L));
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints1))
+            .anyTimes();
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints2))
+            .anyTimes();
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+
+    // test that running the main loop again checks the status of the tasks that were created and does nothing if they
+    // are all still running
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskQueue);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(tasks)).anyTimes();
+    final List<Integer> observedServerPriorities = new ArrayList<>();
+    for (Task task : tasks) {
+      EasyMock.expect(taskStorage.getStatus(task.getId()))
+              .andReturn(Optional.of(TaskStatus.running(task.getId())))
+              .anyTimes();
+      EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+      observedServerPriorities.add(((KafkaIndexTask) task).getServerPriority());
+    }
+    Assert.assertEquals(4, tasks.size());
+    Assert.assertEquals(List.of(2, 1, 2, 1), observedServerPriorities);
+
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    // test that a task failing causes a new task to be re-queued with the same parameters
+    Capture<Task> aNewTaskCapture = Capture.newInstance();
+    List<Task> imStillAlive = tasks.subList(0, 3);
+    KafkaIndexTask iHaveFailed = (KafkaIndexTask) tasks.get(3);
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskQueue);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(imStillAlive)).anyTimes();
+    for (Task task : imStillAlive) {
+      EasyMock.expect(taskStorage.getStatus(task.getId()))
+              .andReturn(Optional.of(TaskStatus.running(task.getId())))
+              .anyTimes();
+      EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
+            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId(), "Dummy task status failure err message")));
+    EasyMock.expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of(iHaveFailed)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(aNewTaskCapture))).andReturn(true);
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
+    KafkaIndexTask retriedTask = (KafkaIndexTask) aNewTaskCapture.getValue();
+    Assert.assertEquals(
+        iHaveFailed.getIOConfig().getBaseSequenceName(),
+        retriedTask.getIOConfig().getBaseSequenceName()
+    );
+    Assert.assertEquals(Integer.valueOf(1), retriedTask.getServerPriority());
+  }
+
+  @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -2422,7 +2536,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2430,7 +2545,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -2579,7 +2695,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2587,7 +2704,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -2915,7 +3033,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
@@ -2923,7 +3042,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("id2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -3034,8 +3154,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       EasyMock.expect(taskClient.getStatusAsync(task.getId()))
               .andReturn(Futures.immediateFuture(Status.NOT_STARTED));
       EasyMock.expect(taskClient.getStartTimeAsync(task.getId()))
-              .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-      taskQueue.shutdown(task.getId(), "Task [%s] failed to return start time, killing task", task.getId());
+              .andReturn(Futures.immediateFailedFuture(new RuntimeException("killed")));
+      taskQueue.shutdown(task.getId(), "Failed to return start time: %s", "killed");
     }
     EasyMock.replay(taskStorage, taskClient, taskQueue);
 
@@ -4368,7 +4488,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -4377,7 +4498,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1"))
@@ -4410,7 +4532,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -4419,7 +4542,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     ParseExceptionReport exception1 = new ParseExceptionReport(
@@ -4626,14 +4750,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
         tuningConfigBuilder().build()
     );
 
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+    SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup = supervisor.addTaskGroupToActivelyReadingTaskGroup(
         42,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
         minMessageTime,
         maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
+
+    Assert.assertNull(supervisor.computeUnassignedServerPriorities(taskGroup, 3));
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
@@ -5028,7 +5155,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void test_doesTaskMatchSupervisor()
   {
-    supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, null, new Period("PT1H"), new Period("PT1H"), false, kafkaHost, null);
+    supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, null, new Period("PT1H"), new Period("PT1H"), false, kafkaHost, null, null);
 
     KafkaIndexTask kafkaTaskMatch = createMock(KafkaIndexTask.class);
     EasyMock.expect(kafkaTaskMatch.getSupervisorId()).andReturn("supervisorId");
@@ -5045,6 +5172,308 @@ public class KafkaSupervisorTest extends EasyMockSupport
     SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
     EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(differentTaskType);
+  }
+
+  @Test
+  public void test_autoScaler_doesNotRepeatScaleDownActions_ifTasksAreStillPublishing() throws Exception
+  {
+    final TaskLocation location1 = TaskLocation.create("testHost1", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 1235, -1);
+    final TaskLocation location3 = TaskLocation.create("testHost3", 1236, -1);
+    final DateTime startTime = DateTimes.nowUtc();
+
+    // Create supervisor with 3 task groups
+    supervisor = getTestableSupervisor(1, 3, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
+    addSomeEvents(100);
+
+    // Manually create 3 tasks (one for each partition/task group)
+    Task task1 = createKafkaIndexTask(
+        "task1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 0, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 0, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        tuningConfig
+    );
+
+    Task task2 = createKafkaIndexTask(
+        "task2",
+        DATASOURCE,
+        1,
+        new SeekableStreamStartSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 1, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 1, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        tuningConfig
+    );
+
+    Task task3 = createKafkaIndexTask(
+        "task3",
+        DATASOURCE,
+        2,
+        new SeekableStreamStartSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            topic,
+            singlePartitionMap(topic, 2, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        tuningConfig
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(task1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(task2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(task3, null, location3));
+
+    // Setup mocks for initial discovery of tasks
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task1.getId())).andReturn(location1).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task2.getId())).andReturn(location2).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task3.getId())).andReturn(location3).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(task1, task2, task3)).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(task1.getId())).andReturn(Optional.of(TaskStatus.running(task1.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(task2.getId())).andReturn(Optional.of(TaskStatus.running(task2.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.running(task3.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getTask(task1.getId())).andReturn(Optional.of(task1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(task2.getId())).andReturn(Optional.of(task2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(task3.getId())).andReturn(Optional.of(task3)).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KafkaDataSourceMetadata(null)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(task1.getId())).andReturn(Futures.immediateFuture(Status.READING));
+    EasyMock.expect(taskClient.getStatusAsync(task2.getId())).andReturn(Futures.immediateFuture(Status.READING));
+    EasyMock.expect(taskClient.getStatusAsync(task3.getId())).andReturn(Futures.immediateFuture(Status.READING));
+    EasyMock.expect(taskClient.getStartTimeAsync(task1.getId())).andReturn(Futures.immediateFuture(startTime));
+    EasyMock.expect(taskClient.getStartTimeAsync(task2.getId())).andReturn(Futures.immediateFuture(startTime));
+    EasyMock.expect(taskClient.getStartTimeAsync(task3.getId())).andReturn(Futures.immediateFuture(startTime));
+
+    TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, singlePartitionMap(topic, 0, 0L));
+    TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, singlePartitionMap(topic, 1, 0L));
+    TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints3 = new TreeMap<>();
+    checkpoints3.put(0, singlePartitionMap(topic, 2, 0L));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.eq(task1.getId()), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints1))
+            .times(1);
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.eq(task2.getId()), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints2))
+            .times(1);
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.eq(task3.getId()), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints3))
+            .times(1);
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    // Start supervisor and discover the 3 existing tasks
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    // Verify we have 3 actively reading task groups after discovery
+    Assert.assertEquals(
+        "Should have 3 actively reading task groups after discovery",
+        3,
+        supervisor.getActivelyReadingTaskGroupsCount()
+    );
+
+    // Reset and setup mocks for gracefulShutdownInternal
+    EasyMock.reset(taskRunner, taskClient, taskQueue);
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task1.getId())).andReturn(location1).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task2.getId())).andReturn(location2).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(task3.getId())).andReturn(location3).anyTimes();
+    EasyMock.expect(taskClient.pauseAsync(task1.getId())).andReturn(Futures.immediateFuture(singlePartitionMap(topic, 0, 100L)));
+    EasyMock.expect(taskClient.pauseAsync(task2.getId())).andReturn(Futures.immediateFuture(singlePartitionMap(topic, 1, 100L)));
+    EasyMock.expect(taskClient.pauseAsync(task3.getId())).andReturn(Futures.immediateFuture(singlePartitionMap(topic, 2, 100L)));
+    EasyMock.expect(taskClient.setEndOffsetsAsync(EasyMock.eq(task1.getId()), EasyMock.anyObject(), EasyMock.eq(true))).andReturn(Futures.immediateFuture(true));
+    EasyMock.expect(taskClient.setEndOffsetsAsync(EasyMock.eq(task2.getId()), EasyMock.anyObject(), EasyMock.eq(true))).andReturn(Futures.immediateFuture(true));
+    EasyMock.expect(taskClient.setEndOffsetsAsync(EasyMock.eq(task3.getId()), EasyMock.anyObject(), EasyMock.eq(true))).andReturn(Futures.immediateFuture(true));
+
+    EasyMock.replay(taskRunner, taskClient, taskQueue);
+
+    // Simulate autoscaler scale-down by calling gracefulShutdownInternal()
+    // This should move tasks from activelyReadingTaskGroups to pendingCompletionTaskGroups
+    supervisor.gracefulShutdownInternal();
+
+    verifyAll();
+
+    // After gracefulShutdownInternal, tasks should be moved to pendingCompletionTaskGroups
+    Assert.assertEquals(
+        "activelyReadingTaskGroups should be empty after gracefulShutdownInternal",
+        0,
+        supervisor.getActivelyReadingTaskGroupsCount()
+    );
+
+    // Verify pendingCompletionTaskGroups is NOT empty (tasks were moved there)
+    boolean hasPendingTasks = false;
+    for (int groupId = 0; groupId < 3; groupId++) {
+      if (supervisor.getPendingCompletionTaskGroupsCount(groupId) > 0) {
+        hasPendingTasks = true;
+        break;
+      }
+    }
+    Assert.assertTrue(
+        "pendingCompletionTaskGroups should contain task groups after gracefulShutdownInternal",
+        hasPendingTasks
+    );
+
+    // Clear the partition assignments (this is called when task count has changed)
+    supervisor.clearPartitionAssignmentsForScaling();
+
+    // Verify that pendingCompletionTaskGroups has not been cleared
+    boolean stillHasPendingTasks = false;
+    for (int groupId = 0; groupId < 3; groupId++) {
+      if (supervisor.getPendingCompletionTaskGroupsCount(groupId) > 0) {
+        stillHasPendingTasks = true;
+        break;
+      }
+    }
+    Assert.assertTrue(
+        "pendingCompletionTaskGroups should be preserved after clearAllocationInfo() " +
+        "to prevent autoscaler from creating duplicate history entries",
+        stillHasPendingTasks
+    );
+
+    // Verify activelyReadingTaskGroups is still empty
+    Assert.assertEquals(
+        "activelyReadingTaskGroups should remain empty after clearAllocationInfo",
+        0,
+        supervisor.getActivelyReadingTaskGroupsCount()
+    );
+
+    // Verify that partitionOffsets have not been cleared either
+    Assert.assertFalse(supervisor.getPartitionOffsets().isEmpty());
+  }
+
+  @Test
+  public void testComputeUnassignedServerPriorities_whenMultipleReplicasPerPriorityIsSet()
+  {
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        topic,
+        null,
+        INPUT_FORMAT,
+        null,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        null,
+        null,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        Map.of(
+            10, 2,
+            20, 3
+        )
+    );
+
+    Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
+
+    final KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null);
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        KafkaSupervisorTuningConfig.defaultConfig(),
+        kafkaSupervisorIOConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKafkaSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup1 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            0,
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            Set.of(),
+            Set.of(),
+            Map.of()
+        );
+
+    Assert.assertEquals(List.of(20, 20, 20, 10, 10), supervisor.computeUnassignedServerPriorities(taskGroup1, 5));
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup2 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            1,
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            Set.of("task1", "task2"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10)
+        );
+
+    Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
+
+    final SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>.TaskGroup taskGroup3 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            2,
+            ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+            null,
+            null,
+            Set.of("task1", "task2", "task3"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10, "task3", 20)
+        );
+
+    Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
@@ -5158,6 +5587,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         false,
         kafkaHost,
+        null,
         null
     );
   }
@@ -5184,6 +5614,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
+        null,
         null
     );
   }
@@ -5210,7 +5641,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        idleConfig
+        idleConfig,
+        null
     );
   }
 
@@ -5225,7 +5657,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period earlyMessageRejectionPeriod,
       boolean suspended,
       String kafkaHost,
-      IdleConfig idleConfig
+      IdleConfig idleConfig,
+      Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -5252,7 +5685,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         idleConfig,
         null,
-        true
+        true,
+        serverPriorityToReplicas
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5346,7 +5780,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5440,7 +5875,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5589,7 +6025,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        null
     );
   }
 
@@ -5752,6 +6189,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
     private SeekableStreamSupervisorStateManager getStateManager()
     {
       return stateManager;
+    }
+
+    public int getActivelyReadingTaskGroupsCount()
+    {
+      return getActiveTaskGroupsCount();
+    }
+
+    public int getPendingCompletionTaskGroupsCount(int groupId)
+    {
+      CopyOnWriteArrayList<?> groups = getPendingCompletionTaskGroups(groupId);
+      return groups != null ? groups.size() : 0;
     }
   }
 

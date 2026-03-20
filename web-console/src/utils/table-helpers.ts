@@ -19,10 +19,11 @@
 import { ascending, descending, sort } from 'd3-array';
 import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { C } from 'druid-query-toolkit';
-import type { Filter, SortingRule } from 'react-table';
+import type { SortingRule } from 'react-table';
 
 import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
+import type { TableFilters } from './table-filters';
 
 export interface Pagination {
   page: number;
@@ -71,7 +72,7 @@ export function getNumericColumnBraces(
 export interface TableState {
   page: number;
   pageSize: number;
-  filtered: Filter[];
+  filtered: TableFilters;
   sorted: SortingRule[];
 }
 

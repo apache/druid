@@ -58,9 +58,7 @@ public class CpuSetTest
   @Test
   public void testWontCrash()
   {
-    final CpuSet cpuSet = new CpuSet(cgroup -> {
-      throw new RuntimeException("Should still continue");
-    });
+    final CpuSet cpuSet = new CpuSet(TestUtils.exceptionThrowingDiscoverer());
     final CpuSet.CpuSetMetric metric = cpuSet.snapshot();
     Assert.assertEquals(0, metric.getCpuSetCpus().length);
     Assert.assertEquals(0, metric.getEffectiveCpuSetCpus().length);

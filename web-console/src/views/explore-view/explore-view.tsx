@@ -129,6 +129,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
   async function initializeWithFirstTable() {
     const tables = await queryDruidSql<{ TABLE_NAME: string }>({
       query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE' LIMIT 1`,
+      context: { engine: 'native' },
     });
 
     const firstTableName = tables[0].TABLE_NAME;
@@ -175,9 +176,9 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
     [exploreState, querySourceState.data],
   );
 
-  const { source, parseError, where, showSourceQuery, hideResources, hideHelpers } =
-    effectiveExploreState;
+  const { source, parseError, showSourceQuery, hideResources, hideHelpers } = effectiveExploreState;
   const timezone = effectiveExploreState.getEffectiveTimezone();
+  const where = effectiveExploreState.getEffectiveWhere();
 
   function setModuleState(index: number, moduleState: ModuleState) {
     setExploreState(effectiveExploreState.changeModuleState(index, moduleState));
@@ -229,6 +230,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
 
       const { query: rewrittenQuery, maxTime } = await rewriteMaxDataTime(
         rewriteAggregate(parsedQuery, querySource.measures),
+        signal,
       );
       const results = await runSqlQuery(rewrittenQuery, queryTimezone, signal);
 

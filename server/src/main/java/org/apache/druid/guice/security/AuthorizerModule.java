@@ -19,34 +19,37 @@
 
 package org.apache.druid.guice.security;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authorizer;
 
-public class AuthorizerModule implements Module
+import java.util.List;
+
+public class AuthorizerModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
   {
-    final MapBinder<String, Authorizer> authorizerMapBinder = PolyBind.optionBinder(
-        binder,
-        Key.get(Authorizer.class)
+  }
+
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return List.of(
+        new SimpleModule().registerSubtypes(AllowAllAuthorizer.class)
     );
-    authorizerMapBinder.addBinding(AuthConfig.ALLOW_ALL_NAME).to(AllowAllAuthorizer.class).in(LazySingleton.class);
   }
 
   @Provides
   @Named(AuthConfig.ALLOW_ALL_NAME)
   public Authorizer getAuthorizer()
   {
-    return new AllowAllAuthorizer();
+    return new AllowAllAuthorizer(null);
   }
 }

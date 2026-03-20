@@ -312,15 +312,15 @@ public class NestedDataOperatorConversions
         }
 
         RelDataType sqlType = cx.getValidator().getValidatedNodeType(call);
+        final SqlTypeName sqlTypeName = sqlType.getSqlTypeName();
         SqlOperator jsonValueOperator;
-        if (SqlTypeName.INT_TYPES.contains(sqlType.getSqlTypeName())) {
+        if (SqlTypeName.INT_TYPES.contains(sqlTypeName) || SqlTypeName.BOOLEAN_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueBigintOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
-                   SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.DECIMAL.equals(sqlTypeName) || SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueDoubleOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueVarcharOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.ARRAY.equals(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.ARRAY.equals(sqlTypeName)) {
           ColumnType elementType = Calcites.getColumnTypeForRelDataType(sqlType.getComponentType());
           switch (elementType.getType()) {
             case LONG:

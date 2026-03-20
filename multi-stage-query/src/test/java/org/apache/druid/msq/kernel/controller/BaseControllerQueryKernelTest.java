@@ -139,7 +139,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           break;
 
         case READING_INPUT:
-          controllerQueryKernel.createWorkOrders(stageId.getStageNumber(), null);
+          controllerQueryKernel.createWorkOrders(stageId.getStageNumber(), Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, null);
           controllerQueryKernel.startStage(stageId);
           for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
             controllerQueryKernel.workOrdersSentForWorker(stageId, i);
@@ -248,7 +248,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
               inputSlicerFactory,
               WorkerAssignmentStrategy.MAX,
               MultiStageQueryContext.getRowBasedFrameType(QueryContext.of(config.getWorkerContextMap())),
-              Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+              Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
+              Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER,
+              Limits.DEFAULT_MAX_PARTITIONS
           )
       );
     }
@@ -280,7 +282,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public void startStage(int stageNumber)
     {
       Preconditions.checkArgument(initialized);
-      controllerQueryKernel.createWorkOrders(stageNumber, null);
+      controllerQueryKernel.createWorkOrders(stageNumber, Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, null);
       controllerQueryKernel.startStage(new StageId(queryDefinition.getQueryId(), stageNumber));
 
     }

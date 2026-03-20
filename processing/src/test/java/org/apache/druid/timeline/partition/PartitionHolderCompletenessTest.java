@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -86,6 +87,7 @@ public class PartitionHolderCompletenessTest
             ImmutableList.of(
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     null,
                     StringTuple.create("aaa"),
                     0,
@@ -93,6 +95,7 @@ public class PartitionHolderCompletenessTest
                 ),
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     StringTuple.create("ttt"),
                     StringTuple.create("zzz"),
                     2,
@@ -100,6 +103,7 @@ public class PartitionHolderCompletenessTest
                 ),
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     StringTuple.create("bbb"),
                     StringTuple.create("fff"),
                     1,
@@ -116,6 +120,7 @@ public class PartitionHolderCompletenessTest
             ImmutableList.of(
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     StringTuple.create("bbb"),
                     StringTuple.create("fff"),
                     1,
@@ -123,6 +128,7 @@ public class PartitionHolderCompletenessTest
                 ),
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     StringTuple.create("fff"),
                     null,
                     2,
@@ -130,6 +136,7 @@ public class PartitionHolderCompletenessTest
                 ),
                 new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
+                    VirtualColumns.EMPTY,
                     null,
                     StringTuple.create("bbb"),
                     0,

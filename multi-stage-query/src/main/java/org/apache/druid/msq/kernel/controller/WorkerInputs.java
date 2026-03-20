@@ -34,6 +34,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.query.filter.SegmentPruner;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,6 +63,7 @@ public class WorkerInputs
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final int maxInputFilesPerWorker,
       final long maxInputBytesPerWorker
   )
   {
@@ -78,10 +80,11 @@ public class WorkerInputs
     // Assign input slices to workers.
     for (int inputNumber = 0; inputNumber < numInputs; inputNumber++) {
       final InputSpec inputSpec = stageDef.getInputSpecs().get(inputNumber);
+      final SegmentPruner pruner = stageDef.getSegmentPruner(inputNumber);
 
       if (stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
         // Broadcast case: send everything everywhere.
-        final List<InputSlice> broadcastSlices = slicer.sliceStatic(inputSpec, 1);
+        final List<InputSlice> broadcastSlices = slicer.sliceStatic(inputSpec, pruner, 1);
         final InputSlice broadcastSlice = broadcastSlices.isEmpty()
                                           ? NilInputSlice.INSTANCE
                                           : Iterables.getOnlyElement(broadcastSlices);
@@ -99,6 +102,8 @@ public class WorkerInputs
             inputSpec,
             stageWorkerCountMap,
             slicer,
+            pruner,
+            maxInputFilesPerWorker,
             maxInputBytesPerWorker
         );
 

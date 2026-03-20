@@ -24,4 +24,15 @@ public interface SupervisorTaskAutoScaler
   void start();
   void stop();
   void reset();
+
+  /**
+   * Computes the optimal task count during task rollover, allowing a non-disruptive scale-down.
+   * Must be called by the supervisor when tasks are ending their duration.
+   *
+   * @return optimal task count for scale-down, or -1 if no change needed
+   */
+  default int computeTaskCountForRollover()
+  {
+    return -1;
+  }
 }

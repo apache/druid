@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.server.http.OverlordProxyServlet;
 import org.apache.druid.server.http.RedirectFilter;
@@ -54,6 +53,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/coordinator/false",
       "/overlord/false",
       "/status/health",
+      "/status/ready",
       "/druid/coordinator/v1/isLeader"
   );
 
@@ -110,7 +110,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // add some paths not to be redirected to leader.
     final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
-    root.addFilter(GuiceFilter.class, "/status/*", null);
+    root.addFilter(guiceFilterHolder, "/status/*", null);
     root.addFilter(guiceFilterHolder, "/druid-internal/*", null);
 
     // redirect anything other than status to the current lead
