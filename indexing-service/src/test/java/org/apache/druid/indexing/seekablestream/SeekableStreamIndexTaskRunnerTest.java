@@ -62,6 +62,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -92,6 +93,14 @@ public class SeekableStreamIndexTaskRunnerTest
 
   @Mock
   private SeekableStreamIndexTask task;
+
+  private StubServiceEmitter emitter;
+
+  @Before
+  public void setup()
+  {
+    emitter = new StubServiceEmitter();
+  }
 
   @Test
   public void testWithinMinMaxTime()
@@ -292,6 +301,7 @@ public class SeekableStreamIndexTaskRunnerTest
     );
     Assert.assertEquals("supervisorId", runner.getSupervisorId());
 
+    // Setup the task to return a RecordSupplier, StreamAppenderatorDriver, Appenderator
     final RecordSupplier<?, ?, ?> recordSupplier = Mockito.mock(RecordSupplier.class);
     Mockito.when(task.newTaskRecordSupplier(any()))
            .thenReturn(recordSupplier);
@@ -300,14 +310,14 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.newAppenderator(any(), any(), any(), any()))
            .thenReturn(appenderator);
 
-    final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
-
-    final List<DataSegment> segments = CreateDataSegments
+    final List<DataSegment> segment = CreateDataSegments
         .ofDatasource(schema.getDataSource())
         .withNumPartitions(10)
         .withNumRows(1_000)
         .eachOfSizeInMb(500);
-    final SegmentsAndCommitMetadata commitMetadata = new SegmentsAndCommitMetadata(segments, "offset-100");
+    final SegmentsAndCommitMetadata commitMetadata = new SegmentsAndCommitMetadata(segment, "offset-100");
+
+    final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
     Mockito.when(task.newDriver(any(), any(), any()))
            .thenReturn(driver);
     Mockito.when(driver.publish(any(), any(), any()))
@@ -315,7 +325,6 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(driver.registerHandoff(any()))
            .thenReturn(Futures.immediateFuture(commitMetadata));
 
-    final StubServiceEmitter emitter = new StubServiceEmitter();
     Mockito.doAnswer(invocation -> {
       final String metricName = invocation.getArgument(1);
       final Number value = invocation.getArgument(2);
@@ -323,9 +332,17 @@ public class SeekableStreamIndexTaskRunnerTest
       return null;
     }).when(task).emitMetric(any(), any(), any());
 
+    runner.run(createTaskToolbox());
+    emitter.verifyValue("ingest/segments/count", 10);
+    emitter.verifyValue("ingest/rows/published", 10_000L);
+  }
+
+  private TaskToolbox createTaskToolbox()
+  {
     final TestUtils testUtils = new TestUtils();
     final File taskWorkDir = createTaskWorkDirectory();
-    TaskToolbox toolbox = new TaskToolbox.Builder()
+    return new TaskToolbox
+        .Builder()
         .indexIO(TestHelper.getTestIndexIO())
         .taskWorkDir(taskWorkDir)
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
@@ -341,10 +358,6 @@ public class SeekableStreamIndexTaskRunnerTest
         .jsonMapper(TestHelper.JSON_MAPPER)
         .emitter(emitter)
         .build();
-    runner.run(toolbox);
-
-    emitter.verifyValue("ingest/segments/count", 10);
-    emitter.verifyValue("ingest/rows/published", 10_000L);
   }
 
   private File createTaskWorkDirectory()
