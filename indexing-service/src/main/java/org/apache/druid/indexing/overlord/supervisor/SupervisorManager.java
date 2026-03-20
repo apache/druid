@@ -392,10 +392,18 @@ public class SupervisorManager
       throw new IAE("Supervisor[%s] is not a SeekableStreamSupervisor", id);
     }
     SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
+    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
 
     // Verify useEarliestOffset is false
     if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
       throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
+    }
+
+    // Verify useConcurrentLocks is enabled
+    if (streamSpec.getContext() == null || !Boolean.TRUE.equals(streamSpec.getContext().get("useConcurrentLocks"))) {
+      throw new IAE(
+          "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
+      );
     }
 
     // We need an active recordSupplier to query the latest offsets from the stream
