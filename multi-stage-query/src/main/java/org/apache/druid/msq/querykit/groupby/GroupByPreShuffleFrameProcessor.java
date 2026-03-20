@@ -24,7 +24,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -59,7 +58,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -169,24 +167,10 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
-      if (segmentReference == null) {
-        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
-      }
-
-      final Segment segment = segmentReference.getSegmentReference().orElse(null);
-      if (segment == null) {
-        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
-      }
-
-      if (segmentHolder.getInputCounters() != null) {
-        final int rowCount = getSegmentRowCount(segmentReference);
-        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
-      }
-
+      final Segment segment = mapSegment(segmentHolder, closer);
       final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
-
       final Sequence<ResultRow> rowSequence;
+
       if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
         // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
         rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));
