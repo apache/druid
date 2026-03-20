@@ -1315,7 +1315,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.interval = inputSpec.findInterval(dataSource);
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
-        segmentsToCompact = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getSegmentsToCompact());
+        segmentsToCompact = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getSegments());
       } else {
         minorCompaction = false;
         segmentsToCompact = null;

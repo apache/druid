@@ -41,12 +41,12 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
   public static final String TYPE = "minor";
 
   private final Interval interval;
-  private final List<SegmentDescriptor> segmentsToCompact;
+  private final List<SegmentDescriptor> segments;
 
   @JsonCreator
   public MinorCompactionInputSpec(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("segments") List<SegmentDescriptor> segmentsToCompact
+      @JsonProperty("segments") List<SegmentDescriptor> segments
   )
   {
     InvalidInput.conditionalException(interval != null, "Minor compaction interval must not be null");
@@ -56,13 +56,13 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
         interval
     );
     InvalidInput.conditionalException(
-        segmentsToCompact != null && !segmentsToCompact.isEmpty(),
+        segments != null && !segments.isEmpty(),
         "Minor compaction specified segments must not be null or empty"
     );
 
     // Validate that all segments are within the interval
     List<SegmentDescriptor> segmentsNotInInterval =
-        segmentsToCompact.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+        segments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
     InvalidInput.conditionalException(
         segmentsNotInInterval.isEmpty(),
         "All segments must be within interval[%s], got segments outside interval: %s",
@@ -71,7 +71,7 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
     );
 
     this.interval = interval;
-    this.segmentsToCompact = segmentsToCompact;
+    this.segments = segments;
   }
 
   @JsonProperty
@@ -81,9 +81,9 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
   }
 
   @JsonProperty
-  public List<SegmentDescriptor> getSegmentsToCompact()
+  public List<SegmentDescriptor> getSegments()
   {
-    return segmentsToCompact;
+    return segments;
   }
 
   @Override
@@ -112,13 +112,13 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
     }
     MinorCompactionInputSpec that = (MinorCompactionInputSpec) o;
     return Objects.equals(interval, that.interval) &&
-           Objects.equals(segmentsToCompact, that.segmentsToCompact);
+           Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, segmentsToCompact);
+    return Objects.hash(interval, segments);
   }
 
   @Override
@@ -126,7 +126,7 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
   {
     return "MinorCompactionInputSpec{" +
            "interval=" + interval +
-           ", segments=" + segmentsToCompact +
+           ", segments=" + segments +
            '}';
   }
 }
