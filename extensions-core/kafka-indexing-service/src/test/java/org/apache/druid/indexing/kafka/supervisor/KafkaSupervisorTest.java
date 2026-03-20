@@ -5401,7 +5401,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Map.of(
             10, 2,
             20, 3
-        )
+        ),
+        null
     );
 
     Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
@@ -5686,7 +5687,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         idleConfig,
         null,
         true,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5781,6 +5783,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 
@@ -5876,6 +5879,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 

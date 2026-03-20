@@ -86,7 +86,8 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         stopTaskCount,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     );
 
     this.consumerProperties = consumerProperties;

@@ -696,6 +696,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         null,
+        null,
         null
     )
     {
@@ -802,6 +803,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null,
         null
     )
@@ -1103,6 +1105,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         null,
+        null,
         null
     ) {};
 
@@ -1322,6 +1325,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         stopTaskCount,
+        null,
         null
     )
     {
@@ -1557,6 +1561,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null,
         null
     )
@@ -2709,6 +2714,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -2773,6 +2779,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         1, // ensure this is overridden
+        null,
         null
     )
     {
@@ -2928,7 +2935,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     )
     {
     };

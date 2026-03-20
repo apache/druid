@@ -276,64 +276,106 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     try {
       String backfillSupervisorId = spec.getDataSchema().getDataSource() + "_backfill";
-      String baseSequenceName = generateSequenceName(
-          startOffsets,
-          null, // minimumMessageTime - process all data in range
-          null, // maximumMessageTime - process all data in range
-          spec.getDataSchema(),
-          spec.getTuningConfig()
+
+      // Get the backfillTaskCount from config
+      int backfillTaskCount = spec.getIoConfig().getBackfillTaskCount();
+      List<KafkaTopicPartition> partitions = new ArrayList<>(startOffsets.keySet());
+
+      // Determine actual number of tasks (can't have more tasks than partitions)
+      int numTasks = Math.min(backfillTaskCount, partitions.size());
+
+      log.info(
+          "Submitting %d backfill task(s) with supervisorId[%s] for %d partition(s)",
+          numTasks,
+          backfillSupervisorId,
+          partitions.size()
       );
 
-      KafkaSupervisorIOConfig kafkaIoConfig = spec.getIoConfig();
-      KafkaIndexTaskIOConfig backfillIoConfig = new KafkaIndexTaskIOConfig(
-          0,
-          baseSequenceName,
-          null,
-          null,
-          new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getStream(), startOffsets, Collections.emptySet()),
-          new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getStream(), endOffsets),
-          kafkaIoConfig.getConsumerProperties(),
-          kafkaIoConfig.getPollTimeout(),
-          false, // useTransaction = false for backfill (no supervisor coordination)
-          null, // minimumMessageTime - no time filtering for backfill
-          null, // maximumMessageTime - no time filtering for backfill
-          kafkaIoConfig.getInputFormat(),
-          kafkaIoConfig.getConfigOverrides(),
-          kafkaIoConfig.isMultiTopic(),
-          null, // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
-          false // supervised = false
-      );
+      // Split partitions into groups for each task
+      int partitionsPerTask = partitions.size() / numTasks;
+      int remainder = partitions.size() % numTasks;
 
-      // Create backfill task with different supervisorId
-      String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
-      Map<String, Object> context = createBaseTaskContexts();
-      // Use APPEND locks to allow writing to intervals that may overlap with main supervisor
-      context.put("useConcurrentLocks", true);
+      int startIdx = 0;
+      for (int taskNum = 0; taskNum < numTasks; taskNum++) {
+        // Distribute remainder across first few tasks
+        int taskPartitionCount = partitionsPerTask + (taskNum < remainder ? 1 : 0);
+        int endIdx = startIdx + taskPartitionCount;
 
-      KafkaIndexTask backfillTask = new KafkaIndexTask(
-          taskId,
-          backfillSupervisorId, // Use backfill supervisorId instead of spec.getId()
-          new TaskResource(baseSequenceName, 1),
-          spec.getDataSchema(),
-          spec.getTuningConfig(),
-          backfillIoConfig,
-          context,
-          sortingMapper,
-          null // no server priority for backfill tasks
-      );
+        List<KafkaTopicPartition> taskPartitions = partitions.subList(startIdx, endIdx);
 
-      Optional<TaskQueue> taskQueue = getTaskMaster().getTaskQueue();
-      if (taskQueue.isPresent()) {
-        log.info(
-            "Submitting backfill task[%s] with supervisorId[%s] for offsets from [%s] to [%s]",
-            taskId,
-            backfillSupervisorId,
-            startOffsets,
-            endOffsets
+        // Create offset maps for this task's partitions only
+        Map<KafkaTopicPartition, Long> taskStartOffsets = new HashMap<>();
+        Map<KafkaTopicPartition, Long> taskEndOffsets = new HashMap<>();
+        for (KafkaTopicPartition partition : taskPartitions) {
+          taskStartOffsets.put(partition, startOffsets.get(partition));
+          taskEndOffsets.put(partition, endOffsets.get(partition));
+        }
+
+        String baseSequenceName = generateSequenceName(
+            taskStartOffsets,
+            null, // minimumMessageTime - process all data in range
+            null, // maximumMessageTime - process all data in range
+            spec.getDataSchema(),
+            spec.getTuningConfig()
         );
-        taskQueue.get().add(backfillTask);
-      } else {
-        log.error("Failed to submit backfill task because I'm not the leader!");
+
+        KafkaSupervisorIOConfig kafkaIoConfig = spec.getIoConfig();
+        KafkaIndexTaskIOConfig backfillIoConfig = new KafkaIndexTaskIOConfig(
+            taskNum, // taskGroupId
+            baseSequenceName,
+            null,
+            null,
+            new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getStream(), taskStartOffsets, Collections.emptySet()),
+            new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getStream(), taskEndOffsets),
+            kafkaIoConfig.getConsumerProperties(),
+            kafkaIoConfig.getPollTimeout(),
+            false, // useTransaction = false for backfill (no supervisor coordination)
+            null, // minimumMessageTime - no time filtering for backfill
+            null, // maximumMessageTime - no time filtering for backfill
+            kafkaIoConfig.getInputFormat(),
+            kafkaIoConfig.getConfigOverrides(),
+            kafkaIoConfig.isMultiTopic(),
+            null, // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
+            false // supervised = false
+        );
+
+        // Create backfill task with different supervisorId
+        String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
+        Map<String, Object> context = createBaseTaskContexts();
+        // Use APPEND locks to allow writing to intervals that may overlap with main supervisor
+        context.put("useConcurrentLocks", true);
+
+        KafkaIndexTask backfillTask = new KafkaIndexTask(
+            taskId,
+            backfillSupervisorId, // Use backfill supervisorId instead of spec.getId()
+            new TaskResource(baseSequenceName, 1),
+            spec.getDataSchema(),
+            spec.getTuningConfig(),
+            backfillIoConfig,
+            context,
+            sortingMapper,
+            null // no server priority for backfill tasks
+        );
+
+        Optional<TaskQueue> taskQueue = getTaskMaster().getTaskQueue();
+        if (taskQueue.isPresent()) {
+          log.info(
+              "Submitting backfill task[%s] (task %d of %d) with supervisorId[%s] for partitions %s, offsets from [%s] to [%s]",
+              taskId,
+              taskNum + 1,
+              numTasks,
+              backfillSupervisorId,
+              taskPartitions,
+              taskStartOffsets,
+              taskEndOffsets
+          );
+          taskQueue.get().add(backfillTask);
+        } else {
+          log.error("Failed to submit backfill task because I'm not the leader!");
+          break;
+        }
+
+        startIdx = endIdx;
       }
     }
     catch (Exception e) {
