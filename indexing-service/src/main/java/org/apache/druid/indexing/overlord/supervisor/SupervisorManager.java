@@ -369,17 +369,17 @@ public class SupervisorManager
   }
 
   /**
-   * Resets a supervisor to latest offsets and returns the skipped offset ranges.
+   * Resets a supervisor to latest offsets and backfills the skipped offset ranges.
    * Requirements:
    * - Supervisor must be RUNNING - needs active stream connection
-   * - Supervisor must be a SeekableStreamSupervisor (Kafka, Kinesis)
+   * - Supervisor must be a SeekableStreamSupervisor
    * - useEarliestOffset must be false (otherwise supervisor always starts from earliest)
    * @param id supervisor ID
    * @return Map containing supervisorId and skipped offset ranges
    * @throws IllegalArgumentException if supervisor doesn't exist or if useEarliestOffset is true
    * @throws IllegalStateException if supervisor is not running
    */
-  public Map<String, Object> resetSupervisorAndReturnSkippedOffsets(String id)
+  public Map<String, Object> resetSupervisorAndBackfill(String id)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
@@ -424,15 +424,15 @@ public class SupervisorManager
       autoscaler.reset();
     }
 
-    Map<?, Object> skippedRanges = streamSupervisor.calculateSkippedOffsetRanges(startOffsets, latestOffsets);
+    Map<?, Object> backfillRange = streamSupervisor.calculateBackfillRange(startOffsets, latestOffsets);
 
     streamSupervisor.submitBackfillTask(startOffsets, latestOffsets);
 
-    log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, skippedRanges);
+    log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, backfillRange);
 
     return ImmutableMap.of(
       "id", id,
-      "skippedOffsets", skippedRanges
+      "backfillRange", backfillRange
     );
   }
 

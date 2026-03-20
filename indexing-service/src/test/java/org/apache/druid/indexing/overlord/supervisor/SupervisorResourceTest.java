@@ -1328,12 +1328,12 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetOffsetsAndReturnSkippedOffsets()
+  public void testResetOffsetsAndBackfill()
   {
     Capture<String> id1 = Capture.newInstance();
     Map<String, Object> expectedResult = ImmutableMap.of(
         "id", "my-id",
-        "skippedOffsets", ImmutableMap.of(
+        "backfillRange", ImmutableMap.of(
             "0", ImmutableMap.of("start", 50L, "end", 100L),
             "1", ImmutableMap.of("start", 150L, "end", 200L),
             "2", ImmutableMap.of("start", 250L, "end", 300L)
@@ -1341,7 +1341,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
-    EasyMock.expect(supervisorManager.resetSupervisorAndReturnSkippedOffsets(
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill(
         EasyMock.capture(id1)
     )).andReturn(expectedResult);
     replayAll();

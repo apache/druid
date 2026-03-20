@@ -594,11 +594,11 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response reset(
       @PathParam("id") final String id,
-      @QueryParam("returnSkippedOffsets") Boolean returnSkippedOffsets
+      @QueryParam("backfill") Boolean backfill
   )
   {
-    if (Boolean.TRUE.equals(returnSkippedOffsets)) {
-      return handleResetAndReturnSkippedOffsets(id);
+    if (Boolean.TRUE.equals(backfill)) {
+      return handleResetAndBackfill(id);
     } else {
       return handleResetRequest(id, null);
     }
@@ -635,12 +635,12 @@ public class SupervisorResource
     );
   }
 
-  private Response handleResetAndReturnSkippedOffsets(final String id)
+  private Response handleResetAndBackfill(final String id)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
           try {
-            Map<String, Object> result = manager.resetSupervisorAndReturnSkippedOffsets(id);
+            Map<String, Object> result = manager.resetSupervisorAndBackfill(id);
             return Response.ok(result).build();
           }
           catch (IllegalArgumentException e) {

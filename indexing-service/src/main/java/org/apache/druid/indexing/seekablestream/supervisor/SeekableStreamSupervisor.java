@@ -1917,14 +1917,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Calculates the skipped offset ranges between start and end offsets.
+   * Calculates the backfill range between start and end offsets.
    * Returns a map with partition ID as key and [startOffset, endOffset] array as value.
    *
    * @param startOffsets Starting offsets (last checkpointed)
    * @param endOffsets Ending offsets (latest from stream)
    * @return Map of partition ID to offset range [start, end]
    */
-  public Map<PartitionIdType, Object> calculateSkippedOffsetRanges(
+  public Map<PartitionIdType, Object> calculateBackfillRange(
       Map<PartitionIdType, SequenceOffsetType> startOffsets,
       Map<PartitionIdType, SequenceOffsetType> endOffsets
   )
