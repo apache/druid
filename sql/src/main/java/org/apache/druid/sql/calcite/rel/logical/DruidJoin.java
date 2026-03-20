@@ -30,7 +30,9 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 
@@ -75,5 +77,10 @@ public class DruidJoin extends Join implements DruidLogicalNode, SourceDescProdu
     SourceDesc leftDesc = sources.get(0);
     SourceDesc rightDesc = sources.get(1);
     return DruidJoinQueryRel.buildJoinSourceDesc(leftDesc, rightDesc, plannerContext, this, null);
+  }
+
+  public JoinAlgorithm getJoinAlgorithm(PlannerContext plannerContext)
+  {
+    return QueryUtils.getJoinAlgorithm(this, plannerContext);
   }
 }

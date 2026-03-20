@@ -84,10 +84,13 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       return RetryUtils.retry(
           () -> {
             final FileSystem fs = path.getFileSystem(config);
-            if (!fs.exists(path)) {
+
+            if (fs.exists(path)) {
+              FileStatus fileStatus = fs.getFileStatus(path);
+              return mostRecentInDir(fileStatus.isDirectory() ? path : path.getParent(), pattern);
+            } else {
               return null;
             }
-            return mostRecentInDir(fs.isDirectory(path) ? path : path.getParent(), pattern);
           },
           shouldRetryPredicate(),
           DEFAULT_RETRY_COUNT
@@ -97,5 +100,4 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       throw new RuntimeException(e);
     }
   }
-
 }

@@ -721,6 +721,27 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
+    public Iterator<String> getValueIterator()
+    {
+      return new Iterator<>()
+      {
+        int position = 0;
+
+        @Override
+        public boolean hasNext()
+        {
+          return position < idMapping.getValueCardinality();
+        }
+
+        @Override
+        public String next()
+        {
+          return delegate.getValue(idMapping.getReverseId(position++));
+        }
+      };
+    }
+
+    @Override
     public ImmutableBitmap getBitmap(int idx)
     {
       return delegate.getBitmap(idMapping.getReverseId(idx));

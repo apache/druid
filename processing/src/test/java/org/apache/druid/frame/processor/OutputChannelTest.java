@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -39,19 +40,17 @@ public class OutputChannelTest
     Assert.assertTrue(channel.getReadableChannel().isFinished());
 
     // No writable channel: cannot call getWritableChannel.
-    final IllegalStateException e1 = Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
+    final DruidException e1 = Assert.assertThrows(DruidException.class, channel::getWritableChannel);
     MatcherAssert.assertThat(
         e1,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Writable channel is not available. The output channel might be marked as read-only, hence no writes are allowed."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Writable channel is not available."))
     );
 
     // No writable channel: cannot call getFrameMemoryAllocator.
-    final IllegalStateException e2 = Assert.assertThrows(IllegalStateException.class, channel::getFrameMemoryAllocator);
+    final DruidException e2 = Assert.assertThrows(DruidException.class, channel::getFrameMemoryAllocator);
     MatcherAssert.assertThat(
         e2,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Frame memory allocator is not available."))
     );
 
     // Mapping the writable channel of a nil channel has no effect, because there is no writable channel.

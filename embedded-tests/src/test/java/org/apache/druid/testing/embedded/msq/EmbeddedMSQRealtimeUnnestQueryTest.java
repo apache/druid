@@ -20,15 +20,6 @@
 package org.apache.druid.testing.embedded.msq;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.QueryableIndex;
@@ -42,11 +33,10 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.util.Collections;
 import java.util.List;
 
 public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
@@ -67,9 +57,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "always")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
 
@@ -84,17 +71,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
            .addProperty("druid.worker.capacity", "4");
 
     return clusterWithKafka
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class
-        )
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .useLatchableEmitter()
@@ -106,8 +82,8 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
         .addServer(indexer);
   }
 
-  @BeforeEach
-  void setUpEach()
+  @BeforeAll
+  void setupAll()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
 
@@ -121,7 +97,7 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(totalRows)
     );
   }

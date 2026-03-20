@@ -19,22 +19,11 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.exec.OutputChannelMode;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -59,6 +48,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.shaded.com.google.common.io.ByteStreams;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
@@ -101,19 +91,8 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class,
-            MSQExternalDataSourceModule.class,
-            S3StorageConnectorModule.class
-        )
+        .useDefaultTimeoutForLatchableEmitter(20)
+        .addExtensions(S3StorageConnectorModule.class)
         .addResource(storageResource)
         .addResource(msqStorageResource)
         .addServer(coordinator)
@@ -133,7 +112,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
   }
 
   @Override
-  protected void beforeEachTest()
+  protected void refreshDatasourceName()
   {
     // do nothing here, the super version of this method generates a new value for dataSource field each time, but
     // we are setting that in our @BeforeAll where we are just inserting data once and re-using between runs
@@ -299,10 +278,10 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         queryId
     );
 
-    final List<S3ObjectSummary> queryResultObjects =
+    final List<S3Object> queryResultObjects =
         storageResource.getS3Client()
-                       .listObjects(storageResource.getBucket(), resultsBaseKey)
-                       .getObjectSummaries();
+                       .listObjects(builder -> builder.bucket(storageResource.getBucket()).prefix(resultsBaseKey))
+                       .contents();
 
     final int lastStage = stages.size() - 1;
     Assertions.assertEquals(
@@ -312,7 +291,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
             StringUtils.format("%s/stage_%s/worker_0/taskId_%s-worker0_0/part_0", resultsBaseKey, lastStage, queryId),
             StringUtils.format("%s/stage_%s/worker_1/taskId_%s-worker1_0/part_1", resultsBaseKey, lastStage, queryId)
         ),
-        queryResultObjects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toSet())
+        queryResultObjects.stream().map(S3Object::key).collect(Collectors.toSet())
     );
   }
 

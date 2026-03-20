@@ -56,7 +56,8 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
       @JsonProperty("tuningConfig") RabbitStreamIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") RabbitStreamIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JsonProperty("serverPriority") @Nullable Integer serverPriority
   )
   {
     super(
@@ -67,7 +68,8 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        serverPriority
     );
     this.configMapper = configMapper;
 
@@ -92,11 +94,7 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
   protected SeekableStreamIndexTaskRunner<String, Long, ByteEntity> createTaskRunner()
   {
     // noinspection unchecked
-    return new RabbitStreamIndexTaskRunner(
-        this,
-        dataSchema.getParser(),
-        lockGranularityToUse
-    );
+    return new RabbitStreamIndexTaskRunner(this, lockGranularityToUse);
   }
 
   @Override

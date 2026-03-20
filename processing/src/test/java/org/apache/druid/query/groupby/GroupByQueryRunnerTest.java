@@ -2946,6 +2946,34 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMaxSpillFileCountLimitThroughContextOverride()
+  {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+    
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .overrideContext(ImmutableMap.of("maxSpillFileCount", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
+        .build();
+
+    List<ResultRow> expectedResults = null;
+    expectedException.expect(ResourceLimitExceededException.class);
+    if (config.getMaxOnDiskStorage().getBytes() > 0) {
+      // The error message always mentions disk if you have spilling enabled (maxOnDiskStorage > 0)
+      expectedException.expectMessage("Maximum number of spill files reached for this query. Try raising druid.query.groupBy.maxSpillFileCount.");
+    } else {
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "disk-space");
+  }
+
+  @Test
   public void testNotEnoughDiskSpaceThroughContextOverride()
   {
     // Granularity != ALL requires time-ordering.
@@ -3399,26 +3427,70 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
-    GroupByQuery query = makeQueryBuilder()
+
+    GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
-        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .build();
-
-    List<ResultRow> expectedResults = Collections.singletonList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "rows",
-            26L,
-            "cardinality",
-            QueryRunnerTestHelper.UNIQUES_9
-        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
+    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
+        QueryContexts.USE_PROJECTION,
+        "daily_countAndQualityCardinalityAndMaxLongNullable"
+    )).build();
+    // act
+    Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
+    Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
+        factory,
+        runner,
+        queryWithProjection
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality");
+    List<ResultRow> expectedResults = Collections.singletonList(makeRow(
+        queryBuilder.build(),
+        "2011-04-01",
+        "rows",
+        26L,
+        "cardinality",
+        QueryRunnerTestHelper.UNIQUES_9
+    ));
+
+    TestHelper.assertExpectedObjects(expectedResults, resultsNoProjection, "cardinality");
+    TestHelper.assertExpectedObjects(expectedResults, resultsWithProjection, "cardinality");
+  }
+
+  @Test
+  public void testGroupByWithCardinalityNoData()
+  {
+
+    GroupByQuery.Builder queryBuilder = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setInterval("2011-01-21T00:00:00.000Z/P1D")
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
+    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
+        QueryContexts.USE_PROJECTION,
+        "daily_countAndQualityCardinalityAndMaxLongNullable"
+    )).build();
+
+    Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
+    Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
+        factory,
+        runner,
+        queryWithProjection
+    );
+
+    List<ResultRow> expectedResults = Collections.singletonList(makeRow(
+        queryBuilder.build(),
+        "2011-04-01",
+        "rows",
+        0L,
+        "cardinality",
+        0.0d
+    ));
+    TestHelper.assertExpectedObjects(expectedResults, resultsNoProjection, "no data");
+    TestHelper.assertExpectedObjects(expectedResults, resultsWithProjection, "no data");
   }
 
   @Test
@@ -4203,8 +4275,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         new DefaultLimitSpec(OrderByColumnSpec.ascending("idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.ascending("rows", "idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.descending("idx"), null),
-        new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null),
-        };
+        new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null)
+    };
 
     GroupByQuery baseQuery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)

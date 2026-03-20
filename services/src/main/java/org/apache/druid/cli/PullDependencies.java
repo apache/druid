@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ExtensionsConfig;
-import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -68,7 +67,7 @@ import java.util.stream.Collectors;
 
 @Command(
     name = "pull-deps",
-    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop dependencies directory specified by druid.extensions.hadoopDependenciesDir"
+    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir"
 )
 public class PullDependencies implements Runnable
 {
@@ -94,8 +93,6 @@ public class PullDependencies implements Runnable
                   .put("commons-beanutils", "commons-beanutils-core")
                   .build();
 
-  private final Dependencies hadoopExclusions;
-
   @Inject
   public ExtensionsConfig extensionsConfig;
 
@@ -107,21 +104,8 @@ public class PullDependencies implements Runnable
   public List<String> coordinates = new ArrayList<>();
 
   @Option(
-      name = {"-h", "--hadoop-coordinate"},
-      title = "hadoop coordinate",
-      description = "Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0"
-  )
-  public List<String> hadoopCoordinates = new ArrayList<>();
-
-  @Option(
-      name = "--no-default-hadoop",
-      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client-runtime if hadoop3. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
-  )
-  public boolean noDefaultHadoop = false;
-
-  @Option(
       name = "--clean",
-      title = "Remove exisiting extension and hadoop dependencies directories before pulling down dependencies."
+      title = "Remove exisiting extension directories before pulling down dependencies."
   )
   public boolean clean = false;
 
@@ -181,24 +165,18 @@ public class PullDependencies implements Runnable
   @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
   {
-    hadoopExclusions = Dependencies.builder()
-                                   .putAll(PROVIDED_BY_CORE_DEPENDENCIES)
-                                   .putAll(SECURITY_VULNERABILITY_EXCLUSIONS)
-                                   .build();
   }
 
   // Used for testing only
   PullDependencies(
       RepositorySystem repositorySystem,
       RepositorySystemSession repositorySystemSession,
-      ExtensionsConfig extensionsConfig,
-      Dependencies hadoopExclusions
+      ExtensionsConfig extensionsConfig
   )
   {
     this.repositorySystem = repositorySystem;
     this.repositorySystemSession = repositorySystemSession;
     this.extensionsConfig = extensionsConfig;
-    this.hadoopExclusions = hadoopExclusions;
   }
 
   private RepositorySystem getRepositorySystem()
@@ -259,15 +237,12 @@ public class PullDependencies implements Runnable
     }
 
     final File extensionsDir = new File(extensionsConfig.getDirectory());
-    final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
 
     try {
       if (clean) {
         FileUtils.deleteDirectory(extensionsDir);
-        FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
       FileUtils.mkdirp(extensionsDir);
-      FileUtils.mkdirp(hadoopDependenciesDir);
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
@@ -292,25 +267,6 @@ public class PullDependencies implements Runnable
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
-
-      if (!noDefaultHadoop && hadoopCoordinates.isEmpty()) {
-        hadoopCoordinates.addAll(HadoopTaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
-      }
-
-      log.info("Start downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
-      for (final String hadoopCoordinate : hadoopCoordinates) {
-        final Artifact versionedArtifact = getArtifact(hadoopCoordinate);
-
-        File currExtensionDir = new File(hadoopDependenciesDir, versionedArtifact.getArtifactId());
-        createExtensionDirectory(hadoopCoordinate, currExtensionDir);
-
-        // add a version folder for hadoop dependency directory
-        currExtensionDir = new File(currExtensionDir, versionedArtifact.getVersion());
-        createExtensionDirectory(hadoopCoordinate, currExtensionDir);
-
-        downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions);
-      }
-      log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -412,6 +368,7 @@ public class PullDependencies implements Runnable
       } else {
         log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
       }
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
       log.error(e, "I/O error while processing artifact [%s].", versionedArtifact);

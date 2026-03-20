@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.LinesInputFormat;
 import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -48,6 +49,7 @@ import java.io.File;
 @JsonSubTypes(value = {
     @Type(name = CsvInputFormat.TYPE_KEY, value = CsvInputFormat.class),
     @Type(name = JsonInputFormat.TYPE_KEY, value = JsonInputFormat.class),
+    @Type(name = LinesInputFormat.TYPE_KEY, value = LinesInputFormat.class),
     @Type(name = RegexInputFormat.TYPE_KEY, value = RegexInputFormat.class),
     @Type(name = DelimitedInputFormat.TYPE_KEY, value = DelimitedInputFormat.class)
 })

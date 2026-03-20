@@ -24,6 +24,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.OutputStream;
 
 public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
@@ -44,5 +45,11 @@ public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
   public void setObjectMapper(ObjectMapper objectMapper)
   {
 
+  }
+
+  @Override
+  public File getReportsFile(String taskId)
+  {
+    return null;
   }
 }

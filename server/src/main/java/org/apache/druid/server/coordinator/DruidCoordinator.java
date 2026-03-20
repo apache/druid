@@ -94,6 +94,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -143,6 +144,7 @@ public class DruidCoordinator
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
+  private final BrokerDynamicConfigSyncer brokerDynamicConfigSyncer;
   private final CloneStatusManager cloneStatusManager;
 
   private volatile boolean started = false;
@@ -190,6 +192,7 @@ public class DruidCoordinator
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker,
       CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer,
+      BrokerDynamicConfigSyncer brokerDynamicConfigSyncer,
       CloneStatusManager cloneStatusManager
   )
   {
@@ -213,6 +216,7 @@ public class DruidCoordinator
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
+    this.brokerDynamicConfigSyncer = brokerDynamicConfigSyncer;
     this.cloneStatusManager = cloneStatusManager;
 
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
@@ -450,6 +454,7 @@ public class DruidCoordinator
         coordinatorSegmentMetadataCache.onLeaderStart();
       }
       coordinatorDynamicConfigSyncer.onLeaderStart();
+      brokerDynamicConfigSyncer.onLeaderStart();
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       dutiesRunnables.add(
@@ -532,6 +537,7 @@ public class DruidCoordinator
       compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
       coordinatorDynamicConfigSyncer.onLeaderStop();
+      brokerDynamicConfigSyncer.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
@@ -705,7 +711,12 @@ public class DruidCoordinator
     {
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutyGroup = new CoordinatorDutyGroup(alias, duties, period, this);
-      this.executor = executorFactory.create(1, "Coordinator-Exec-" + alias + "-%d");
+      this.executor = ScheduledExecutors.emittingDelayMetric(
+          executorFactory.create(1, "Coordinator-Exec-" + alias + "-%d"),
+          emitter,
+          "coordinator/duty/wait/millis",
+          Map.of(Dimension.DUTY_GROUP.reportedName(), alias)
+      );
     }
 
     @Override

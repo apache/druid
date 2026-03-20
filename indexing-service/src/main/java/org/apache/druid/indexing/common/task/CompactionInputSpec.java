@@ -34,6 +34,7 @@ import java.util.List;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = CompactionIntervalSpec.TYPE, value = CompactionIntervalSpec.class),
+    @Type(name = MinorCompactionInputSpec.TYPE, value = MinorCompactionInputSpec.class),
     @Type(name = SpecificSegmentsSpec.TYPE, value = SpecificSegmentsSpec.class)
 })
 public interface CompactionInputSpec

@@ -514,6 +514,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                           .build();
                       if (segment.isTombstone()) {
                         log.debug("Skipping refresh for tombstone segment.");
+                        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent
+                            .Builder()
+                            .setDimension(DruidMetrics.DATASOURCE, segment.getDataSource());
+                        emitMetric(Metric.REFRESH_SKIPPED_TOMBSTONES, 1L, builder);
                       } else {
                         markSegmentAsNeedRefresh(segment.getId());
                       }
@@ -987,11 +991,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
-      if (entry.getValue().isError()) {
-        // Skip columns with analysis errors.
-        continue;
-      }
-
       ColumnType valueType = entry.getValue().getTypeSignature();
 
       // this shouldn't happen, but if it does, first try to fall back to legacy type information field in case

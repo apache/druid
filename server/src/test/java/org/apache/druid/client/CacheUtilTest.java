@@ -176,7 +176,7 @@ public class CacheUtilTest
     }
 
     @Override
-    public boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment)
+    public boolean isCacheable(QueryType query, boolean willMergeRunners, boolean segmentLevel)
     {
       return willMergeRunners ? cacheableOnDataServers : cacheableOnBrokers;
     }

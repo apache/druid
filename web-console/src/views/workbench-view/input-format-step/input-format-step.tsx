@@ -105,7 +105,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   const [previewState] = useQueryManager<InputSourceAndFormat, SampleResponse>({
     query: inputSourceAndFormatToSample,
-    processQuery: async ({ inputSource, inputFormat }, cancelToken) => {
+    processQuery: async ({ inputSource, inputFormat }, signal) => {
       const fixedFormatSource = inputSource.type === 'delta';
       if (!fixedFormatSource && !isValidInputFormat(inputFormat))
         throw new Error('invalid input format');
@@ -138,7 +138,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         },
       };
 
-      return await postToSampler(sampleSpec, 'input-format-step', cancelToken);
+      return await postToSampler(sampleSpec, 'input-format-step', signal);
     },
   });
 

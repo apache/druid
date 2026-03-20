@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.hamcrest.CoreMatchers;
@@ -76,26 +77,24 @@ public class OutputChannelsTest
     Assert.assertEquals(1, readOnlyChannels.getAllChannels().size());
     Assert.assertEquals(1, channels.getChannelsForPartition(1).size());
 
-    final IllegalStateException e = Assert.assertThrows(
-        IllegalStateException.class,
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> Iterables.getOnlyElement(readOnlyChannels.getAllChannels()).getWritableChannel()
     );
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Writable channel is not available. The output channel might be marked as read-only, hence no writes are allowed."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Writable channel is not available."))
     );
 
-    final IllegalStateException e2 = Assert.assertThrows(
-        IllegalStateException.class,
+    final DruidException e2 = Assert.assertThrows(
+        DruidException.class,
         () -> Iterables.getOnlyElement(readOnlyChannels.getAllChannels()).getFrameMemoryAllocator()
     );
 
     MatcherAssert.assertThat(
         e2,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Frame memory allocator is not available."))
     );
   }
 

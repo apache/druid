@@ -21,7 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
@@ -91,7 +91,7 @@ public class NoopQueryableIndex implements QueryableIndex
 
   @Nullable
   @Override
-  public ColumnHolder getColumnHolder(String columnName)
+  public BaseColumnHolder getColumnHolder(String columnName)
   {
     throw new UnsupportedOperationException();
   }

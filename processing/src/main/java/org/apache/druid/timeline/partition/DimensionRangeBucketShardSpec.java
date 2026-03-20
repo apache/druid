@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -51,7 +52,7 @@ public class DimensionRangeBucketShardSpec extends BaseDimensionRangeShardSpec
       @JsonProperty("end") @Nullable StringTuple end
   )
   {
-    super(dimensions, start, end);
+    super(dimensions, VirtualColumns.EMPTY, start, end);
     // Verify that the tuple sizes and number of dimensions are the same
     Preconditions.checkArgument(
         start == null || start.size() == dimensions.size(),
@@ -95,20 +96,23 @@ public class DimensionRangeBucketShardSpec extends BaseDimensionRangeShardSpec
   @Override
   public BuildingDimensionRangeShardSpec convert(int partitionId)
   {
-    return dimensions != null && dimensions.size() == 1
-           ? new BuildingSingleDimensionShardSpec(
-        bucketId,
-        dimensions.get(0),
-        StringTuple.firstOrNull(start),
-        StringTuple.firstOrNull(end),
-        partitionId
-    ) : new BuildingDimensionRangeShardSpec(
-        bucketId,
-        dimensions,
-        start,
-        end,
-        partitionId
-    );
+    if (dimensions != null && dimensions.size() == 1) {
+      return new BuildingSingleDimensionShardSpec(
+          bucketId,
+          dimensions.get(0),
+          StringTuple.firstOrNull(start),
+          StringTuple.firstOrNull(end),
+          partitionId
+      );
+    } else {
+      return new BuildingDimensionRangeShardSpec(
+          bucketId,
+          dimensions,
+          start,
+          end,
+          partitionId
+      );
+    }
   }
 
   @Override

@@ -22,12 +22,10 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.FileContent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -37,7 +35,6 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
@@ -55,25 +52,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   {
     this.storage = storage;
     this.config = config;
-  }
-
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    return StringUtils.format("gs://%s/%s", config.getBucket(), config.getPrefix());
-  }
-
-  @Override
-  public List<String> getAllowedPropertyPrefixesForHadoop()
-  {
-    return ImmutableList.of("druid.google");
   }
 
   public void insert(final File file, final String contentType, final String path)

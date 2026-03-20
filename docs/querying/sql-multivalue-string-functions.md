@@ -50,6 +50,8 @@ All array references in the multi-value string function documentation can refer 
 |--------|-----|
 |`MV_FILTER_ONLY(expr, arr)`|Filters multi-value `expr` to include only values contained in array `arr`.|
 |`MV_FILTER_NONE(expr, arr)`|Filters multi-value `expr` to include no values contained in array `arr`.|
+|`MV_FILTER_REGEX(expr, pattern)`|Filters multi-value `expr` to include values that match `pattern`.|
+|`MV_FILTER_PREFIX(expr, prefix)`|Filters multi-value `expr` to include values that have prefix `prefix`.|
 |`MV_LENGTH(arr)`|Returns length of the array expression.|
 |`MV_CONTAINS(arr, expr)`|If `expr` is a scalar type, returns true if `arr` contains `expr`. If `expr` is an array, returns true if `arr` contains all elements of `expr`. Otherwise returns false.|
 |`MV_OVERLAP(arr1, arr2)`|Returns true if `arr1` and `arr2` have any elements in common, else false.|

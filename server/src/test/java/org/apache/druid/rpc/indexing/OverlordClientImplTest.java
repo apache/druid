@@ -504,7 +504,8 @@ public class OverlordClientImplTest
         101,
         new NewestSegmentFirstPolicy(null),
         true,
-        CompactionEngine.MSQ
+        CompactionEngine.MSQ,
+        true
     );
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
@@ -523,7 +524,7 @@ public class OverlordClientImplTest
   public void test_updateClusterCompactionConfig()
       throws ExecutionException, InterruptedException, JsonProcessingException
   {
-    final ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null);
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null, null);
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
             .jsonContent(jsonMapper, config),

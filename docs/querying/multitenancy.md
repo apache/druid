@@ -43,7 +43,6 @@ and expiration rules.
 Pros of shared datasources:
 
 - Each datasource requires its own JVMs for realtime indexing.
-- Each datasource requires its own YARN resources for Hadoop batch jobs.
 - Each datasource requires its own segment files on disk.
 - For these reasons it can be wasteful to have a very large number of small datasources.
 
@@ -57,7 +56,7 @@ If your multitenant cluster uses shared datasources, most of your queries will l
 dimension. These sorts of queries perform best when data is well-partitioned by tenant. There are a few ways to
 accomplish this.
 
-With batch indexing, you can use [single-dimension partitioning](../ingestion/hadoop.md#single-dimension-range-partitioning)
+With batch indexing, you can use [multi-dimension partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning)
 to partition your data by tenant_id. Druid always partitions by time first, but the secondary partition within each
 time bucket will be on tenant_id.
 
@@ -83,7 +82,7 @@ running, we don't want any query to be starved out. Druid's internal processing 
 This allows for a second set of segments from another query to be scanned. By keeping segment computation time very small, we ensure
 that resources are constantly being yielded, and segments pertaining to different queries are all being processed.
 
-Druid queries can optionally set a `priority` flag in the [query context](../querying/query-context.md). Queries known to be
+Druid queries can optionally set a `priority` flag in the [query context reference](../querying/query-context-reference.md). Queries known to be
 slow (download or reporting style queries) can be de-prioritized and more interactive queries can have higher priority.
 
 Broker processes can also be dedicated to a given tier. For example, one set of Broker processes can be dedicated to fast interactive queries,

@@ -234,7 +234,7 @@ public class SegmentToMoveCalculatorTest
   private static ServerHolder createServer(String name, List<DataSegment> segments)
   {
     final DruidServer server
-        = new DruidServer(name, name, null, 10L << 30, ServerType.HISTORICAL, "tier1", 1);
+        = new DruidServer(name, name, null, 10L << 30, null, ServerType.HISTORICAL, "tier1", 1);
     segments.forEach(server::addDataSegment);
     return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
   }

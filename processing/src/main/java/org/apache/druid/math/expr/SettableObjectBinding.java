@@ -75,4 +75,13 @@ public class SettableObjectBinding implements Expr.ObjectBinding
   {
     return bindings;
   }
+
+  @Override
+  public String toString()
+  {
+    return "SettableObjectBinding{" +
+           "bindings=" + bindings +
+           ", inspector=" + inspector +
+           '}';
+  }
 }

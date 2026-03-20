@@ -18,7 +18,6 @@
 
 import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import { isDate } from 'date-fns';
@@ -52,7 +51,7 @@ export interface FilterPaneProps {
   timezone: Timezone;
   filter: SqlExpression;
   onFilterChange(filter: SqlExpression): void;
-  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, signal?: AbortSignal): Promise<QueryResult>;
   onAddToSourceQueryAsColumn?: (expression: SqlExpression) => void;
   onMoveToSourceQueryAsClause?: (expression: SqlExpression, changeWhere?: SqlExpression) => void;
 }
@@ -82,8 +81,8 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
 
   const [boundsState] = useQueryManager<string, [Date, Date]>({
     query: boundsQuery,
-    processQuery: async (query, cancelToken) => {
-      const boundsData = await runSqlQuery(query, cancelToken);
+    processQuery: async (query, signal) => {
+      const boundsData = await runSqlQuery(query, signal);
       const startEndRecord = boundsData.toObjectArray()[0];
       if (!startEndRecord || !isDate(startEndRecord.start) || !isDate(startEndRecord.end)) {
         throw new Error('Unexpected result');

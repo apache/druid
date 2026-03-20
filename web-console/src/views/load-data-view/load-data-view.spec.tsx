@@ -25,8 +25,7 @@ describe('LoadDataView', () => {
     const loadDataView = shallow(
       <LoadDataView
         mode="streaming"
-        goToSupervisor={() => {}}
-        goToTasks={() => {}}
+        goToView={() => {}}
         openSupervisorSubmit={() => {}}
         openTaskSubmit={() => {}}
       />,
@@ -38,8 +37,7 @@ describe('LoadDataView', () => {
     const loadDataView = shallow(
       <LoadDataView
         mode="batch"
-        goToSupervisor={() => {}}
-        goToTasks={() => {}}
+        goToView={() => {}}
         openSupervisorSubmit={() => {}}
         openTaskSubmit={() => {}}
       />,

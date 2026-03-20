@@ -114,6 +114,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need a SQL node */
       null, /* Don't need an engine */
+      Collections.emptySet(),
       Collections.emptyMap(),
       null
   );

@@ -42,7 +42,7 @@ public class EmbeddedMiddleManager extends EmbeddedDruidServer<EmbeddedMiddleMan
 {
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new MiddleManager(handler);
   }

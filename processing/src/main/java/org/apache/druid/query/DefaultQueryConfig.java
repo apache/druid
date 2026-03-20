@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -38,6 +39,11 @@ import java.util.Map;
  */
 public class DefaultQueryConfig
 {
+  /**
+   * Config that does nothing.
+   */
+  public static final DefaultQueryConfig NIL = new DefaultQueryConfig(Collections.emptyMap());
+
   /**
    * Note that context values should not be directly retrieved from this field but instead should
    * be read through {@link QueryContexts}. This field contains context configs from runtime property

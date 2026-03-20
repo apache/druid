@@ -106,7 +106,9 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
 
     return input.map(
         simpleExtraction -> {
-          if (adjustedIndexLiteral != null && (lengthNode == null || lengthLiteral != null)) {
+          if (adjustedIndexLiteral != null
+              && (lengthNode == null || lengthLiteral != null)
+              && plannerContext.isUseExtractionFns()) {
             return simpleExtraction.cascade(new SubstringDimExtractionFn(adjustedIndexLiteral, lengthLiteral));
           } else {
             return null;

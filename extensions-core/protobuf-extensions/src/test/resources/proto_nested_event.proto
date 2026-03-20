@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package prototest;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "org.apache.druid.data.input.protobuf";
+option java_outer_classname = "ProtoNestedEventWrapper";
+option java_multiple_files = true;
+
+message ProtoNestedEvent {
+  int64 timestamp = 1;
+  string name = 2 [json_name = "name"];
+  string log = 3;
+  google.protobuf.Struct my_struct = 4 [json_name = "my_struct"];
+  map<string, google.protobuf.Value> my_map = 5 [json_name = "my_map"];
+}

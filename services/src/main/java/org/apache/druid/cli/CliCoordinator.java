@@ -65,6 +65,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -82,7 +85,9 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.ClusterResource;
+import org.apache.druid.server.http.CoordinatorBrokerConfigsResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorCompactionResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
@@ -198,6 +203,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(CoordinatorDynamicConfigSyncer.class).in(ManageLifecycle.class);
+            binder.bind(BrokerDynamicConfigSyncer.class).in(ManageLifecycle.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {
@@ -226,6 +232,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
+            Jerseys.addResource(binder, CoordinatorBrokerConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
             Jerseys.addResource(binder, RulesResource.class);
@@ -298,6 +305,9 @@ public class CliCoordinator extends ServerRunnable
       // the injector to get confused due to having multiple bindings for the same classes.
       modules.add(new LookupSerdeModule());
       modules.add(new SupervisorCleanupModule());
+      modules.add(new MSQIndexingModule());
+      modules.add(new MSQDurableStorageModule());
+      modules.add(new MSQExternalDataSourceModule());
     }
 
     return modules;

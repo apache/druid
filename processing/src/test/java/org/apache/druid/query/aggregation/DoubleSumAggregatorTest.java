@@ -41,8 +41,8 @@ public class DoubleSumAggregatorTest
     final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
     DoubleSumAggregator agg = new DoubleSumAggregator(selector);
 
-    double expectedFirst = new Double(values[0]).doubleValue();
-    double expectedSecond = new Double(values[1]).doubleValue() + expectedFirst;
+    double expectedFirst = values[0];
+    double expectedSecond = values[1] + expectedFirst;
 
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());

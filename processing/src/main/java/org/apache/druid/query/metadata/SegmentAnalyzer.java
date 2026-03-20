@@ -35,6 +35,7 @@ import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -53,6 +54,7 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -140,7 +142,7 @@ public class SegmentAnalyzer
             analysis = analyzeArrayColumn(capabilities);
             break;
           case COMPLEX:
-            final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
+            final BaseColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
             analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
             break;
           default:
@@ -198,7 +200,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final ColumnHolder columnHolder
+      final BaseColumnHolder columnHolder
   )
   {
     Comparable min = null;
@@ -211,11 +213,14 @@ public class SegmentAnalyzer
     if (valueIndex != null) {
       cardinality = valueIndex.getCardinality();
       if (analyzingSize()) {
-        for (int i = 0; i < cardinality; ++i) {
-          String value = valueIndex.getValue(i);
+        final Iterator<String> valueIterator = valueIndex.getValueIterator();
+        int i = 0;
+        while (valueIterator.hasNext()) {
+          final String value = valueIterator.next();
           if (value != null) {
             size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
           }
+          i++;
         }
       }
       if (analyzingMinMax() && cardinality > 0) {
@@ -309,7 +314,7 @@ public class SegmentAnalyzer
   private ColumnAnalysis analyzeComplexColumn(
       final ColumnCapabilities capabilities,
       final int numCells,
-      @Nullable final ColumnHolder columnHolder
+      @Nullable final BaseColumnHolder columnHolder
   )
   {
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;

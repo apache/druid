@@ -20,7 +20,9 @@
 package org.apache.druid.server.compaction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -28,11 +30,13 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -65,8 +69,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
-  private final CompactionStatusTracker statusTracker;
-  private final CompactionCandidateSearchPolicy searchPolicy;
+  private final IndexingStateFingerprintMapper fingerprintMapper;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -84,14 +87,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
       CompactionCandidateSearchPolicy searchPolicy,
-      CompactionStatusTracker statusTracker
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
-    this.statusTracker = statusTracker;
     this.config = config;
     this.dataSource = config.getDataSource();
-    this.searchPolicy = searchPolicy;
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
+    this.fingerprintMapper = indexingStateFingerprintMapper;
 
     populateQueue(timeline, skipIntervals);
   }
@@ -117,11 +119,14 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             }
           }
           if (!partialEternitySegments.isEmpty()) {
-            CompactionCandidate candidatesWithStatus = CompactionCandidate.from(partialEternitySegments).withCurrentStatus(
+            // Do not use the target segment granularity in the CompactionCandidate
+            // as Granularities.getIterable() will cause OOM due to the above issue
+            CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
+                partialEternitySegments,
+                null,
                 CompactionStatus.skipped("Segments have partial-eternity intervals")
             );
             skippedSegments.add(candidatesWithStatus);
-            statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
             return;
           }
 
@@ -141,18 +146,29 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           final String temporaryVersion = DateTimes.nowUtc().toString();
           for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
             Interval interval = partitionsPerInterval.getKey();
-            int partitionNum = 0;
             Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
             int partitions = segmentSet.size();
-            for (DataSegment segment : segmentSet) {
-              DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
-              timelineWithConfiguredSegmentGranularity.add(
-                  interval,
-                  temporaryVersion,
-                  NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
-              );
-              partitionNum += 1;
-            }
+            timelineWithConfiguredSegmentGranularity.addAll(
+                Iterators.transform(
+                    segmentSet.iterator(),
+                    new Function<>()
+                    {
+                      int partitionNum = 0;
+
+                      @Override
+                      public VersionedIntervalTimeline.PartitionChunkEntry<String, DataSegment> apply(DataSegment segment)
+                      {
+                        final DataSegment segmentForCompact =
+                            segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
+                        return new VersionedIntervalTimeline.PartitionChunkEntry<>(
+                            interval,
+                            temporaryVersion,
+                            NumberedPartitionChunk.make(partitionNum++, partitions, segmentForCompact)
+                        );
+                      }
+                    }
+                )
+            );
           }
           // PartitionHolder can only holds chunks of one partition space
           // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
@@ -315,18 +331,19 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      final CompactionCandidate candidates = CompactionCandidate.from(segments);
-      final CompactionStatus compactionStatus
-          = statusTracker.computeCompactionStatus(candidates, config, searchPolicy);
-      final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(segments, config, fingerprintMapper);
+      final CompactionCandidate candidates = CompactionCandidate.from(
+          segments,
+          config.getSegmentGranularity(),
+          compactionStatus
+      );
 
       if (compactionStatus.isComplete()) {
-        compactedSegments.add(candidatesWithStatus);
+        compactedSegments.add(candidates);
       } else if (compactionStatus.isSkipped()) {
-        skippedSegments.add(candidatesWithStatus);
+        skippedSegments.add(candidates);
       } else if (!queuedIntervals.contains(candidates.getUmbrellaInterval())) {
-        queue.add(candidatesWithStatus);
+        queue.add(candidates);
         queuedIntervals.add(candidates.getUmbrellaInterval());
       }
     }
@@ -360,18 +377,24 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
-        final CompactionCandidate candidates = CompactionCandidate.from(segments);
+        final Interval compactionInterval = CompactionCandidate.getCompactionInterval(
+            segments,
+            config.getSegmentGranularity()
+        );
 
         final CompactionStatus reason;
-        if (candidates.getUmbrellaInterval().overlaps(latestSkipInterval)) {
+        if (compactionInterval.overlaps(latestSkipInterval)) {
           reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");
         }
 
-        final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(reason);
+        final CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
+            segments,
+            config.getSegmentGranularity(),
+            reason
+        );
         skippedSegments.add(candidatesWithStatus);
-        statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
       }
     }
 
@@ -394,7 +417,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           // findNonOvershadowedObjectsInInterval() may return segments merely intersecting with lookupInterval, while
           // we are interested only in segments fully lying within lookupInterval here.
           .filter(segment -> lookupInterval.contains(segment.getInterval()))
-          .collect(Collectors.toList());
+          .toList();
 
       if (segments.isEmpty()) {
         continue;
@@ -498,7 +521,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
     }
 
-    if (!remainingStart.equals(remainingEnd)) {
+    if (remainingStart.isBefore(remainingEnd)) {
       filteredIntervals.add(new Interval(remainingStart, remainingEnd));
     }
 

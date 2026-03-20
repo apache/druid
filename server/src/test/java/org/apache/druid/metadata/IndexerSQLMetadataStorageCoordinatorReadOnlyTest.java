@@ -36,6 +36,8 @@ import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.NoopIndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -104,6 +106,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
         () -> new SegmentsMetadataManagerConfig(null, cacheMode, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopSegmentSchemaCache(),
+        new NoopIndexingStateCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,
@@ -178,7 +181,8 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         null,
-        CentralizedDatasourceSchemaConfig.enabled(false)
+        CentralizedDatasourceSchemaConfig.enabled(false),
+        new HeapMemoryIndexingStateStorage()
     );
   }
 

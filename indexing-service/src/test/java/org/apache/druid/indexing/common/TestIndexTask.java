@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -61,7 +62,7 @@ public class TestIndexTask extends IndexTask
         id,
         taskResource,
         new IndexIngestionSpec(
-            DataSchema.builder().withDataSource(dataSource).withObjectMapper(mapper).build(),
+            DataSchema.builder().withDataSource(dataSource).withTimestamp(TimestampSpec.DEFAULT).build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),
@@ -70,7 +71,7 @@ public class TestIndexTask extends IndexTask
             ),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsInMemory(10)
-                               .withIndexSpec(IndexSpec.DEFAULT)
+                               .withIndexSpec(IndexSpec.getDefault())
                                .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withForceGuaranteedRollup(false)
                                .withMaxPendingPersists(3)

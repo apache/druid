@@ -46,7 +46,7 @@ public class TrueFilter implements Filter
     return INSTANCE;
   }
 
-  private TrueFilter()
+  protected TrueFilter()
   {
   }
 

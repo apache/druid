@@ -96,12 +96,10 @@ public class Ranges
   {
     final ExpressionType exprType = ExpressionType.fromColumnType(newMatchValueType);
     final RangeValue upper = range.getUpper() != null
-                             ? new RangeValue(ExprEval.ofType(exprType, range.getUpper())
-                                                      .valueOrDefault(), newMatchValueType)
+                             ? new RangeValue(ExprEval.ofType(exprType, range.getUpper()).value(), newMatchValueType)
                              : null;
     final RangeValue lower = range.getLower() != null
-                             ? new RangeValue(ExprEval.ofType(exprType, range.getLower())
-                                                      .valueOrDefault(), newMatchValueType)
+                             ? new RangeValue(ExprEval.ofType(exprType, range.getLower()).value(), newMatchValueType)
                              : null;
 
     if (lower == null) {
@@ -236,7 +234,7 @@ public class Ranges
         return value;
       } else {
         final ExpressionType expressionType = ExpressionType.fromColumnType(columnType);
-        return ExprEval.ofType(expressionType, value).valueOrDefault();
+        return ExprEval.ofType(expressionType, value).value();
       }
     } else {
       return value;

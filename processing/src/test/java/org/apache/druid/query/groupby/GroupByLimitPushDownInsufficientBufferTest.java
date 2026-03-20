@@ -201,7 +201,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -243,7 +243,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);

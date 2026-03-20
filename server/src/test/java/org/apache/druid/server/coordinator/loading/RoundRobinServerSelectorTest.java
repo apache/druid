@@ -139,7 +139,7 @@ public class RoundRobinServerSelectorTest
   private ServerHolder createHistorical(String name, long size)
   {
     return new ServerHolder(
-        new DruidServer(name, name, null, size, ServerType.HISTORICAL, TIER, 1)
+        new DruidServer(name, name, null, size, null, ServerType.HISTORICAL, TIER, 1)
             .toImmutableDruidServer(),
         new TestLoadQueuePeon()
     );

@@ -31,11 +31,12 @@ import org.joda.time.Duration;
  * Builder utility for various task tuning configs.
  *
  * @param <C> Type of config that is being built
+ * @param <Self> Type of this builder itself
  * @see TuningConfigBuilder#forIndexTask()
  * @see TuningConfigBuilder#forParallelIndexTask()
  * @see TuningConfigBuilder#forCompactionTask()
  */
-public abstract class TuningConfigBuilder<C>
+public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self, C>, C>
 {
   protected Integer targetPartitionSize;
   protected Integer maxRowsPerSegment;
@@ -71,202 +72,208 @@ public abstract class TuningConfigBuilder<C>
   protected Integer maxAllowedLockCount;
   protected Integer numPersistThreads;
 
-  public TuningConfigBuilder<C> withTargetPartitionSize(Integer targetPartitionSize)
+  public Self withTargetPartitionSize(Integer targetPartitionSize)
   {
     this.targetPartitionSize = targetPartitionSize;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxRowsPerSegment(Integer maxRowsPerSegment)
+  public Self withMaxRowsPerSegment(Integer maxRowsPerSegment)
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withAppendableIndexSpec(AppendableIndexSpec appendableIndexSpec)
+  public Self withAppendableIndexSpec(AppendableIndexSpec appendableIndexSpec)
   {
     this.appendableIndexSpec = appendableIndexSpec;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxRowsInMemory(Integer maxRowsInMemory)
+  public Self withMaxRowsInMemory(Integer maxRowsInMemory)
   {
     this.maxRowsInMemory = maxRowsInMemory;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxBytesInMemory(Long maxBytesInMemory)
+  public Self withMaxBytesInMemory(Long maxBytesInMemory)
   {
     this.maxBytesInMemory = maxBytesInMemory;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withSkipBytesInMemoryOverheadCheck(Boolean skipBytesInMemoryOverheadCheck)
+  public Self withSkipBytesInMemoryOverheadCheck(Boolean skipBytesInMemoryOverheadCheck)
   {
     this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxTotalRows(Long maxTotalRows)
+  public Self withMaxTotalRows(Long maxTotalRows)
   {
     this.maxTotalRows = maxTotalRows;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withNumShards(Integer numShards)
+  public Self withNumShards(Integer numShards)
   {
     this.numShards = numShards;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withSplitHintSpec(SplitHintSpec splitHintSpec)
+  public Self withSplitHintSpec(SplitHintSpec splitHintSpec)
   {
     this.splitHintSpec = splitHintSpec;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withPartitionsSpec(PartitionsSpec partitionsSpec)
+  public Self withPartitionsSpec(PartitionsSpec partitionsSpec)
   {
     this.partitionsSpec = partitionsSpec;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withIndexSpec(IndexSpec indexSpec)
+  public Self withIndexSpec(IndexSpec indexSpec)
   {
     this.indexSpec = indexSpec;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withIndexSpecForIntermediatePersists(IndexSpec indexSpecForIntermediatePersists)
+  public Self withIndexSpecForIntermediatePersists(IndexSpec indexSpecForIntermediatePersists)
   {
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxPendingPersists(Integer maxPendingPersists)
+  public Self withMaxPendingPersists(Integer maxPendingPersists)
   {
     this.maxPendingPersists = maxPendingPersists;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withForceGuaranteedRollup(Boolean forceGuaranteedRollup)
+  public Self withForceGuaranteedRollup(Boolean forceGuaranteedRollup)
   {
     this.forceGuaranteedRollup = forceGuaranteedRollup;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withReportParseExceptions(Boolean reportParseExceptions)
+  public Self withReportParseExceptions(Boolean reportParseExceptions)
   {
     this.reportParseExceptions = reportParseExceptions;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withPushTimeout(Long pushTimeout)
+  public Self withPushTimeout(Long pushTimeout)
   {
     this.pushTimeout = pushTimeout;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withPublishTimeout(Long publishTimeout)
+  public Self withPublishTimeout(Long publishTimeout)
   {
     this.publishTimeout = publishTimeout;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public Self withSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxNumSubTasks(Integer maxNumSubTasks)
+  public Self withMaxNumSubTasks(Integer maxNumSubTasks)
   {
     this.maxNumSubTasks = maxNumSubTasks;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxNumConcurrentSubTasks(Integer maxNumConcurrentSubTasks)
+  public Self withMaxNumConcurrentSubTasks(Integer maxNumConcurrentSubTasks)
   {
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxRetry(Integer maxRetry)
+  public Self withMaxRetry(Integer maxRetry)
   {
     this.maxRetry = maxRetry;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withTaskStatusCheckPeriodMs(Long taskStatusCheckPeriodMs)
+  public Self withTaskStatusCheckPeriodMs(Long taskStatusCheckPeriodMs)
   {
     this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withChatHandlerTimeout(Duration chatHandlerTimeout)
+  public Self withChatHandlerTimeout(Duration chatHandlerTimeout)
   {
     this.chatHandlerTimeout = chatHandlerTimeout;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withChatHandlerNumRetries(Integer chatHandlerNumRetries)
+  public Self withChatHandlerNumRetries(Integer chatHandlerNumRetries)
   {
     this.chatHandlerNumRetries = chatHandlerNumRetries;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxNumSegmentsToMerge(Integer maxNumSegmentsToMerge)
+  public Self withMaxNumSegmentsToMerge(Integer maxNumSegmentsToMerge)
   {
     this.maxNumSegmentsToMerge = maxNumSegmentsToMerge;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withTotalNumMergeTasks(Integer totalNumMergeTasks)
+  public Self withTotalNumMergeTasks(Integer totalNumMergeTasks)
   {
     this.totalNumMergeTasks = totalNumMergeTasks;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withLogParseExceptions(Boolean logParseExceptions)
+  public Self withLogParseExceptions(Boolean logParseExceptions)
   {
     this.logParseExceptions = logParseExceptions;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxParseExceptions(Integer maxParseExceptions)
+  public Self withMaxParseExceptions(Integer maxParseExceptions)
   {
     this.maxParseExceptions = maxParseExceptions;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxSavedParseExceptions(Integer maxSavedParseExceptions)
+  public Self withMaxSavedParseExceptions(Integer maxSavedParseExceptions)
   {
     this.maxSavedParseExceptions = maxSavedParseExceptions;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxColumnsToMerge(Integer maxColumnsToMerge)
+  public Self withMaxColumnsToMerge(Integer maxColumnsToMerge)
   {
     this.maxColumnsToMerge = maxColumnsToMerge;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withAwaitSegmentAvailabilityTimeoutMillis(Long awaitSegmentAvailabilityTimeoutMillis)
+  public Self withAwaitSegmentAvailabilityTimeoutMillis(Long awaitSegmentAvailabilityTimeoutMillis)
   {
     this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withNumPersistThreads(Integer numPersistThreads)
+  public Self withNumPersistThreads(Integer numPersistThreads)
   {
     this.numPersistThreads = numPersistThreads;
-    return this;
+    return self();
   }
 
-  public TuningConfigBuilder<C> withMaxAllowedLockCount(Integer maxAllowedLockCount)
+  public Self withMaxAllowedLockCount(Integer maxAllowedLockCount)
   {
     this.maxAllowedLockCount = maxAllowedLockCount;
-    return this;
+    return self();
+  }
+  
+  @SuppressWarnings("unchecked")
+  private Self self()
+  {
+    return (Self) this;
   }
 
   public abstract C build();
@@ -295,7 +302,7 @@ public abstract class TuningConfigBuilder<C>
     return new Index();
   }
 
-  public static class Index extends TuningConfigBuilder<IndexTask.IndexTuningConfig>
+  public static class Index extends TuningConfigBuilder<Index, IndexTask.IndexTuningConfig>
   {
     @Override
     public IndexTask.IndexTuningConfig build()
@@ -330,7 +337,7 @@ public abstract class TuningConfigBuilder<C>
     }
   }
 
-  public static class ParallelIndex extends TuningConfigBuilder<ParallelIndexTuningConfig>
+  public static class ParallelIndex extends TuningConfigBuilder<ParallelIndex, ParallelIndexTuningConfig>
   {
     @Override
     public ParallelIndexTuningConfig build()
@@ -372,7 +379,7 @@ public abstract class TuningConfigBuilder<C>
     }
   }
 
-  public static class Compact extends TuningConfigBuilder<CompactionTask.CompactionTuningConfig>
+  public static class Compact extends TuningConfigBuilder<Compact, CompactionTask.CompactionTuningConfig>
   {
     @Override
     public CompactionTask.CompactionTuningConfig build()

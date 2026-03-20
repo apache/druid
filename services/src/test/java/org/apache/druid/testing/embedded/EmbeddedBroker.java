@@ -37,7 +37,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
 {
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Broker(handler);
   }
@@ -49,6 +49,8 @@ public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
     private Broker(LifecycleInitHandler handler)
     {
       this.handler = handler;
+      addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
+      addProperty("druid.sql.planner.metadataSegmentPollPeriod", "100");
     }
 
     @Override

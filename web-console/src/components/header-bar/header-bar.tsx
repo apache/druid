@@ -36,11 +36,13 @@ import React, { useState } from 'react';
 
 import {
   AboutDialog,
+  BrokerDynamicConfigDialog,
   CompactionDynamicConfigDialog,
   CoordinatorDynamicConfigDialog,
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { WebConsoleConfigDialog } from '../../dialogs/web-console-config-dialog/web-console-config-dialog';
 import type { ConsoleViewId } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import { Capabilities } from '../../helpers';
@@ -74,8 +76,10 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
+  const [brokerDynamicConfigDialogOpen, setBrokerDynamicConfigDialogOpen] = useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
+  const [webConsoleConfigDialogOpen, setWebConsoleConfigDialogOpen] = useState(false);
 
   const showSplitDataLoaderMenu = capabilities.hasMultiStageQueryTask();
 
@@ -183,6 +187,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
+        icon={IconNames.APPLICATIONS}
+        text="Broker dynamic config"
+        onClick={() => setBrokerDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
+      />
+      <MenuItem
         icon={IconNames.WRENCH}
         text="Overlord dynamic config"
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
@@ -194,16 +204,21 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         onClick={() => setCompactionDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasCoordinatorAccess()}
       />
+      <MenuItem
+        icon={IconNames.CONSOLE}
+        text="Web console config"
+        onClick={() => setWebConsoleConfigDialogOpen(true)}
+      />
       <MenuDivider />
       <MenuItem
         icon={IconNames.HIGH_PRIORITY}
-        text="Capabilty detection"
+        text="Capability detection"
         intent={capabilitiesOverride ? Intent.DANGER : undefined}
       >
         {capabilitiesOverride && (
           <>
             <MenuItem
-              text="Use automatic capabilty detection"
+              text="Use automatic capability detection"
               onClick={() => setCapabilitiesOverride(undefined)}
               intent={Intent.PRIMARY}
             />
@@ -373,7 +388,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           >
             <Button
               icon={IconNames.HIGH_PRIORITY}
-              text="Manual capabilty detection"
+              text="Manual capability detection"
               intent={Intent.DANGER}
               minimal
             />
@@ -393,6 +408,9 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           onClose={() => setCoordinatorDynamicConfigDialogOpen(false)}
         />
       )}
+      {brokerDynamicConfigDialogOpen && (
+        <BrokerDynamicConfigDialog onClose={() => setBrokerDynamicConfigDialogOpen(false)} />
+      )}
       {overlordDynamicConfigDialogOpen && (
         <OverlordDynamicConfigDialog onClose={() => setOverlordDynamicConfigDialogOpen(false)} />
       )}
@@ -400,6 +418,9 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <CompactionDynamicConfigDialog
           onClose={() => setCompactionDynamicConfigDialogOpen(false)}
         />
+      )}
+      {webConsoleConfigDialogOpen && (
+        <WebConsoleConfigDialog onClose={() => setWebConsoleConfigDialogOpen(false)} />
       )}
     </Navbar>
   );

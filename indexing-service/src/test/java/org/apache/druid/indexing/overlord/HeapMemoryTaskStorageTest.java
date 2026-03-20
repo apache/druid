@@ -24,7 +24,6 @@ import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.TaskLookup;
 import org.joda.time.Period;
@@ -70,7 +69,7 @@ public class HeapMemoryTaskStorageTest
     storage.insert(task2, TaskStatus.running(task2.getId()));
 
     // Active statuses
-    final List<TaskInfo<Task, TaskStatus>> taskInfosActive = storage.getTaskInfos(
+    final List<TaskInfo> taskInfosActive = storage.getTaskInfos(
         ImmutableMap.of(
             TaskLookup.TaskLookupType.ACTIVE,
             TaskLookup.ActiveTaskLookup.getInstance(),
@@ -84,7 +83,7 @@ public class HeapMemoryTaskStorageTest
     Assert.assertEquals(task2.getId(), taskInfosActive.get(0).getTask().getId());
 
     // Complete statuses
-    final List<TaskInfo<Task, TaskStatus>> taskInfosComplete = storage.getTaskInfos(
+    final List<TaskInfo> taskInfosComplete = storage.getTaskInfos(
         ImmutableMap.of(
             TaskLookup.TaskLookupType.COMPLETE,
             new TaskLookup.CompleteTaskLookup(null, DateTimes.of("1970"))

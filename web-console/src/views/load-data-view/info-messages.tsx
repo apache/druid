@@ -101,7 +101,7 @@ export const TransformMessage = React.memo(function TransformMessage() {
       <Callout>
         <p>
           Druid can perform per-row{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/transform-spec#transforms`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/ingestion-spec#transforms`}>
             transforms
           </ExternalLink>{' '}
           of column values allowing you to create new derived columns or alter existing column.

@@ -47,6 +47,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.segment.metadata.NoopIndexingStateCache;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -65,7 +68,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -82,13 +84,7 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-  private CompactionStatusTracker statusTracker;
-
-  @Before
-  public void setup()
-  {
-    statusTracker = new CompactionStatusTracker(mapper);
-  }
+  private final IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(new NoopIndexingStateCache(), mapper);
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -285,7 +281,7 @@ public class NewestSegmentFirstPolicyTest
             )
         ),
         Collections.emptyMap(),
-        statusTracker
+        fingerprintMapper
     );
 
     assertCompactSegmentIntervals(
@@ -518,7 +514,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
         ),
-        statusTracker
+        fingerprintMapper
     );
 
     assertCompactSegmentIntervals(
@@ -558,7 +554,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
         ),
-        statusTracker
+        fingerprintMapper
     );
 
     assertCompactSegmentIntervals(
@@ -742,7 +738,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityAndSameTimezone()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -771,14 +767,13 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityInLastCompactionState()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState
-        = new CompactionState(
+    final CompactionState compactionState = new CompactionState(
         partitionsSpec,
         null,
         null,
@@ -807,7 +802,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularity()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -855,14 +850,13 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularityInLastCompactionState()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState
-        = new CompactionState(
+    final CompactionState compactionState = new CompactionState(
         partitionsSpec,
         null,
         null,
@@ -904,7 +898,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentTimezone()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -954,7 +948,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentOrigin()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1003,7 +997,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentRollup()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1092,7 +1086,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentQueryGranularity()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1187,7 +1181,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentDimensions()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1306,7 +1300,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorDoesNotReturnsSegmentsWhenPartitionDimensionsPrefixed()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Set range partitions spec with dimensions ["dim2", "dim4"] -- the same as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(
         null,
@@ -1377,7 +1371,7 @@ public class NewestSegmentFirstPolicyTest
                                1000L,
                                null,
                                partitionsSpec,
-                               IndexSpec.DEFAULT,
+                               IndexSpec.getDefault(),
                                null,
                                null,
                                null,
@@ -1413,10 +1407,10 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter()
   {
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1435,7 +1429,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null),
                     indexSpec,
                     null,
                     null
@@ -1449,7 +1443,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null)),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null),
                     indexSpec,
                     null,
                     null
@@ -1463,7 +1457,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(null),
+                    new CompactionTransformSpec(null, null),
                     indexSpec,
                     null,
                     null
@@ -1478,7 +1472,7 @@ public class NewestSegmentFirstPolicyTest
     // Auto compaction config sets filter=SelectorDimFilter("dim1", "bar", null)
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().withTransformSpec(
-            new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null))
+            new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null)
         ).build(),
         timeline
     );
@@ -1522,7 +1516,7 @@ public class NewestSegmentFirstPolicyTest
     // Auto compaction config sets filter=null
     iterator = createIterator(
         configBuilder().withTransformSpec(
-            new CompactionTransformSpec(null)
+            new CompactionTransformSpec(null, null)
         ).build(),
         timeline
     );
@@ -1538,7 +1532,7 @@ public class NewestSegmentFirstPolicyTest
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
     );
     // Same indexSpec as what is set in the auto compaction config
-    IndexSpec indexSpec = IndexSpec.DEFAULT;
+    IndexSpec indexSpec = IndexSpec.getDefault();
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(
         null));
@@ -1746,7 +1740,7 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null, null)
+                new CompactionState(partitionsSpec, null, null, null, IndexSpec.getDefault(), null, null)
             )
     );
 
@@ -1756,10 +1750,10 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 new OnheapIncrementalIndex.Spec(true),
                 null,
-                1000L,
+                null,
                 null,
                 partitionsSpec,
-                IndexSpec.DEFAULT,
+                IndexSpec.getDefault(),
                 null,
                 null,
                 null,
@@ -1784,10 +1778,10 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 new OnheapIncrementalIndex.Spec(false),
                 null,
-                1000L,
+                null,
                 null,
                 partitionsSpec,
-                IndexSpec.DEFAULT,
+                IndexSpec.getDefault(),
                 null,
                 null,
                 null,
@@ -2064,7 +2058,7 @@ public class NewestSegmentFirstPolicyTest
             TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
         Collections.emptyMap(),
-        statusTracker
+        fingerprintMapper
     );
 
     // Verify that the segments of WIKI are preferred even though they are older
@@ -2086,7 +2080,7 @@ public class NewestSegmentFirstPolicyTest
         Collections.singletonMap(TestDataSource.WIKI, config),
         Collections.singletonMap(TestDataSource.WIKI, timeline),
         Collections.emptyMap(),
-        statusTracker
+        fingerprintMapper
     );
   }
 

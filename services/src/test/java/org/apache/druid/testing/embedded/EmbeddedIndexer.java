@@ -42,7 +42,7 @@ public class EmbeddedIndexer extends EmbeddedDruidServer<EmbeddedIndexer>
   }
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Indexer(handler);
   }

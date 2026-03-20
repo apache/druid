@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.collect.ImmutableMap;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -105,11 +104,5 @@ public class StructuredDataTest
     Assert.assertEquals(1, sd0.compareTo(sd2));
     Assert.assertEquals(1, sd1.compareTo(sd2));
     Assert.assertEquals(0, sd0.compareTo(sd1));
-  }
-
-  @Test
-  public void testEqualsAndHashcode()
-  {
-    EqualsVerifier.forClass(StructuredData.class).withIgnoredFields("hashInitialized", "hashValue", "hash").usingGetClass().verify();
   }
 }

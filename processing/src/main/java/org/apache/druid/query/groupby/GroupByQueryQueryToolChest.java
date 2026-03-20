@@ -559,11 +559,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       private final List<DimensionSpec> dims = query.getDimensions();
 
       @Override
-      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         //disable segment-level cache on borker,
         //see PR https://github.com/apache/druid/issues/3820
-        return willMergeRunners || !bySegment;
+        return willMergeRunners || !segmentLevel;
       }
 
       @Override

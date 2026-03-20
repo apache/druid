@@ -127,7 +127,7 @@ public class InfluxParser implements Parser<String, Object>
       return Long.valueOf(raw.substring(0, raw.length() - 1));
     }
 
-    return new Double(raw);
+    return Double.valueOf(raw);
   }
 
   private Object parseBool(String raw)

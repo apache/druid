@@ -80,6 +80,7 @@ import org.easymock.EasyMock;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -102,7 +103,8 @@ public class QueryFrameworkUtils
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         authorizerMapper,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
+        null  // BrokerConfigManager - null for tests
     );
   }
 
@@ -139,7 +141,6 @@ public class QueryFrameworkUtils
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
   }
@@ -369,6 +370,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );
@@ -388,6 +390,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );

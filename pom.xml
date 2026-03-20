@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -70,7 +70,7 @@
     </scm>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
@@ -78,11 +78,13 @@
         <apache.kafka.version>3.9.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
-        <apache.ranger.version>2.4.0</apache.ranger.version>
-        <gson.version>2.10.1</gson.version>
+        <apache.ranger.version>2.7.0</apache.ranger.version>
+        <antlr4.version>4.5.3</antlr4.version>
+        <gson.version>2.13.2</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.25.0</avatica.version>
-        <avro.version>1.11.4</avro.version>
+        <avatica.version>1.27.0</avatica.version>
+        <avro.version>1.11.5</avro.version>
+        <bytebuddy.version>1.18.5</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -94,37 +96,41 @@
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.35.1</errorprone.version>
+        <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
-        <guice.version>5.1.0</guice.version>
-        <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.57.v20241219</jetty.version>
+        <guice.version>6.0.0</guice.version>
+        <hamcrest.version>2.2</hamcrest.version>
+        <jetty.version>12.0.30</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.core.version>2.18.4.1</jackson.core.version>
-        <jackson.version>2.18.4</jackson.version>
+        <jackson.version>2.19.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.22.1</log4j.version>
+        <log4j.version>2.25.3</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.122.Final</netty4.version>
+        <netty4.version>4.2.6.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <protobuf.version>3.25.5</protobuf.version>
+        <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>2.0.16</slf4j.version>
-        <jna.version>5.13.0</jna.version>
-        <jna-platform.version>5.13.0</jna-platform.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <jna.version>5.18.1</jna.version>
+        <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
-        <mockito.version>5.14.2</mockito.version>
-        <aws.sdk.version>1.12.784</aws.sdk.version>
+        <mockito.version>5.23.0</mockito.version>
+        <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
+             It should be removed once those extensions are upgraded or dropped (see #19109). -->
+        <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
+        <aws.sdk.v2.version>2.40.0</aws.sdk.v2.version>
         <caffeine.version>2.8.0</caffeine.version>
-        <jacoco.version>0.8.12</jacoco.version>
-        <testcontainers.version>1.21.3</testcontainers.version>
+        <jacoco.version>0.8.14</jacoco.version>
+        <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
-        <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.8.4</zookeeper.version>
+        <okhttp.version>5.3.2</okhttp.version>
+        <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
+        <zookeeper.version>3.8.6</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
@@ -187,10 +193,9 @@
         <module>processing</module>
         <module>server</module>
         <module>indexing-service</module>
-        <module>indexing-hadoop</module>
+        <module>multi-stage-query</module>
         <module>services</module>
         <module>sql</module>
-        <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->
@@ -211,7 +216,6 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
-        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -227,6 +231,7 @@
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
+        <module>extensions-core/druid-testcontainers</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
@@ -235,6 +240,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
@@ -244,8 +250,6 @@
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
-        <module>extensions-contrib/materialized-view-maintenance</module>
-        <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
@@ -263,10 +267,8 @@
         <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
-        <!-- Revised integration tests -->
+        <!-- more test stuff -->
         <module>integration-tests-ex/tools</module>
-        <module>integration-tests-ex/image</module>
-        <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
@@ -315,7 +317,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.16.1</version>
+                <version>1.20.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -345,7 +347,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.17.0</version>
+                <version>3.20.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -353,24 +355,54 @@
                 <version>1.13.1</version>
             </dependency>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-core</artifactId>
-                <version>${aws.sdk.version}</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>s3</artifactId>
+                <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-ec2</artifactId>
-                <version>${aws.sdk.version}</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>s3-transfer-manager</artifactId>
+                <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-s3</artifactId>
-                <version>${aws.sdk.version}</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>sts</artifactId>
+                <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-sts</artifactId>
-                <version>${aws.sdk.version}</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>apache-client</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>auth</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>regions</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>ec2</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>aws-core</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>sdk-core</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>netty-nio-client</artifactId>
+                <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -388,14 +420,6 @@
                 <version>2.5.2</version>
             </dependency>
 
-            <!-- transitive dependency of testng
-            this would be resolved by updating
-            testng to 7.8.0 -->
-            <dependency>
-                <groupId>org.apache.ant</groupId>
-                <artifactId>ant</artifactId>
-                <version>1.10.14</version>
-            </dependency>
             <!-- transitive dependency of kafka-clients and kubernetes client
             this should get resolved with the update of above depdendencies -->
             <dependency>
@@ -409,7 +433,12 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.9.25</version>
+                <version>2.2.21</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>26.0.2</version>
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
@@ -425,7 +454,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.78.1</version>
+                <version>1.81</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -433,6 +462,36 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-configuration2</artifactId>
                 <version>2.10.1</version>
+            </dependency>
+            <dependency>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>okhttp</artifactId>
+              <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>okhttp-jvm</artifactId>
+              <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>logging-interceptor</artifactId>
+              <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java-api</artifactId>
+              <version>${kubernetes.client.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java</artifactId>
+              <version>${kubernetes.client.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.kubernetes</groupId>
+              <artifactId>client-java-extended</artifactId>
+              <version>${kubernetes.client.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
@@ -593,17 +652,17 @@
             <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
-                <version>73.2</version>
+                <version>77.1</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7.14</version>
+                <version>1.7.14.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.26.0</version>
+                <version>1.27.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -618,7 +677,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>${jackson.core.version}</version>
+                <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -640,7 +699,12 @@
             <dependency>
                 <groupId>jakarta.inject</groupId>
                 <artifactId>jakarta.inject-api</artifactId>
-                <version>1.0.3</version>
+                <version>2.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>1</version>
             </dependency>
             <dependency>
                 <groupId>javax.el</groupId>
@@ -752,26 +816,44 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlet</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlet</artifactId>
+                <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlets</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlets</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-proxy</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-proxy</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-rewrite</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
@@ -847,7 +929,7 @@
             <dependency>
                 <groupId>com.lmax</groupId>
                 <artifactId>disruptor</artifactId>
-                <version>3.3.6</version>
+                <version>3.4.4</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -857,12 +939,12 @@
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
-                <version>4.5.3</version>
+                <version>${antlr4.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-coordinator</artifactId>
-                <version>4.5.3</version>
+                <version>${antlr4.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -872,12 +954,23 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-dbcp2</artifactId>
-                <version>2.0.1</version>
+                <version>2.11.0</version>
             </dependency>
+            <!-- this is relocated to at.yawk.lz4, but license checker script (the one that uses licenses.yaml)
+             complains about stuff (our dependencies) using org.lz4 package, so put this here even though our own
+              packaging doesn't use it directly anymore
+             -->
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
+            </dependency>
+            <!-- dependency:analyze complains if we don't declare this like this in our own packaging, since this is
+             what org.lz4 is relocated as -->
+            <dependency>
+                <groupId>at.yawk.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.10.2</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
@@ -987,14 +1080,19 @@
                 <version>0.9.49</version>
             </dependency>
             <dependency>
+                <groupId>org.checkerframework</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>${checkerframework.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.8</version>
+                <version>9.9.1</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.8</version>
+                <version>9.9.1</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
@@ -1034,7 +1132,7 @@
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
-                <version>3.1.0</version>
+                <version>4.0.1</version>
             </dependency>
             <dependency>
                 <groupId>javax.activation</groupId>
@@ -1094,7 +1192,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.13.3</version>
+                <version>5.14.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1117,7 +1215,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>5.2.0</version>
+                <version>5.6.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1140,9 +1238,16 @@
                 <type>pom</type>
             </dependency>
             <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.3.4</version>
+                <version>3.7.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -1185,15 +1290,18 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.24.2</version>
+                <version>3.27.7</version>
                 <scope>test</scope>
-                <exclusions>
-                  <!-- exclude older byte-buddy until assertj-core depends on 1.14+ for Java 21 -->
-                  <exclusion>
-                    <groupId>net.bytebuddy</groupId>
-                    <artifactId>byte-buddy</artifactId>
-                  </exclusion>
-                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${bytebuddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${bytebuddy.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ircclouds.irc</groupId>
@@ -1203,25 +1311,6 @@
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.maxmind.geoip2</groupId>
-                <artifactId>geoip2</artifactId>
-                <version>0.4.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client-jackson2</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -1298,20 +1387,8 @@
             </dependency>
 
             <dependency>
-                <groupId>org.testng</groupId>
-                <artifactId>testng</artifactId>
-                <version>7.3.0</version>
-                <!-- testng ships guice 4.2, which requires a newer version of guava -->
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.inject</groupId>
-                        <artifactId>guice</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>org.hamcrest</groupId>
-                <artifactId>hamcrest-all</artifactId>
+                <artifactId>hamcrest</artifactId>
                 <version>${hamcrest.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -1348,8 +1425,14 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.15.8</version>
+                <version>4.4.1</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.objenesis</groupId>
+              <artifactId>objenesis</artifactId>
+              <version>3.5</version>
+              <scope>test</scope>
             </dependency>
             <dependency>
               <groupId>com.github.stefanbirkner</groupId>
@@ -1371,12 +1454,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
-            <version>${hadoop.compile.version}</version>
-            <scope>provided</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-common</artifactId>
             <version>${hadoop.compile.version}</version>
             <scope>provided</scope>
           </dependency>
@@ -1410,7 +1487,7 @@
             </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
-                <artifactId>junit-jupiter</artifactId>
+                <artifactId>testcontainers-junit-jupiter</artifactId>
                 <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -1543,7 +1620,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.6.0</version>
                 <configuration>
                     <sourceDirectories>
                         <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
@@ -1552,7 +1629,7 @@
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
                     <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
-                    <encoding>UTF-8</encoding>
+                    <inputEncoding>UTF-8</inputEncoding>
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
@@ -1564,7 +1641,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.21</version>
+                        <version>12.3.1</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -1622,7 +1699,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -1641,6 +1718,10 @@
                       <exclude>**/DruidSqlParserImpl.class</exclude>
                       <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
+                      <!-- Exclude JMH-generated classes -->
+                      <exclude>**/*_jmhType_*.class</exclude>
+                      <exclude>**/*_jmhTest_*.class</exclude>
+                      <exclude>**/*_generated*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1712,6 +1793,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1735,8 +1817,55 @@
                                         <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
                                         <!-- See https://github.com/apache/druid/pull/17370 -->
                                         <exclude>javax.xml.bind:jaxb-api</exclude>
+                                        <exclude>org.eclipse.jetty.toolchain:jetty-servlet-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
+                                <requireUpperBoundDeps>
+                                    <excludes>
+                                       <!-- upgrading these later -->
+                                       <exclude>org.apache.zookeeper:zookeeper</exclude>
+                                       <exclude>com.google.guava:guava</exclude>
+                                       <exclude>org.apache.commons:commons-collections4</exclude>
+                                       <exclude>com.github.ben-manes.caffeine:caffeine</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
+                                       <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
+                                       <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
+                                       <exclude>jakarta.activation:jakarta.activation-api</exclude>
+                                       <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
+                                       <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
+                                       <exclude>com.google.inject:guice</exclude>
+                                       <exclude>redis.clients:jedis</exclude>
+                                       <exclude>org.reflections:reflections</exclude>
+                                       <exclude>org.roaringbitmap:RoaringBitmap</exclude>
+                                       <exclude>io.airlift:aircompressor</exclude>
+                                       <exclude>com.squareup.okio:okio</exclude>
+                                       <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
+                                       <exclude>com.sun.activation:jakarta.activation</exclude>
+                                       <exclude>org.apache.commons:commons-compress</exclude>
+                                       <exclude>org.yaml:snakeyaml</exclude>
+                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
+                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
+                                       <exclude>io.netty:netty-handler-proxy</exclude>
+                                       <exclude>io.netty:netty-handler</exclude>
+                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
+                                       <exclude>com.google.http-client:google-http-client</exclude>
+                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
+                                       <exclude>commons-io:commons-io</exclude>
+                                       <exclude>com.github.luben:zstd-jni</exclude>
+                                       <exclude>org.scala-lang:scala-library</exclude>
+                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
+                                       <exclude>org.jetbrains.kotlin:kotlin-stdlib-jdk8</exclude>
+                                       <exclude>io.netty:netty-codec-http</exclude>
+                                       <exclude>io.confluent:kafka-schema-registry-client</exclude>
+                                       <exclude>org.apache.kafka:kafka-clients</exclude>
+                                       <exclude>com.google.errorprone:error_prone_annotations</exclude>
+                                    </excludes>
+                                    <excludedScopes>
+                                       <excludedScope>provided</excludedScope>
+                                    </excludedScopes>
+                                </requireUpperBoundDeps>
                             </rules>
                             <fail>true</fail>
                         </configuration>
@@ -1821,8 +1950,9 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.4.4</version>
+                <version>12.2.0</version>
                 <configuration>
+                    <nvdApiKey>${nvdApiKey}</nvdApiKey>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
@@ -1862,7 +1992,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.2.5</version>
+                    <version>3.5.4</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
@@ -1933,7 +2063,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>
@@ -1943,7 +2073,7 @@
                 <plugin>
                     <groupId>org.antlr</groupId>
                     <artifactId>antlr4-maven-plugin</artifactId>
-                    <version>4.5.3</version>
+                    <version>${antlr4.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1965,7 +2095,7 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>

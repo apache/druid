@@ -21,6 +21,8 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -29,6 +31,12 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.nio.ByteBuffer;
 
+@LoadScope(roles = {
+    NodeRole.BROKER_JSON_NAME,
+    NodeRole.HISTORICAL_JSON_NAME,
+    NodeRole.INDEXER_JSON_NAME,
+    NodeRole.PEON_JSON_NAME
+})
 public class GroupByStatsMonitor extends AbstractMonitor
 {
   private final GroupByStatsProvider groupByStatsProvider;
@@ -50,26 +58,27 @@ public class GroupByStatsMonitor extends AbstractMonitor
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
 
     emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", mergeBufferPool.getPendingRequests()));
-
     emitter.emit(builder.setMetric("mergeBuffer/used", mergeBufferPool.getUsedResourcesCount()));
 
     GroupByStatsProvider.AggregateStats statsContainer = groupByStatsProvider.getStatsSince();
 
     if (statsContainer.getMergeBufferQueries() > 0) {
       emitter.emit(builder.setMetric("mergeBuffer/queries", statsContainer.getMergeBufferQueries()));
-      emitter.emit(builder.setMetric(
-          "mergeBuffer/acquisitionTimeNs",
-          statsContainer.getMergeBufferAcquisitionTimeNs()
-      ));
+      emitter.emit(builder.setMetric("mergeBuffer/acquisitionTimeNs", statsContainer.getMergeBufferAcquisitionTimeNs()));
+      emitter.emit(builder.setMetric("mergeBuffer/maxAcquisitionTimeNs", statsContainer.getMaxMergeBufferAcquisitionTimeNs()));
+      emitter.emit(builder.setMetric("mergeBuffer/bytesUsed", statsContainer.getTotalMergeBufferUsedBytes()));
+      emitter.emit(builder.setMetric("mergeBuffer/maxBytesUsed", statsContainer.getMaxMergeBufferUsedBytes()));
     }
 
     if (statsContainer.getSpilledQueries() > 0) {
       emitter.emit(builder.setMetric("groupBy/spilledQueries", statsContainer.getSpilledQueries()));
       emitter.emit(builder.setMetric("groupBy/spilledBytes", statsContainer.getSpilledBytes()));
+      emitter.emit(builder.setMetric("groupBy/maxSpilledBytes", statsContainer.getMaxSpilledBytes()));
     }
 
     if (statsContainer.getMergeDictionarySize() > 0) {
       emitter.emit(builder.setMetric("groupBy/mergeDictionarySize", statsContainer.getMergeDictionarySize()));
+      emitter.emit(builder.setMetric("groupBy/maxMergeDictionarySize", statsContainer.getMaxMergeDictionarySize()));
     }
 
     return true;

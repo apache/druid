@@ -36,6 +36,8 @@ import java.util.List;
  */
 public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
 {
+  private long maxDiskSize = MEM_100_MB;
+
   public EmbeddedHistorical()
   {
     addBeforeStartHook((cluster, self) -> {
@@ -44,14 +46,20 @@ public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
           StringUtils.format(
               "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
               cluster.getTestFolder().newFolder().getAbsolutePath(),
-              MEM_100_MB
+              maxDiskSize
           )
       );
     });
   }
 
+  public EmbeddedHistorical setDiskSize(long maxDiskSize)
+  {
+    this.maxDiskSize = maxDiskSize;
+    return this;
+  }
+
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Historical(handler);
   }

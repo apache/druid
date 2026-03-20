@@ -193,7 +193,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           return new ArrayContainsElementFilter(
               leftExpr.getSimpleExtraction().getColumn(),
               ExpressionType.toColumnType(exprEval.type()),
-              exprEval.valueOrDefault(),
+              exprEval.value(),
               null
           );
         }

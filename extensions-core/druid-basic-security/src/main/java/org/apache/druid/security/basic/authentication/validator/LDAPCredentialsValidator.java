@@ -153,6 +153,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
+    if (username.isEmpty() || password.length == 0) {
+      return null;
+    }
     final SearchResult userResult;
     final LdapName userDn;
     final Map<String, Object> contextMap = new HashMap<>();

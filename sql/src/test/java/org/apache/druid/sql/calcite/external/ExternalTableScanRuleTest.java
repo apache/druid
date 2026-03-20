@@ -83,6 +83,7 @@ public class ExternalTableScanRuleTest
         "SELECT 1", // The actual query isn't important for this test
         DruidSqlParser.parse("SELECT 1", false).getMainStatement(),
         engine,
+        Collections.emptySet(),
         Collections.emptyMap(),
         null
     );

@@ -26,6 +26,7 @@ import { ExecutionDetailsPaneLoader } from '../execution-details-pane-loader/exe
 import './execution-details-dialog.scss';
 
 export interface ExecutionDetailsDialogProps {
+  type: 'task' | 'dart';
   id: string;
   initTab?: ExecutionDetailsTab;
   initExecution?: Execution;
@@ -36,12 +37,13 @@ export interface ExecutionDetailsDialogProps {
 export const ExecutionDetailsDialog = React.memo(function ExecutionDetailsDialog(
   props: ExecutionDetailsDialogProps,
 ) {
-  const { id, initTab, initExecution, goToTask, onClose } = props;
+  const { type, id, initTab, initExecution, goToTask, onClose } = props;
 
   return (
     <Dialog className="execution-details-dialog" isOpen onClose={onClose} title="Execution details">
       <div className={Classes.DIALOG_BODY}>
         <ExecutionDetailsPaneLoader
+          type={type}
           id={id}
           initTab={initTab}
           initExecution={initExecution}

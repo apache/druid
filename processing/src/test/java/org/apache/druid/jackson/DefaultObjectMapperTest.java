@@ -22,26 +22,18 @@ package org.apache.druid.jackson;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -124,22 +116,5 @@ public class DefaultObjectMapperTest
     }
     Assert.fail("We expect InvalidTypeIdException to be thrown");
   }
-
-  @Test
-  public void testColumnBasedFrameRowsAndColumns() throws Exception
-  {
-    DefaultObjectMapper om = new DefaultObjectMapper("test");
-
-    MapOfColumnsRowsAndColumns input = (MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
-        )));
-
-    ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
-    byte[] bytes = om.writeValueAsBytes(frc);
-
-    ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
-    assertEquals(frc, frc2);
-  }
 }
+

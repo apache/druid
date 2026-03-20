@@ -81,16 +81,19 @@ public class SegmentTimelineTest
 
   private DataSegment createSegment(String interval, String version, int partitionNum, int totalNumPartitions)
   {
-    return new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of(interval),
-        version,
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        new NumberedShardSpec(partitionNum, totalNumPartitions),
-        0x9,
-        1L
-    );
+    return DataSegment.builder(SegmentId.of(
+                          TestDataSource.WIKI,
+                          Intervals.of(interval),
+                          version,
+                          new NumberedShardSpec(partitionNum, totalNumPartitions)
+                      ))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(new NumberedShardSpec(partitionNum, totalNumPartitions))
+                      .binaryVersion(0x9)
+                      .size(1L)
+                      .totalRows(1)
+                      .build();
   }
 }

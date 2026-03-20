@@ -61,7 +61,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_bool\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -151,7 +150,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_int\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -252,7 +250,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -356,7 +353,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -446,7 +442,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_float\",\"type\":\"ARRAY<DOUBLE>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -547,7 +542,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<DOUBLE>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -651,7 +645,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<DOUBLE>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -741,7 +734,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_str\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -842,7 +834,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -946,7 +937,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1036,7 +1026,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_null\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1137,7 +1126,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1241,7 +1229,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1331,7 +1318,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_empty\",\"type\":\"ARRAY<LONG>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1432,7 +1418,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1536,7 +1521,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1626,7 +1610,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_mixed\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1727,7 +1710,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1831,7 +1813,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1921,7 +1902,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"a_nested\",\"type\":\"COMPLEX<json>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -2022,7 +2002,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -2126,7 +2105,6 @@ FROM test_array;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__

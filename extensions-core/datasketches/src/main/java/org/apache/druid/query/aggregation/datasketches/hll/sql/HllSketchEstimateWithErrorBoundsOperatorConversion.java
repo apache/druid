@@ -42,7 +42,7 @@ import java.util.List;
 
 public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOperatorConversion
 {
-  private static final String FUNCTION_NAME = "HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS";
+  private static final String FUNCTION_NAME = "hll_sketch_estimate_with_error_bounds";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
@@ -63,7 +63,12 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOp
       RexNode rexNode
   )
   {
-    return null;
+    return OperatorConversions.convertDirectCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        FUNCTION_NAME
+    );
   }
 
   @Nullable

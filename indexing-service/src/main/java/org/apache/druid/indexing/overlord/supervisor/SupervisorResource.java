@@ -432,7 +432,7 @@ public class SupervisorResource
         manager -> {
           try {
             if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
-              return Response.ok().build();
+              return Response.status(Response.Status.ACCEPTED).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
                              .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
@@ -533,12 +533,33 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id
+      @PathParam("id") final String id,
+      @QueryParam("count") final Integer count
   )
   {
+    if (count != null && count <= 0) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", StringUtils.format("Count must be greater than zero if set (count was %d)", count)))
+                     .build();
+    }
+
     return asLeaderWithSupervisorManager(
         manager -> {
-          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id);
+          List<VersionedSupervisorSpec> historyForId;
+          try {
+            historyForId = manager.getSupervisorHistoryForId(id, count);
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   e.getMessage()
+                               )
+                           )
+                           .build();
+          }
+
           if (!historyForId.isEmpty()) {
             final List<VersionedSupervisorSpec> authorizedHistoryForId =
                 Lists.newArrayList(

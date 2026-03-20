@@ -83,7 +83,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
         <FormGroup label="Name">
           <InputGroup
             value={lookupId}
-            onChange={(e: any) => onChange('id', e.target.value)}
+            onChange={(e: any) => onChange('id', e.target.value.trimStart())}
             intent={lookupId ? Intent.NONE : Intent.PRIMARY}
             disabled={isEdit}
             placeholder="Enter the lookup name"

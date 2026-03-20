@@ -37,6 +37,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -112,6 +113,17 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   @Nullable
   private final CompactionState lastCompactionState;
   private final long size;
+  private final Integer totalRows;
+
+  /**
+   * SHA-256 fingerprint representation of the CompactionState.
+   * <p>
+   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before indexing
+   * state fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
+   * </p>
+   */
+  @Nullable
+  private final String indexingStateFingerprint;
 
   /**
    * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
@@ -141,6 +153,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         binaryVersion,
         size,
+        null,
+        null,
         PruneSpecsHolder.DEFAULT
     );
   }
@@ -174,14 +188,17 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         lastCompactionState,
         binaryVersion,
         size,
+        null,
+        null,
         PruneSpecsHolder.DEFAULT
     );
   }
 
   @JsonCreator
-  public DataSegment(
+  private DataSegment(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
+      // We take interval input as a String so we can deserialize it optimally via Intervals.fromString(interval).
+      @JsonProperty("interval") String interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
@@ -194,7 +211,44 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
+      @JsonProperty("totalRows") Integer totalRows,
+      @JsonProperty("indexingStateFingerprint") @Nullable String indexingStateFingerprint,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
+  )
+  {
+    this(
+        dataSource,
+        Intervals.fromString(interval),
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        projections,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        totalRows,
+        indexingStateFingerprint,
+        pruneSpecsHolder
+    );
+  }
+
+  public DataSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      @Nullable Map<String, Object> loadSpec,
+      @Nullable List<String> dimensions,
+      @Nullable List<String> metrics,
+      @Nullable List<String> projections,
+      @Nullable ShardSpec shardSpec,
+      @Nullable CompactionState lastCompactionState,
+      Integer binaryVersion,
+      long size,
+      Integer totalRows,
+      String indexingStateFingerprint,
+      PruneSpecsHolder pruneSpecsHolder
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
@@ -212,6 +266,10 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.binaryVersion = binaryVersion;
     Preconditions.checkArgument(size >= 0);
     this.size = size;
+    this.totalRows = totalRows;
+    this.indexingStateFingerprint = indexingStateFingerprint == null ?
+                                    null :
+                                    STRING_INTERNER.intern(indexingStateFingerprint);
   }
 
   /**
@@ -294,6 +352,14 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return size;
   }
 
+  @Nullable
+  @JsonProperty("totalRows")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getTotalRows()
+  {
+    return totalRows;
+  }
+
   // "identifier" for backward compatibility of JSON API
   @JsonProperty(value = "identifier", access = JsonProperty.Access.READ_ONLY)
   public SegmentId getId()
@@ -304,6 +370,21 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public boolean isTombstone()
   {
     return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
+  }
+
+  /**
+   * Get the inexing state fingerprint associated with this segment.
+   * <p>
+   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before compaction
+   * fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
+   * </p>
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getIndexingStateFingerprint()
+  {
+    return indexingStateFingerprint;
   }
 
   @Override
@@ -400,6 +481,16 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).lastCompactionState(compactionState).build();
   }
 
+  public DataSegment withIndexingStateFingerprint(String indexingStateFingerprint)
+  {
+    return builder(this).indexingStateFingerprint(indexingStateFingerprint).build();
+  }
+
+  public DataSegment.Builder toBuilder()
+  {
+    return builder(this);
+  }
+
   @Override
   public int compareTo(DataSegment dataSegment)
   {
@@ -434,6 +525,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
+           ", totalRows=" + totalRows +
+           ", indexingStateFingerprint=" + indexingStateFingerprint +
            '}';
   }
 
@@ -494,6 +587,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return new Builder(segment);
   }
 
+  public static Builder builder(DataSegment.Builder segmentBuilder)
+  {
+    return new Builder(segmentBuilder);
+  }
+
   public static class Builder
   {
     private String dataSource;
@@ -507,6 +605,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private CompactionState lastCompactionState;
     private Integer binaryVersion;
     private long size;
+    private Integer totalRows;
+    private String indexingStateFingerprint;
 
     /**
      * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
@@ -521,6 +621,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.projections = null;
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.size = -1;
+      this.totalRows = null;
     }
 
     private Builder(SegmentId segmentId)
@@ -531,7 +632,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.binaryVersion = 0;
       this.size = 0;
+      this.totalRows = null;
       this.lastCompactionState = null;
+      this.indexingStateFingerprint = null;
     }
 
     private Builder(DataSegment segment)
@@ -547,6 +650,25 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
       this.size = segment.getSize();
+      this.totalRows = segment.getTotalRows();
+      this.indexingStateFingerprint = segment.getIndexingStateFingerprint();
+    }
+
+    private Builder(DataSegment.Builder segmentBuilder)
+    {
+      this.dataSource = segmentBuilder.dataSource;
+      this.interval = segmentBuilder.interval;
+      this.version = segmentBuilder.version;
+      this.loadSpec = segmentBuilder.loadSpec;
+      this.dimensions = segmentBuilder.dimensions;
+      this.metrics = segmentBuilder.metrics;
+      this.projections = segmentBuilder.projections;
+      this.shardSpec = segmentBuilder.shardSpec;
+      this.lastCompactionState = segmentBuilder.lastCompactionState;
+      this.binaryVersion = segmentBuilder.binaryVersion;
+      this.size = segmentBuilder.size;
+      this.totalRows = segmentBuilder.totalRows;
+      this.indexingStateFingerprint = segmentBuilder.indexingStateFingerprint;
     }
 
     public Builder dataSource(String dataSource)
@@ -615,6 +737,18 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
+    public Builder totalRows(Integer totalRows)
+    {
+      this.totalRows = totalRows;
+      return this;
+    }
+
+    public Builder indexingStateFingerprint(String indexingStateFingerprint)
+    {
+      this.indexingStateFingerprint = indexingStateFingerprint;
+      return this;
+    }
+
     public DataSegment build()
     {
       // Check stuff that goes into the id, at least.
@@ -635,6 +769,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           lastCompactionState,
           binaryVersion,
           size,
+          totalRows,
+          indexingStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
     }

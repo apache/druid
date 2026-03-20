@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
@@ -28,31 +28,40 @@ import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 /**
  * Monitor that reports memory usage stats by reading `memory.*` files reported by cgroupv2
  */
-public class CgroupV2MemoryMonitor extends CgroupMemoryMonitor
+public class CgroupV2MemoryMonitor extends FeedDefiningMonitor
 {
 
+  private static final String MEMORY_USAGE_FILE = "memory.current";
+  private static final String MEMORY_LIMIT_FILE = "memory.max";
+  private final CgroupDiscoverer cgroupDiscoverer;
+
   @VisibleForTesting
-  CgroupV2MemoryMonitor(CgroupDiscoverer cgroupDiscoverer)
+  CgroupV2MemoryMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
-    super(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
+    super(feed);
+    this.cgroupDiscoverer = cgroupDiscoverer;
   }
 
-  // This would be invoked when monitor is specified in config (supressing to satisy intellij-inspections)
-  @SuppressWarnings("unused")
-  CgroupV2MemoryMonitor()
+
+  public CgroupV2MemoryMonitor(String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class));
+    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class), feed);
+  }
+
+  public CgroupV2MemoryMonitor()
+  {
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
-  public String memoryUsageFile()
+  public boolean doMonitor(ServiceEmitter emitter)
   {
-    return "memory.current";
-  }
-
-  @Override
-  public String memoryLimitFile()
-  {
-    return "memory.max";
+    return CgroupMemoryMonitor.parseAndEmit(
+        emitter,
+        cgroupDiscoverer,
+        MEMORY_USAGE_FILE,
+        MEMORY_LIMIT_FILE,
+        this
+    );
   }
 }

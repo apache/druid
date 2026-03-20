@@ -108,6 +108,7 @@ public class ExpressionTestHelper
       "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need SQL node */
       null, /* Don't need engine */
+      Collections.emptySet(),
       Collections.emptyMap(),
       null
   );
@@ -387,7 +388,6 @@ public class ExpressionTestHelper
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
                 rowSignature,
-                false,
                 false
             ),
             VirtualColumns.create(virtualColumns)

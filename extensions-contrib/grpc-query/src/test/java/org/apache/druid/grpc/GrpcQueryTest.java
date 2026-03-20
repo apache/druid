@@ -34,6 +34,7 @@ import org.apache.druid.grpc.proto.TestResults.QueryResult;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
@@ -75,7 +77,9 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
-        sqlTestFramework.queryLifecycleFactory()
+        Map.of(),
+        sqlTestFramework.queryLifecycleFactory(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
     AuthenticatorMapper authMapper = new AuthenticatorMapper(
         ImmutableMap.of(

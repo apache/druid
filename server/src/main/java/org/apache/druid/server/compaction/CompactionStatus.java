@@ -19,9 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -32,17 +30,25 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.timeline.CompactionState;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,7 +57,10 @@ import java.util.stream.Collectors;
  */
 public class CompactionStatus
 {
-  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null);
+  private static final Logger log = new Logger(CompactionStatus.class);
+
+  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null, null);
+  public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
   {
@@ -59,13 +68,18 @@ public class CompactionStatus
   }
 
   /**
+   * List of checks performed to determine if compaction is already complete based on indexing state fingerprints.
+   */
+  private static final List<Function<Evaluator, CompactionStatus>> FINGERPRINT_CHECKS = List.of(
+      Evaluator::allFingerprintedCandidatesHaveExpectedFingerprint
+  );
+
+  /**
    * List of checks performed to determine if compaction is already complete.
    * <p>
    * The order of the checks must be honored while evaluating them.
    */
   private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
-      Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
-      Evaluator::allCandidatesHaveSameCompactionState,
       Evaluator::partitionsSpecIsUpToDate,
       Evaluator::indexSpecIsUpToDate,
       Evaluator::segmentGranularityIsUpToDate,
@@ -73,17 +87,34 @@ public class CompactionStatus
       Evaluator::rollupIsUpToDate,
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
-      Evaluator::transformSpecFilterIsUpToDate,
+      Evaluator::transformSpecIsUpToDate,
       Evaluator::projectionsAreUpToDate
   );
 
   private final State state;
   private final String reason;
 
-  private CompactionStatus(State state, String reason)
+  @Nullable
+  private final CompactionStatistics compactedStats;
+  @Nullable
+  private final CompactionStatistics uncompactedStats;
+  @Nullable
+  private final List<DataSegment> uncompactedSegments;
+
+
+  private CompactionStatus(
+      State state,
+      String reason,
+      @Nullable CompactionStatistics compactedStats,
+      @Nullable CompactionStatistics uncompactedStats,
+      @Nullable List<DataSegment> uncompactedSegments
+  )
   {
     this.state = state;
     this.reason = reason;
+    this.compactedStats = compactedStats;
+    this.uncompactedStats = uncompactedStats;
+    this.uncompactedSegments = uncompactedSegments;
   }
 
   public boolean isComplete()
@@ -106,21 +137,60 @@ public class CompactionStatus
     return state;
   }
 
+  public CompactionStatistics getCompactedStats()
+  {
+    return compactedStats;
+  }
+
+  public CompactionStatistics getUncompactedStats()
+  {
+    return uncompactedStats;
+  }
+
+  public List<DataSegment> getUncompactedSegments()
+  {
+    return uncompactedSegments;
+  }
+
   @Override
   public String toString()
   {
     return "CompactionStatus{" +
            "state=" + state +
            ", reason=" + reason +
+           ", compactedStats=" + compactedStats +
+           ", uncompactedStats=" + uncompactedStats +
            '}';
   }
 
-  private static CompactionStatus incomplete(String reasonFormat, Object... args)
+  public static CompactionStatus pending(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));
+    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null, null);
   }
 
-  private static <T> CompactionStatus completeIfEqual(
+  public static CompactionStatus pending(
+      CompactionStatistics compactedStats,
+      CompactionStatistics uncompactedStats,
+      List<DataSegment> uncompactedSegments,
+      String reasonFormat,
+      Object... args
+  )
+  {
+    return new CompactionStatus(
+        State.PENDING,
+        StringUtils.format(reasonFormat, args),
+        compactedStats,
+        uncompactedStats,
+        uncompactedSegments
+    );
+  }
+
+  /**
+   * Computes compaction status for the given field. The status is assumed to be
+   * COMPLETE (i.e. no further compaction is required) if the configured value
+   * of the field is null or equal to the current value.
+   */
+  private static <T> CompactionStatus completeIfNullOrEqual(
       String field,
       T configured,
       T current,
@@ -141,7 +211,7 @@ public class CompactionStatus
       Function<T, String> stringFunction
   )
   {
-    return CompactionStatus.incomplete(
+    return CompactionStatus.pending(
         "'%s' mismatch: required[%s], current[%s]",
         field,
         target == null ? null : stringFunction.apply(target),
@@ -187,39 +257,55 @@ public class CompactionStatus
     }
   }
 
-  static CompactionStatus skipped(String reasonFormat, Object... args)
+  public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args));
+    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null, null);
   }
 
-  static CompactionStatus running(String reasonForCompaction)
+  public static CompactionStatus running(String message)
   {
-    return new CompactionStatus(State.RUNNING, reasonForCompaction);
+    return new CompactionStatus(State.RUNNING, message, null, null, null);
   }
 
   /**
    * Determines the CompactionStatus of the given candidate segments by evaluating
    * the {@link #CHECKS} one by one. If any check returns an incomplete status,
-   * further checks are not performed and the incomplete status is returned.
+   * further checks are still performed to determine the number of uncompacted
+   * segments but only the first incomplete status is returned.
    */
   static CompactionStatus compute(
-      CompactionCandidate candidateSegments,
+      List<DataSegment> candidateSegments,
       DataSourceCompactionConfig config,
-      ObjectMapper objectMapper
+      @Nullable IndexingStateFingerprintMapper fingerprintMapper
   )
   {
-    final Evaluator evaluator = new Evaluator(candidateSegments, config, objectMapper);
-    return CHECKS.stream().map(f -> f.apply(evaluator))
-                 .filter(status -> !status.isComplete())
-                 .findFirst().orElse(COMPLETE);
+    final CompactionState expectedState = config.toCompactionState();
+    String expectedFingerprint;
+    if (fingerprintMapper == null) {
+      expectedFingerprint = null;
+    } else {
+      expectedFingerprint = fingerprintMapper.generateFingerprint(
+          config.getDataSource(),
+          expectedState
+      );
+    }
+    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate();
   }
 
-  static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  @Nullable
+  public static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {
-      final long maxTotalRows = Configs.valueOrDefault(tuningConfig.getMaxTotalRows(), Long.MAX_VALUE);
-      return new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows);
+      final Long maxTotalRows = tuningConfig.getMaxTotalRows();
+      final Integer maxRowsPerSegment = tuningConfig.getMaxRowsPerSegment();
+
+      if (maxTotalRows == null && maxRowsPerSegment == null) {
+        // If not specified, return null so that partitionsSpec is not compared
+        return null;
+      } else {
+        return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
+      }
     } else if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
       return new DynamicPartitionsSpec(
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
@@ -232,19 +318,28 @@ public class CompactionStatus
     }
   }
 
+  @Nullable
   private static List<DimensionSchema> getNonPartitioningDimensions(
       @Nullable final List<DimensionSchema> dimensionSchemas,
-      @Nullable final PartitionsSpec partitionsSpec
+      @Nullable final PartitionsSpec partitionsSpec,
+      @Nullable final IndexSpec indexSpec
   )
   {
+    final IndexSpec effectiveIndexSpec = (indexSpec == null ? IndexSpec.getDefault() : indexSpec).getEffectiveSpec();
     if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-      return dimensionSchemas;
+      if (dimensionSchemas != null) {
+        return dimensionSchemas.stream()
+                               .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
+                               .collect(Collectors.toList());
+      }
+      return null;
     }
 
     final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
     return dimensionSchemas.stream()
-                     .filter(dim -> !partitionsDimensions.contains(dim.getName()))
-                     .collect(Collectors.toList());
+                           .filter(dim -> !partitionsDimensions.contains(dim.getName()))
+                           .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
+                           .collect(Collectors.toList());
   }
 
   /**
@@ -262,68 +357,250 @@ public class CompactionStatus
   }
 
   /**
-   * Evaluates {@link #CHECKS} to determine the compaction status.
+   * Evaluates {@link #CHECKS} to determine the compaction status of a
+   * {@link CompactionCandidate}.
    */
   private static class Evaluator
   {
-    private final ObjectMapper objectMapper;
     private final DataSourceCompactionConfig compactionConfig;
-    private final CompactionCandidate candidateSegments;
-    private final CompactionState lastCompactionState;
+    private final List<DataSegment> candidateSegments;
+    private final long totalSegmentBytes;
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
-    private final ClientCompactionTaskGranularitySpec existingGranularitySpec;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
+    private final List<DataSegment> fingerprintedSegments = new ArrayList<>();
+    private final List<DataSegment> compactedSegments = new ArrayList<>();
+    private final List<DataSegment> uncompactedSegments = new ArrayList<>();
+    private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
+
+    @Nullable
+    private final String targetFingerprint;
+    private final IndexingStateFingerprintMapper fingerprintMapper;
+
     private Evaluator(
-        CompactionCandidate candidateSegments,
+        List<DataSegment> candidateSegments,
         DataSourceCompactionConfig compactionConfig,
-        ObjectMapper objectMapper
+        @Nullable String targetFingerprint,
+        @Nullable IndexingStateFingerprintMapper fingerprintMapper
     )
     {
       this.candidateSegments = candidateSegments;
-      this.objectMapper = objectMapper;
-      this.lastCompactionState = candidateSegments.getSegments().get(0).getLastCompactionState();
+      this.totalSegmentBytes = candidateSegments.stream().mapToLong(DataSegment::getSize).sum();
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
-      if (lastCompactionState == null) {
-        this.existingGranularitySpec = null;
+      this.targetFingerprint = targetFingerprint;
+      this.fingerprintMapper = fingerprintMapper;
+    }
+
+    private CompactionStatus evaluate()
+    {
+      final CompactionStatus inputBytesCheck = inputBytesAreWithinLimit();
+      if (inputBytesCheck.isSkipped()) {
+        return inputBytesCheck;
+      }
+
+      List<String> reasonsForCompaction = new ArrayList<>();
+      CompactionStatus compactedOnceCheck = segmentsHaveBeenCompactedAtLeastOnce();
+      if (!compactedOnceCheck.isComplete()) {
+        reasonsForCompaction.add(compactedOnceCheck.getReason());
+      }
+
+      if (fingerprintMapper != null && targetFingerprint != null) {
+        // First try fingerprint-based evaluation (fast path)
+        CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
+                                                               .map(f -> f.apply(this))
+                                                               .filter(status -> !status.isComplete())
+                                                               .findFirst().orElse(COMPLETE);
+
+        if (!fingerprintStatus.isComplete()) {
+          reasonsForCompaction.add(fingerprintStatus.getReason());
+        }
+      }
+
+      if (!unknownStateToSegments.isEmpty()) {
+        // Run CHECKS against any states with uknown compaction status
+        reasonsForCompaction.addAll(
+            CHECKS.stream()
+                  .map(f -> f.apply(this))
+                  .filter(status -> !status.isComplete())
+                  .map(CompactionStatus::getReason)
+                  .toList()
+        );
+
+        // Any segments left in unknownStateToSegments passed all checks and are considered compacted
+        this.compactedSegments.addAll(
+            unknownStateToSegments
+                .values()
+                .stream()
+                .flatMap(List::stream)
+                .toList()
+        );
+      }
+
+      if (reasonsForCompaction.isEmpty()) {
+        return COMPLETE;
       } else {
-        this.existingGranularitySpec = convertIfNotNull(
-            lastCompactionState.getGranularitySpec(),
-            ClientCompactionTaskGranularitySpec.class
+        return CompactionStatus.pending(
+            createStats(this.compactedSegments),
+            createStats(this.uncompactedSegments),
+            this.uncompactedSegments,
+            reasonsForCompaction.get(0)
         );
       }
     }
 
-    private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
+    /**
+     * Evaluates the fingerprints of all fingerprinted candidate segments against the expected fingerprint.
+     * <p>
+     * If all fingerprinted segments have the expected fingerprint, the check can quickly pass as COMPLETE. However,
+     * if any fingerprinted segment has a mismatched fingerprint, we need to investigate further by adding them to
+     * {@link #unknownStateToSegments} where their indexing states will be analyzed.
+     * </p>
+     */
+    private CompactionStatus allFingerprintedCandidatesHaveExpectedFingerprint()
     {
-      if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("not compacted yet");
+      Map<String, List<DataSegment>> mismatchedFingerprintToSegmentMap = new HashMap<>();
+      for (DataSegment segment : fingerprintedSegments) {
+        String fingerprint = segment.getIndexingStateFingerprint();
+        if (fingerprint == null) {
+          // Should not happen since we are iterating over fingerprintedSegments
+        } else if (fingerprint.equals(targetFingerprint)) {
+          compactedSegments.add(segment);
+        } else {
+          mismatchedFingerprintToSegmentMap
+              .computeIfAbsent(fingerprint, k -> new ArrayList<>())
+              .add(segment);
+        }
+      }
+
+      if (mismatchedFingerprintToSegmentMap.isEmpty()) {
+        // All fingerprinted segments have the expected fingerprint - compaction is complete
+        return COMPLETE;
+      }
+
+      if (fingerprintMapper == null) {
+        // Cannot evaluate further without a fingerprint mapper
+        uncompactedSegments.addAll(
+            mismatchedFingerprintToSegmentMap.values()
+                                            .stream()
+                                            .flatMap(List::stream)
+                                            .toList()
+        );
+        return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
+      }
+
+      boolean fingerprintedSegmentWithoutCachedStateFound = false;
+
+      for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
+        String fingerprint = e.getKey();
+        CompactionState stateToValidate = fingerprintMapper.getStateForFingerprint(fingerprint).orElse(null);
+        if (stateToValidate == null) {
+          log.warn("No indexing state found for fingerprint[%s]", fingerprint);
+          fingerprintedSegmentWithoutCachedStateFound = true;
+          uncompactedSegments.addAll(e.getValue());
+        } else {
+          // Note that this does not mean we need compaction yet - we need to validate the state further to determine this
+          unknownStateToSegments.compute(
+              stateToValidate,
+              (state, segments) -> {
+                if (segments == null) {
+                  segments = new ArrayList<>();
+                }
+                segments.addAll(e.getValue());
+                return segments;
+              });
+        }
+      }
+
+      if (fingerprintedSegmentWithoutCachedStateFound) {
+        return CompactionStatus.pending("One or more fingerprinted segments do not have a cached indexing state");
       } else {
         return COMPLETE;
       }
     }
 
-    private CompactionStatus allCandidatesHaveSameCompactionState()
+    /**
+     * Checks if all the segments have been compacted at least once and groups them into uncompacted, fingerprinted, or
+     * non-fingerprinted.
+     */
+    private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
-      final boolean allHaveSameCompactionState = candidateSegments.getSegments().stream().allMatch(
-          segment -> lastCompactionState.equals(segment.getLastCompactionState())
-      );
-      if (allHaveSameCompactionState) {
+      for (DataSegment segment : candidateSegments) {
+        final String fingerprint = segment.getIndexingStateFingerprint();
+        final CompactionState segmentState = segment.getLastCompactionState();
+        if (fingerprint != null) {
+          fingerprintedSegments.add(segment);
+        } else if (segmentState == null) {
+          uncompactedSegments.add(segment);
+        } else {
+          unknownStateToSegments.computeIfAbsent(segmentState, s -> new ArrayList<>()).add(segment);
+        }
+      }
+
+      if (uncompactedSegments.isEmpty()) {
         return COMPLETE;
       } else {
-        return CompactionStatus.incomplete("segments have different last compaction states");
+        return CompactionStatus.pending(NEVER_COMPACTED_REASON);
       }
     }
 
     private CompactionStatus partitionsSpecIsUpToDate()
     {
+      return evaluateForAllCompactionStates(this::partitionsSpecIsUpToDate);
+    }
+
+    private CompactionStatus indexSpecIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::indexSpecIsUpToDate);
+    }
+
+    private CompactionStatus projectionsAreUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::projectionsAreUpToDate);
+    }
+
+    private CompactionStatus segmentGranularityIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::segmentGranularityIsUpToDate);
+    }
+
+    private CompactionStatus rollupIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::rollupIsUpToDate);
+    }
+
+    private CompactionStatus queryGranularityIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::queryGranularityIsUpToDate);
+    }
+
+    private CompactionStatus dimensionsSpecIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::dimensionsSpecIsUpToDate);
+    }
+
+    private CompactionStatus metricsSpecIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::metricsSpecIsUpToDate);
+    }
+
+    private CompactionStatus transformSpecIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::transformSpecIsUpToDate);
+    }
+
+    private CompactionStatus partitionsSpecIsUpToDate(CompactionState lastCompactionState)
+    {
       PartitionsSpec existingPartionsSpec = lastCompactionState.getPartitionsSpec();
       if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
         existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
+      } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
+        existingPartionsSpec = new DynamicPartitionsSpec(
+            existingPartionsSpec.getMaxRowsPerSegment(),
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
       }
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
           existingPartionsSpec,
@@ -331,19 +608,19 @@ public class CompactionStatus
       );
     }
 
-    private CompactionStatus indexSpecIsUpToDate()
+    private CompactionStatus indexSpecIsUpToDate(CompactionState lastCompactionState)
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "indexSpec",
-          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
-          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.getDefault()).getEffectiveSpec(),
+          lastCompactionState.getIndexSpec().getEffectiveSpec(),
           String::valueOf
       );
     }
 
-    private CompactionStatus projectionsAreUpToDate()
+    private CompactionStatus projectionsAreUpToDate(CompactionState lastCompactionState)
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "projections",
           compactionConfig.getProjections(),
           lastCompactionState.getProjections(),
@@ -351,7 +628,20 @@ public class CompactionStatus
       );
     }
 
-    private CompactionStatus segmentGranularityIsUpToDate()
+    private CompactionStatus inputBytesAreWithinLimit()
+    {
+      final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
+      if (totalSegmentBytes > inputSegmentSize) {
+        return CompactionStatus.skipped(
+            "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
+            totalSegmentBytes, inputSegmentSize
+        );
+      } else {
+        return COMPLETE;
+      }
+    }
+
+    private CompactionStatus segmentGranularityIsUpToDate(CompactionState lastCompactionState)
     {
       if (configuredGranularitySpec == null
           || configuredGranularitySpec.getSegmentGranularity() == null) {
@@ -359,6 +649,7 @@ public class CompactionStatus
       }
 
       final Granularity configuredSegmentGranularity = configuredGranularitySpec.getSegmentGranularity();
+      final UserCompactionTaskGranularityConfig existingGranularitySpec = getGranularitySpec(lastCompactionState);
       final Granularity existingSegmentGranularity
           = existingGranularitySpec == null ? null : existingGranularitySpec.getSegmentGranularity();
 
@@ -367,11 +658,12 @@ public class CompactionStatus
       } else if (existingSegmentGranularity == null) {
         // Candidate segments were compacted without segment granularity specified
         // Check if the segments already have the desired segment granularity
-        boolean needsCompaction = candidateSegments.getSegments().stream().anyMatch(
+        final List<DataSegment> segmentsForState = unknownStateToSegments.get(lastCompactionState);
+        boolean needsCompaction = segmentsForState.stream().anyMatch(
             segment -> !configuredSegmentGranularity.isAligned(segment.getInterval())
         );
         if (needsCompaction) {
-          return CompactionStatus.incomplete(
+          return CompactionStatus.pending(
               "segmentGranularity: segments do not align with target[%s]",
               asString(configuredSegmentGranularity)
           );
@@ -388,12 +680,14 @@ public class CompactionStatus
       return COMPLETE;
     }
 
-    private CompactionStatus rollupIsUpToDate()
+    private CompactionStatus rollupIsUpToDate(CompactionState lastCompactionState)
     {
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        final UserCompactionTaskGranularityConfig existingGranularitySpec
+            = getGranularitySpec(lastCompactionState);
+        return CompactionStatus.completeIfNullOrEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
             existingGranularitySpec == null ? null : existingGranularitySpec.isRollup(),
@@ -402,12 +696,14 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus queryGranularityIsUpToDate()
+    private CompactionStatus queryGranularityIsUpToDate(CompactionState lastCompactionState)
     {
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        final UserCompactionTaskGranularityConfig existingGranularitySpec
+            = getGranularitySpec(lastCompactionState);
+        return CompactionStatus.completeIfNullOrEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
             existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
@@ -421,7 +717,7 @@ public class CompactionStatus
      * which can create a mismatch between expected and actual order of dimensions. Partition dimensions are separately
      * covered in {@link Evaluator#partitionsSpecIsUpToDate()} check.
      */
-    private CompactionStatus dimensionsSpecIsUpToDate()
+    private CompactionStatus dimensionsSpecIsUpToDate(CompactionState lastCompactionState)
     {
       if (compactionConfig.getDimensionsSpec() == null) {
         return COMPLETE;
@@ -430,24 +726,26 @@ public class CompactionStatus
             lastCompactionState.getDimensionsSpec() == null
             ? null
             : lastCompactionState.getDimensionsSpec().getDimensions(),
-            lastCompactionState.getPartitionsSpec()
+            lastCompactionState.getPartitionsSpec(),
+            lastCompactionState.getIndexSpec()
         );
         List<DimensionSchema> configuredDimensions = getNonPartitioningDimensions(
             compactionConfig.getDimensionsSpec().getDimensions(),
-            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
+            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec(),
+            compactionConfig.getTuningConfig() == null
+            ? IndexSpec.getDefault()
+            : compactionConfig.getTuningConfig().getIndexSpec()
         );
-        {
-          return CompactionStatus.completeIfEqual(
-              "dimensionsSpec",
-              configuredDimensions,
-              existingDimensions,
-              String::valueOf
-          );
-        }
+        return CompactionStatus.completeIfNullOrEqual(
+            "dimensionsSpec",
+            configuredDimensions,
+            existingDimensions,
+            String::valueOf
+        );
       }
     }
 
-    private CompactionStatus metricsSpecIsUpToDate()
+    private CompactionStatus metricsSpecIsUpToDate(CompactionState lastCompactionState)
     {
       final AggregatorFactory[] configuredMetricsSpec = compactionConfig.getMetricsSpec();
       if (ArrayUtils.isEmpty(configuredMetricsSpec)) {
@@ -471,32 +769,64 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus transformSpecFilterIsUpToDate()
+    private CompactionStatus transformSpecIsUpToDate(CompactionState lastCompactionState)
     {
-      if (compactionConfig.getTransformSpec() == null) {
+      final CompactionTransformSpec configuredSpec = compactionConfig.getTransformSpec();
+      if (configuredSpec == null
+          || (configuredSpec.getFilter() == null && configuredSpec.getVirtualColumns().isEmpty())) {
         return COMPLETE;
       }
 
-      CompactionTransformSpec existingTransformSpec = convertIfNotNull(
+      final CompactionTransformSpec existingSpec = Configs.valueOrDefault(
           lastCompactionState.getTransformSpec(),
-          CompactionTransformSpec.class
+          new CompactionTransformSpec(null, null)
       );
-      return CompactionStatus.completeIfEqual(
-          "transformSpec filter",
-          compactionConfig.getTransformSpec().getFilter(),
-          existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
+      return CompactionStatus.completeIfNullOrEqual(
+          "transformSpec",
+          configuredSpec,
+          existingSpec,
           String::valueOf
       );
     }
 
-    @Nullable
-    private <T> T convertIfNotNull(Object object, Class<T> clazz)
+    /**
+     * Evaluates the given check for each entry in the {@link #unknownStateToSegments}.
+     * If any entry fails the given check by returning a status which is not
+     * COMPLETE, all the segments with that state are moved to {@link #uncompactedSegments}.
+     *
+     * @return The first status which is not COMPLETE.
+     */
+    private CompactionStatus evaluateForAllCompactionStates(
+        Function<CompactionState, CompactionStatus> check
+    )
     {
-      if (object == null) {
-        return null;
-      } else {
-        return objectMapper.convertValue(object, clazz);
+      CompactionStatus firstIncompleteStatus = null;
+      for (CompactionState state : List.copyOf(unknownStateToSegments.keySet())) {
+        final CompactionStatus status = check.apply(state);
+        if (!status.isComplete()) {
+          uncompactedSegments.addAll(unknownStateToSegments.remove(state));
+          if (firstIncompleteStatus == null) {
+            firstIncompleteStatus = status;
+          }
+        }
       }
+
+      return firstIncompleteStatus == null ? COMPLETE : firstIncompleteStatus;
+    }
+
+    private static UserCompactionTaskGranularityConfig getGranularitySpec(
+        CompactionState compactionState
+    )
+    {
+      return UserCompactionTaskGranularityConfig.from(compactionState.getGranularitySpec());
+    }
+
+    private static CompactionStatistics createStats(List<DataSegment> segments)
+    {
+      final Set<Interval> segmentIntervals =
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
+      final long totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
+      return CompactionStatistics.create(totalBytes, segments.size(), segmentIntervals.size());
     }
   }
 }

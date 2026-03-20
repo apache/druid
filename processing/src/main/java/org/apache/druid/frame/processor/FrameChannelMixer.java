@@ -21,9 +21,9 @@ package org.apache.druid.frame.processor;
 
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -85,9 +85,9 @@ public class FrameChannelMixer implements FrameProcessor<Long>
       final ReadableFrameChannel channel = inputChannels.get(channelNumber);
 
       if (!channel.isFinished()) {
-        final Frame frame = channel.read();
-        outputChannel.write(frame);
-        rowsRead += frame.numRows();
+        final RowsAndColumns rac = channel.read();
+        outputChannel.write(rac);
+        rowsRead += rac.numRows();
       }
     }
 

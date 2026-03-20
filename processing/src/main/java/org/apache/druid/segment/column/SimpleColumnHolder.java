@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 /**
  *
  */
-class SimpleColumnHolder implements ColumnHolder
+class SimpleColumnHolder implements BaseColumnHolder
 {
   private final ColumnCapabilities capabilities;
   private final ColumnFormat columnFormat;

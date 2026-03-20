@@ -70,7 +70,6 @@ public abstract class AbstractTask implements Task
     REPLACE, // replace with tombstones
     APPEND, // append to existing segments
     REPLACE_LEGACY, // original replace, it does not replace existing data for empty time chunks in input intervals
-    HADOOP, // non-native batch, hadoop ingestion
     NONE; // not an ingestion task (i.e. a kill task)
 
     @JsonCreator
@@ -101,8 +100,6 @@ public abstract class AbstractTask implements Task
   private File reportsFile;
   private File statusFile;
 
-  private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-
   private volatile CountDownLatch cleanupCompletionLatch;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
@@ -131,7 +128,6 @@ public abstract class AbstractTask implements Task
     // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
     this.context = context == null ? new HashMap<>() : new HashMap<>(context);
     this.ingestionMode = ingestionMode;
-    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
   }
 
   protected AbstractTask(
@@ -153,7 +149,7 @@ public abstract class AbstractTask implements Task
       FileUtils.mkdirp(taskDir);
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);
-      reportsFile = new File(attemptDir, "report.json");
+      reportsFile = toolbox.getTaskReportFileWriter().getReportsFile(getId());
       statusFile = new File(attemptDir, "status.json");
       InetAddress hostName = InetAddress.getLocalHost();
       DruidNode node = toolbox.getTaskExecutorNode();
@@ -204,7 +200,7 @@ public abstract class AbstractTask implements Task
     // isEncapsulatedTask() currently means "isK8sIngestion".
     // We don't need to push reports and status here for other ingestion methods.
     if (!toolbox.getConfig().isEncapsulatedTask()) {
-      log.debug("Not pushing task logs and reports from task.");
+      log.info("Not pushing task logs and reports from task.");
       return;
     }
 
@@ -385,8 +381,14 @@ public abstract class AbstractTask implements Task
     return context;
   }
 
-  protected ServiceMetricEvent.Builder getMetricBuilder()
+  /**
+   * @return A fresh instance of {@link ServiceMetricEvent.Builder} that can be
+   * used to emit metrics for this task.
+   */
+  public ServiceMetricEvent.Builder getMetricBuilder()
   {
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
     return metricBuilder;
   }
 
@@ -426,13 +428,15 @@ public abstract class AbstractTask implements Task
         + "Either dropExisting or appendToExisting should be set to false");
   }
 
+  /**
+   * Emits a metric for this task using the {@link #getMetricBuilder() metric builder}.
+   */
   public void emitMetric(
       ServiceEmitter emitter,
       String metric,
       Number value
   )
   {
-
     if (emitter == null || metric == null || value == null) {
       return;
     }

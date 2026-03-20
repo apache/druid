@@ -386,4 +386,16 @@ public class ColumnProcessors
   {
     return capabilities == null || capabilities.hasMultipleValues().isMaybeTrue();
   }
+
+  /**
+   * Checks the {@link ColumnCapabilities} to see if the column has a dictionary available
+   * ({@link ColumnCapabilities#isDictionaryEncoded()} is true), and there is a unique mapping of dictionary
+   * id to value ({@link ColumnCapabilities#areDictionaryValuesUnique()} is true).
+   */
+  public static boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
+  {
+    Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
+    Preconditions.checkArgument(capabilities.is(ValueType.STRING), "Must only be called on a STRING column");
+    return capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
+  }
 }

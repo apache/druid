@@ -20,7 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -317,16 +317,14 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     );
 
     return VirtualColumns.create(
-        ImmutableList.of(
-            longVirtualColumn,
-            doubleVirtualColumn,
-            mixedNumericVirtualColumn,
-            mixedVirtualColumn,
-            sparseLongVirtualColumn,
-            sparseDoubleVirtualColumn,
-            sparseMixedNumericVirtualColumn,
-            sparseMixedVirtualColumn
-        )
+        longVirtualColumn,
+        doubleVirtualColumn,
+        mixedNumericVirtualColumn,
+        mixedVirtualColumn,
+        sparseLongVirtualColumn,
+        sparseDoubleVirtualColumn,
+        sparseMixedNumericVirtualColumn,
+        sparseMixedVirtualColumn
     );
   }
 
@@ -337,13 +335,13 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
         TestIndex.DEFAULT_JSON_INPUT_FORMAT,
-        NestedDataTestUtils.TIMESTAMP_SPEC,
+        TimestampSpec.DEFAULT,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     Assert.assertEquals(1, segments.size());
     Segment segment = segments.get(0);
@@ -364,13 +362,13 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
         TestIndex.DEFAULT_JSON_INPUT_FORMAT,
-        NestedDataTestUtils.TIMESTAMP_SPEC,
+        TimestampSpec.DEFAULT,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     Assert.assertEquals(1, segments.size());
     Segment segment = segments.get(0);

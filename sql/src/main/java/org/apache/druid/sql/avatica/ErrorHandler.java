@@ -23,12 +23,18 @@ import com.google.inject.Inject;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.ForbiddenException;
+
+import java.util.Optional;
+import java.util.UUID;
 
 
 /**
@@ -37,6 +43,7 @@ import org.apache.druid.server.security.ForbiddenException;
 class ErrorHandler
 {
   private final ErrorResponseTransformStrategy errorResponseTransformStrategy;
+  private static final Logger log = new Logger(ErrorHandler.class);
 
   @Inject
   ErrorHandler(final ServerConfig serverConfig)
@@ -79,6 +86,20 @@ class ErrorHandler
       // could do `throw sanitize(error);` but just sanitizing immediately avoids unnecessary going down multiple levels
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
+    if (error instanceof DruidException) {
+      String errorId = UUID.randomUUID().toString();
+      Optional<Exception> transformedException = errorResponseTransformStrategy.maybeTransform(
+          (DruidException) error,
+          Optional.of(errorId)
+      );
+
+      if (transformedException.isPresent()) {
+        // Log the exception here itself, since the error has been transformed.
+        log.error(error, StringUtils.format("External Error ID: [%s]", errorId));
+      }
+      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(transformedException.orElse((Exception) error));
+      return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
+    }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
     return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
   }
@@ -86,7 +107,7 @@ class ErrorHandler
   /**
    * Check to see if something needs to be sanitized.
    * <p>
-   * Done by checking to see if the ErrorResponse is different than a NoOp Error response transform strategy.
+   * Done by checking to see if the ErrorResponse is different from a NoOp Error response transform strategy.
    *
    * @return a boolean that returns true if error handler has an error response strategy other than the NoOp error
    * response strategy

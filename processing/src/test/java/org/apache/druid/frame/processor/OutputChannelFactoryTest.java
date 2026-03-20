@@ -20,9 +20,9 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -71,7 +71,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     // write data to the channel
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
-    writableFrameChannel.write(new FrameWithPartition(frame, 1));
+    writableFrameChannel.write(frame, 1);
     writableFrameChannel.close();
 
     // read back data from the channel
@@ -113,7 +113,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
     for (int partition : partitions) {
-      writableFrameChannel.write(new FrameWithPartition(frame, partition));
+      writableFrameChannel.write(frame, partition);
     }
     writableFrameChannel.close();
 
@@ -141,7 +141,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
         break;
       }
     }
-    Frame readbackFrame = readableFrameChannel.read();
+    Frame readbackFrame = readableFrameChannel.readFrame();
     readableFrameChannel.readabilityFuture().get();
     Assert.assertFalse(readableFrameChannel.canRead());
     Assert.assertTrue(readableFrameChannel.isFinished());
@@ -177,6 +177,6 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
 
     Assert.assertEquals(1, channel.getPartitionNumber());
     Assert.assertTrue(channel.getReadableChannel().isFinished());
-    Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
+    Assert.assertThrows(DruidException.class, channel::getWritableChannel);
   }
 }

@@ -48,22 +48,36 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 public abstract class NullableNumericAggregatorFactory<T extends BaseNullableColumnValueSelector>
     extends AggregatorFactory
 {
+  /**
+   * If true, this aggregator will not check for null inputs, instead directly delegating to the underlying aggregator.
+   * Currently, this is only used by {@link CountAggregatorFactory#getCombiningFactory}.
+   * This isn't entirely safe, as some selectors might throw an exception when attempting to retrieve a primitive value from `null`.
+   */
+  public boolean forceNotNullable()
+  {
+    return false;
+  }
+
   @Override
   public final Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
     T selector = selector(columnSelectorFactory);
-    BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    return new NullableNumericAggregator(aggregator, nullSelector);
+    if (this.forceNotNullable()) {
+      return aggregator;
+    }
+    return new NullableNumericAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
   }
 
   @Override
   public final BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
     T selector = selector(columnSelectorFactory);
-    BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    return new NullableNumericBufferAggregator(aggregator, nullSelector);
+    if (this.forceNotNullable()) {
+      return aggregator;
+    }
+    return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
   }
 
   @Override
@@ -72,6 +86,9 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
+    if (this.forceNotNullable()) {
+      return aggregator;
+    }
     return new NullableNumericVectorAggregator(aggregator, selector);
   }
 
@@ -79,12 +96,18 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
     AggregateCombiner<?> combiner = makeAggregateCombiner();
+    if (this.forceNotNullable()) {
+      return combiner;
+    }
     return new NullableNumericAggregateCombiner<>(combiner);
   }
 
   @Override
   public final int getMaxIntermediateSizeWithNulls()
   {
+    if (this.forceNotNullable()) {
+      return getMaxIntermediateSize();
+    }
     return getMaxIntermediateSize() + Byte.BYTES;
   }
 

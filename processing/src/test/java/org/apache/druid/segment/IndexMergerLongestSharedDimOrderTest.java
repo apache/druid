@@ -26,6 +26,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
@@ -45,10 +46,10 @@ import static org.mockito.Mockito.when;
 public class IndexMergerLongestSharedDimOrderTest
 {
   @Mock
-  Supplier<ColumnHolder> mockSupplier;
+  Supplier<BaseColumnHolder> mockSupplier;
 
   @Mock
-  ColumnHolder mockColumnHolder;
+  BaseColumnHolder mockColumnHolder;
 
   @Mock
   SmooshedFileMapper mockSmooshedFileMapper;

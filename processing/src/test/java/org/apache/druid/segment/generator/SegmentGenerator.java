@@ -117,7 +117,7 @@ public class SegmentGenerator implements Closeable
         schemaInfo,
         schemaInfo.getDimensionsSpec(),
         TransformSpec.NONE,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         granularity,
         Collections.emptyList(),
         numRows
@@ -252,7 +252,7 @@ public class SegmentGenerator implements Closeable
 
     final Transformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         dimensionsSpec,
         null
     );
@@ -370,7 +370,7 @@ public class SegmentGenerator implements Closeable
 
     final Transformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         dimensionsSpec,
         null
     );

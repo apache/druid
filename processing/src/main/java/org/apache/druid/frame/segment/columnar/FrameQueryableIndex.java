@@ -27,7 +27,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -77,7 +77,7 @@ public class FrameQueryableIndex implements QueryableIndex
 
   @Nullable
   @Override
-  public ColumnHolder getColumnHolder(final String columnName)
+  public BaseColumnHolder getColumnHolder(final String columnName)
   {
     final int columnIndex = signature.indexOf(columnName);
 

@@ -266,9 +266,9 @@ The following example shows a supervisor spec with idle configuration enabled:
 
 #### Data format
 
-The Kafka indexing service supports both [`inputFormat`](data-formats.md#input-format) and [`parser`](data-formats.md#parser) to specify the data format. Use the `inputFormat` to specify the data format for the Kafka indexing service unless you need a format only supported by the legacy `parser`. For more information, see [Source input formats](data-formats.md).
+The Kafka indexing service supports [`inputFormat`](data-formats.md#input-format). For more information, see [Source input formats](data-formats.md).
 
-The Kinesis indexing service supports the following values for `inputFormat`:
+The Kafka indexing service supports the following values for `inputFormat`:
 
 * `csv`
 * `tvs`
@@ -276,8 +276,7 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `kafka`
 * `avro_stream`
 * `protobuf`
-
-You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
+* `thrift`
 
 ##### Kafka input format supervisor spec example
 

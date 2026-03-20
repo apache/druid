@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
@@ -33,7 +32,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -51,7 +49,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Rule;
@@ -119,7 +116,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     DataSchema dataSchema =
         DataSchema.builder()
                   .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(new DimensionsSpec(Collections.emptyList()))
                   .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
                   .build();
@@ -145,7 +142,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(authorizerMapper)
         .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
-        .indexMergerV9(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+        .indexMerger(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
         .build();
     taskRunner.run(toolbox);
   }
@@ -284,7 +281,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTask<String, String, ByteEntity> task
     )
     {
-      super(task, null, LockGranularity.SEGMENT);
+      super(task, LockGranularity.SEGMENT);
     }
 
     @Override
@@ -375,7 +372,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig
     )
     {
-      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null);
+      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null, null);
     }
 
     @Override
@@ -394,24 +391,6 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return null;
-    }
-  }
-
-  private static class TestSeekableStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
-  {
-    public TestSeekableStreamIndexTaskIOConfig()
-    {
-      super(
-          null,
-          "someSequence",
-          new SeekableStreamStartSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap(), null),
-          new SeekableStreamEndSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap()),
-          false,
-          DateTimes.nowUtc().minusDays(2),
-          DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0, null),
-          Duration.standardHours(2).getStandardMinutes()
-      );
     }
   }
 

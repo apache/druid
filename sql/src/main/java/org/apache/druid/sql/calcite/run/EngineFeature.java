@@ -69,15 +69,6 @@ public enum EngineFeature
   SCAN_ORDER_BY_NON_TIME,
 
   /**
-   * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
-   * query contexts.
-   *
-   * {@link Deprecated} Instead of the context value {@link org.apache.druid.query.scan.ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  SCAN_NEEDS_SIGNATURE,
-
-  /**
    * Planner is permitted to use a {@link org.apache.calcite.runtime.Bindable} plan on local resources, instead
    * of {@link QueryMaker}, for SELECT query implementation. Used for system tables and the like.
    */

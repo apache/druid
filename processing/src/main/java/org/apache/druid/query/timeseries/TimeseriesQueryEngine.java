@@ -337,7 +337,9 @@ public class TimeseriesQueryEngine
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setPreferredOrdering(
-                           query.isDescending() ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder()
+                           query.getGranularity().equals(Granularities.ALL)
+                           ? List.of()
+                           : query.isDescending() ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder()
                        )
                        .setQueryMetrics(queryMetrics)
                        .build()

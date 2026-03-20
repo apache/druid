@@ -21,8 +21,14 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.query.rowsandcols.column.Column;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 
+/**
+ * This class exists as a test class to force validate that the default implementations of the semantic interfaces
+ * exist.  As it is named "NoAs" it is intentionally blocking access to the as method.  It should not be adjusted
+ * to remove said override.
+ */
 public class NoAsRowsAndColumns implements RowsAndColumns
 {
   private final RowsAndColumns rac;
@@ -48,5 +54,14 @@ public class NoAsRowsAndColumns implements RowsAndColumns
   public Column findColumn(String name)
   {
     return rac.findColumn(name);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    // Pretend that it doesn't implement the clazz.  This is the whole point of this class, so if you are considering
+    // changing this method, please stop.
+    return null;
   }
 }

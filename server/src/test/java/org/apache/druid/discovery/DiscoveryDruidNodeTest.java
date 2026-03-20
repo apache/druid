@@ -58,7 +58,7 @@ public class DiscoveryDruidNodeTest
   public void testEquals()
   {
     EqualsVerifier.forClass(DiscoveryDruidNode.class)
-                  .withNonnullFields("druidNode", "nodeRole", "services")
+                  .withNonnullFields("druidNode", "nodeRole", "services", "availableProcessors", "totalMemory")
                   .withIgnoredFields("startTime")
                   .usingGetClass()
                   .verify();
@@ -112,12 +112,13 @@ public class DiscoveryDruidNodeTest
             -1,
             8282,
             true,
-            true
+            true,
+            null
         ),
         NodeRole.BROKER,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY,
-            new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0),
+            new DataNodeService("_default_tier", 1000000000, 500000000L, ServerType.BROKER, 0),
             LookupNodeService.DISCOVERY_SERVICE_KEY,
             new LookupNodeService("lookup_tier")
         )
@@ -125,152 +126,6 @@ public class DiscoveryDruidNodeTest
     final String json = mapper.writeValueAsString(node);
     Assert.assertEquals(
         node,
-        mapper.readValue(json, DiscoveryDruidNode.class)
-    );
-  }
-
-  @Test
-  public void testDeserializeWithDataNodeServiceWithAWrongPropertyOrder() throws JsonProcessingException
-  {
-    final ObjectMapper mapper = createObjectMapper(ImmutableList.of());
-    final String json = "{\n"
-                        + "  \"druidNode\" : {\n"
-                        + "    \"service\" : \"druid/broker\",\n"
-                        + "    \"host\" : \"druid-broker\",\n"
-                        + "    \"bindOnHost\" : false,\n"
-                        + "    \"plaintextPort\" : 8082,\n"
-                        + "    \"port\" : -1,\n"
-                        + "    \"tlsPort\" : 8282,\n"
-                        + "    \"enablePlaintextPort\" : true,\n"
-                        + "    \"enableTlsPort\" : true\n"
-                        + "  },\n"
-                        + "  \"nodeType\" : \"broker\",\n"
-                        + "  \"services\" : {\n"
-                        + "    \"dataNodeService\" : {\n"
-                        // In normal case, this proprty must appear after another "type" below.
-                        + "      \"type\" : \"broker\",\n"
-                        + "      \"type\" : \"dataNodeService\",\n"
-                        + "      \"tier\" : \"_default_tier\",\n"
-                        + "      \"maxSize\" : 1000000000,\n"
-                        + "      \"serverType\" : \"broker\",\n"
-                        + "      \"priority\" : 0\n"
-                        + "    }\n"
-                        + "  }\n"
-                        + "}";
-    Assert.assertEquals(
-        new DiscoveryDruidNode(
-            new DruidNode(
-                "druid/broker",
-                "druid-broker",
-                false,
-                8082,
-                -1,
-                8282,
-                true,
-                true
-            ),
-            NodeRole.BROKER,
-            ImmutableMap.of(
-                "dataNodeService",
-                new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0)
-            )
-        ),
-        mapper.readValue(json, DiscoveryDruidNode.class)
-    );
-  }
-
-  @Test
-  public void testDeserialize_duplicateProperties_shouldSucceedToDeserialize() throws JsonProcessingException
-  {
-    final ObjectMapper mapper = createObjectMapper(ImmutableList.of());
-    final String json = "{\n"
-                        + "  \"druidNode\" : {\n"
-                        + "    \"service\" : \"druid/broker\",\n"
-                        + "    \"host\" : \"druid-broker\",\n"
-                        + "    \"bindOnHost\" : false,\n"
-                        + "    \"plaintextPort\" : 8082,\n"
-                        + "    \"port\" : -1,\n"
-                        + "    \"tlsPort\" : 8282,\n"
-                        + "    \"enablePlaintextPort\" : true,\n"
-                        + "    \"enableTlsPort\" : true\n"
-                        + "  },\n"
-                        + "  \"nodeType\" : \"broker\",\n"
-                        + "  \"services\" : {\n"
-                        + "    \"dataNodeService\" : {\n"
-                        + "      \"type\" : \"dataNodeService\",\n"
-                        + "      \"tier\" : \"_default_tier\",\n"
-                        + "      \"maxSize\" : 1000000000,\n"
-                        + "      \"maxSize\" : 1000000000,\n"
-                        + "      \"serverType\" : \"broker\",\n"
-                        + "      \"priority\" : 0\n"
-                        + "    }\n"
-                        + "  }\n"
-                        + "}";
-    Assert.assertEquals(
-        new DiscoveryDruidNode(
-            new DruidNode(
-                "druid/broker",
-                "druid-broker",
-                false,
-                8082,
-                -1,
-                8282,
-                true,
-                true
-            ),
-            NodeRole.BROKER,
-            ImmutableMap.of(
-                "dataNodeService",
-                new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0)
-            )
-        ),
-        mapper.readValue(json, DiscoveryDruidNode.class)
-    );
-  }
-
-  @Test
-  public void testDeserialize_duplicateKeysWithDifferentValus_shouldIgnoreDataNodeService()
-      throws JsonProcessingException
-  {
-    final ObjectMapper mapper = createObjectMapper(ImmutableList.of());
-    final String json = "{\n"
-                        + "  \"druidNode\" : {\n"
-                        + "    \"service\" : \"druid/broker\",\n"
-                        + "    \"host\" : \"druid-broker\",\n"
-                        + "    \"bindOnHost\" : false,\n"
-                        + "    \"plaintextPort\" : 8082,\n"
-                        + "    \"port\" : -1,\n"
-                        + "    \"tlsPort\" : 8282,\n"
-                        + "    \"enablePlaintextPort\" : true,\n"
-                        + "    \"enableTlsPort\" : true\n"
-                        + "  },\n"
-                        + "  \"nodeType\" : \"broker\",\n"
-                        + "  \"services\" : {\n"
-                        + "    \"dataNodeService\" : {\n"
-                        + "      \"type\" : \"dataNodeService\",\n"
-                        + "      \"tier\" : \"_default_tier\",\n"
-                        + "      \"maxSize\" : 1000000000,\n"
-                        + "      \"maxSize\" : 10,\n"
-                        + "      \"serverType\" : \"broker\",\n"
-                        + "      \"priority\" : 0\n"
-                        + "    }\n"
-                        + "  }\n"
-                        + "}";
-    Assert.assertEquals(
-        new DiscoveryDruidNode(
-            new DruidNode(
-                "druid/broker",
-                "druid-broker",
-                false,
-                8082,
-                -1,
-                8282,
-                true,
-                true
-            ),
-            NodeRole.BROKER,
-            ImmutableMap.of()
-        ),
         mapper.readValue(json, DiscoveryDruidNode.class)
     );
   }

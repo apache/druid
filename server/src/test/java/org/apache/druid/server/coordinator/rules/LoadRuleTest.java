@@ -493,7 +493,7 @@ public class LoadRuleTest
   private DruidServer createDruidServer(String tier)
   {
     final String serverName = "hist_" + tier + "_" + serverId.incrementAndGet();
-    return new DruidServer(serverName, serverName, null, 10L << 30, ServerType.HISTORICAL, tier, 0);
+    return new DruidServer(serverName, serverName, null, 10L << 30, null, ServerType.HISTORICAL, tier, 0);
   }
 
   private ServerHolder createServer(String tier, DataSegment... segments)

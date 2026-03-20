@@ -42,6 +42,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
@@ -196,6 +197,7 @@ public class ExpressionPostAggregator implements PostAggregator
     return comparator;
   }
 
+  @Nullable
   @Override
   public Object compute(Map<String, Object> values)
   {
@@ -212,20 +214,20 @@ public class ExpressionPostAggregator implements PostAggregator
     // from decoration
     final ExprEval<?> eval = parsed.get().eval(InputBindings.forMap(finalizedValues, partialTypeInformation));
     if (expressionType == null) {
-      return eval.valueOrDefault();
+      return eval.value();
     }
     // outputType cannot be null if expressionType is not null
-    if (outputType.is(ValueType.FLOAT) && !eval.isNumericNull()) {
+    if (Types.is(outputType, ValueType.FLOAT) && !eval.isNumericNull()) {
       return (float) eval.asDouble();
     }
     if (eval.type().equals(expressionType)) {
-      return eval.valueOrDefault();
+      return eval.value();
     }
     if (expressionType.is(ExprType.STRING) && eval.isArray()) {
       return ExpressionSelectors.coerceEvalToObjectOrList(eval);
     }
     // coerce to expected type
-    return eval.castTo(expressionType).valueOrDefault();
+    return eval.castTo(expressionType).value();
   }
 
   @Override

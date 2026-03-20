@@ -73,6 +73,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -103,8 +104,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   );
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String DATASOURCE = "testDatasource";
-  private static final AggregateProjectionMetadata.Schema PROJECTION_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
-  private static final int PROJECTION_ROWS = 279;
+  private static final AggregateProjectionSchema PROJECTION1_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
+  private static final AggregateProjectionSchema PROJECTION2_SCHEMA = TestIndex.PROJECTIONS.get(1).toMetadataSchema();
+  private static final int PROJECTION1_ROWS = 279;
+  private static final int PROJECTION2_ROWS = 93;
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
@@ -226,8 +229,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
     final Map<String, AggregateProjectionMetadata> expectedProjections = ImmutableMap.of(
-        PROJECTION_SCHEMA.getName(),
-        new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS)
+        PROJECTION1_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS),
+        PROJECTION2_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS)
     );
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
@@ -705,8 +710,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
         ImmutableMap.of(
-            PROJECTION_SCHEMA.getName(),
-            new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS * 2)
+            PROJECTION1_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS * 2),
+            PROJECTION2_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS * 2)
         ),
         null,
         null,

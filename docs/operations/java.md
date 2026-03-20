@@ -27,11 +27,7 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 11 and Java 17. The project team recommends Java 17.
-
-:::info
-Note: Starting with Apache Druid 32.0.0, support for Java 8 has been removed.
-:::
+Druid officially supports Java 17 and 21.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
@@ -47,7 +43,7 @@ Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to fi
 ## Garbage collection
 
 In general, the project team recommends using the G1 collector with default settings. This is the default collector in
-Java 11 and 17.
+Java 17.
 
 Garbage collector selection and tuning is a form of sport in the Java community. There may be situations where adjusting
 garbage collection configuration improves or worsens performance. The project team's guidance is that most people do
@@ -55,17 +51,9 @@ not need to stray away from G1 with default settings.
 
 ## Strong encapsulation
 
-Java 9 and beyond (including Java 11 and 17) include the capability for
+Java 9 and beyond (including Java 17) include the capability for
 [strong encapsulation](https://dev.java/learn/strong-encapsulation-\(of-jdk-internals\)/) of internal JDK APIs. Druid
 uses certain internal JDK APIs, which must be added to `--add-exports` and `--add-opens` on the Java command line.
-
-On Java 11, if these parameters are not included, you will see warnings like the following:
-
-```
-WARNING: An illegal reflective access operation has occurred
-WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-WARNING: All illegal access operations will be denied in a future release
-```
 
 On Java 17, if these parameters are not included, you will see errors on startup like the following:
 
@@ -74,7 +62,7 @@ Exception in thread "main" java.lang.ExceptionInInitializerError
 ```
 
 Druid's out-of-box configuration adds these parameters transparently when you use the bundled `bin/start-druid` or
-similar commands. In this case, there is nothing special you need to do to run successfully on Java 11 or 17. However,
+similar commands. In this case, there is nothing special you need to do to run successfully. However,
 if you have customized your Druid service launching system, you will need to ensure the required Java parameters are
 added. There are many ways of doing this. Choose the one that works best for you.
 

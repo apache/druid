@@ -38,6 +38,7 @@ import type {
   MsqTaskReportResponse,
   SegmentLoadWaiterStatus,
   TaskStatus,
+  WorkerState,
 } from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -188,6 +189,7 @@ export interface ExecutionValue {
   error?: ExecutionError;
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
+  workers?: Record<string, WorkerState[]>;
   _payload?: MsqTaskPayloadResponse;
   segmentStatus?: SegmentLoadWaiterStatus;
 }
@@ -348,6 +350,7 @@ export class Execution {
       stages: Array.isArray(stages)
         ? new Stages(stages, deepGet(taskReport, 'multiStageQuery.payload.counters'))
         : undefined,
+      workers: deepGet(taskReport, 'multiStageQuery.payload.status.workers'),
       error,
       warnings: Array.isArray(warnings) ? warnings : undefined,
       result,
@@ -366,8 +369,18 @@ export class Execution {
 
   static getProgressDescription(execution: Execution | undefined): string {
     if (!execution?.stages) return 'Loading...';
-    if (!execution.isWaitingForQuery())
-      return 'Query complete, waiting for segments to be loaded...';
+    if (!execution.isWaitingForQuery()) {
+      switch (execution.engine) {
+        case 'sql-msq-task':
+          return 'Query complete, waiting for segments to be loaded...';
+
+        case 'sql-msq-dart':
+          return 'Got a non-running report. Did you reuse a sqlQueryID?';
+
+        default:
+          return 'Query not running.';
+      }
+    }
 
     let ret = execution.stages.getStage(0)?.phase ? 'Running query...' : 'Starting query...';
     if (execution.usageInfo) {
@@ -396,6 +409,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly workers?: Record<string, WorkerState[]>;
   public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
@@ -418,6 +432,7 @@ export class Execution {
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.workers = value.workers;
     this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
@@ -441,6 +456,7 @@ export class Execution {
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      workers: this.workers,
       segmentStatus: this.segmentStatus,
 
       _payload: this._payload,
@@ -554,6 +570,10 @@ export class Execution {
   public isWaitingForQuery(): boolean {
     const { status } = this;
     return status !== 'SUCCESS' && status !== 'FAILED';
+  }
+
+  public isWaitingForSegments(): boolean {
+    return Boolean(this.stages && !this.isWaitingForQuery() && this.engine === 'sql-msq-task');
   }
 
   public getSegmentStatusDescription() {

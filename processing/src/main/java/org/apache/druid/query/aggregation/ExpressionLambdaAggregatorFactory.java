@@ -344,7 +344,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     // arbitrarily assign lhs and rhs to accumulator and aggregator name inputs to re-use combine function
     return combineExpression.get().eval(
         combineBindings.get().withBinding(accumulatorId, lhs).withBinding(name, rhs)
-    ).valueOrDefault();
+    ).value();
   }
 
   @Override
@@ -360,7 +360,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     Expr finalizeExpr;
     finalizeExpr = finalizeExpression.get();
     if (finalizeExpr != null) {
-      return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).valueOrDefault();
+      return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).value();
     }
     return object;
   }

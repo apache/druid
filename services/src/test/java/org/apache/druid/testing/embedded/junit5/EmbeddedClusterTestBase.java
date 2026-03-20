@@ -19,8 +19,11 @@
 
 package org.apache.druid.testing.embedded.junit5;
 
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +57,32 @@ public abstract class EmbeddedClusterTestBase
   protected String dataSource;
 
   /**
+   * Returns the URL of the requested server.
+   */
+  protected static String getServerUrl(EmbeddedDruidServer<?> server)
+  {
+    final DruidNode node = server.bindings().selfNode();
+    return StringUtils.format(
+        "http://%s:%s",
+        node.getHost(),
+        node.getPlaintextPort()
+    );
+  }
+
+  /**
+   * Returns the TLS-enabled HTTPS url of the given server.
+   */
+  protected static String getServerHttpsUrl(EmbeddedDruidServer<?> server)
+  {
+    final DruidNode node = server.bindings().selfNode();
+    return StringUtils.format(
+        "https://%s:%s",
+        node.getHost(),
+        node.getTlsPort()
+    );
+  }
+
+  /**
    * Creates the cluster to be used in this test class. This method is invoked
    * only once before any of the {@code @Test} methods have run.
    * Implementations of this method should not start the cluster as it is done in
@@ -65,6 +94,7 @@ public abstract class EmbeddedClusterTestBase
   protected void setup() throws Exception
   {
     cluster = createCluster();
+    cluster.setTestClassName(getClass().getSimpleName());
     cluster.start();
   }
 
@@ -76,8 +106,11 @@ public abstract class EmbeddedClusterTestBase
     }
   }
 
+  /**
+   * Assigns a new value to the {@link #dataSource} before each test.
+   */
   @BeforeEach
-  protected void beforeEachTest()
+  protected void refreshDatasourceName()
   {
     dataSource = EmbeddedClusterApis.createTestDatasourceName();
   }

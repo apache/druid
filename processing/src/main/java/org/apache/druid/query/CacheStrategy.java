@@ -62,11 +62,11 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * @param query            the query to be cached
    * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
    *                         called on the cached by-segment results
-   * @param bySegment        segment level or result level cache
+   * @param segmentLevel        segment level or result level cache
    *
    * @return true if the query is cacheable, otherwise false.
    */
-  default boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment)
+  default boolean isCacheable(QueryType query, boolean willMergeRunners, boolean segmentLevel)
   {
     return isCacheable(query, willMergeRunners);
   }

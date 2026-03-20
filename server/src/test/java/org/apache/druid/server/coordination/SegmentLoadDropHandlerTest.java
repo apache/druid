@@ -154,14 +154,12 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
     Assert.assertEquals(ImmutableList.of(segment), cacheManager.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(segment), cacheManager.getObservedSegmentsLoadedIntoPageCache());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     Assert.assertEquals(ImmutableList.of(segment), segmentAnnouncer.getObservedSegments());
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 
@@ -207,14 +205,12 @@ public class SegmentLoadDropHandlerTest
     // The same segment reference will be fetched more than once in the above sequence, but the segment should
     // be loaded only once onto the page cache.
     Assert.assertEquals(ImmutableList.of(segment, segment), cacheManager.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(segment), cacheManager.getObservedSegmentsLoadedIntoPageCache());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 
@@ -254,9 +250,7 @@ public class SegmentLoadDropHandlerTest
 
     final ImmutableList<DataSegment> expectedSegments = ImmutableList.of(segment1);
     Assert.assertEquals(expectedSegments, cacheManager.getObservedSegments());
-    Assert.assertEquals(expectedSegments, cacheManager.getObservedSegmentsLoadedIntoPageCache());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
   }
 
   @Test(timeout = 60_000L)

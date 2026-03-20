@@ -21,9 +21,10 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
 
-public enum Order
+public enum Order implements Cacheable
 {
   ASCENDING,
   DESCENDING,
@@ -40,5 +41,11 @@ public enum Order
   public static Order fromString(String name)
   {
     return valueOf(StringUtils.toUpperCase(name));
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return StringUtils.toUtf8(toString());
   }
 }

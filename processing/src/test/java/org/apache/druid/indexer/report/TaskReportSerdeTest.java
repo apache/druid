@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
+import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -353,6 +354,7 @@ public class TaskReportSerdeTest
             "processedBytes", (int) determinePartitionTotalStats.getProcessedBytes(),
             "processedWithError", (int) determinePartitionTotalStats.getProcessedWithError(),
             "thrownAway", (int) determinePartitionTotalStats.getThrownAway(),
+            "thrownAwayByReason", CollectionUtils.mapValues(determinePartitionTotalStats.getThrownAwayByReason(), Long::intValue),
             "unparseable", (int) determinePartitionTotalStats.getUnparseable()
         ),
         observedTotals.get("determinePartitions")
@@ -363,6 +365,7 @@ public class TaskReportSerdeTest
             "processedBytes", (int) buildSegmentTotalStats.getProcessedBytes(),
             "processedWithError", (int) buildSegmentTotalStats.getProcessedWithError(),
             "thrownAway", (int) buildSegmentTotalStats.getThrownAway(),
+            "thrownAwayByReason", CollectionUtils.mapValues(buildSegmentTotalStats.getThrownAwayByReason(), Long::intValue),
             "unparseable", (int) buildSegmentTotalStats.getUnparseable()
         ),
         observedTotals.get("buildSegments")

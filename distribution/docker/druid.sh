@@ -129,6 +129,13 @@ SCONFIG=$(eval echo \$$(echo $SCONFIG))
 
 if [ -n "${SCONFIG}" ]
 then
+    # Create service conf directory as it may not exist for custom node roles
+    if [ ! -d "$SERVICE_CONF_DIR" ]
+    then
+      echo "Creating conf directory '$SERVICE_CONF_DIR'"
+      mkdir -p $SERVICE_CONF_DIR
+    fi
+
     cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
 fi
 
@@ -205,7 +212,7 @@ then
     echo "$DRUID_SERVICE_LOG4J" >$SERVICE_CONF_DIR/log4j2.xml
 fi
 
-DRUID_DIRS_TO_CREATE=${DRUID_DIRS_TO_CREATE-'var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache'}
+DRUID_DIRS_TO_CREATE=${DRUID_DIRS_TO_CREATE-'var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/segment-cache'}
 if [ -n "${DRUID_DIRS_TO_CREATE}" ]
 then
     mkdir -p ${DRUID_DIRS_TO_CREATE}

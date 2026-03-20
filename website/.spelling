@@ -50,6 +50,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+blocklist
 bottlenecked
 cartesian
 concat
@@ -175,6 +176,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+KubernetesClient
 Lakehouse
 LDAPS
 LRU
@@ -217,16 +219,19 @@ pull-deps
 RDBMS
 RDDs
 RDS
+RoleBinding
 ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
 Rackspace
 Redis
+residualFilterMode
 S3
 SAS
 SDK
 SIGAR
+SNI
 SPNEGO
 Splunk
 SqlInputSource
@@ -286,6 +291,7 @@ backfills
 backfilled
 backpressure
 base64
+baseTime
 big-endian
 bigint
 blkio
@@ -341,6 +347,7 @@ endpointConfig
 enum
 expectedType
 expr
+fabric8
 failover
 failovers
 featureSpec
@@ -409,7 +416,10 @@ localhost
 log4j
 log4j2
 log4j2.xml
+lookahead
+lookaheadDuration
 lookback
+lookbackDuration
 lookups
 mapreduce
 masse
@@ -430,6 +440,7 @@ misconfiguration
 misconfigured
 mostAvailableSize
 multipart
+multithreading
 multitenancy
 multitenant
 MVDs
@@ -439,6 +450,7 @@ namespaced
 namespaces
 natively
 netflow
+node_roles
 nondescriptive
 nonfinalized
 non-null
@@ -449,6 +461,7 @@ numerics
 numShards
 parameterize
 objectGlob
+okhttp
 parameterized
 parse_json
 parseable
@@ -458,6 +471,7 @@ partitionsSpec
 pathParts
 PERCENT_RANK
 performant
+pipelining
 plaintext
 pluggable
 podSpec
@@ -470,6 +484,7 @@ pre-aggregating
 pre-aggregation
 pre-computation
 pre-compute
+pre-computed
 pre-computing
 preconfigured
 pre-existing
@@ -515,6 +530,7 @@ reindexing
 reingest
 reingesting
 reingestion
+resync
 repo
 requireSSL
 rollup
@@ -528,6 +544,7 @@ searchable
 secondaryPartitionPruning
 seekable
 seekable-stream
+service_name
 servlet
 setProcessingThreadNames
 sigterm
@@ -547,6 +564,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -616,6 +634,7 @@ vectorizeVirtualColumns
 versioned
 versioning
 virtualColumns
+vert.x
 w.r.t.
 walkthrough
 whitelist
@@ -665,6 +684,7 @@ PT5M
 SCHEMA_NAME
 SCHEMA_OWNER
 SERVER_SEGMENTS
+SERVER_PROPERTIES
 SMALLINT
 SQL_PATH
 STRING_AGG
@@ -704,6 +724,8 @@ is_realtime
 java.sql.Types
 last_compaction_state
 max_size
+available_processors
+total_memory
 num_replicas
 num_rows
 num_segments
@@ -740,6 +762,8 @@ granularity_string
 QueryKit
 # MSQ report fields
 taskId
+taskGroupId
+movingAverages
 multiStageQuery.taskId
 multiStageQuery.payload.status
 multiStageQuery.payload.status.status
@@ -935,15 +959,12 @@ druid_cache_total
 druid_hits
 druid_query
 historical001
-HadoopTuningConfig
 TuningConfig
 base-dataSource
 baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-druid.extensions.hadoopDependenciesDir
-hadoopDependencyCoordinates
 maxTaskCount
 metricsSpec
 queryType
@@ -998,7 +1019,6 @@ postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
-HadoopDruidIndexer
 LzoThriftBlock
 SequenceFile
 classname
@@ -1112,6 +1132,7 @@ Env
 POD_NAME
 POD_NAMESPACE
 ConfigMap
+ConfigMaps
 PT17S
 GCS
 gcs-connector
@@ -1345,6 +1366,7 @@ listDelimiter
 lowerOpen
 timestamp
 timestampColumnName
+TimestampType
 timestampSpec
 upperOpen
 urls
@@ -1364,7 +1386,6 @@ windowPeriod
 2012-01-07T00
 500MB
 CombineTextInputFormat
-HadoopIndexTask
 InputFormat
 InputSplit
 JobHistory
@@ -1473,6 +1494,7 @@ httpAuthenticationPassword
 accessKeyId
 secretAccessKey
 accessKeyId
+sessionToken
 httpAuthenticationPassword
 countryName
 appendToExisting
@@ -1723,7 +1745,6 @@ mapred-default
 mapred-site
 sbt
 scala-2
-org.apache.hadoop
 proxy.com.
 remoteRepository
 JBOD
@@ -1799,6 +1820,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1816,6 +1838,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs
@@ -1862,6 +1885,7 @@ minTopNThreshold
 parallelMergeInitialYieldRows
 parallelMergeParallelism
 parallelMergeSmallBatchRows
+parallelPoolInit
 populateCache
 populateResultLevelCache
 queryId
@@ -1951,8 +1975,8 @@ srcPort
 common_runtime_properties
 druid.extensions.directory
 druid.extensions.loadList
-druid.hadoop.security.kerberos.keytab
 druid.hadoop.security.kerberos.principal
+druid.hadoop.security.kerberos.keytab
 druid.indexer.logs.directory
 druid.indexer.logs.type
 druid.storage.storageDirectory
@@ -1991,7 +2015,6 @@ File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
 GCE
-HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost
@@ -2289,6 +2312,8 @@ MV_CONCAT
 MV_CONTAINS
 MV_FILTER_NONE
 MV_FILTER_ONLY
+MV_FILTER_REGEX
+MV_FILTER_PREFIX
 MV_LENGTH
 MV_OFFSET
 MV_OFFSET_OF
@@ -2423,12 +2448,15 @@ ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
+SPECTATOR_PERCENTILE
+SPECTATOR_COUNT
 PercentileBuckets
 spectatorHistogram
 spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+countSpectatorHistogram
 
 - ../docs/development/extensions-contrib/ddsketch-quantiles.md
 quantilesFromDDSketch
@@ -2436,9 +2464,16 @@ quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
 
+- ../docs/development/extensions-contrib/druid-exact-count-bitmap.md
+Bitmap64ExactCountBuild
+Bitmap64ExactCountMerge
+
 - ../docs/development/extensions-core/catalog.md
 ColumnSpec
 PropertyKeyName
 PropertyValueType
 tableSpec
 TableSpec
+
+- ../docs/development/extensions-contrib/prometheus.md
+TTL

@@ -23,7 +23,7 @@ title: "DataSketches KLL Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on numeric quantiles KllFloatsSketch and KllDoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. KLL quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesOverview). This document applies to both KllFloatsSketch and KllDoublesSketch. Only one of them will be used in the examples.
+This module provides Apache Druid aggregators based on numeric quantiles KllFloatsSketch and KllDoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. KLL quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesSketchOverview.html). This document applies to both KllFloatsSketch and KllDoublesSketch. Only one of them will be used in the examples.
 
 There are three major modes of operation:
 

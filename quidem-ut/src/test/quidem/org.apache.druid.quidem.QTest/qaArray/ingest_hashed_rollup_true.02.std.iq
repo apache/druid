@@ -540,7 +540,7 @@ WHERE t_bool_scalar1 = 'true';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -555,7 +555,7 @@ WHERE t_bool_scalar1 IS NULL;
 +---+
 | c |
 +---+
-| 2 |
+| 1 |
 +---+
 (1 row)
 
@@ -570,7 +570,7 @@ WHERE t_int_scalar1 = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -585,7 +585,7 @@ WHERE t_int_scalar1 IS NULL;
 +---+
 | c |
 +---+
-| 2 |
+| 1 |
 +---+
 (1 row)
 
@@ -600,7 +600,7 @@ WHERE t_float_scalar1 = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -615,7 +615,7 @@ WHERE t_float_scalar1 IS NULL;
 +---+
 | c |
 +---+
-| 2 |
+| 1 |
 +---+
 (1 row)
 
@@ -630,7 +630,7 @@ WHERE t_str_scalar1 = 'S1';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -645,7 +645,7 @@ WHERE t_str_scalar1 IS NULL;
 +---+
 | c |
 +---+
-| 2 |
+| 1 |
 +---+
 (1 row)
 
@@ -720,7 +720,7 @@ WHERE t_mixed_scalar1 = 'true';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -735,7 +735,7 @@ WHERE t_mixed_scalar1 IS NULL;
 +---+
 | c |
 +---+
-| 2 |
+| 1 |
 +---+
 (1 row)
 

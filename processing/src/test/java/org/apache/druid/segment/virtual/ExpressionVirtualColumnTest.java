@@ -206,7 +206,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
       RowSignature.empty(),
-      false,
       false
   );
 
@@ -693,7 +692,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.LONG).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -712,7 +710,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.DOUBLE).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -731,7 +728,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.FLOAT).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)

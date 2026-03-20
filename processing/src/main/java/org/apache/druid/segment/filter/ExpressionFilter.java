@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
@@ -45,14 +44,8 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -97,7 +90,7 @@ public class ExpressionFilter implements Filter
       // evaluate the expression, just in case it does actually match nulls
       final ExprEval<?> constantEval = theExpr.eval(InputBindings.nilBindings());
       final ConstantMatcherType constantMatcherType;
-      if (constantEval.valueOrDefault() == null) {
+      if (constantEval.value() == null) {
         constantMatcherType = ConstantMatcherType.ALL_UNKNOWN;
       } else {
         constantMatcherType = constantEval.asBoolean() ? ConstantMatcherType.ALL_TRUE : ConstantMatcherType.ALL_FALSE;
@@ -196,38 +189,7 @@ public class ExpressionFilter implements Filter
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    final Expr.BindingAnalysis details = bindingDetails.get();
-    if (details.getRequiredBindings().isEmpty()) {
-      // Constant expression.
-      final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-      if (eval.valueOrDefault() == null) {
-        return new AllUnknownBitmapColumnIndex(selector);
-      }
-      if (eval.asBoolean()) {
-        return new AllTrueBitmapColumnIndex(selector);
-      }
-      return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
-    } else if (details.getRequiredBindings().size() == 1) {
-      // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
-      // map over the values of the index.
-      final String column = Iterables.getOnlyElement(details.getRequiredBindings());
-
-      // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
-      // are null, it means that the column is missing and should take the single valued path, while truly unknown
-      // things will not have a bitmap index available
-      final ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
-      if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
-        if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
-          return null;
-        }
-        return Filters.makePredicateIndex(
-            column,
-            selector,
-            getBitmapPredicateFactory(capabilities)
-        );
-      }
-    }
-    return null;
+    return expr.get().asBitmapColumnIndex(selector);
   }
 
   @Override
@@ -318,162 +280,6 @@ public class ExpressionFilter implements Filter
             return DruidPredicateMatch.UNKNOWN;
           }
           return DruidPredicateMatch.of(Evals.objectAsBoolean(input));
-        };
-      }
-
-      // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
-      // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
-      // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
-      // a bit strange. DimensionPredicateFilter should probably be reworked to use equals from DruidPredicateFactory
-      // instead of using toString.
-      @Override
-      public int hashCode()
-      {
-        return super.hashCode();
-      }
-
-      @Override
-      public boolean equals(Object obj)
-      {
-        return super.equals(obj);
-      }
-    };
-  }
-
-  /**
-   * {@link DruidPredicateFactory} which evaluates the expression using the value as input, used for building predicate
-   * indexes where the raw column values will be checked against this predicate
-   */
-  private DruidPredicateFactory getBitmapPredicateFactory(@Nullable ColumnCapabilities inputCapabilites)
-  {
-    return new DruidPredicateFactory()
-    {
-      @Override
-      public DruidObjectPredicate<String> makeStringPredicate()
-      {
-        return value -> {
-          final ExprEval<?> eval = expr.get().eval(
-              InputBindings.forInputSupplier(
-                  ExpressionType.STRING,
-                  () -> value
-              )
-          );
-          if (eval.value() == null) {
-            return DruidPredicateMatch.UNKNOWN;
-          }
-          return DruidPredicateMatch.of(eval.asBoolean());
-        };
-      }
-
-      @Override
-      public DruidLongPredicate makeLongPredicate()
-      {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public DruidPredicateMatch applyLong(long input)
-          {
-            final ExprEval<?> eval = expr.get().eval(InputBindings.forInputSupplier(ExpressionType.LONG, () -> input));
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-
-          @Override
-          public DruidPredicateMatch applyNull()
-          {
-            final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-        };
-      }
-
-      @Override
-      public DruidFloatPredicate makeFloatPredicate()
-      {
-        return new DruidFloatPredicate()
-        {
-          @Override
-          public DruidPredicateMatch applyFloat(float input)
-          {
-            final ExprEval<?> eval = expr.get().eval(
-                InputBindings.forInputSupplier(ExpressionType.DOUBLE, () -> input)
-            );
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-
-          @Override
-          public DruidPredicateMatch applyNull()
-          {
-
-            final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-        };
-      }
-
-      @Override
-      public DruidDoublePredicate makeDoublePredicate()
-      {
-        return new DruidDoublePredicate()
-        {
-          @Override
-          public DruidPredicateMatch applyDouble(double input)
-          {
-            final ExprEval<?> eval = expr.get().eval(
-                InputBindings.forInputSupplier(ExpressionType.DOUBLE, () -> input)
-            );
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-
-          @Override
-          public DruidPredicateMatch applyNull()
-          {
-            final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-            if (eval.isNumericNull()) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          }
-        };
-      }
-
-      @Override
-      public DruidObjectPredicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
-      {
-        if (inputCapabilites == null) {
-          return input -> {
-            final ExprEval<?> eval = expr.get()
-                                         .eval(
-                                             InputBindings.forInputSupplier(ExpressionType.STRING_ARRAY, () -> input)
-                                         );
-            if (eval.value() == null) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(eval.asBoolean());
-          };
-        }
-        return input -> {
-          ExprEval<?> eval = expr.get().eval(
-              InputBindings.forInputSupplier(ExpressionType.fromColumnType(inputCapabilites), () -> input)
-          );
-          if (eval.value() == null) {
-            return DruidPredicateMatch.UNKNOWN;
-          }
-          return DruidPredicateMatch.of(eval.asBoolean());
         };
       }
 

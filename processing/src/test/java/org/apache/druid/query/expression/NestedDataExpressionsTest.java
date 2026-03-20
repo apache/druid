@@ -34,8 +34,11 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Arrays;
 import java.util.List;
@@ -194,6 +197,121 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals("{\"a\":\"x\"}", JSON_MAPPER.writeValueAsString(eval.value()));
     Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+  }
+
+  @Test
+  public void testJsonMergeWithNonObjectArguments()
+  {
+    // Test with strings that don't parse as JSON
+    RuntimeException e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('foo', '{\"b\":\"y\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', 'foo')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    // Test with strings that do parse as JSON but are not objects.
+    // String 'null' is treated the same as an actual null in the first parameter.
+    Expr expr = Parser.parse("json_merge('null', '{\"a\":\"x\"}')", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertNull(eval.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    // String 'null' is treated the same as an actual null in the second parameter.
+    expr = Parser.parse("json_merge('{\"a\":\"x\"}', 'null')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertNull(eval.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    // When first argument is a JSON string, can't merge objects into it
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('\"foo\"', '{\"b\":\"y\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    // When second argument is a JSON string, Jackson's merge fails trying to update object with string
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', '\"foo\"')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    // When first argument is a JSON number string, can't merge objects into it
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('\"3\"', '{\"b\":\"y\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    // When second argument is a JSON number string, Jackson's merge fails trying to update object with string
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', '\"3\"')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("bad string input")));
+
+    // Test with non-string arguments (numbers) - these throw validation exceptions
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge(3, '{\"b\":\"y\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e,
+                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                                 "invalid input expected STRING but got LONG"))
+    );
+
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', 3)", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e,
+                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                                 "invalid input expected STRING but got LONG"))
+    );
+
+    // Test with arrays - these should fail as they're not string or complex types
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge([1, 2, 3], '{\"b\":\"y\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e,
+                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                                 "invalid input expected STRING but got ARRAY<LONG>"))
+    );
+
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', [1, 2, 3])", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(e,
+                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                                 "invalid input expected STRING but got ARRAY<LONG>"))
+    );
+
+    // Test mixing JSON string arrays with objects - these fail because you can't merge objects into arrays or vice versa
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('[\"a\", \"b\"]', '{\"c\":\"d\"}')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("expected array but got object"))
+    );
+
+    e = Assert.assertThrows(
+        ExpressionProcessingException.class,
+        () -> Parser.parse("json_merge('{\"a\":\"x\"}', '[\"c\", \"d\"]')", MACRO_TABLE).eval(inputBindings)
+    );
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("expected object but got array"))
+    );
   }
 
   @Test

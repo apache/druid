@@ -26,118 +26,94 @@ SELECT dim1 from (SELECT dim1,__time FROM (SELECT t1.dim1, t1."__time" from abc 
 
 !ok
 LogicalAggregate(group=[{0}])
-  LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR])
-    LogicalAggregate(group=[{1}])
-      LogicalJoin(condition=[=($0, $2)], joinType=[inner])
-        LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0])
-          LogicalFilter(condition=[=($1, '10.1')])
-            LogicalTableScan(table=[[druid, foo]])
-        LogicalProject(dim1=[$1])
-          LogicalFilter(condition=[=($1, '10.1')])
-            LogicalTableScan(table=[[druid, foo]])
+  LogicalProject($f0=[CAST('10.1':VARCHAR):VARCHAR])
+    LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+      LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR])
+        LogicalFilter(condition=[=($1, '10.1')])
+          LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(dim1=[$1])
+        LogicalFilter(condition=[=($1, '10.1')])
+          LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidAggregate(group=[{0}], druid=[logical])
-  DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], druid=[logical])
-    DruidAggregate(group=[{1}], druid=[logical])
-      DruidJoin(condition=[=($0, $2)], joinType=[inner])
-        DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0], druid=[logical])
-          DruidFilter(condition=[=($1, '10.1')])
-            DruidTableScan(table=[[druid, foo]], druid=[logical])
-        DruidProject(dim1=[$1], druid=[logical])
-          DruidFilter(condition=[=($1, '10.1')])
-            DruidTableScan(table=[[druid, foo]], druid=[logical])
+  DruidProject($f0=[CAST('10.1':VARCHAR):VARCHAR], druid=[logical])
+    DruidJoin(condition=[=($0, $1)], joinType=[inner])
+      DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], druid=[logical])
+        DruidFilter(condition=[=($1, '10.1')])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(dim1=[$1], druid=[logical])
+        DruidFilter(condition=[=($1, '10.1')])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
   "queryType" : "groupBy",
   "dataSource" : {
-    "type" : "query",
-    "query" : {
-      "queryType" : "groupBy",
-      "dataSource" : {
-        "type" : "join",
-        "left" : {
-          "type" : "query",
-          "query" : {
-            "queryType" : "scan",
-            "dataSource" : {
-              "type" : "table",
-              "name" : "foo"
-            },
-            "intervals" : {
-              "type" : "intervals",
-              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-            },
-            "virtualColumns" : [ {
-              "type" : "expression",
-              "name" : "v0",
-              "expression" : "'10.1'",
-              "outputType" : "STRING"
-            } ],
-            "resultFormat" : "compactedList",
-            "filter" : {
-              "type" : "equals",
-              "column" : "dim1",
-              "matchValueType" : "STRING",
-              "matchValue" : "10.1"
-            },
-            "columns" : [ "v0", "__time" ],
-            "columnTypes" : [ "STRING", "LONG" ],
-            "granularity" : {
-              "type" : "all"
-            },
-            "legacy" : false
-          }
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
         },
-        "right" : {
-          "type" : "query",
-          "query" : {
-            "queryType" : "scan",
-            "dataSource" : {
-              "type" : "table",
-              "name" : "foo"
-            },
-            "intervals" : {
-              "type" : "intervals",
-              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-            },
-            "resultFormat" : "compactedList",
-            "filter" : {
-              "type" : "equals",
-              "column" : "dim1",
-              "matchValueType" : "STRING",
-              "matchValue" : "10.1"
-            },
-            "columns" : [ "dim1" ],
-            "columnTypes" : [ "STRING" ],
-            "granularity" : {
-              "type" : "all"
-            },
-            "legacy" : false
-          }
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
-        "rightPrefix" : "j0.",
-        "condition" : "(\"v0\" == \"j0.dim1\")",
-        "joinType" : "INNER"
-      },
-      "intervals" : {
-        "type" : "intervals",
-        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-      },
-      "granularity" : {
-        "type" : "all"
-      },
-      "dimensions" : [ {
-        "type" : "default",
-        "dimension" : "__time",
-        "outputName" : "d0",
-        "outputType" : "LONG"
-      } ],
-      "limitSpec" : {
-        "type" : "NoopLimitSpec"
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "'10.1'",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "dim1",
+          "matchValueType" : "STRING",
+          "matchValue" : "10.1"
+        },
+        "columns" : [ "v0" ],
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
       }
-    }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "dim1",
+          "matchValueType" : "STRING",
+          "matchValue" : "10.1"
+        },
+        "columns" : [ "dim1" ],
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"v0\" == \"j0.dim1\")",
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",
@@ -145,7 +121,7 @@ DruidAggregate(group=[{0}], druid=[logical])
   },
   "virtualColumns" : [ {
     "type" : "expression",
-    "name" : "v0",
+    "name" : "_v0",
     "expression" : "'10.1'",
     "outputType" : "STRING"
   } ],
@@ -154,8 +130,8 @@ DruidAggregate(group=[{0}], druid=[logical])
   },
   "dimensions" : [ {
     "type" : "default",
-    "dimension" : "v0",
-    "outputName" : "_d0",
+    "dimension" : "_v0",
+    "outputName" : "d0",
     "outputType" : "STRING"
   } ],
   "limitSpec" : {

@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -52,6 +51,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -69,8 +69,6 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -80,7 +78,6 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
@@ -93,6 +90,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
@@ -102,6 +100,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -150,79 +149,7 @@ public class CalciteTests
     @Override
     public Authorizer getAuthorizer(String name)
     {
-      return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
-                                                  .contains(resource.getName()) && action.equals(Action.READ);
-
-        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
-        }
-
-        switch (resource.getType()) {
-          case ResourceType.DATASOURCE:
-            switch (resource.getName()) {
-              case FORBIDDEN_DATASOURCE:
-                return Access.DENIED;
-              default:
-                return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
-            }
-          case ResourceType.VIEW:
-            if ("forbiddenView".equals(resource.getName())) {
-              return Access.DENIED;
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.QUERY_CONTEXT:
-            return Access.OK;
-          case ResourceType.EXTERNAL:
-            if (Action.WRITE.equals(action)) {
-              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
-                return Access.DENIED;
-              } else {
-                return Access.OK;
-              }
-            }
-            return Access.DENIED;
-          default:
-            return Access.DENIED;
-        }
-      };
-    }
-  };
-
-  public static final AuthorizerMapper TEST_EXTERNAL_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
-  {
-    @Override
-    public Authorizer getAuthorizer(String name)
-    {
-      return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
-                                                  .contains(resource.getName()) && action.equals(Action.READ);
-
-        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
-        }
-
-        switch (resource.getType()) {
-          case ResourceType.DATASOURCE:
-            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return Access.DENIED;
-            } else {
-              return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
-            }
-          case ResourceType.VIEW:
-            if ("forbiddenView".equals(resource.getName())) {
-              return Access.DENIED;
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.QUERY_CONTEXT:
-          case ResourceType.EXTERNAL:
-            return Access.OK;
-          default:
-            return Access.DENIED;
-        }
-      };
+      return TestAuthorizer.simple(TEST_SUPERUSER_NAME, POLICY_RESTRICTION);
     }
   };
 
@@ -486,7 +413,8 @@ public class CalciteTests
         new MetadataSegmentView(
             coordinatorClient,
             new BrokerSegmentWatcherConfig(),
-            BrokerSegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create(),
+            new StubServiceEmitter()
         ),
         timelineServerView,
         new FakeServerInventoryView(),
@@ -494,7 +422,10 @@ public class CalciteTests
         coordinatorClient,
         overlordClient,
         provider,
-        getJsonMapper()
+        getJsonMapper(),
+        new FakeHttpClient(),
+        () -> new SqlEngineRegistry(Collections.emptySet()),
+        new PlannerConfig()
     );
   }
 

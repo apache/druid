@@ -55,6 +55,7 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @BeforeEach
   public void setup()
   {
+    EasyMock.expect(accountConfig.getProtocol()).andReturn("https").anyTimes();
     EasyMock.expect(accountConfig.getBlobStorageEndpoint()).andReturn("blob.core.windows.net").anyTimes();
   }
 

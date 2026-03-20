@@ -74,7 +74,6 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
         RowAdapters.standardRow(),
         () -> largeRow,
         signature,
-        false,
         false
     );
 
@@ -98,12 +97,14 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
 
     final RowSignature signature = RowSignature.builder().add(colName, ColumnType.LONG).build();
 
+    RuntimeException realException = new RuntimeException(errorMsg);
+
     LongFieldWriter fieldWriter = EasyMock.mock(LongFieldWriter.class);
     EasyMock.expect(fieldWriter.writeTo(
         EasyMock.anyObject(),
         EasyMock.anyLong(),
         EasyMock.anyLong()
-    )).andThrow(new RuntimeException(errorMsg));
+    )).andThrow(realException);
 
     EasyMock.replay(fieldWriter);
 
@@ -128,5 +129,6 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
         rowBasedFrameWriter::addSelection
     );
     Assert.assertEquals(expectedException, actualException);
+    Assert.assertEquals(realException, actualException.getCause());
   }
 }

@@ -26,6 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -41,12 +42,19 @@ public class SimpleExtraction
   @Nullable
   private final ExtractionFn extractionFn;
 
-  public SimpleExtraction(String column, @Nullable ExtractionFn extractionFn)
+  private SimpleExtraction(String column, @Nullable ExtractionFn extractionFn)
   {
     this.column = Preconditions.checkNotNull(column, "column");
     this.extractionFn = extractionFn;
   }
 
+  /**
+   * Create an instance.
+   *
+   * @param column       column
+   * @param extractionFn extraction fn, if any. Callers should only provide a function if
+   *                     {@link PlannerContext#isUseExtractionFns()} is true.
+   */
   public static SimpleExtraction of(String column, @Nullable ExtractionFn extractionFn)
   {
     return new SimpleExtraction(column, extractionFn);
@@ -63,6 +71,10 @@ public class SimpleExtraction
     return extractionFn;
   }
 
+  /**
+   * Create a new instance where the provided {@link ExtractionFn} is composed with the existing {@link ExtractionFn}
+   * of this instance. Callers should only use this method if {@link PlannerContext#isUseExtractionFns()} is true.
+   */
   public SimpleExtraction cascade(final ExtractionFn nextExtractionFn)
   {
     return new SimpleExtraction(

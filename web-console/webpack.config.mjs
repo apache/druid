@@ -182,7 +182,7 @@ export default env => {
     },
     plugins:
       process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE'
-        ? [...plugins, new BundleAnalyzerPlugin()]
+        ? [...plugins, new BundleAnalyzerPlugin({ analyzerPort: 18082 })]
         : plugins,
   };
 };

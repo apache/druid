@@ -28,7 +28,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
@@ -114,9 +113,7 @@ public class RestrictAllTablesPolicyEnforcerTest
         inlineDataSource.rowAdapter(),
         inlineDataSource.getRowSignature()
     );
-    ReferenceCountedObjectProvider<Segment> segment = ReferenceCountedSegmentProvider.wrapUnmanaged(inlineSegment);
-
-    policyEnforcer.validateOrElseThrow(segment.acquireReference().orElseThrow(), null);
+    policyEnforcer.validateOrElseThrow(ReferenceCountedSegmentProvider.unmanaged(inlineSegment).orElseThrow(), null);
   }
 
   @Test

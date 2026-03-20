@@ -46,15 +46,18 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -68,6 +71,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -105,8 +109,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
       "2011-01-12T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
       "2011-01-12T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
       "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
-      "2011-01-13T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
-      };
+      "2011-01-13T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000"
+  };
   public static final String[] V_0113 = {
       "2011-01-14T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
       "2011-01-14T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
@@ -116,8 +120,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
       "2011-01-16T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
       "2011-01-16T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
       "2011-01-17T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
-      "2011-01-17T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
-      };
+      "2011-01-17T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299"
+  };
 
   private static IncrementalIndex newIndex(String minTimeStamp)
   {
@@ -157,21 +161,27 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
 
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
+    final DataSegment dataSegment0 = TestHelper.toSimpleDataSegment(segment0, new NumberedShardSpec(0, 1));
+    final DataSegment dataSegment1 = TestHelper.toSimpleDataSegment(segment1, new NumberedShardSpec(0, 1));
+    Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders = Map.of(
+        dataSegment0, ReferenceCountedSegmentProvider.of(segment0),
+        dataSegment1, ReferenceCountedSegmentProvider.of(segment1)
+    );
 
-    VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = new VersionedIntervalTimeline<>(
+    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
         StringComparators.LEXICOGRAPHIC);
     timeline.add(
         index0.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment0))
+        new SingleElementPartitionChunk<>(dataSegment0)
     );
     timeline.add(
         index1.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment1))
+        new SingleElementPartitionChunk<>(dataSegment1)
     );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, referenceProviders, FACTORY);
   }
 
   @Test

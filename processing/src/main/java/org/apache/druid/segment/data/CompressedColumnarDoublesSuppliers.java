@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -37,17 +37,17 @@ public class CompressedColumnarDoublesSuppliers
 
   /**
    * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
-   * {@link SmooshedFileMapper}.
+   * {@link SegmentFileMapper}.
    *
-   * @param buffer       primary buffer to read from
-   * @param order        byte order
-   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
-   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   * @param buffer     primary buffer to read from
+   * @param order      byte order
+   * @param fileMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                   a single-file column. Generally, this should only be null in tests, not production code.
    */
   public static Supplier<ColumnarDoubles> fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order,
-      SmooshedFileMapper smooshMapper
+      SegmentFileMapper fileMapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -66,7 +66,7 @@ public class CompressedColumnarDoublesSuppliers
           buffer.asReadOnlyBuffer(),
           order,
           compression,
-          smooshMapper
+          fileMapper
       );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);

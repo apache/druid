@@ -58,8 +58,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -91,8 +90,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -123,8 +121,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -157,8 +154,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "mv_to_array(\"dummy\")", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "mv_to_array(\"dummy\")", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -191,8 +187,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -230,8 +225,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -275,8 +269,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -308,8 +301,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -337,8 +329,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -371,8 +362,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", null, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", null, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -404,14 +394,12 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor childCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", null, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", null, ExprMacroTable.nil())
     );
     UnnestColumnValueSelectorCursor parentCursor = new UnnestColumnValueSelectorCursor(
         childCursor,
         childCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"" + OUTPUT_NAME + "\"", null, ExprMacroTable.nil()),
-        "tmp-out"
+        new ExpressionVirtualColumn("tmp-out", "\"" + OUTPUT_NAME + "\"", null, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = parentCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector("tmp-out");
@@ -444,8 +432,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -481,8 +468,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -518,8 +504,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -551,8 +536,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -584,8 +568,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -620,8 +603,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", null, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", null, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
@@ -655,8 +637,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     // should return a column value selector for this case
     BaseSingleValueDimensionSelector unnestDimSelector = (BaseSingleValueDimensionSelector) unnestCursor.getColumnSelectorFactory()
@@ -697,8 +678,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
-        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
-        OUTPUT_NAME
+        new ExpressionVirtualColumn(OUTPUT_NAME, "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil())
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);

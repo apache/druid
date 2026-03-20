@@ -19,6 +19,15 @@
 @import '../variables';
 
 .ReactTable {
+  &.centered-table {
+    .rt-th {
+      align-content: start;
+    }
+
+    .rt-td {
+      align-content: center;
+    }
+  }
   .rt-tr {
     min-height: 38px;
 

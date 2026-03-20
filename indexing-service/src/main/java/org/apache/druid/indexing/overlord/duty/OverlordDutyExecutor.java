@@ -25,8 +25,10 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -38,6 +40,7 @@ public class OverlordDutyExecutor
   private static final Logger log = new Logger(OverlordDutyExecutor.class);
 
   private final ScheduledExecutorFactory execFactory;
+  private final ServiceEmitter emitter;
   private final Set<OverlordDuty> duties;
 
   private volatile ScheduledExecutorService exec;
@@ -47,10 +50,12 @@ public class OverlordDutyExecutor
   @Inject
   public OverlordDutyExecutor(
       ScheduledExecutorFactory scheduledExecutorFactory,
+      ServiceEmitter emitter,
       Set<OverlordDuty> duties
   )
   {
     this.execFactory = scheduledExecutorFactory;
+    this.emitter = emitter;
     this.duties = duties;
   }
 
@@ -128,7 +133,12 @@ public class OverlordDutyExecutor
   {
     if (exec == null) {
       final int numThreads = 1;
-      exec = execFactory.create(numThreads, "Overlord-Duty-Exec--%d");
+      exec = ScheduledExecutors.emittingDelayMetric(
+          execFactory.create(numThreads, "Overlord-Duty-Exec--%d"),
+          emitter,
+          "overlord/duty/wait/millis",
+          Map.of()
+      );
       log.info("Initialized duty executor with [%d] threads", numThreads);
     }
   }

@@ -80,7 +80,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
           case LONG:
             return evalAsLong(eval);
           default:
-            return ExprEval.of(null);
+            return ExprEval.ofString(null);
         }
       }
 
@@ -100,19 +100,19 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
     if (IPv4AddressExprUtils.isValidIPv4Address(eval.asString())) {
       return eval;
     }
-    return ExprEval.of(null);
+    return ExprEval.ofString(null);
   }
 
   private static ExprEval evalAsLong(ExprEval eval)
   {
     if (eval.isNumericNull()) {
-      return ExprEval.of(null);
+      return ExprEval.ofString(null);
     }
 
     IPv4Address address = IPv4AddressExprUtils.parse(eval.asLong());
     if (address == null) {
-      return ExprEval.of(null);
+      return ExprEval.ofString(null);
     }
-    return ExprEval.of(IPv4AddressExprUtils.toString(address));
+    return ExprEval.ofString(IPv4AddressExprUtils.toString(address));
   }
 }

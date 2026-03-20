@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
 
@@ -28,7 +29,10 @@ public class CoordinatorDutyStatus
 {
   private final List<DutyGroupStatus> dutyGroups;
 
-  public CoordinatorDutyStatus(List<DutyGroupStatus> dutyGroups)
+  @JsonCreator
+  public CoordinatorDutyStatus(
+      @JsonProperty("dutyGroups") List<DutyGroupStatus> dutyGroups
+  )
   {
     this.dutyGroups = dutyGroups;
   }

@@ -1,0 +1,114 @@
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: test-cluster-${service}
+spec:
+  image: ${image}
+  startScript: /druid.sh
+  scalePvcSts: true
+  rollingDeploy: true
+  defaultProbes: false
+  podLabels:
+    environment: stage
+    release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
+  volumes:
+    - name: mysqlconnector
+      emptyDir: { }
+  securityContext:
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  containerSecurityContext:
+    privileged: true
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  common.runtime.properties: |
+${commonRuntimeProperties}
+  jvm.options: |-
+    -server
+    -Djava.net.preferIPv4Stack=true
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Dlog4j.debug
+    -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+  log4j.config: |-
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <Configuration status="WARN">
+        <Appenders>
+            <Console name="Console" target="SYSTEM_OUT">
+                <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            </Console>
+            <File name="FileAppender" fileName="log/${sys:druid.node.type}.log">
+                <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            </File>
+        </Appenders>
+        <Loggers>
+            <Root level="info">
+                <AppenderRef ref="Console"/>
+                <AppenderRef ref="FileAppender"/>
+            </Root>
+        </Loggers>
+    </Configuration>
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+  nodes:
+    ${service}s:
+      nodeType: ${service}
+      priorityClassName: system-cluster-critical
+      druid.port: ${port}
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: http
+                port: ${port}
+                targetPort: ${port}
+                nodePort: ${port}
+      replicas: 1
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/${serviceFolder}"
+      runtime.properties: |
+${nodeRuntimeProperties}
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /status/health
+          port: ${port}
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      readinessProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /status/health
+          port: ${port}
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      startUpProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /status/health
+          port: ${port}
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 10
+      volumeMounts:
+        - mountPath: /druid/data
+          name: druid-shared-storage
+      volumes:
+        - name: druid-shared-storage
+          hostPath:
+            path: /druid/shared-storage
+            type: DirectoryOrCreate

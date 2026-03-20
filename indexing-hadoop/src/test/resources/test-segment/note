@@ -1,5 +1,0 @@
-This is a test segment containing following columns.
-__time, host, visited_sum, unique_hosts
-2014-10-22T00:00:00.000Z, a.example.com, 100, HLL sketch of cardinality 1
-2014-10-22T01:00:00.000Z, b.example.com, 150, HLL sketch of cardinality 1
-2014-10-22T02:00:00.000Z, c.example.com, 200, HLL sketch of cardinality 1

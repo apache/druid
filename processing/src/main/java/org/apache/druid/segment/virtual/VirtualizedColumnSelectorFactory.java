@@ -49,7 +49,7 @@ public class VirtualizedColumnSelectorFactory extends VirtualizedColumnInspector
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
     if (virtualColumns.exists(dimensionSpec.getDimension())) {
-      return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+      return virtualColumns.makeDimensionSelector(dimensionSpec, this, null, null);
     } else {
       return baseFactory.makeDimensionSelector(dimensionSpec);
     }
@@ -59,7 +59,7 @@ public class VirtualizedColumnSelectorFactory extends VirtualizedColumnInspector
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeColumnValueSelector(columnName, this);
+      return virtualColumns.makeColumnValueSelector(columnName, this, null, null);
     } else {
       return baseFactory.makeColumnValueSelector(columnName);
     }

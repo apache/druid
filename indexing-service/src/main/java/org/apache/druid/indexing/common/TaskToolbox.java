@@ -49,7 +49,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -96,8 +96,8 @@ public class TaskToolbox
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   /**
    * Using Provider, not {@link QueryRunnerFactoryConglomerate} directly, to not require {@link
-   * org.apache.druid.indexing.overlord.TaskRunner} implementations that create TaskToolboxes to inject query stuff eagerly,
-   * because it may be unavailable, e. g. for batch tasks running in Spark or Hadoop.
+   * org.apache.druid.indexing.overlord.TaskRunner} implementations that create TaskToolboxes to inject query stuff
+   * eagerly, because it may be unavailable in extension task types
    */
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   /**
@@ -117,7 +117,7 @@ public class TaskToolbox
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final PolicyEnforcer policyEnforcer;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMerger indexMerger;
   private final TaskReportFileWriter taskReportFileWriter;
 
   private final DruidNodeAnnouncer druidNodeAnnouncer;
@@ -168,7 +168,7 @@ public class TaskToolbox
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       PolicyEnforcer policyEnforcer,
-      IndexMergerV9 indexMergerV9,
+      IndexMerger indexMerger,
       DruidNodeAnnouncer druidNodeAnnouncer,
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
@@ -214,7 +214,7 @@ public class TaskToolbox
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.policyEnforcer = policyEnforcer;
-    this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
@@ -358,6 +358,9 @@ public class TaskToolbox
     return jsonMapper;
   }
 
+  /**
+   * Returns a {@link SegmentCacheManager} in virtual storage mode.
+   */
   public SegmentCacheManager getSegmentCacheManager()
   {
     return segmentCacheManager;
@@ -404,9 +407,9 @@ public class TaskToolbox
     return cachePopulatorStats;
   }
 
-  public IndexMergerV9 getIndexMergerV9()
+  public IndexMerger getIndexMerger()
   {
-    return indexMergerV9;
+    return indexMerger;
   }
 
   public File getIndexingTmpDir()
@@ -577,7 +580,7 @@ public class TaskToolbox
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
     private PolicyEnforcer policyEnforcer;
-    private IndexMergerV9 indexMergerV9;
+    private IndexMerger indexMerger;
     private DruidNodeAnnouncer druidNodeAnnouncer;
     private DruidNode druidNode;
     private LookupNodeService lookupNodeService;
@@ -628,7 +631,7 @@ public class TaskToolbox
       this.cacheConfig = other.cacheConfig;
       this.cachePopulatorStats = other.cachePopulatorStats;
       this.policyEnforcer = other.policyEnforcer;
-      this.indexMergerV9 = other.indexMergerV9;
+      this.indexMerger = other.indexMerger;
       this.druidNodeAnnouncer = other.druidNodeAnnouncer;
       this.druidNode = other.druidNode;
       this.lookupNodeService = other.lookupNodeService;
@@ -797,9 +800,9 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder indexMergerV9(final IndexMergerV9 indexMergerV9)
+    public Builder indexMerger(final IndexMerger indexMerger)
     {
-      this.indexMergerV9 = indexMergerV9;
+      this.indexMerger = indexMerger;
       return this;
     }
 
@@ -939,7 +942,7 @@ public class TaskToolbox
           cacheConfig,
           cachePopulatorStats,
           policyEnforcer,
-          indexMergerV9,
+          indexMerger,
           druidNodeAnnouncer,
           druidNode,
           lookupNodeService,

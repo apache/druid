@@ -40,8 +40,8 @@ You can follow these steps on a relatively modest machine, such as a workstation
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
-* [Java 11 or 17](../operations/java.md)
-* Python 3 (preferred) or Python 2
+* [Java 17](../operations/java.md)
+* Python 3 
 * Perl 5
 
 Java must be available. Either it is on your path, or set one of the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variables.
@@ -112,7 +112,7 @@ After starting the Druid services, open the [web console](../operations/web-cons
 
 It may take a few seconds for all Druid services to finish starting, including the [Druid router](../design/router.md), which serves the console. If you attempt to open the web console before startup is complete, you may see errors in the browser. Wait a few moments and try again.
 
-In this quickstart, you use the the web console to perform ingestion. The MSQ task engine specifically uses the **Query** view to edit and run SQL queries.
+In this quickstart, you use the web console to perform ingestion. The MSQ task engine specifically uses the **Query** view to edit and run SQL queries.
 For a complete walkthrough of the **Query** view as it relates to the multi-stage query architecture and the MSQ task engine, see [UI walkthrough](../operations/web-console.md).
 
 ## Load data

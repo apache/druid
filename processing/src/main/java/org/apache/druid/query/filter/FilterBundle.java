@@ -169,20 +169,34 @@ public class FilterBundle
     {
       this.filter = filter;
       this.columnIndexSelector = columnIndexSelector;
-      this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
       // Construct Builder instances for all child filters recursively.
       if (filter instanceof BooleanFilter) {
-        Collection<Filter> childFilters = ((BooleanFilter) filter).getFilters();
+        final BooleanFilter bool = (BooleanFilter) filter;
+        Collection<Filter> childFilters = bool.getFilters();
         this.childBuilders = new ArrayList<>(childFilters.size());
         for (Filter childFilter : childFilters) {
-          this.childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
+          childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
         }
+        this.bitmapColumnIndex = bool.getBitmapColumnIndex(columnIndexSelector.getBitmapFactory(), childBuilders);
+      } else if (filter instanceof BooleanUnaryFilter) {
+        final BooleanUnaryFilter bool = (BooleanUnaryFilter) filter;
+        childBuilders = new ArrayList<>(1);
+        final FilterBundle.Builder childBuilder = new FilterBundle.Builder(
+            bool.getBaseFilter(),
+            columnIndexSelector,
+            cursorAutoArrangeFilters
+        );
+        childBuilders.add(childBuilder);
+        this.bitmapColumnIndex = bool.getBitmapColumnIndex(columnIndexSelector.getNumRows(), childBuilder);
       } else {
-        this.childBuilders = new ArrayList<>(0);
+        this.childBuilders = List.of();
+        this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
       }
       if (cursorAutoArrangeFilters) {
-        // Sort child builders by cost in ASCENDING order, should be stable by default.
-        this.childBuilders.sort(Comparator.comparingInt(FilterBundle.Builder::getEstimatedIndexComputeCost));
+        if (!childBuilders.isEmpty()) {
+          // Sort child builders by cost in ASCENDING order, should be stable by default.
+          childBuilders.sort(Comparator.comparingInt(FilterBundle.Builder::getEstimatedIndexComputeCost));
+        }
         this.estimatedIndexComputeCost = calculateEstimatedIndexComputeCost();
       } else {
         this.estimatedIndexComputeCost = Integer.MAX_VALUE;
@@ -191,10 +205,10 @@ public class FilterBundle
 
     private int calculateEstimatedIndexComputeCost()
     {
-      if (this.bitmapColumnIndex == null) {
+      if (bitmapColumnIndex == null) {
         return Integer.MAX_VALUE;
       }
-      int cost = this.bitmapColumnIndex.estimatedComputeCost();
+      int cost = bitmapColumnIndex.estimatedComputeCost();
       if (cost == Integer.MAX_VALUE) {
         return Integer.MAX_VALUE;
       }

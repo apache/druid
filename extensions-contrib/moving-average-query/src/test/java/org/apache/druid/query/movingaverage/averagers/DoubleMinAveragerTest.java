@@ -40,7 +40,7 @@ public class DoubleMinAveragerTest
     avg.addElement(Collections.singletonMap("field", 1.0), new HashMap<>());
     Assert.assertEquals(-1.1e100, avg.computeResult(), 0.0);
 
-    avg.addElement(Collections.singletonMap("field", new Integer(1)), new HashMap<>());
+    avg.addElement(Collections.singletonMap("field", 1), new HashMap<>());
     Assert.assertEquals(-1.1e100, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 5.0), new HashMap<>());

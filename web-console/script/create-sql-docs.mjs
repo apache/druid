@@ -21,6 +21,7 @@
 import fs from 'fs-extra';
 import snarkdown from 'snarkdown';
 
+const INPUT_FILELIST_FILE = 'script/sql-doc-files.txt';
 const OUTPUT_FILE = 'lib/sql-docs.ts';
 
 const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 198;
@@ -71,16 +72,19 @@ function convertMarkdownToHtml(markdown) {
 }
 
 const readDoc = async () => {
-  const data = [
-    await fs.readFile('../docs/querying/sql-data-types.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-array-functions.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-window-functions.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
-  ].join('\n');
+  // Read the list of files from sql-doc-files.txt
+  const fileList = await fs.readFile(INPUT_FILELIST_FILE, 'utf-8');
+  const filePaths = fileList
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('#')); // Skip empty lines and comments
+
+  // Read all files in parallel
+  const fileContents = await Promise.all(
+    filePaths.map(filePath => fs.readFile(filePath, 'utf-8'))
+  );
+
+  const data = fileContents.join('\n');
 
   const lines = data.split('\n');
 

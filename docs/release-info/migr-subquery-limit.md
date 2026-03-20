@@ -60,5 +60,5 @@ See [Metrics monitors](../configuration/index.md#metrics-monitors-for-each-servi
 
 See the following topics for more information:
 
-- [Query context](../querying/query-context.md) for information on setting query context parameters.
+- [Query context reference](../querying/query-context-reference.md) for information on query context parameters.
 - [Broker configuration reference](../configuration#guardrails-for-materialization-of-subqueries) for more information on `maxSubqueryRows` and `maxSubqueryBytes`.

@@ -59,9 +59,7 @@ public class DiskTest
   @Test
   public void testWontCrash()
   {
-    final Disk disk = new Disk((cgroup) -> {
-      throw new RuntimeException("shouldContinue");
-    });
+    final Disk disk = new Disk(TestUtils.exceptionThrowingDiscoverer());
     final Map<String, Disk.Metrics> stats = disk.snapshot();
     Assert.assertEquals(ImmutableMap.of(), stats);
   }

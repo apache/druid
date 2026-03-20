@@ -177,7 +177,7 @@ public class CompactionSupervisorManager
 
     return performIfLeader(
         manager -> manager
-            .getSupervisorHistoryForId(supervisorId)
+            .getSupervisorHistoryForId(supervisorId, null)
             .stream()
             .filter(versionedSpec -> versionedSpec.getSpec() instanceof CompactionSupervisorSpec)
             .map(

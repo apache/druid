@@ -19,13 +19,9 @@
 
 package org.apache.druid.segment.indexing;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
@@ -34,8 +30,6 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -46,9 +40,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
@@ -57,6 +51,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -83,43 +78,36 @@ public class DataSchema
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
   private final TransformSpec transformSpec;
-  private final Map<String, Object> parserMap;
-  private final ObjectMapper objectMapper;
-
-  // The below fields can be initialized lazily from parser for backward compatibility.
-  private TimestampSpec timestampSpec;
-  private DimensionsSpec dimensionsSpec;
-
-  // This is used for backward compatibility
-  private InputRowParser inputRowParser;
   @Nullable
-  private List<AggregateProjectionSpec> projections;
+  private final TimestampSpec timestampSpec;
+  @Nullable
+  private final DimensionsSpec dimensionsSpec;
+  @Nullable
+  private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
-      @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
+      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec,
+      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] aggregators,
+      @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
-      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
-      @JacksonInject ObjectMapper objectMapper
+      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap
   )
   {
+    InvalidInput.conditionalException(parserMap == null, "parser was removed in Druid 37, define the timestampSpec and dimensionsSpec on the schema directly instead of nested inside the parser definition");
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
-    this.timestampSpec = timestampSpec;
+    this.timestampSpec = InvalidInput.notNull(timestampSpec, "timestampSpec");
     this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
-    this.dimensionsSpec = dimensionsSpec == null
-                          ? null
-                          : computeDimensionsSpec(
-                              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
-                              dimensionsSpec,
-                              this.aggregators
-                          );
+    this.dimensionsSpec = dimensionsSpec == null ? null : computeDimensionsSpec(
+        timestampSpec,
+        dimensionsSpec,
+        this.aggregators
+    );
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -129,8 +117,6 @@ public class DataSchema
     }
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
     this.projections = projections;
-    this.parserMap = parserMap;
-    this.objectMapper = objectMapper;
 
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
@@ -147,7 +133,6 @@ public class DataSchema
           dataSource
       );
     }
-
   }
 
   @JsonProperty
@@ -158,35 +143,15 @@ public class DataSchema
 
   @Nullable
   @JsonProperty("timestampSpec")
-  private TimestampSpec getGivenTimestampSpec()
-  {
-    return timestampSpec;
-  }
-
   public TimestampSpec getTimestampSpec()
   {
-    if (timestampSpec == null) {
-      timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
-    }
     return timestampSpec;
   }
 
   @Nullable
   @JsonProperty("dimensionsSpec")
-  private DimensionsSpec getGivenDimensionsSpec()
-  {
-    return dimensionsSpec;
-  }
-
   public DimensionsSpec getDimensionsSpec()
   {
-    if (dimensionsSpec == null) {
-      dimensionsSpec = computeDimensionsSpec(
-          getTimestampSpec(),
-          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
-          aggregators
-      );
-    }
     return dimensionsSpec;
   }
 
@@ -225,39 +190,6 @@ public class DataSchema
     return projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList());
   }
 
-  @Deprecated
-  @JsonProperty("parser")
-  @Nullable
-  @JsonInclude(Include.NON_NULL)
-  public Map<String, Object> getParserMap()
-  {
-    return parserMap;
-  }
-
-  @Nullable
-  public InputRowParser getParser()
-  {
-    if (inputRowParser == null) {
-      if (parserMap == null) {
-        return null;
-      }
-      //noinspection unchecked
-      inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
-      ParseSpec parseSpec = inputRowParser.getParseSpec();
-      parseSpec = parseSpec.withDimensionsSpec(
-          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
-      );
-      if (timestampSpec != null) {
-        parseSpec = parseSpec.withTimestampSpec(timestampSpec);
-      }
-      if (dimensionsSpec != null) {
-        parseSpec = parseSpec.withDimensionsSpec(dimensionsSpec);
-      }
-      inputRowParser = inputRowParser.withParseSpec(parseSpec);
-    }
-    return inputRowParser;
-  }
-
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
     return builder(this).withGranularity(granularitySpec).build();
@@ -281,11 +213,9 @@ public class DataSchema
            ", aggregators=" + Arrays.toString(aggregators) +
            ", granularitySpec=" + granularitySpec +
            ", transformSpec=" + transformSpec +
-           ", parserMap=" + parserMap +
            ", timestampSpec=" + timestampSpec +
            ", dimensionsSpec=" + dimensionsSpec +
            ", projections=" + projections +
-           ", inputRowParser=" + inputRowParser +
            '}';
   }
 
@@ -415,9 +345,88 @@ public class DataSchema
       }
     }
 
+    return getFieldsOrThrowIfErrors(fields);
+  }
+
+  /**
+   * Validates that each {@link AggregateProjectionSpec} does not have duplicate column names in
+   * {@link AggregateProjectionSpec#groupingColumns} and {@link AggregateProjectionSpec#aggregators} and that segment
+   * {@link Granularity} is at least as coarse as {@link AggregateProjectionSchema#effectiveGranularity}
+   */
+  public static void validateProjections(
+      @Nullable List<AggregateProjectionSpec> projections,
+      @Nullable Granularity segmentGranularity
+  )
+  {
+    if (projections != null) {
+      final Set<String> names = Sets.newHashSetWithExpectedSize(projections.size());
+      for (AggregateProjectionSpec projection : projections) {
+        if (names.contains(projection.getName())) {
+          throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
+        }
+        names.add(projection.getName());
+        final AggregateProjectionSchema schema = projection.toMetadataSchema();
+
+        if (schema.getTimeColumnName() != null) {
+          final Granularity projectionGranularity = schema.getEffectiveGranularity();
+          if (segmentGranularity != null) {
+            if (segmentGranularity.isFinerThan(projectionGranularity)) {
+              throw InvalidInput.exception(
+                  "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
+                  projection.getName(),
+                  projectionGranularity,
+                  segmentGranularity
+              );
+            }
+          }
+        }
+
+        final Map<String, Multiset<String>> fields = new TreeMap<>();
+        int position = 0;
+        for (DimensionSchema grouping : projection.getGroupingColumns()) {
+          final String field = grouping.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered grouping column with null or empty name at position[%d]", position);
+          }
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] grouping column list");
+          position++;
+        }
+        for (AggregatorFactory aggregator : projection.getAggregators()) {
+          final String field = aggregator.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered aggregator with null or empty name at position[%d]", position);
+          }
+
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] aggregators list");
+          position++;
+        }
+
+        getFieldsOrThrowIfErrors(fields);
+      }
+    }
+  }
+
+  /**
+   * Helper method that processes a validation result stored as a {@link Map} of field names to {@link Multiset} of
+   * where they were defined. An error is indicated by the multi-set having more than a single entry
+   * (such as if a field is defined as both a dimension and an aggregator). If all fields have only a single entry, this
+   * method returns the list of output field names. If there are duplicates, this method throws a {@link DruidException}
+   * collecting all validation errors to help indicate where a field is defined
+   *
+   * @see #computeAndValidateOutputFieldNames
+   * @see #validateProjections(List, Granularity)
+   */
+  private static Set<String> getFieldsOrThrowIfErrors(Map<String, Multiset<String>> validatedFields)
+  {
     final List<String> errors = new ArrayList<>();
 
-    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+    for (Map.Entry<String, Multiset<String>> fieldEntry : validatedFields.entrySet()) {
       if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
         errors.add(
             StringUtils.format(
@@ -440,7 +449,7 @@ public class DataSchema
     }
 
     if (errors.isEmpty()) {
-      return fields.keySet();
+      return validatedFields.keySet();
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
@@ -448,35 +457,34 @@ public class DataSchema
     }
   }
 
-  public static void validateProjections(
-      @Nullable List<AggregateProjectionSpec> projections,
-      @Nullable Granularity segmentGranularity
-  )
+  @Override
+  public boolean equals(Object o)
   {
-    if (projections != null) {
-      final Set<String> names = Sets.newHashSetWithExpectedSize(projections.size());
-      for (AggregateProjectionSpec projection : projections) {
-        if (names.contains(projection.getName())) {
-          throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
-        }
-        names.add(projection.getName());
-        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
-        if (schema.getTimeColumnName() == null) {
-          continue;
-        }
-        final Granularity projectionGranularity = schema.getGranularity();
-        if (segmentGranularity != null) {
-          if (segmentGranularity.isFinerThan(projectionGranularity)) {
-            throw InvalidInput.exception(
-                "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
-                projection.getName(),
-                projectionGranularity,
-                segmentGranularity
-            );
-          }
-        }
-      }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
+    DataSchema that = (DataSchema) o;
+    return Objects.equals(dataSource, that.dataSource) &&
+           Objects.deepEquals(aggregators, that.aggregators) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
+           Objects.equals(timestampSpec, that.timestampSpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec)
+           && Objects.equals(projections, that.projections);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        dataSource,
+        Arrays.hashCode(aggregators),
+        granularitySpec,
+        transformSpec,
+        timestampSpec,
+        dimensionsSpec,
+        projections
+    );
   }
 
   public static class Builder
@@ -485,8 +493,6 @@ public class DataSchema
     private AggregatorFactory[] aggregators;
     private GranularitySpec granularitySpec;
     private TransformSpec transformSpec;
-    private Map<String, Object> parserMap;
-    private ObjectMapper objectMapper;
     private TimestampSpec timestampSpec;
     private DimensionsSpec dimensionsSpec;
     private List<AggregateProjectionSpec> projections;
@@ -505,8 +511,6 @@ public class DataSchema
       this.aggregators = schema.aggregators;
       this.projections = schema.projections;
       this.granularitySpec = schema.granularitySpec;
-      this.parserMap = schema.parserMap;
-      this.objectMapper = schema.objectMapper;
     }
 
     public Builder withDataSource(String dataSource)
@@ -562,20 +566,6 @@ public class DataSchema
       return this;
     }
 
-    @Deprecated
-    public Builder withObjectMapper(ObjectMapper objectMapper)
-    {
-      this.objectMapper = objectMapper;
-      return this;
-    }
-
-    @Deprecated
-    public Builder withParserMap(Map<String, Object> parserMap)
-    {
-      this.parserMap = parserMap;
-      return this;
-    }
-
     public DataSchema build()
     {
       return new DataSchema(
@@ -586,8 +576,7 @@ public class DataSchema
           granularitySpec,
           transformSpec,
           projections,
-          parserMap,
-          objectMapper
+          null
       );
     }
   }

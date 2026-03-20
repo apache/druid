@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -91,7 +92,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
+    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), NAME, "probability").floatValue();
     final int resolution;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -102,7 +103,7 @@ public class QuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      resolution = ((Number) RexLiteral.value(resolutionArg)).intValue();
+      resolution = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "resolution").intValue();
     } else {
       resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
     }

@@ -22,6 +22,7 @@ package org.apache.druid.server.metrics;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -31,6 +32,7 @@ import org.apache.druid.query.DruidMetrics;
 import java.util.Map;
 import java.util.Set;
 
+@LoadScope(roles = {NodeRole.INDEXER_JSON_NAME, NodeRole.MIDDLE_MANAGER_JSON_NAME})
 public class WorkerTaskCountStatsMonitor extends AbstractMonitor
 {
   private final WorkerTaskCountStatsProvider statsProvider;

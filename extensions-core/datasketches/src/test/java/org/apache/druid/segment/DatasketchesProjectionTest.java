@@ -47,7 +47,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
@@ -98,36 +97,43 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   private static final Closer CLOSER = Closer.create();
 
   private static final List<AggregateProjectionSpec> PROJECTIONS = Collections.singletonList(
-      new AggregateProjectionSpec(
-          "a_projection",
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new LongDimensionSchema("__gran"),
-              new StringDimensionSchema("a")
-          ),
-          new AggregatorFactory[]{
-              new HllSketchBuildAggregatorFactory("_b_hll", "b", null, null, null, null, false),
-              new SketchMergeAggregatorFactory("_b_theta", "b", null, null, false, null),
-              new DoublesSketchAggregatorFactory("_d_doubles", "d", null),
-              new ArrayOfDoublesSketchAggregatorFactory("_bcd_aod", "b", null, Arrays.asList("c", "d"), null),
-              new KllDoublesSketchAggregatorFactory("_d_kll", "d", null, null)
-          }
-      )
+      AggregateProjectionSpec.builder("a_projection")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                             )
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("a")
+                             )
+                             .aggregators(
+                                 new HllSketchBuildAggregatorFactory("_b_hll", "b", null, null, null, null, false),
+                                 new SketchMergeAggregatorFactory("_b_theta", "b", null, null, false, null),
+                                 new DoublesSketchAggregatorFactory("_d_doubles", "d", null),
+                                 new ArrayOfDoublesSketchAggregatorFactory(
+                                     "_bcd_aod",
+                                     "b",
+                                     null,
+                                     Arrays.asList("c", "d"),
+                                     null
+                                 ),
+                                 new KllDoublesSketchAggregatorFactory("_d_kll", "d", null, null)
+                             )
+                             .build()
   );
 
-  private static final List<AggregateProjectionSpec> AUTO_PROJECTIONS = PROJECTIONS.stream().map(projection -> {
-    return new AggregateProjectionSpec(
-        projection.getName(),
-        projection.getVirtualColumns(),
-        projection.getGroupingColumns()
-                  .stream()
-                  .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                  .collect(Collectors.toList()),
-        projection.getAggregators()
-    );
-  }).collect(Collectors.toList());
+  private static final List<AggregateProjectionSpec> AUTO_PROJECTIONS =
+      PROJECTIONS.stream()
+                 .map(
+                     projection ->
+                         AggregateProjectionSpec.builder(projection)
+                                                .groupingColumns(
+                                                    projection.getGroupingColumns()
+                                                              .stream()
+                                                              .map(x -> AutoTypeColumnSchema.of(x.getName()))
+                                                              .collect(Collectors.toList())
+                                                )
+                                                .build()
+                 ).collect(Collectors.toList());
 
   @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
   public static Collection<?> constructorFeeder()
@@ -161,7 +167,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                 .collect(Collectors.toList());
     for (boolean incremental : new boolean[]{true, false}) {
       for (boolean sortByDim : new boolean[]{true, false}) {
@@ -221,7 +227,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                            IncrementalIndexSchema.builder()
                                                  .withDimensionsSpec(dimensionsSpec)
                                                  .withRollup(false)
-                                                 .withMinTimestamp(CursorFactoryProjectionTest.TIMESTAMP.getMillis())
+                                                 .withMinTimestamp(CursorFactoryProjectionTest.UTC_MIDNIGHT.getMillis())
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )

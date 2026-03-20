@@ -36,6 +36,7 @@ import { MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
+  ConsoleViewId,
   DruidEngine,
   Execution,
   QueryContext,
@@ -56,6 +57,7 @@ import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
 import {
+  assemble,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -67,6 +69,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
@@ -131,7 +134,7 @@ export interface WorkbenchViewProps
   serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
   hiddenMoreMenuItems?: MoreMenuItem[] | ((engine: DruidEngine) => MoreMenuItem[]);
-  goToTask(taskId: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
   maxTasksOptions?:
@@ -147,7 +150,12 @@ export interface WorkbenchViewState {
 
   columnMetadataState: QueryState<readonly ColumnMetadata[]>;
 
-  details?: { id: string; initTab?: ExecutionDetailsTab; initExecution?: Execution };
+  details?: {
+    type: 'task' | 'dart';
+    id: string;
+    initTab?: ExecutionDetailsTab;
+    initExecution?: Execution;
+  };
 
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
@@ -220,12 +228,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
   componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async (_, cancelToken) => {
+      processQuery: async (_, signal) => {
         return await queryDruidSql<ColumnMetadata>(
           {
             query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+            context: { engine: 'native' },
           },
-          cancelToken,
+          signal,
         );
       },
       onStateChange: columnMetadataState => {
@@ -289,9 +298,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, false);
   };
 
-  private readonly handleDetailsWithId = (id: string, initTab?: ExecutionDetailsTab) => {
+  private readonly handleDetailsWithTaskId = (id: string, initTab?: ExecutionDetailsTab) => {
     this.setState({
-      details: { id, initTab },
+      details: { type: 'task', id, initTab },
+    });
+  };
+
+  private readonly handleDetailsWithSqlId = (id: string, initTab?: ExecutionDetailsTab) => {
+    this.setState({
+      details: { type: 'dart', id, initTab },
     });
   };
 
@@ -304,7 +319,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     initTab?: ExecutionDetailsTab,
   ) => {
     this.setState({
-      details: { id: execution.id, initExecution: execution, initTab },
+      details: {
+        type: execution.engine === 'sql-msq-dart' ? 'dart' : 'task',
+        id: execution.id,
+        initExecution: execution,
+        initTab,
+      },
     });
   };
 
@@ -334,16 +354,17 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderExecutionDetailsDialog() {
-    const { goToTask } = this.props;
+    const { goToView } = this.props;
     const { details } = this.state;
     if (!details) return;
 
     return (
       <ExecutionDetailsDialog
+        type={details.type}
         id={details.id}
         initTab={details.initTab}
         initExecution={details.initExecution}
-        goToTask={goToTask}
+        goToTask={(taskId: string) => goToView('tasks', TableFilters.eq({ task_id: taskId }))}
         onClose={() => this.setState({ details: undefined })}
       />
     );
@@ -484,6 +505,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         onSubmit={execution => {
           this.setState({
             details: {
+              type: 'task',
               id: execution.id,
               initExecution: execution,
             },
@@ -550,7 +572,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             <div
               key={i}
               className={classNames('tab-button', { active })}
-              data-tooltip={tabEntry.tabName}
+              data-tooltip={assemble(tabEntry.tabName, tabEntry.query.formatLastExecution()).join(
+                '\n',
+              )}
             >
               {active ? (
                 <Popover
@@ -734,7 +758,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       baseQueryContext,
       serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      goToTask,
+      goToView,
       getClusterCapacity,
       maxTasksMenuHeader,
       enginesLabelFn,
@@ -771,7 +795,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onDetails={this.handleDetailsWithExecution}
           queryEngines={queryEngines}
           clusterCapacity={capabilities.getMaxTaskSlots()}
-          goToTask={goToTask}
+          goToTask={(taskId: string) => goToView('tasks', TableFilters.eq({ task_id: taskId }))}
           getClusterCapacity={getClusterCapacity}
           maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}
@@ -962,13 +986,16 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               {showRecentQueryTaskPanel && (
                 <RecentQueryTaskPanel
                   onClose={this.handleRecentQueryTaskPanelClose}
-                  onExecutionDetails={this.handleDetailsWithId}
+                  onExecutionDetails={this.handleDetailsWithTaskId}
                   onChangeQuery={this.handleQueryStringChange}
                   onNewTab={this.handleNewTab}
                 />
               )}
               {showCurrentDartPanel && (
-                <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
+                <CurrentDartPanel
+                  onClose={this.handleCurrentDartPanelClose}
+                  onExecutionDetails={this.handleDetailsWithSqlId}
+                />
               )}
             </div>
           )}

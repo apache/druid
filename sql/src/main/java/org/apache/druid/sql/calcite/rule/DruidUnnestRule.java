@@ -166,7 +166,7 @@ public class DruidUnnestRule extends RelOptRule
         }
       }
     } else {
-      rows.add(new Object[]{eval.valueOrDefault()});
+      rows.add(new Object[]{eval.value()});
     }
 
     // Transform to inline datasource.

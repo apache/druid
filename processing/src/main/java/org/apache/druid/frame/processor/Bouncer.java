@@ -24,8 +24,10 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,6 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class Bouncer
 {
+  @Nullable
+  private final Bouncer parentBouncer;
   private final int maxCount;
 
   private final Object lock = new Object();
@@ -47,8 +51,25 @@ public class Bouncer
   @GuardedBy("lock")
   private final Queue<SettableFuture<Ticket>> waiters = new ArrayDeque<>();
 
+  /**
+   * Create a Bouncer that issues a limited number of tickets.
+   */
   public Bouncer(final int maxCount)
   {
+    this.parentBouncer = null;
+    this.maxCount = maxCount;
+
+    if (maxCount <= 0) {
+      throw new ISE("maxConcurrentWorkers must be greater than zero");
+    }
+  }
+
+  /**
+   * Create a Bouncer that issues a limited number of tickets from a parent.
+   */
+  public Bouncer(final int maxCount, @Nullable final Bouncer parentBouncer)
+  {
+    this.parentBouncer = parentBouncer;
     this.maxCount = maxCount;
 
     if (maxCount <= 0) {
@@ -63,16 +84,21 @@ public class Bouncer
 
   public int getMaxCount()
   {
-    return maxCount;
+    return parentBouncer == null ? maxCount : Math.min(parentBouncer.getMaxCount(), maxCount);
   }
 
   public ListenableFuture<Ticket> ticket()
   {
+    // Acquire our ticket first, then acquire a parent ticket. Only return our ticket once the parent ticket
+    // is also acquired.
     synchronized (lock) {
       if (currentCount < maxCount) {
         currentCount++;
-        //noinspection UnstableApiUsage
-        return Futures.immediateFuture(new Ticket());
+        if (parentBouncer != null) {
+          return FutureUtils.transform(parentBouncer.ticket(), Ticket::new);
+        } else {
+          return Futures.immediateFuture(new Ticket(null));
+        }
       } else {
         final SettableFuture<Ticket> future = SettableFuture.create();
         waiters.add(future);
@@ -91,7 +117,14 @@ public class Bouncer
 
   public class Ticket
   {
+    @Nullable
+    private final Ticket parentTicket;
     private final AtomicBoolean givenBack = new AtomicBoolean();
+
+    public Ticket(@Nullable Ticket parentTicket)
+    {
+      this.parentTicket = parentTicket;
+    }
 
     public void giveBack()
     {
@@ -110,13 +143,18 @@ public class Bouncer
           if (nextFuture == null) {
             // Nobody was waiting.
             currentCount--;
-            return;
+            break;
           }
         }
 
-        if (nextFuture.set(new Ticket())) {
+        if (nextFuture.set(new Ticket(parentTicket))) {
           return;
         }
+      }
+
+      // Dispose of the parent ticket, if we have one.
+      if (parentTicket != null) {
+        parentTicket.giveBack();
       }
     }
   }

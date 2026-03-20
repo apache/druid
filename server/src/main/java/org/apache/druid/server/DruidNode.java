@@ -25,16 +25,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -42,6 +45,8 @@ import java.util.Objects;
  */
 public class DruidNode
 {
+  public static final String UNKNOWN_VERSION = "unknown";
+
   @JsonProperty("service")
   @NotNull
   private String serviceName;
@@ -80,6 +85,16 @@ public class DruidNode
   @JsonProperty
   private boolean enableTlsPort = false;
 
+  @JsonProperty
+  @NotNull
+  private final String version = GuavaUtils.firstNonNull(
+      DruidNode.class.getPackage().getImplementationVersion(),
+      UNKNOWN_VERSION
+  );
+
+  @JsonProperty
+  private Map<String, String> labels;
+
   public DruidNode(
       String serviceName,
       String host,
@@ -90,7 +105,7 @@ public class DruidNode
       boolean enableTlsPort
   )
   {
-    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort);
+    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort, null);
   }
 
   /**
@@ -118,7 +133,8 @@ public class DruidNode
       @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
       @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
-      @JsonProperty("enableTlsPort") boolean enableTlsPort
+      @JsonProperty("enableTlsPort") boolean enableTlsPort,
+      @JsonProperty("labels") @Nullable Map<String, String> labels
   )
   {
     init(
@@ -127,8 +143,9 @@ public class DruidNode
         bindOnHost,
         plaintextPort != null ? plaintextPort : port,
         tlsPort,
-        enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
-        enableTlsPort
+        enablePlaintextPort == null || enablePlaintextPort.booleanValue(),
+        enableTlsPort,
+        labels
     );
   }
 
@@ -139,7 +156,8 @@ public class DruidNode
       Integer plainTextPort,
       Integer tlsPort,
       boolean enablePlaintextPort,
-      boolean enableTlsPort
+      boolean enableTlsPort,
+      Map<String, String> labels
   )
   {
     Preconditions.checkNotNull(serviceName);
@@ -199,6 +217,13 @@ public class DruidNode
     this.serviceName = serviceName;
     this.host = host;
     this.bindOnHost = bindOnHost;
+    this.labels = labels;
+  }
+
+  @Nullable
+  public Map<String, String> getLabels()
+  {
+    return labels;
   }
 
   public String getServiceName()
@@ -234,6 +259,11 @@ public class DruidNode
   public int getTlsPort()
   {
     return tlsPort;
+  }
+
+  public String getVersion()
+  {
+    return version;
   }
 
   public DruidNode withService(String service)
@@ -320,13 +350,14 @@ public class DruidNode
            tlsPort == druidNode.tlsPort &&
            enableTlsPort == druidNode.enableTlsPort &&
            Objects.equals(serviceName, druidNode.serviceName) &&
-           Objects.equals(host, druidNode.host);
+           Objects.equals(host, druidNode.host) &&
+           Objects.equals(labels, druidNode.labels);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort);
+    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort, labels);
   }
 
   @Override
@@ -341,6 +372,7 @@ public class DruidNode
            ", enablePlaintextPort=" + enablePlaintextPort +
            ", tlsPort=" + tlsPort +
            ", enableTlsPort=" + enableTlsPort +
+           ", labels=" + labels +
            '}';
   }
 }

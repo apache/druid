@@ -34,6 +34,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -42,6 +43,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -49,7 +51,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -92,6 +99,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
+  private final long logSaveTimeoutMs;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -104,7 +112,8 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener
+      TaskStateListener stateListener,
+      long logSaveTimeoutMs
   )
   {
     this.task = task;
@@ -114,6 +123,7 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
+    this.logSaveTimeoutMs = logSaveTimeoutMs;
   }
 
   /**
@@ -256,16 +266,14 @@ public class KubernetesPeonLifecycle
   /**
    * Get task location for the Kubernetes pod running the peon process
    *
-   * @return
+   * @return {@link TaskLocation#unknown()} if the task has not started or if the status of the respective pod could not be fetched.
    */
   protected TaskLocation getTaskLocation()
   {
     State currentState = state.get();
     if (State.PENDING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
-      /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
-      have already gone into State.RUNNING, so getTaskLocation should not be called.
-       */
-      log.warn("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+      // This can happen if something external is checking the task location before the task has started.
+      // For example, when MSQ controller has started but the workers have not been started yet, this can be called.
       return TaskLocation.unknown();
     }
 
@@ -331,23 +339,37 @@ public class KubernetesPeonLifecycle
     return taskStatus.withDuration(duration);
   }
 
+  /**
+   * Attempts to initialize a logWatch for the peon pod if one does not already exist.
+   * <p>
+   * It is not guaranteed that a logWatch will be successfully initialized with this call.
+   * </p>
+   */
   protected void startWatchingLogs()
   {
     if (logWatch != null) {
       log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
       return;
     }
-    try {
-      Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
-      if (maybeLogWatch.isPresent()) {
-        logWatch = maybeLogWatch.get();
-      }
-    }
-    catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+    Optional<LogWatch> maybeLogWatch = executeWithTimeout(
+        () -> kubernetesClient.getPeonLogWatcher(taskId),
+        logSaveTimeoutMs,
+        "initializing K8s LogWatch",
+        "LogWatch failed to initialize. Peon may not be able to stream and persist task logs."
+        + "  If this continues to happen, check Kubernetes server logs for potential errors."
+    );
+    if (maybeLogWatch != null && maybeLogWatch.isPresent()) {
+      logWatch = maybeLogWatch.get();
     }
   }
 
+  /**
+   * Saves logs from the peon pod to deep storage via the TaskLogs interface.
+   * <p>
+   * This method does not gaurantee that logs will be successfully saved. It makes a best-effort attempt to copy
+   * the logs from the Peon and push them to deep storage.
+   * </p>
+   */
   protected void saveLogs()
   {
     try {
@@ -355,7 +377,18 @@ public class KubernetesPeonLifecycle
       try {
         startWatchingLogs();
         if (logWatch != null) {
-          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+          // Copy log output with timeout protection
+          executeWithTimeout(
+              () -> {
+                FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+                return null;
+              },
+              logSaveTimeoutMs,
+              "coyping and persisting task logs",
+              "This failure does not have any impact on the"
+              + " ingestion work done by the task, but the logs may be partial or innaccessible. If "
+              + " this continues to happen, check Kubernetes server logs for potential errors."
+          );
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
           FileUtils.writeStringToFile(
@@ -415,5 +448,35 @@ public class KubernetesPeonLifecycle
   protected ListenableFuture<Boolean> getTaskStartedSuccessfullyFuture()
   {
     return taskStartedSuccessfullyFuture;
+  }
+
+  /**
+   * Executes a callable with a timeout.
+   * <p>
+   * If the callable does not complete within the specified timeout or another exception occurs, the error will be
+   * logged and null will be returned.
+   * </p>
+   */
+  private <T> @Nullable T executeWithTimeout(Callable<T> callable, long timeoutMillis, String operationName, String errorMessage)
+  {
+    ExecutorService executor = Executors.newSingleThreadExecutor(
+        Execs.makeThreadFactory("k8s-peon-lifecycle-util-" + taskId.getOriginalTaskId() + "-%d"));
+    try {
+      Future<T> future = executor.submit(callable);
+      return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+    catch (TimeoutException e) {
+      log.warn("Operation[%s] for task[%s] timed out after [%d] ms with error[%s].", operationName, taskId.getOriginalTaskId(), timeoutMillis, errorMessage);
+    }
+    catch (InterruptedException e) {
+      log.warn("Operation[%s] for task[%s] was interrupted with error[%s].", operationName, taskId.getOriginalTaskId(), errorMessage);
+    }
+    catch (Exception e) {
+      log.error(e, "Error during operation[%s] for task[%s]: %s", operationName, taskId, errorMessage);
+    }
+    finally {
+      executor.shutdownNow();
+    }
+    return null;
   }
 }

@@ -24,10 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import org.apache.druid.data.input.parquet.avro.ParquetAvroHadoopInputRowParser;
 import org.apache.druid.data.input.parquet.guice.Parquet;
-import org.apache.druid.data.input.parquet.simple.ParquetHadoopInputRowParser;
-import org.apache.druid.data.input.parquet.simple.ParquetParseSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
 
@@ -56,9 +53,6 @@ public class ParquetExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("ParquetInputRowParserModule")
             .registerSubtypes(
-                new NamedType(ParquetAvroHadoopInputRowParser.class, PARQUET_AVRO_INPUT_PARSER_TYPE),
-                new NamedType(ParquetHadoopInputRowParser.class, PARQUET_SIMPLE_INPUT_PARSER_TYPE),
-                new NamedType(ParquetParseSpec.class, PARQUET_SIMPLE_INPUT_PARSER_TYPE),
                 new NamedType(ParquetInputFormat.class, PARQUET_SIMPLE_PARSE_SPEC_TYPE)
             )
     );

@@ -764,12 +764,12 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals("cnt", 40.0, new Double(row.get(1).toString()), 0);
+    Assert.assertEquals("cnt", 40.0, Double.parseDouble(row.get(1).toString()), 0);
     Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
-    Assert.assertEquals("estimate", 40.0, new Double(row.get(2).toString()), 0);
-    Assert.assertEquals("union", 40.0, new Double(row.get(4).toString()), 0);
-    Assert.assertEquals("intersection", 40.0, new Double(row.get(5).toString()), 0);
-    Assert.assertEquals("anotb", 0, new Double(row.get(6).toString()), 0);
+    Assert.assertEquals("estimate", 40.0, Double.parseDouble(row.get(2).toString()), 0);
+    Assert.assertEquals("union", 40.0, Double.parseDouble(row.get(4).toString()), 0);
+    Assert.assertEquals("intersection", 40.0, Double.parseDouble(row.get(5).toString()), 0);
+    Assert.assertEquals("anotb", 0, Double.parseDouble(row.get(6).toString()), 0);
 
     Object obj = row.get(3); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
@@ -852,12 +852,12 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals("cnt", 40.0, new Double(row.get(1).toString()), 0);
+    Assert.assertEquals("cnt", 40.0, Double.parseDouble(row.get(1).toString()), 0);
     Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
-    Assert.assertEquals("estimate", 40.0, new Double(row.get(2).toString()), 0);
-    Assert.assertEquals("union", 40.0, new Double(row.get(4).toString()), 0);
-    Assert.assertEquals("intersection", 40.0, new Double(row.get(5).toString()), 0);
-    Assert.assertEquals("anotb", 0, new Double(row.get(6).toString()), 0);
+    Assert.assertEquals("estimate", 40.0, Double.parseDouble(row.get(2).toString()), 0);
+    Assert.assertEquals("union", 40.0, Double.parseDouble(row.get(4).toString()), 0);
+    Assert.assertEquals("intersection", 40.0, Double.parseDouble(row.get(5).toString()), 0);
+    Assert.assertEquals("anotb", 0, Double.parseDouble(row.get(6).toString()), 0);
 
     Object obj = row.get(3); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);

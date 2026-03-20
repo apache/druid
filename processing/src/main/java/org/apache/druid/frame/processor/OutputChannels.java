@@ -67,15 +67,6 @@ public class OutputChannels
   }
 
   /**
-   * Creates an instance wrapping read-only versions (see {@link OutputChannel#readOnly()}) of all the
-   * provided channels.
-   */
-  public static OutputChannels wrapReadOnly(final List<OutputChannel> outputChannels)
-  {
-    return new OutputChannels(outputChannels.stream().map(OutputChannel::readOnly).collect(Collectors.toList()));
-  }
-
-  /**
    * Verifies there is exactly one channel per partition.
    */
   public OutputChannels verifySingleChannel()
@@ -139,6 +130,24 @@ public class OutputChannels
    */
   public OutputChannels readOnly()
   {
-    return wrapReadOnly(outputChannels);
+    if (isReadOnly()) {
+      return this;
+    } else {
+      return new OutputChannels(outputChannels.stream().map(OutputChannel::readOnly).collect(Collectors.toList()));
+    }
+  }
+
+  /**
+   * Returns whether this instance is read-only (all channels have {@link OutputChannel#isReadOnly()}).
+   */
+  public boolean isReadOnly()
+  {
+    for (final OutputChannel channel : outputChannels) {
+      if (!channel.isReadOnly()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

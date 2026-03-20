@@ -46,6 +46,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.expression.NestedDataExpressions;
@@ -54,12 +55,15 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -67,7 +71,10 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class NestedDataOperatorConversions
 {
@@ -220,8 +227,11 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_query(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_query(%s,%s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath)
+      );
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
         return DruidExpression.ofVirtualColumn(
@@ -230,8 +240,8 @@ public class NestedDataOperatorConversions
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
-            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
-                druidExpressions.get(0).getDirectColumn(),
+            (name, outputType, parser, self) -> new NestedFieldVirtualColumn(
+                self.getArguments().get(0).getDirectColumn(),
                 name,
                 outputType,
                 parts,
@@ -302,15 +312,15 @@ public class NestedDataOperatorConversions
         }
 
         RelDataType sqlType = cx.getValidator().getValidatedNodeType(call);
+        final SqlTypeName sqlTypeName = sqlType.getSqlTypeName();
         SqlOperator jsonValueOperator;
-        if (SqlTypeName.INT_TYPES.contains(sqlType.getSqlTypeName())) {
+        if (SqlTypeName.INT_TYPES.contains(sqlTypeName) || SqlTypeName.BOOLEAN_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueBigintOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
-                   SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.DECIMAL.equals(sqlTypeName) || SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueDoubleOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
           jsonValueOperator = JsonValueVarcharOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.ARRAY.equals(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.ARRAY.equals(sqlTypeName)) {
           ColumnType elementType = Calcites.getColumnTypeForRelDataType(sqlType.getComponentType());
           switch (elementType.getType()) {
             case LONG:
@@ -404,19 +414,20 @@ public class NestedDataOperatorConversions
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
 
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s, %s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath),
+          DruidExpression.stringLiteral(druidType.asTypeString())
+      );
 
-      if (druidExpressions.get(0).isSimpleExtraction()) {
-
+      if (druidExpressions.get(0).isIdentifierOrSpecialized()) {
         return DruidExpression.ofVirtualColumn(
             druidType,
             builder,
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
-            ),
-            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
-                druidExpressions.get(0).getDirectColumn(),
+            List.of(druidExpressions.get(0)),
+            (name, outputType, parser, self) -> new NestedFieldVirtualColumn(
+                self.getArguments().get(0).getDirectColumn(),
                 name,
                 outputType,
                 parts,
@@ -534,8 +545,12 @@ public class NestedDataOperatorConversions
         );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s, %s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath),
+          DruidExpression.stringLiteral(druidType.asTypeString())
+      );
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
@@ -545,8 +560,8 @@ public class NestedDataOperatorConversions
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
-            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
-                druidExpressions.get(0).getDirectColumn(),
+            (name, outputType, parser, self) -> new NestedFieldVirtualColumn(
+                self.getArguments().get(0).getDirectColumn(),
                 name,
                 outputType,
                 parts,
@@ -692,8 +707,11 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath)
+      );
 
       // STRING is the closest thing we have to ANY, though maybe someday this
       // can be replaced with a VARIANT type
@@ -706,8 +724,8 @@ public class NestedDataOperatorConversions
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
-            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
-                druidExpressions.get(0).getDirectColumn(),
+            (name, outputType, parser, self) -> new NestedFieldVirtualColumn(
+                self.getArguments().get(0).getDirectColumn(),
                 name,
                 null,
                 parts,
@@ -754,14 +772,6 @@ public class NestedDataOperatorConversions
     @Override
     public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
     {
-      final DruidExpression.DruidExpressionCreator expressionFunction = druidExpressions ->
-          DruidExpression.ofExpression(
-              ColumnType.NESTED_DATA,
-              null,
-              DruidExpression.functionCall(FUNCTION_NAME),
-              druidExpressions
-          );
-
       final RexCall call = (RexCall) rexNode;
 
       // we ignore the first argument because calcite sets a 'nullBehavior' parameter by the time it gets here
@@ -776,7 +786,88 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      return expressionFunction.create(druidExpressions);
+      if (allKeysLiteral(druidExpressions, plannerContext.getExpressionParser())) {
+        return DruidExpression.ofVirtualColumn(
+            ColumnType.NESTED_DATA,
+            DruidExpression.functionCall(NestedDataExpressions.JsonObjectExprMacro.NAME),
+            druidExpressions,
+            (name, outputType, parser, self) -> new NestedObjectVirtualColumn(
+                name,
+                argsAsObjectMap(self.getArguments(), plannerContext.getExpressionParser()),
+                plannerContext.getExprMacroTable()
+            )
+        );
+      } else {
+        return DruidExpression.ofFunctionCall(
+            ColumnType.NESTED_DATA,
+            NestedDataExpressions.JsonObjectExprMacro.NAME,
+            druidExpressions
+        );
+      }
+    }
+
+    /**
+     * Returns whether the object represented by the given arguments has all literal keys.
+     */
+    private static boolean allKeysLiteral(
+        final List<DruidExpression> args,
+        final ExpressionParser parser
+    )
+    {
+      for (int i = 0; i < args.size(); i += 2) {
+        final DruidExpression key = args.get(i);
+
+        if (key.getType() != DruidExpression.NodeType.LITERAL) {
+          return false;
+        }
+
+        final String keyLiteral = Evals.asString(parser.parse(key.getExpression()).getLiteralValue());
+        if (keyLiteral == null) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    /**
+     * Returns a map for the object represented by the given arguments, if
+     * {@link #allKeysLiteral(List, ExpressionParser)} is true. Otherwise throws an exception.
+     */
+    private static Map<String, NestedObjectVirtualColumn.TypedExpression> argsAsObjectMap(
+        final List<DruidExpression> args,
+        final ExpressionParser parser
+    )
+    {
+      // Use LinkedHashMap to preserve order.
+      final Map<String, NestedObjectVirtualColumn.TypedExpression> retVal = new LinkedHashMap<>();
+      for (int i = 0; i < args.size(); i += 2) {
+        final DruidExpression key = args.get(i);
+        if (key.getType() != DruidExpression.NodeType.LITERAL) {
+          throw DruidException.defensive("Do not call this method unless allKeysLiteral returns true");
+        }
+
+        final String keyLiteral = Evals.asString(parser.parse(key.getExpression()).getLiteralValue());
+        if (keyLiteral == null) {
+          throw DruidException.defensive("Do not call this method unless allKeysLiteral returns true");
+        }
+
+        final NestedObjectVirtualColumn.TypedExpression typedExpression;
+        if (i + 1 < args.size()) {
+          typedExpression = new NestedObjectVirtualColumn.TypedExpression(
+              args.get(i + 1).getExpression(),
+              args.get(i + 1).getDruidType()
+          );
+        } else {
+          typedExpression = new NestedObjectVirtualColumn.TypedExpression(
+              DruidExpression.nullLiteral(),
+              ColumnType.LONG
+          );
+        }
+
+        retVal.put(keyLiteral, typedExpression);
+      }
+      return retVal;
     }
   }
 
@@ -817,11 +908,26 @@ public class NestedDataOperatorConversions
           plannerContext,
           rowSignature,
           rexNode,
-          druidExpressions -> DruidExpression.ofExpression(
-              ColumnType.NESTED_DATA,
-              DruidExpression.functionCall("json_merge"),
-              druidExpressions
-          )
+          druidExpressions -> {
+            if (druidExpressions.stream().allMatch(DruidExpression::isIdentifierOrSpecialized)) {
+              return DruidExpression.ofVirtualColumn(
+                  ColumnType.NESTED_DATA,
+                  DruidExpression.functionCall("json_merge"),
+                  druidExpressions,
+                  (name, outputType, parser, self) -> new NestedMergeVirtualColumn(
+                      name,
+                      self.getArguments().stream().map(DruidExpression::getDirectColumn).collect(Collectors.toList()),
+                      plannerContext.getExprMacroTable()
+                  )
+              );
+            } else {
+              return DruidExpression.ofFunctionCall(
+                  ColumnType.NESTED_DATA,
+                  "json_merge",
+                  druidExpressions
+              );
+            }
+          }
       );
     }
   }

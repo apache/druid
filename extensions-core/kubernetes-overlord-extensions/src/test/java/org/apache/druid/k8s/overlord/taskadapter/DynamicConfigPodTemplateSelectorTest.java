@@ -29,12 +29,14 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.Selector;
 import org.apache.druid.k8s.overlord.execution.SelectorBasedPodTemplateSelectStrategy;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,26 +55,28 @@ public class DynamicConfigPodTemplateSelectorTest
   private Path tempDir;
   private ObjectMapper mapper;
   private PodTemplate podTemplateSpec;
-  private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  private KubernetesTaskRunnerEffectiveConfig effectiveConfig;
 
   @BeforeEach
   public void setup()
   {
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY);
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, 1);
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder().build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
   }
 
   @Test
   public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
   {
-    Exception exception = Assert.assertThrows(
-        "No base prop should throw an IAE",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             new Properties(),
-            dynamicConfigRef
-        )
+            effectiveConfig
+        ),
+        "No base prop should throw an IAE"
     );
     Assertions.assertEquals(
         exception.getMessage(),
@@ -88,13 +92,13 @@ public class DynamicConfigPodTemplateSelectorTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Exception exception = Assert.assertThrows(
-        "Empty base pod template should throw a exception",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             props,
-            dynamicConfigRef
-        )
+            effectiveConfig
+        ),
+        "Empty base pod template should throw a exception"
     );
 
     Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
@@ -111,7 +115,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -146,7 +150,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null)
@@ -190,10 +194,11 @@ public class DynamicConfigPodTemplateSelectorTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
-    Assert.assertThrows(IAE.class, () -> new DynamicConfigPodTemplateSelector(
-        props,
-        dynamicConfigRef
-    ));
+    Assertions.assertThrows(IAE.class, () -> new DynamicConfigPodTemplateSelector(
+            props,
+            effectiveConfig
+        )
+    );
   }
 
   @Test
@@ -208,7 +213,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector podTemplateSelector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -242,16 +247,21 @@ public class DynamicConfigPodTemplateSelectorTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
-        Collections.singletonList(
-            new Selector("lowThroughput", null, null, Sets.newSet(dataSource)
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(
+        new SelectorBasedPodTemplateSelectStrategy(
+            Collections.singletonList(
+                new Selector("lowThroughput", null, null, Sets.newSet(dataSource)
+                )
             )
-        )
-    ));
+        ), 1
+    );
+
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder().build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
 
     DynamicConfigPodTemplateSelector podTemplateSelector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task taskWithMatchedDatasource = new NoopTask("id", "id", dataSource, 0, 0, null);
@@ -276,7 +286,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -290,10 +300,10 @@ public class DynamicConfigPodTemplateSelectorTest
     // Now we change the file to an empty file, and expect an assertion.
     mapper.writeValue(baseTemplatePath.toFile(), null);
 
-    Exception exception = Assert.assertThrows(
-        "Empty base pod template should throw a exception",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
-        () -> adapter.getPodTemplateForTask(task)
+        () -> adapter.getPodTemplateForTask(task),
+        "Empty base pod template should throw a exception"
     );
 
     Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file"));
@@ -311,7 +321,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);

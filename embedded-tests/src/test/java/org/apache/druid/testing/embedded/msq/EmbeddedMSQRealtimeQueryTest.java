@@ -22,19 +22,11 @@ package org.apache.druid.testing.embedded.msq;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -49,7 +41,6 @@ import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -100,9 +91,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "always")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
 
@@ -119,17 +107,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
            .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
     return clusterWithKafka
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class
-        )
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .useLatchableEmitter()
@@ -161,11 +138,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     broker.start();
     indexer.start();
     historical.start();
-  }
 
-  @BeforeEach
-  void setUpEach()
-  {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     submitSupervisor();
     publishToKafka(TestIndex.getMMappedWikipediaIndex());
@@ -173,8 +146,12 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(totalRows)
+    );
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 
@@ -287,7 +264,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
 
     String taskId = taskStatus.getTaskId();
-    cluster.callApi().waitForTaskToFinish(taskId, overlord);
+    cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
 
     final TaskStatusResponse currentStatus = cluster.callApi().onLeaderOverlord(
         o -> o.taskStatus(taskId)

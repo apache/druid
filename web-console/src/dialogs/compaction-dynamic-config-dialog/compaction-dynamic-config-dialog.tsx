@@ -51,10 +51,10 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       try {
         const configResp = await Api.instance.get('/druid/indexer/v1/compaction/config/cluster', {
-          cancelToken,
+          signal,
         });
         setDynamicConfig(configResp.data || {});
       } catch (e) {

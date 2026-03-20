@@ -25,13 +25,13 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.junit.Assert;
@@ -104,7 +104,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             });
           }
 
-          try (final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+          try (final SegmentFileChannel channel = v9Smoosher.addWithChannel(
               "test",
               serializer.getSerializedSize()
           )) {

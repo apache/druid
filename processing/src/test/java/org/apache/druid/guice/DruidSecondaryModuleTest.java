@@ -30,12 +30,24 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.druid.frame.wire.FrameWireTransferable;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -499,7 +511,138 @@ public class DruidSecondaryModuleTest
   private static ObjectMapper makeObjectMapper(Injector injector)
   {
     final ObjectMapper mapper = new ObjectMapper();
-    DruidSecondaryModule.setupJackson(injector, mapper);
+    DruidSecondaryModule.setupJackson(
+        injector,
+        mapper,
+        Collections.emptyMap(),
+        true
+    );
     return mapper;
+  }
+
+  /**
+   * Tests for WireTransferable serialization and deserialization.
+   */
+  public static class WireTransferableTests
+  {
+    private static final Map<ByteBuffer, WireTransferable.Deserializer> FRAME_DESERIALIZERS =
+        Collections.singletonMap(
+            StringUtils.toUtf8ByteBuffer(FrameWireTransferable.TYPE),
+            new FrameWireTransferable.Deserializer()
+        );
+
+    @Test
+    public void testColumnBasedFrameRowsAndColumns() throws Exception
+    {
+      final ObjectMapper om = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(om, FRAME_DESERIALIZERS, false);
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+      final byte[] bytes = om.writeValueAsBytes(frc);
+
+      final ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
+      Assert.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testRowBasedFrameRowsAndColumns() throws Exception
+    {
+      final ObjectMapper om = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(om, FRAME_DESERIALIZERS, false);
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final RowBasedFrameRowsAndColumns frc = RowBasedFrameRowsAndColumnsTest.MAKER.apply(input);
+      final byte[] bytes = om.writeValueAsBytes(frc);
+
+      final RowBasedFrameRowsAndColumns frc2 = (RowBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
+      Assert.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testColumnBasedFrameRowsAndColumnsLegacySerialization() throws Exception
+    {
+      // Test legacy serialization format (for rolling update compatibility)
+      final ObjectMapper legacySerializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          legacySerializer,
+          FRAME_DESERIALIZERS,
+          true  // useLegacyFrameSerialization
+      );
+
+      // New deserializer should be able to read legacy format
+      final ObjectMapper newDeserializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          newDeserializer,
+          FRAME_DESERIALIZERS,
+          false  // useLegacyFrameSerialization
+      );
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+
+      // Serialize with legacy format
+      final byte[] bytes = legacySerializer.writeValueAsBytes(frc);
+
+      // Deserialize with new deserializer (should handle legacy format)
+      final ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) newDeserializer.readValue(
+          bytes,
+          RowsAndColumns.class
+      );
+      Assert.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testRowBasedFrameRowsAndColumnsLegacySerialization() throws Exception
+    {
+      // Test legacy serialization format (for rolling update compatibility)
+      final ObjectMapper legacySerializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          legacySerializer,
+          FRAME_DESERIALIZERS,
+          true  // useLegacyFrameSerialization
+      );
+
+      // New deserializer should be able to read legacy format
+      final ObjectMapper newDeserializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          newDeserializer,
+          FRAME_DESERIALIZERS,
+          false  // useLegacyFrameSerialization
+      );
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final RowBasedFrameRowsAndColumns frc = RowBasedFrameRowsAndColumnsTest.MAKER.apply(input);
+
+      // Serialize with legacy format
+      final byte[] bytes = legacySerializer.writeValueAsBytes(frc);
+
+      // Deserialize with new deserializer (should handle legacy format)
+      final RowBasedFrameRowsAndColumns frc2 = (RowBasedFrameRowsAndColumns) newDeserializer.readValue(
+          bytes,
+          RowsAndColumns.class
+      );
+      Assert.assertEquals(frc, frc2);
+    }
   }
 }

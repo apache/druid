@@ -20,11 +20,12 @@
 package org.apache.druid.segment.metadata;
 
 /**
- * Metrics related to {@link SegmentSchemaCache} and {@link SegmentSchemaManager}.
+ * Metrics related to {@link SegmentSchemaCache}, {@link SegmentSchemaManager}, and {@link IndexingStateCache}.
  */
 public class Metric
 {
   private static final String PREFIX = "segment/schemaCache/";
+  private static final String INDEXING_STATE_PREFIX = "segment/indexingStateCache/";
 
   public static final String CACHE_MISSES = "miss/count";
 
@@ -44,14 +45,24 @@ public class Metric
   // Broker-side metrics
   public static final String BROKER_POLL_DURATION_MILLIS = PREFIX + "poll/time";
   public static final String BROKER_POLL_FAILED = PREFIX + "poll/failed";
+  public static final String BROKER_SEGMENTS_SKIPPED_REFRESH = PREFIX + "refreshSkipped/count";
 
   // Schema refresh metrics
   public static final String STARTUP_DURATION_MILLIS = "metadatacache/init/time";
   public static final String REFRESHED_SEGMENTS = PREFIX + "refresh/count";
+  public static final String REFRESH_SKIPPED_TOMBSTONES = PREFIX + "refresh/tombstone/count";
   public static final String REFRESH_DURATION_MILLIS = PREFIX + "refresh/time";
+  public static final String DATASOURCE_REMOVED = PREFIX + "dataSource/removed";
+  public static final String SCHEMA_ROW_SIGNATURE_CHANGED = PREFIX + "rowSignature/changed";
+  public static final String SCHEMA_ROW_SIGNATURE_COLUMN_COUNT = PREFIX + "rowSignature/column/count";
 
   /**
    * Number of used cold segments in the metadata store.
    */
   public static final String USED_COLD_SEGMENTS = "segment/used/deepStorageOnly/count";
+
+  // Compaction state cache metrics
+  public static final String INDEXING_STATE_CACHE_HITS = INDEXING_STATE_PREFIX + "hit/count";
+  public static final String INDEXING_STATE_CACHE_MISSES = INDEXING_STATE_PREFIX + "miss/count";
+  public static final String INDEXING_STATE_CACHE_FINGERPRINTS = INDEXING_STATE_PREFIX + "fingerprint/count";
 }

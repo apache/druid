@@ -99,7 +99,7 @@ public class OverlordCompactionResourceTest
 
     httpRequest = EasyMock.createStrictMock(HttpServletRequest.class);
     authorizerMapper = EasyMock.createStrictMock(AuthorizerMapper.class);
-    EasyMock.expect(authorizerMapper.getAuthorizer("druid")).andReturn(new AllowAllAuthorizer()).anyTimes();
+    EasyMock.expect(authorizerMapper.getAuthorizer("druid")).andReturn(new AllowAllAuthorizer(null)).anyTimes();
 
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).anyTimes();
@@ -159,7 +159,7 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     Response response = compactionResource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true),
         httpRequest
     );
     Assert.assertEquals(200, response.getStatus());
@@ -170,7 +170,7 @@ public class OverlordCompactionResourceTest
   public void test_getClusterConfig()
   {
     final ClusterCompactionConfig clusterConfig =
-        new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ);
+        new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ, true);
     EasyMock.expect(configManager.getClusterCompactionConfig())
             .andReturn(clusterConfig)
             .once();
@@ -248,6 +248,26 @@ public class OverlordCompactionResourceTest
 
     EasyMock.expect(scheduler.getAllCompactionSnapshots())
             .andReturn(Map.of(TestDataSource.WIKI, snapshot)).anyTimes();
+    replayAll();
+
+    final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
+  }
+
+  @Test
+  public void test_getAllCompactionSnapshots_redirectsToCoordinator_ifSchedulerIsDisabled()
+  {
+    useSupervisors.set(false);
+
+    final AutoCompactionSnapshot snapshot =
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
+
+    setupMockRequestForUser("druid");
+    EasyMock.expect(httpRequest.getMethod()).andReturn("GET").once();
+
+    EasyMock.expect(coordinatorClient.getCompactionSnapshots(null))
+            .andReturn(Futures.immediateFuture(new CompactionStatusResponse(List.of(snapshot))));
     replayAll();
 
     final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
@@ -386,7 +406,7 @@ public class OverlordCompactionResourceTest
         new VersionedSupervisorSpec(spec, "2025-01")
     );
 
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId))
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId, null))
             .andReturn(specVersions)
             .anyTimes();
     replayAll();

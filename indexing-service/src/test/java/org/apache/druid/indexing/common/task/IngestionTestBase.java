@@ -87,6 +87,8 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -131,6 +133,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
+  private TaskActionToolbox taskActionToolbox;
   private SegmentsMetadataManager segmentsMetadataManager;
   private GlobalTaskLockbox lockbox;
   private File baseDir;
@@ -138,6 +141,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TestDataSegmentKiller dataSegmentKiller;
   private SegmentMetadataCache segmentMetadataCache;
   private SegmentSchemaCache segmentSchemaCache;
+  private IndexingStateCache indexingStateCache;
   protected File reportsFile;
 
   protected IngestionTestBase()
@@ -163,6 +167,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     connector.createPendingSegmentsTable();
+    connector.createIndexingStatesTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -171,13 +176,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
 
     segmentSchemaCache = new SegmentSchemaCache();
+    indexingStateCache = new IndexingStateCache();
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         createTransactionFactory(),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,
@@ -194,6 +201,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
+    taskActionToolbox = createTaskActionToolbox();
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
@@ -230,7 +238,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public SegmentCacheManager newSegmentLoader(File storageDir)
   {
-    return segmentCacheManagerFactory.manufacturate(storageDir);
+    return segmentCacheManagerFactory.manufacturate(storageDir, true);
   }
 
   public ObjectMapper getObjectMapper()
@@ -278,7 +286,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return dataSegmentKiller;
   }
 
-  public TaskActionToolbox createTaskActionToolbox()
+  private TaskActionToolbox createTaskActionToolbox()
   {
     storageCoordinator.start();
     return new TaskActionToolbox(
@@ -289,6 +297,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         supervisorManager,
         objectMapper
     );
+  }
+
+  public TaskActionToolbox getTaskActionToolbox()
+  {
+    return taskActionToolbox;
   }
 
   public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
@@ -305,8 +318,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .jsonMapper(objectMapper)
         .taskWorkDir(baseDir)
         .indexIO(getIndexIO())
-        .indexMergerV9(testUtils.getIndexMergerV9Factory()
-                                .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .indexMerger(testUtils.getIndexMergerV9Factory()
+                              .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
         .chatHandlerProvider(new NoopChatHandlerProvider())
@@ -330,6 +343,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         segmentSchemaCache,
+        indexingStateCache,
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()
@@ -417,7 +431,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     private TestLocalTaskActionClient(Task task)
     {
-      super(task, taskStorage, createTaskActionToolbox());
+      super(task, taskStorage, getTaskActionToolbox());
     }
 
     @Override
@@ -524,8 +538,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .jsonMapper(objectMapper)
             .taskWorkDir(baseDir)
             .indexIO(getIndexIO())
-            .indexMergerV9(testUtils.getIndexMergerV9Factory()
-                                    .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+            .indexMerger(testUtils.getIndexMergerV9Factory()
+                                  .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
             .taskReportFileWriter(new SingleFileTaskReportFileWriter(taskReportsFile))
             .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
             .chatHandlerProvider(new NoopChatHandlerProvider())

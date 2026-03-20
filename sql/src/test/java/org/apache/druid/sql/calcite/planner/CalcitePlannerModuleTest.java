@@ -191,6 +191,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         sql,
         DruidSqlParser.parse(sql, false).getMainStatement(),
         new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+        Collections.emptySet(),
         Collections.emptyMap(),
         null
     );
@@ -213,6 +214,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            Collections.emptySet(),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
     );
@@ -222,6 +224,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            Collections.emptySet(),
             Collections.emptyMap(),
             null
     );
@@ -232,7 +235,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
 
   private void assertBloat(PlannerContext context, int expectedBloat)
   {
-    Optional<ProjectMergeRule> firstProjectMergeRule = injector.getInstance(CalciteRulesManager.class).baseRuleSet(context).stream()
+    Optional<ProjectMergeRule> firstProjectMergeRule = injector.getInstance(CalciteRulesManager.class).baseRuleSet(context, false).stream()
             .filter(rule -> rule instanceof ProjectMergeRule)
             .map(rule -> (ProjectMergeRule) rule)
             .findAny();

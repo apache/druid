@@ -20,7 +20,10 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
@@ -33,9 +36,13 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class RowsTest extends InitializedNullHandlingTest
 {
@@ -217,5 +224,192 @@ public class RowsTest extends InitializedNullHandlingTest
           ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("for field[" + FIELD_NAME + "]"))
       );
     }
+  }
+
+  @Test
+  public void test_objectToStrings_nullInput()
+  {
+    // Null input should return empty list
+    Assert.assertEquals(Collections.emptyList(), Rows.objectToStrings(null));
+  }
+
+  @Test
+  public void test_objectToStrings_singleString()
+  {
+    Assert.assertEquals(Collections.singletonList("foo"), Rows.objectToStrings("foo"));
+  }
+
+  @Test
+  public void test_objectToStrings_listWithStrings()
+  {
+    Assert.assertEquals(
+        Arrays.asList("a", "b", "c"),
+        Rows.objectToStrings(Arrays.asList("a", "b", "c"))
+    );
+  }
+
+  @Test
+  public void test_objectToStrings_listWithNullValues()
+  {
+    // After the fix, null values in lists are preserved as actual null, not converted to "null" string
+    List<String> result = Rows.objectToStrings(Arrays.asList("a", null, "b"));
+    Assert.assertEquals(3, result.size());
+    Assert.assertEquals("a", result.get(0));
+    Assert.assertNull(result.get(1));
+    Assert.assertEquals("b", result.get(2));
+  }
+
+  @Test
+  public void test_objectToStrings_listWithOnlyNull()
+  {
+    List<String> result = Rows.objectToStrings(Collections.singletonList(null));
+    Assert.assertEquals(1, result.size());
+    Assert.assertNull(result.get(0));
+  }
+
+  @Test
+  public void test_objectToStrings_listWithMultipleNulls()
+  {
+    List<String> result = Rows.objectToStrings(Arrays.asList(null, "a", null, "b", null));
+    Assert.assertEquals(5, result.size());
+    Assert.assertNull(result.get(0));
+    Assert.assertEquals("a", result.get(1));
+    Assert.assertNull(result.get(2));
+    Assert.assertEquals("b", result.get(3));
+    Assert.assertNull(result.get(4));
+  }
+
+  @Test
+  public void test_objectToStrings_arrayWithNullValues()
+  {
+    // Arrays should also preserve null values
+    List<String> result = Rows.objectToStrings(new Object[]{"a", null, "b"});
+    Assert.assertEquals(3, result.size());
+    Assert.assertEquals("a", result.get(0));
+    Assert.assertNull(result.get(1));
+    Assert.assertEquals("b", result.get(2));
+  }
+
+  @Test
+  public void test_objectToStrings_numberConversion()
+  {
+    Assert.assertEquals(Collections.singletonList("123"), Rows.objectToStrings(123));
+    Assert.assertEquals(Collections.singletonList("123.45"), Rows.objectToStrings(123.45));
+  }
+
+  @Test
+  public void test_objectToStrings_byteArrayBase64()
+  {
+    byte[] bytes = new byte[]{1, 2, 3};
+    List<String> result = Rows.objectToStrings(bytes);
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals(StringUtils.encodeBase64String(bytes), result.get(0));
+  }
+
+  @Test
+  public void test_toGroupKey_basicFunctionality()
+  {
+    long timestamp = DateTimes.of("2023-01-01").getMillis();
+    Map<String, Object> event = new HashMap<>();
+    event.put("dim1", "value1");
+    event.put("dim2", Arrays.asList("a", "b"));
+
+    InputRow inputRow = new MapBasedInputRow(
+        timestamp,
+        Arrays.asList("dim1", "dim2"),
+        event
+    );
+
+    List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
+    Assert.assertEquals(2, groupKey.size());
+    Assert.assertEquals(timestamp, groupKey.get(0));
+
+    @SuppressWarnings("unchecked")
+    Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
+    Assert.assertNotNull(dimensions);
+  }
+
+  @Test
+  public void test_toGroupKey_withNullInMultiValueDimension()
+  {
+    // After the fix, toGroupKey should handle null values in multi-value dimensions
+    long timestamp = DateTimes.of("2023-01-01").getMillis();
+    Map<String, Object> event = new HashMap<>();
+    event.put("dim1", Arrays.asList("a", null, "b"));
+
+    InputRow inputRow = new MapBasedInputRow(
+        timestamp,
+        Collections.singletonList("dim1"),
+        event
+    );
+
+    // This should not throw NPE after the fix
+    List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
+    Assert.assertEquals(2, groupKey.size());
+    Assert.assertEquals(timestamp, groupKey.get(0));
+
+    @SuppressWarnings("unchecked")
+    Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
+    Set<String> dim1Values = dimensions.get("dim1");
+
+    // The set should contain null, "a", "b" (with null sorted first due to naturalNullsFirst comparator)
+    Assert.assertEquals(3, dim1Values.size());
+    Assert.assertTrue(dim1Values.contains(null));
+    Assert.assertTrue(dim1Values.contains("a"));
+    Assert.assertTrue(dim1Values.contains("b"));
+  }
+
+  @Test
+  public void test_toGroupKey_withOnlyNullDimension()
+  {
+    long timestamp = DateTimes.of("2023-01-01").getMillis();
+    Map<String, Object> event = new HashMap<>();
+    event.put("dim1", Collections.singletonList(null));
+
+    InputRow inputRow = new MapBasedInputRow(
+        timestamp,
+        Collections.singletonList("dim1"),
+        event
+    );
+
+    List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
+    Assert.assertEquals(2, groupKey.size());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
+    Set<String> dim1Values = dimensions.get("dim1");
+
+    Assert.assertEquals(1, dim1Values.size());
+    Assert.assertTrue(dim1Values.contains(null));
+  }
+
+  @Test
+  public void test_toGroupKey_nullsSortedFirst()
+  {
+    // Verify that nulls are sorted first in the TreeSet
+    long timestamp = DateTimes.of("2023-01-01").getMillis();
+    Map<String, Object> event = new HashMap<>();
+    event.put("dim1", Arrays.asList("c", null, "a", "b"));
+
+    InputRow inputRow = new MapBasedInputRow(
+        timestamp,
+        Collections.singletonList("dim1"),
+        event
+    );
+
+    List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
+    Set<String> dim1Values = dimensions.get("dim1");
+
+    // Convert to list to check ordering
+    List<String> valuesList = new ArrayList<>(dim1Values);
+    Assert.assertEquals(4, valuesList.size());
+    // Null should be first due to naturalNullsFirst comparator
+    Assert.assertNull(valuesList.get(0));
+    Assert.assertEquals("a", valuesList.get(1));
+    Assert.assertEquals("b", valuesList.get(2));
+    Assert.assertEquals("c", valuesList.get(3));
   }
 }

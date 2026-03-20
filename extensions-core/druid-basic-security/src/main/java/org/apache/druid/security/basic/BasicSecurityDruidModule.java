@@ -207,7 +207,7 @@ public class BasicSecurityDruidModule implements DruidModule
         NoopBasicAuthorizerCacheNotifier.class
     );
   }
-  
+
   @Override
   public List<? extends Module> getJacksonModules()
   {

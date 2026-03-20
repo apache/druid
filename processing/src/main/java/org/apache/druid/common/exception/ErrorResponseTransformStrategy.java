@@ -21,14 +21,17 @@ package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 
 import javax.validation.constraints.NotNull;
+import java.util.Optional;
 import java.util.function.Function;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoErrorResponseTransformStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoErrorResponseTransformStrategy.class),
-    @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class)
+    @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class),
+    @JsonSubTypes.Type(name = "persona", value = PersonaBasedErrorTransformStrategy.class),
 })
 public interface ErrorResponseTransformStrategy
 {
@@ -39,6 +42,17 @@ public interface ErrorResponseTransformStrategy
   default Exception transformIfNeeded(SanitizableException exception)
   {
     return exception.sanitize(getErrorMessageTransformFunction());
+  }
+
+  /**
+   * For a given {@link DruidException} apply the transformation strategy and return a sanitized Exception
+   * if the transformation stategy was applied. This call does not log the exception.
+   * It is the callers responsibility to do so. Returns Optional.empty() if no transformation was applied.
+   * The errorId is provided to be used in the transformed Exception if needed.
+   */
+  default Optional<Exception> maybeTransform(DruidException exception, Optional<String> errorId)
+  {
+    return Optional.empty();
   }
 
   /**

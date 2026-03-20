@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
@@ -54,9 +55,7 @@ import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorF
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -253,14 +252,17 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                             .setDataSource(CalciteTests.DATASOURCE1)
                                                             .setInterval(querySegmentSpec(Filtration.eternity()))
                                                             .setGranularity(Granularities.ALL)
+                                                            .setVirtualColumns(
+                                                                expressionVirtualColumn(
+                                                                    "v0",
+                                                                    "substring(\"dim1\", 0, 1)",
+                                                                    ColumnType.STRING
+                                                                )
+                                                            )
                                                             .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
                                                             .setDimensions(
                                                                 dimensions(
-                                                                    new ExtractionDimensionSpec(
-                                                                        "dim1",
-                                                                        "d0",
-                                                                        new SubstringDimExtractionFn(0, 1)
-                                                                    )
+                                                                    new DefaultDimensionSpec("v0", "d0")
                                                                 )
                                                             )
                                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -447,7 +449,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
     cannotVectorizeUnlessFallback();
     testQuery(
-        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
+        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x), MIN(x)\n"
         + "FROM (\n"
         + "    SELECT\n"
         + "        FLOOR(__time to hour) as \"date\",\n"
@@ -479,11 +481,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .addDimension(new DefaultDimensionSpec("v0", "_d0"))
                         .addAggregator(new LongSumAggregatorFactory("_a0", "a0"))
+                        .addAggregator(new LongMinAggregatorFactory("_a1", "a0"))
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"2000-01", 3L},
-            new Object[]{"2001-01", 3L}
+            new Object[]{"2000-01", 3L, 1L},
+            new Object[]{"2001-01", 3L, 1L}
         )
     );
   }
@@ -1610,7 +1613,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
 
       final String datasource1 = "dsMissingCol";
@@ -1638,7 +1644,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
               ))
               .collect(Collectors.toList());
       final QueryableIndex queryableIndex1 = IndexBuilder
-          .create()
+          .create(jsonMapper)
           .tmpDir(new File(tmpFolder, datasource1))
           .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(new IncrementalIndexSchema.Builder()
@@ -1696,7 +1702,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           .rows(rows2)
           .buildMMappedIndex();
 
-      super.addSegmentsToWalker(walker);
+      super.addSegmentsToWalker(walker, jsonMapper);
       walker.add(
           DataSegment.builder()
               .dataSource(datasource1)

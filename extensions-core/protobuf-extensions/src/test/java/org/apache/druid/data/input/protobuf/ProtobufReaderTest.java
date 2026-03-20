@@ -30,8 +30,8 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -42,7 +42,7 @@ public class ProtobufReaderTest
   private JSONPathSpec flattenSpec;
   private FileBasedProtobufBytesDecoder decoder;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
@@ -69,7 +69,7 @@ public class ProtobufReaderTest
         dimensionsSpec,
         null
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
   }
 
   @Test
@@ -79,13 +79,13 @@ public class ProtobufReaderTest
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputFormatTest.buildNestedData(dateTime);
 
-    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+    ByteBuffer buffer = ProtobufInputFormatTest.toByteBuffer(event);
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+    ProtobufInputFormatTest.verifyNestedData(row, dateTime);
   }
 
   @Test
@@ -95,13 +95,13 @@ public class ProtobufReaderTest
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatData(dateTime);
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputFormatTest.buildFlatData(dateTime);
 
-    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+    ByteBuffer buffer = ProtobufInputFormatTest.toByteBuffer(event);
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatData(row, dateTime, false);
+    ProtobufInputFormatTest.verifyFlatData(row, dateTime, false);
   }
 
   @Test
@@ -111,13 +111,13 @@ public class ProtobufReaderTest
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputFormatTest.buildFlatDataWithComplexTimestamp(dateTime);
 
-    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+    ByteBuffer buffer = ProtobufInputFormatTest.toByteBuffer(event);
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
+    ProtobufInputFormatTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
   }
 
   @Test
@@ -132,12 +132,12 @@ public class ProtobufReaderTest
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputFormatTest.buildFlatDataWithComplexTimestamp(dateTime);
 
-    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+    ByteBuffer buffer = ProtobufInputFormatTest.toByteBuffer(event);
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
+    ProtobufInputFormatTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
   }
 }

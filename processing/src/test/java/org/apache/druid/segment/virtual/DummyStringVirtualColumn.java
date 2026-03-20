@@ -33,12 +33,12 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -222,7 +222,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
     return new byte[0];
   }
 
-  private StringUtf8DictionaryEncodedColumn toStringDictionaryEncodedColumn(BaseColumn column)
+  private StringUtf8DictionaryEncodedColumn toStringDictionaryEncodedColumn(SelectableColumn column)
   {
     if (!(column instanceof StringUtf8DictionaryEncodedColumn)) {
       throw new IAE("I can only work with StringDictionaryEncodedColumn");

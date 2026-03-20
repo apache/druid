@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +34,14 @@ public interface MetadataSupervisorManager
 
   Map<String, List<VersionedSupervisorSpec>> getAll();
 
-  List<VersionedSupervisorSpec> getAllForId(String id);
+  /**
+   * Get supervisor history for a given supervisor ID with an optional limit
+   *
+   * @param id the supervisor ID
+   * @param limit maximum number of history entries to return (null for all entries)
+   * @return list of versioned supervisor specs for the given ID
+   */
+  List<VersionedSupervisorSpec> getAllForId(String id, @Nullable Integer limit);
 
   /**
    * Return latest supervisors (both active and terminated)

@@ -20,9 +20,11 @@
 package org.apache.druid.client.broker;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.List;
@@ -38,6 +40,11 @@ import java.util.List;
  */
 public interface BrokerClient
 {
+  /**
+   * Submits the given query to the {@code /druid/v2} endpoint of a Broker.
+   */
+  ListenableFuture<String> submitNativeQuery(Query<?> query);
+
   /**
    * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint, {@code /druid/v2/sql/}.
    */
@@ -59,4 +66,28 @@ public interface BrokerClient
    * Updates the broker with the given {@link CoordinatorDynamicConfig}.
    */
   ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config);
+
+  /**
+   * Updates the broker with the given {@link BrokerDynamicConfig}.
+   */
+  ListenableFuture<Boolean> updateBrokerDynamicConfig(BrokerDynamicConfig config);
+
+  /**
+   * Gets the report for a SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId the SQL query ID
+   * @param selfOnly   if true, only check the local broker; if false, check all brokers
+   *
+   * @return JSON response from the report API
+   */
+  ListenableFuture<String> getQueryReport(String sqlQueryId, boolean selfOnly);
+
+  /**
+   * Cancels a SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId the SQL query ID to cancel
+   *
+   * @return true if the cancellation was accepted
+   */
+  ListenableFuture<Boolean> cancelSqlQuery(String sqlQueryId);
 }

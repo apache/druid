@@ -27,7 +27,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -68,7 +67,7 @@ public class FrameProcessorExecutor
 {
   private static final Logger log = new Logger(FrameProcessorExecutor.class);
 
-  private final ListeningExecutorService exec;
+  private final ExecutorService exec;
 
   private final Object lock = new Object();
 
@@ -97,7 +96,7 @@ public class FrameProcessorExecutor
   @GuardedBy("lock")
   private final Map<FrameProcessor<?>, Thread> runningProcessors = new IdentityHashMap<>();
 
-  public FrameProcessorExecutor(final ListeningExecutorService exec)
+  public FrameProcessorExecutor(final ExecutorService exec)
   {
     this.exec = exec;
   }
@@ -402,12 +401,7 @@ public class FrameProcessorExecutor
             }
 
             if (didRemoveFromCancelableProcessors) {
-              try {
-                cancel(Collections.singleton(processor));
-              }
-              catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-              }
+              cancel(Collections.singleton(processor));
             }
           }
         },
@@ -432,14 +426,14 @@ public class FrameProcessorExecutor
    * @param cancellationId           optional cancellation id for {@link #runFully}.
    */
   public <T, R> ListenableFuture<R> runAllFully(
-      final ProcessorManager<T, R> processorManager,
+      final ProcessorManager<T, ? extends R> processorManager,
       final int maxOutstandingProcessors,
       final Bouncer bouncer,
       @Nullable final String cancellationId
   )
   {
     // Logic resides in a separate class in order to keep this one simpler.
-    return new RunAllFullyWidget<>(
+    return new RunAllFullyWidget<T, R>(
         processorManager,
         this,
         maxOutstandingProcessors,
@@ -464,7 +458,7 @@ public class FrameProcessorExecutor
    * Deregisters a cancellationId and cancels any currently-running processors associated with that cancellationId.
    * Waits for any canceled processors to exit before returning.
    */
-  public void cancel(final String cancellationId) throws InterruptedException
+  public void cancel(final String cancellationId)
   {
     Preconditions.checkNotNull(cancellationId, "cancellationId");
 
@@ -518,7 +512,7 @@ public class FrameProcessorExecutor
   /**
    * Returns the underlying executor service used by this executor.
    */
-  ListeningExecutorService getExecutorService()
+  ExecutorService getExecutorService()
   {
     return exec;
   }
@@ -577,8 +571,9 @@ public class FrameProcessorExecutor
    * Logs (but does not throw) exceptions encountered while running {@link FrameProcessor#cleanup()}.
    */
   private void cancel(final Set<FrameProcessor<?>> processorsToCancel)
-      throws InterruptedException
   {
+    boolean interrupted = false;
+
     synchronized (lock) {
       for (final FrameProcessor<?> processor : processorsToCancel) {
         final Thread processorThread = runningProcessors.get(processor);
@@ -591,7 +586,14 @@ public class FrameProcessorExecutor
 
       // Wait for all running processors to stop running. Then clean them up outside the critical section.
       while (anyIsRunning(processorsToCancel)) {
-        lock.wait();
+        // If lock.wait() is interrupted, remember that but keep waiting. This method needs to proceed onwards
+        // even when interrupted, to ensure processor cleanup happens.
+        try {
+          lock.wait();
+        }
+        catch (InterruptedException e) {
+          interrupted = true;
+        }
       }
     }
 
@@ -615,6 +617,10 @@ public class FrameProcessorExecutor
       catch (Throwable e) {
         log.noStackTrace().warn(e, "Exception encountered while canceling processor [%s]", processor);
       }
+    }
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
     }
   }
 

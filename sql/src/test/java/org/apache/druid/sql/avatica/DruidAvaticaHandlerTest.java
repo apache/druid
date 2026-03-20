@@ -39,8 +39,9 @@ import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
@@ -56,6 +57,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -90,6 +92,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
@@ -253,7 +256,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   // Default implementation is for JSON to allow debugging of tests.
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(
         druidMeta,
@@ -269,6 +272,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(new LifecycleModule())
         .addModule(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
@@ -278,6 +282,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
               binder.install(new PolicyModule());
+              binder.bind(AuthConfig.class)
+                    .toInstance(AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build());
+              binder.bind(DefaultQueryConfig.class)
+                    .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
@@ -352,6 +360,20 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ),
           rows
       );
+    }
+  }
+
+  @Test
+  public void testForbiddenContextKey() throws SQLException
+  {
+    final Properties propertiesSetForbiddenKey = new Properties();
+    propertiesSetForbiddenKey.setProperty("user", "regularUserLA");
+    propertiesSetForbiddenKey.setProperty("forbidden-key", "val");
+    try (Statement stmt = DriverManager.getConnection(server.url, propertiesSetForbiddenKey).createStatement()) {
+      AvaticaSqlException e = Assert.assertThrows(AvaticaSqlException.class, () -> {
+        stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      });
+      Assert.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
     }
   }
 
@@ -477,7 +499,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of(
                   "PLAN",
                   StringUtils.format(
-                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
+                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"forbidden-key\":\"system-default-value\",\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
@@ -551,6 +573,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
 
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
@@ -653,6 +681,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -1095,6 +1129,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1155,6 +1190,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1317,6 +1353,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testParameterBinding() throws SQLException
   {
+    testRequestLogger.clear();
     try (PreparedStatement statement = client.prepareStatement(
         "SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?")) {
       statement.setString(1, "abc");
@@ -1328,6 +1365,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of("cnt", 2L)
           ),
           rows
+      );
+      Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+      Assert.assertEquals(
+          List.of(
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
+          ),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
       );
     }
   }
@@ -1709,6 +1754,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final CountDownLatch resultsLatch = new CountDownLatch(1);
     DruidMeta druidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,

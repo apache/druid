@@ -60,8 +60,8 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
     SupervisorStatisticsTableRow[]
   >({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      const resp = await Api.instance.get<SupervisorStats>(statsEndpoint, { cancelToken });
+    processQuery: async (_, signal) => {
+      const resp = await Api.instance.get<SupervisorStats>(statsEndpoint, { signal });
       return normalizeSupervisorStatisticsResults(resp.data);
     },
   });

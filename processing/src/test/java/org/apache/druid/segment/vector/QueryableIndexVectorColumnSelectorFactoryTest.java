@@ -148,7 +148,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
                         .buildMMappedIndex();
 
     closer.register(index);
-    theCache = new ColumnCache(index, closer);
+    theCache = new ColumnCache(index, VirtualColumns.EMPTY, closer);
   }
 
   @After
@@ -162,7 +162,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY
@@ -204,7 +203,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY
@@ -256,7 +254,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY

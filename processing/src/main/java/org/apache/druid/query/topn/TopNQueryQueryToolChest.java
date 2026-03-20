@@ -287,7 +287,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       );
 
       @Override
-      public boolean isCacheable(TopNQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(TopNQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         return true;
       }

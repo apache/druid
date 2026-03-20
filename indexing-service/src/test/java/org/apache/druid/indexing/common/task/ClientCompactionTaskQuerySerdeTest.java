@@ -97,7 +97,7 @@ public class ClientCompactionTaskQuerySerdeTest
       new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true);
   private static final AggregatorFactory[] METRICS_SPEC = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
   private static final CompactionTransformSpec CLIENT_COMPACTION_TASK_TRANSFORM_SPEC =
-      new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+      new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
   private static final DynamicPartitionsSpec DYNAMIC_PARTITIONS_SPEC = new DynamicPartitionsSpec(100, 30000L);
   private static final SegmentsSplitHintSpec SEGMENTS_SPLIT_HINT_SPEC = new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10);
 
@@ -193,13 +193,14 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     Assert.assertEquals(query.getId(), task.getId());
     Assert.assertEquals(query.getDataSource(), task.getDataSource());
+    Assert.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
     Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
     Assert.assertEquals(
         query.getIoConfig().getInputSpec().getInterval(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getInterval()
     );
     Assert.assertEquals(
-        query.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds(),
+        ((ClientCompactionIntervalSpec) query.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
     Assert.assertEquals(

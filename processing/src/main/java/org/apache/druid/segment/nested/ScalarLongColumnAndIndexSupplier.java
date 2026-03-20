@@ -33,7 +33,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
@@ -55,6 +55,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.DictionaryRangeScanningBitmapIndex;
@@ -102,7 +103,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
 
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
 
         final ByteBuffer encodedValuesBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -646,13 +647,33 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     public String getValue(int index)
     {
       final Long value = dictionary.get(index);
-      return value == null ? null : String.valueOf(value);
+      return Evals.asString(value);
     }
 
     @Override
     public BitmapFactory getBitmapFactory()
     {
       return bitmapFactory;
+    }
+
+    @Override
+    public Iterator<String> getValueIterator()
+    {
+      final Iterator<Long> delegate = dictionary.iterator();
+      return new Iterator<>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return delegate.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          return Evals.asString(delegate.next());
+        }
+      };
     }
   }
 }

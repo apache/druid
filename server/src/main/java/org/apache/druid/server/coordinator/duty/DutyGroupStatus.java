@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -37,14 +38,15 @@ public class DutyGroupStatus
   private final long avgRuntimeMillis;
   private final long avgRunGapMillis;
 
+  @JsonCreator
   public DutyGroupStatus(
-      String name,
-      Duration period,
-      List<String> dutyNames,
-      DateTime lastRunStart,
-      DateTime lastRunEnd,
-      long avgRuntimeMillis,
-      long avgRunGapMillis
+      @JsonProperty("name") String name,
+      @JsonProperty("period") Duration period,
+      @JsonProperty("dutyNames") List<String> dutyNames,
+      @JsonProperty("lastRunStart") DateTime lastRunStart,
+      @JsonProperty("lastRunEnd") DateTime lastRunEnd,
+      @JsonProperty("avgRuntimeMillis") long avgRuntimeMillis,
+      @JsonProperty("avgRunGapMillis") long avgRunGapMillis
   )
   {
     this.name = name;

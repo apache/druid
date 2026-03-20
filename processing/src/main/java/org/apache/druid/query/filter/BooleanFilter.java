@@ -19,8 +19,13 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 public interface BooleanFilter extends Filter
@@ -42,4 +47,11 @@ public interface BooleanFilter extends Filter
     }
     return allColumns;
   }
+
+  /**
+   * Specialized alternative to {@link #getBitmapColumnIndex(ColumnIndexSelector)} to allow reuse any precomputed
+   * {@link BitmapColumnIndex} created as part of a {@link FilterBundle.Builder}
+   */
+  @Nullable
+  BitmapColumnIndex getBitmapColumnIndex(BitmapFactory bitmapFactory, List<FilterBundle.Builder> childBuilders);
 }

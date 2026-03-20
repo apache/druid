@@ -32,6 +32,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -60,6 +61,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
+import org.apache.zookeeper.Watcher;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -81,6 +83,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -392,7 +395,7 @@ public class RemoteTaskRunnerTest
   public void testStatusRemoved() throws Exception
   {
     doSetup();
-
+    CountDownLatch deletionLatch = new CountDownLatch(1);
     ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
@@ -401,7 +404,16 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals(task.getId()));
 
-    cf.delete().forPath(JOINER.join(STATUS_PATH, task.getId()));
+    String taskStatusPath = JOINER.join(STATUS_PATH, task.getId());
+    cf.checkExists().usingWatcher((CuratorWatcher) event -> {
+      if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
+        deletionLatch.countDown();
+      }
+    }).forPath(taskStatusPath);
+
+    cf.delete().forPath(taskStatusPath);
+
+    Assert.assertTrue("Deletion event not received", deletionLatch.await(5, TimeUnit.SECONDS));
 
     TaskStatus status = future.get();
 

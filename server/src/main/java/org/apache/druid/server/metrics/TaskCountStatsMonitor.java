@@ -20,6 +20,8 @@
 package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -30,6 +32,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
 
+@LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class TaskCountStatsMonitor extends AbstractMonitor
 {
   private final TaskCountStatsProvider statsProvider;

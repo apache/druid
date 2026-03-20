@@ -155,7 +155,7 @@ module.exports={
     "image": "img/druid_nav.png",
     "footer": {
       "links": [],
-      "copyright": "Copyright © 2025 Apache Software Foundation",
+      "copyright": "Copyright © 2026 Apache Software Foundation",
       "logo": {
         "src": "img/favicon.png"
       }

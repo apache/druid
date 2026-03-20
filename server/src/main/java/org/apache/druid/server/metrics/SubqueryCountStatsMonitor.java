@@ -21,6 +21,8 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -31,6 +33,7 @@ import java.util.Map;
 /**
  * Monitors and emits the metrics corresponding to the subqueries and their materialization.
  */
+@LoadScope(roles = NodeRole.BROKER_JSON_NAME)
 public class SubqueryCountStatsMonitor extends AbstractMonitor
 {
 

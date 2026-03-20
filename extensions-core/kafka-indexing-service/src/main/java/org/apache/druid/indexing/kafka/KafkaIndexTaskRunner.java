@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -46,7 +45,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -65,15 +63,10 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
 
   KafkaIndexTaskRunner(
       KafkaIndexTask task,
-      @Nullable InputRowParser<ByteBuffer> parser,
       LockGranularity lockGranularityToUse
   )
   {
-    super(
-        task,
-        parser,
-        lockGranularityToUse
-    );
+    super(task, lockGranularityToUse);
     this.task = task;
   }
 

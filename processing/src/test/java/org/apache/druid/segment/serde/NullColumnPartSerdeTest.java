@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -82,7 +83,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
     partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
-    ColumnHolder holder = builder.build();
+    BaseColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
     Assert.assertTrue(theColumn instanceof DictionaryEncodedColumn);
@@ -104,7 +105,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
     partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
-    ColumnHolder holder = builder.build();
+    BaseColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
     Assert.assertTrue(theColumn instanceof DictionaryEncodedColumn);
@@ -132,7 +133,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
     partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
-    ColumnHolder holder = builder.build();
+    BaseColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
 
@@ -151,7 +152,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
     partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
-    ColumnHolder holder = builder.build();
+    BaseColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
 
@@ -168,7 +169,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
     partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
-    ColumnHolder holder = builder.build();
+    BaseColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
     ReadableVectorOffset vectorOffset = new NoFilterVectorOffset(8, 0, 10);

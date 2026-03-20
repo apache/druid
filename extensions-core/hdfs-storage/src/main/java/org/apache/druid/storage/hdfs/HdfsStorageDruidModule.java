@@ -113,7 +113,7 @@ public class HdfsStorageDruidModule implements DruidModule
     binder.bind(Configuration.class).annotatedWith(Hdfs.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
 
-    Binders.taskLogsBinder(binder).addBinding("hdfs").to(HdfsTaskLogs.class);
+    Binders.bindTaskLogs(binder, SCHEME, HdfsTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", HdfsTaskLogsConfig.class);
     binder.bind(HdfsTaskLogs.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HdfsKerberosConfig.class);
