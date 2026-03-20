@@ -22,7 +22,6 @@ package org.apache.druid.indexing.rabbitstream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -40,7 +39,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -57,15 +55,10 @@ public class RabbitStreamIndexTaskRunner
 
   RabbitStreamIndexTaskRunner(
       RabbitStreamIndexTask task,
-      @Nullable InputRowParser<ByteBuffer> parser,
       LockGranularity lockGranularityToUse
   )
   {
-    super(
-        task,
-        parser,
-        lockGranularityToUse
-    );
+    super(task, lockGranularityToUse);
     this.task = task;
   }
 

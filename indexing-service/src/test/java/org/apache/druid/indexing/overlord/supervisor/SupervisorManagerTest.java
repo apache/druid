@@ -40,9 +40,11 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.metrics.SupervisorStatsProvider;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -57,10 +59,12 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
+import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
@@ -350,6 +354,124 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertEquals(report, manager.getSupervisorStatus("id1").get());
 
     verifyAll();
+  }
+
+  @Test
+  public void testGetSupervisorStatsWithNoSupervisors()
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    replayAll();
+
+    manager.start();
+
+    Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
+    Assert.assertTrue(stats.isEmpty());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testGetSupervisorStatsWithActiveSupervisors()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING);
+    replayAll();
+
+    manager.start();
+
+    Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
+    Assert.assertEquals(1, stats.size());
+
+    SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
+    Assert.assertEquals("id1", stat.getSupervisorId());
+    Assert.assertEquals("TestSupervisorSpec", stat.getType());
+    Assert.assertEquals("RUNNING", stat.getState());
+    Assert.assertEquals("id1", stat.getDataSource());
+    Assert.assertEquals("", stat.getStream());
+    Assert.assertEquals("RUNNING", stat.getDetailedState());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testGetSupervisorStatsWithNullState()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.getState()).andReturn(null);
+    replayAll();
+
+    manager.start();
+
+    Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
+    Assert.assertEquals(1, stats.size());
+
+    SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
+    Assert.assertEquals("id1", stat.getSupervisorId());
+    Assert.assertEquals("TestSupervisorSpec", stat.getType());
+    Assert.assertEquals("UNKNOWN", stat.getState());
+    Assert.assertEquals("UNKNOWN", stat.getDetailedState());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testGetSupervisorStatsSkipsEntryWithNullSupervisor() throws Exception
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    replayAll();
+
+    manager.start();
+
+    final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisorsMap = getSupervisorsMap();
+    supervisorsMap.put("id1", new Pair<>(null, new TestSupervisorSpec("id1", supervisor1)));
+
+    final Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
+    Assert.assertTrue(stats.isEmpty());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testGetSupervisorStatsSkipsNullEntryButRetainsValid() throws Exception
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    EasyMock.expect(supervisor2.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING);
+    replayAll();
+
+    manager.start();
+
+    final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisorsMap = getSupervisorsMap();
+    supervisorsMap.put("id1", new Pair<>(null, new TestSupervisorSpec("id1", supervisor1)));
+    supervisorsMap.put("id2", new Pair<>(supervisor2, new TestSupervisorSpec("id2", supervisor2)));
+
+    final Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
+    Assert.assertEquals(1, stats.size());
+
+    final SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
+    Assert.assertEquals("id2", stat.getSupervisorId());
+    Assert.assertEquals("RUNNING", stat.getState());
+
+    verifyAll();
+  }
+
+  @SuppressWarnings("unchecked")
+  private ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> getSupervisorsMap() throws Exception
+  {
+    final Field field = SupervisorManager.class.getDeclaredField("supervisors");
+    field.setAccessible(true);
+    return (ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>>) field.get(manager);
   }
 
   @Test
@@ -1012,7 +1134,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     @Override
     public List<String> getDataSources()
     {
-      return new ArrayList<>();
+      return Collections.singletonList(id);
     }
   }
 }

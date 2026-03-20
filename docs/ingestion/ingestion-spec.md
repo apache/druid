@@ -24,7 +24,7 @@ description: Reference for the configuration options in the ingestion spec.
   ~ under the License.
   -->
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). Other than with SQL-based ingestion, use an _ingestion spec_ to configure your ingestion.
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch uses a one-time [task](tasks.md). Other than with SQL-based ingestion, use an _ingestion spec_ to configure your ingestion.
 
 Ingestion specs consists of three main components:
 
@@ -102,10 +102,6 @@ available in Druid's [web console](../operations/web-console.md). Druid's visual
 
 ## `dataSchema`
 
-:::info
- The `dataSchema` spec has been changed in 0.17.0. The new spec is supported by all ingestion methods
-except for _Hadoop_ ingestion. See the [Legacy `dataSchema` spec](#legacy-dataschema-spec) for the old spec.
-:::
 
 The `dataSchema` is a holder for the following components:
 
@@ -247,6 +243,7 @@ Dimension objects can have the following components:
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
 | multiValueHandling | For `string` typed dimensions, specifies the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `array` (ingest string arrays as-is), `sorted_array` (sort string arrays during ingestion), and `sorted_set` (sort and de-duplicate string arrays during ingestion). This parameter is ignored for types other than `string`. | `sorted_array` |
+| maxStringLength | For `string` typed dimensions, the maximum number of characters to store per value. Longer values are truncated during ingestion. Does not apply to multi-value string dimensions. Set to 0 to disable. Overrides the global [`druid.indexing.formats.maxStringLength`](../configuration/index.md#additional-peon-configuration) property. | `0` (no truncation) |
 
 #### Inclusions and exclusions
 
@@ -442,11 +439,6 @@ Projections you define become a dimension for your datasource. To remove a proje
 
 ### Legacy `dataSchema` spec
 
-:::info
- The `dataSchema` spec has been changed in 0.17.0. The new spec is supported by all ingestion methods
-except for _Hadoop_ ingestion. See [`dataSchema`](#dataschema) for the new spec.
-:::
-
 The legacy `dataSchema` spec has below two more components in addition to the ones listed in the [`dataSchema`](#dataschema) section above.
 
 - [input row parser](#parser-deprecated), [flattening of nested data](#flattenspec) (if needed)
@@ -454,8 +446,8 @@ The legacy `dataSchema` spec has below two more components in addition to the on
 #### `parser` (Deprecated)
 
 In legacy `dataSchema`, the `parser` is located in the `dataSchema` → `parser` and is responsible for configuring a wide variety of
-items related to parsing input records. The `parser` is deprecated and it is highly recommended to use `inputFormat` instead.
-For details about `inputFormat` and supported `parser` types, see the ["Data formats" page](data-formats.md).
+items related to parsing input records. The `parser` is only supported by Hadoop ingestion, and is deprecated.
+For details about supported `parser` types, see the ["Data formats" page](data-formats.md).
 
 For details about major components of the `parseSpec`, refer to their subsections:
 
@@ -501,8 +493,7 @@ See [Flatten spec](./data-formats.md#flattenspec) for more details.
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
 filesystem, or any other supported source system. The `inputFormat` property applies to all
-[ingestion method](./index.md#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
-uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
+[ingestion method](./index.md#ingestion-methods).
 The rest of `ioConfig` is specific to each individual ingestion method.
 An example `ioConfig` to read JSON data is:
 
@@ -527,13 +518,13 @@ The following table lists the common tuning properties shared among ingestion me
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
+|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `kafka`, and `kinesis`.||
 |maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
 |maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), and [Native batch](native-batch.md#tuningconfig).||
 
 The following example shows a `tuningConfig` object that sets all of the shared common properties to their defaults:
 

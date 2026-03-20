@@ -94,9 +94,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,
@@ -111,9 +109,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim2, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim2, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,
@@ -128,9 +124,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,

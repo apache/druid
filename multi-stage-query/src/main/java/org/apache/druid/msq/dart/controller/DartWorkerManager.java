@@ -59,6 +59,7 @@ public class DartWorkerManager implements WorkerManager
   private static final Logger log = new Logger(DartWorkerManager.class);
 
   private final List<String> workerIds;
+  private final List<String> workerDescs;
   private final DartWorkerClient workerClient;
   private final Object2IntMap<String> workerIdToNumber;
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
@@ -73,10 +74,12 @@ public class DartWorkerManager implements WorkerManager
 
   public DartWorkerManager(
       final List<String> workerIds,
+      final List<String> workerDescs,
       final DartWorkerClient workerClient
   )
   {
     this.workerIds = workerIds;
+    this.workerDescs = workerDescs;
     this.workerClient = workerClient;
     this.workerIdToNumber = new Object2IntOpenHashMap<>();
     this.workerIdToNumber.defaultReturnValue(UNKNOWN_WORKER_NUMBER);
@@ -158,7 +161,7 @@ public class DartWorkerManager implements WorkerManager
     final Int2ObjectMap<List<WorkerStats>> retVal = new Int2ObjectAVLTreeMap<>();
 
     for (int i = 0; i < workerIds.size(); i++) {
-      retVal.put(i, Collections.singletonList(new WorkerStats(workerIds.get(i), TaskState.RUNNING, -1, -1)));
+      retVal.put(i, Collections.singletonList(new WorkerStats(workerIds.get(i), workerDescs.get(i), TaskState.RUNNING, -1, -1)));
     }
 
     return retVal;

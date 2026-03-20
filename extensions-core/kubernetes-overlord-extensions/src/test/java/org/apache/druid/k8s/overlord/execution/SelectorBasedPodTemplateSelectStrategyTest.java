@@ -30,9 +30,9 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,7 +44,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
 {
   private Map<String, Supplier<PodTemplate>> templates;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     templates = ImmutableMap.of(
@@ -87,10 +87,10 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     );
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void shouldThrowNullPointerExceptionWhenSelectorsAreNull()
   {
-    new SelectorBasedPodTemplateSelectStrategy(null);
+    Assertions.assertThrows(NullPointerException.class, () -> new SelectorBasedPodTemplateSelectStrategy(null));
   }
 
   @Test
@@ -100,8 +100,8 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(emptySelectors);
     Task task = NoopTask.create();
     PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
-    Assert.assertEquals("base", podTemplateWithName.getName());
-    Assert.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
+    Assertions.assertEquals("base", podTemplateWithName.getName());
+    Assertions.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
 
   }
 
@@ -113,8 +113,8 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
     PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
-    Assert.assertEquals("base", podTemplateWithName.getName());
-    Assert.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
+    Assertions.assertEquals("base", podTemplateWithName.getName());
+    Assertions.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
   }
 
   @Test
@@ -132,8 +132,8 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
     PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
-    Assert.assertEquals("match", podTemplateWithName.getName());
-    Assert.assertEquals("match", podTemplateWithName.getPodTemplate().getMetadata().getName());
+    Assertions.assertEquals("match", podTemplateWithName.getName());
+    Assertions.assertEquals("match", podTemplateWithName.getPodTemplate().getMetadata().getName());
   }
 
   @Test
@@ -157,7 +157,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
         objectMapper.writeValueAsBytes(strategy),
         SelectorBasedPodTemplateSelectStrategy.class
     );
-    Assert.assertEquals(strategy, strategy2);
+    Assertions.assertEquals(strategy, strategy2);
   }
 
   static class MockSelector extends Selector

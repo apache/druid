@@ -28,9 +28,9 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
-import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
+import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -94,7 +94,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
-      final CompactionCandidateSearchPolicy.Eligibility eligibility =
+      final Eligibility eligibility =
           params.getClusterCompactionConfig()
                 .getCompactionPolicy()
                 .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
@@ -126,7 +126,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       );
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
           finalCandidate,
-          eligibility.getMode(),
+          eligibility,
           finalConfig,
           engine,
           indexingStateFingerprint,
@@ -138,7 +138,8 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
               finalCandidate,
               CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
               indexingStateFingerprint,
-              compactionState
+              compactionState,
+              eligibility
           )
       );
     }

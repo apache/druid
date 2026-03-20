@@ -58,12 +58,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testTest1() throws IOException
   {
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("col1", "col2"))),
         new OrcInputFormat(null, null, new Configuration()),
         "example/test_1.orc"
@@ -79,7 +78,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testTest2() throws IOException
   {
@@ -92,7 +90,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(null),
         inputFormat,
         "example/test_2.orc"
@@ -111,7 +109,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testOrcFile11Format() throws IOException
   {
@@ -189,7 +186,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testOrcSplitElim() throws IOException
   {
@@ -217,7 +213,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testDate1900() throws IOException
   {
@@ -243,7 +238,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  // This test is migrated from OrcHadoopInputRowParserTest
   @Test
   public void testDate2038() throws IOException
   {
@@ -542,7 +536,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a"),
@@ -608,7 +602,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a"),
@@ -683,7 +677,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new Configuration()
     );
     final InputEntityReader reader = createReader(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 new StringDimensionSchema("c1"),

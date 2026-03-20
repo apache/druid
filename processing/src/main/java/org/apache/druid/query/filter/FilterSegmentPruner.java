@@ -21,6 +21,8 @@ package org.apache.druid.query.filter;
 
 import com.google.common.collect.RangeSet;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 
@@ -44,16 +46,18 @@ public class FilterSegmentPruner implements SegmentPruner
 {
   private final DimFilter filter;
   private final Set<String> filterFields;
+  private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
-      @Nullable Set<String> filterFields
+      @Nullable Set<String> filterFields,
+      @Nullable VirtualColumns virtualColumns
   )
   {
-    InvalidInput.conditionalException(filter != null, "filter must not be null");
-    this.filter = filter;
+    this.filter = InvalidInput.notNull(filter, "filter");
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
   }
 
@@ -89,10 +93,25 @@ public class FilterSegmentPruner implements SegmentPruner
         Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
-          if (filterFields == null || filterFields.contains(dimension)) {
+          final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
+          if (shardVirtualColumn != null) {
+            final VirtualColumn queryEquivalent = virtualColumns.findEquivalent(shardVirtualColumn);
+            if (queryEquivalent != null) {
+              if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
+                Optional<RangeSet<String>> optFilterRangeSet = rangeCache
+                    .computeIfAbsent(
+                        queryEquivalent.getOutputName(),
+                        d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
+                    );
+                optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
+                    shardVirtualColumn.getOutputName(),
+                    stringRangeSet
+                ));
+              }
+            }
+          } else if (filterFields == null || filterFields.contains(dimension)) {
             Optional<RangeSet<String>> optFilterRangeSet =
                 rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
-
             optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
           }
         }
@@ -115,13 +134,15 @@ public class FilterSegmentPruner implements SegmentPruner
       return false;
     }
     FilterSegmentPruner that = (FilterSegmentPruner) o;
-    return Objects.equals(filter, that.filter) && Objects.equals(filterFields, that.filterFields);
+    return Objects.equals(filter, that.filter) &&
+           Objects.equals(filterFields, that.filterFields) &&
+           Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(filter, filterFields);
+    return Objects.hash(filter, filterFields, virtualColumns);
   }
 
   @Override
@@ -130,7 +151,7 @@ public class FilterSegmentPruner implements SegmentPruner
     return "FilterSegmentPruner{" +
            "filter=" + filter +
            ", filterFields=" + filterFields +
-           ", rangeCache=" + rangeCache +
+           ", virtualColumns=" + virtualColumns +
            '}';
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Global;
@@ -36,7 +35,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,7 +43,6 @@ import java.util.Map;
 public class AzureDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);
-  static final List<String> ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP = ImmutableList.of("druid.azure");
   private final AzureStorage azureStorage;
   private final AzureAccountConfig accountConfig;
   private final AzureDataSegmentConfig segmentConfig;
@@ -60,32 +57,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     this.azureStorage = azureStorage;
     this.accountConfig = accountConfig;
     this.segmentConfig = segmentConfig;
-  }
-
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    String prefix = segmentConfig.getPrefix();
-    boolean prefixIsNullOrEmpty = org.apache.commons.lang3.StringUtils.isEmpty(prefix);
-    String hadoopPath = StringUtils.format(
-        "%s://%s@%s.%s/%s",
-        AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
-        segmentConfig.getContainer(),
-        accountConfig.getAccount(),
-        accountConfig.getBlobStorageEndpoint(),
-        prefixIsNullOrEmpty ? "" : StringUtils.maybeRemoveTrailingSlash(prefix) + '/'
-    );
-
-    log.info("Using Azure blob storage Hadoop path: %s", hadoopPath);
-
-    return hadoopPath;
   }
 
   @Override
@@ -108,12 +79,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
     // Replace colons with underscores, since they are not supported through wasb:// prefix
     return seg;
-  }
-
-  @Override
-  public List<String> getAllowedPropertyPrefixesForHadoop()
-  {
-    return ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP;
   }
 
   @Override

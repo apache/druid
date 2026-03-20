@@ -29,8 +29,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-
 public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends SeekableStreamSupervisorTestBase
 {
   private static final int DEFAULT_TASK_COUNT = 10;
@@ -105,9 +103,6 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     EasyMock.expect(spec.createAutoscaler(EasyMock.anyObject()))
             .andReturn(createMockAutoScaler(targetTaskCount))
             .anyTimes();
-    EasyMock.expect(spec.getContextValue(EasyMock.eq(DruidMetrics.TAGS)))
-            .andReturn(List.of("tag1", "tag2"))
-            .anyTimes();
     EasyMock.replay(spec);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(100);
@@ -167,6 +162,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(EasyMock.eq(DruidMetrics.TAGS))).andReturn(null).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
   }
 

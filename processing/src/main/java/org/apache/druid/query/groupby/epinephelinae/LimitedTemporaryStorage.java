@@ -52,6 +52,7 @@ public class LimitedTemporaryStorage implements Closeable
 
   private final File storageDirectory;
   private final long maxBytesUsed;
+  private final int maxFileCount;
 
   private final AtomicLong bytesUsed = new AtomicLong();
   private final Set<File> files = new TreeSet<>();
@@ -63,17 +64,21 @@ public class LimitedTemporaryStorage implements Closeable
   public LimitedTemporaryStorage(
       File storageDirectory,
       long maxBytesUsed,
+      int maxFileCount,
       GroupByStatsProvider.PerQueryStats perQueryStatsContainer
   )
   {
     this.storageDirectory = storageDirectory;
     this.maxBytesUsed = maxBytesUsed;
+    this.maxFileCount = maxFileCount;
     this.perQueryStatsContainer = perQueryStatsContainer;
   }
 
   /**
    * Create a new temporary file. All methods of the returned output stream may throw
    * {@link TemporaryStorageFullException} if the temporary storage area fills up.
+   * This method may also throw {@link TemporaryStorageFileLimitException} if the number of files in the
+   * temporary storage exceeds the configured limit.
    *
    * @return output stream to the file
    *
@@ -84,6 +89,10 @@ public class LimitedTemporaryStorage implements Closeable
   {
     if (bytesUsed.get() >= maxBytesUsed) {
       throw new TemporaryStorageFullException(maxBytesUsed);
+    }
+
+    if (files.size() >= maxFileCount) {
+      throw new TemporaryStorageFileLimitException(maxFileCount);
     }
 
     synchronized (files) {

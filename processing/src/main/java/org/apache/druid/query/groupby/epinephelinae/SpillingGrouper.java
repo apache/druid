@@ -67,6 +67,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       0,
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
   );
+  private static final AggregateResult MAX_FILE = AggregateResult.partial(
+      0,
+      "Maximum number of spill files reached for this query. Try raising druid.query.groupBy.maxSpillFileCount."
+  );
 
   private final AbstractBufferHashGrouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
@@ -82,6 +86,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final boolean sortHasNonGroupingFields;
 
   private boolean diskFull = false;
+  private boolean maxFileCount = false;
   private boolean spillingAllowed;
 
   public SpillingGrouper(
@@ -183,6 +188,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       return DISK_FULL;
     }
 
+    if (maxFileCount) {
+      return MAX_FILE;
+    }
+
     final AggregateResult result = grouper.aggregate(key, keyHash);
 
     if (result.isOk() || !spillingAllowed || temporaryStorage.maxSize() <= 0) {
@@ -198,6 +207,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       catch (TemporaryStorageFullException e) {
         diskFull = true;
         return DISK_FULL;
+      }
+      catch (TemporaryStorageFileLimitException e) {
+        maxFileCount = true;
+        return MAX_FILE;
       }
       catch (IOException e) {
         throw new RuntimeException(e);
