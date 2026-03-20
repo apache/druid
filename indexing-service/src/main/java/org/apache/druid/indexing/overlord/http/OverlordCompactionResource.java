@@ -379,7 +379,12 @@ public class OverlordCompactionResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response dryRun(ClusterCompactionConfig updatePayload)
   {
-    return Response.ok().entity(scheduler.dryRunWithConfig(updatePayload)).build();
+    try {
+      return Response.ok().entity(scheduler.dryRunWithConfig(updatePayload)).build();
+    }
+    catch (Exception e) {
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   private static boolean isEmpty(String dataSource)

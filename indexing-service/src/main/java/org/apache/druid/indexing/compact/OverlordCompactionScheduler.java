@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -523,14 +524,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     CompactionStatusDetailedStats detailedStats = new CompactionStatusDetailedStats();
     if (isRunning() && isEnabled()) {
-      scheduleOnExecutor(() -> {
-        try {
-          resetCompactionJobQueue(true, config, detailedStats);
-        }
-        catch (Exception e) {
-          log.error(e, "Error processing compaction queue.");
-        }
-      }, 0L);
+      try {
+        scheduleOnExecutor(() -> resetCompactionJobQueue(true, config, detailedStats), 0L).get();
+      }
+      catch (Exception e) {
+        log.error(e, "Error processing compaction queue");
+        throw new RuntimeException("Error processing compaction queue.", e);
+      }
     }
     return detailedStats;
   }
@@ -571,9 +571,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return segmentManager.getRecentDataSourcesSnapshot();
   }
 
-  private void scheduleOnExecutor(Runnable runnable, long delayMillis)
+  private ScheduledFuture<?> scheduleOnExecutor(Runnable runnable, long delayMillis)
   {
-    executor.schedule(
+    return executor.schedule(
         () -> {
           try {
             runnable.run();
