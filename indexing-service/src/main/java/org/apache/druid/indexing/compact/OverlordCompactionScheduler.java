@@ -118,12 +118,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final AtomicReference<CompactionJobQueue> latestJobQueue;
 
   /**
-   * Lock used to synchronize access when resetting the compaction job queue.
-   * Ensures thread-safe updates to the queue and related state during queue resets.
-   */
-  private final Object lock = new Object();
-
-  /**
    * Single-threaded executor to process the compaction queue.
    */
   private final ScheduledExecutorService executor;
@@ -387,41 +381,39 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       @Nullable CompactionStatusDetailedStats detailedStats
   )
   {
-    synchronized (lock) {
-      // Remove the old queue so that no more jobs are added to it
-      latestJobQueue.set(null);
-      statusTracker.resetCompactionStatusDetailedStats(detailedStats);
+    // Remove the old queue so that no more jobs are added to it
+    latestJobQueue.set(null);
+    statusTracker.resetCompactionStatusDetailedStats(detailedStats);
 
-      final Stopwatch runDuration = Stopwatch.createStarted();
-      final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
-      final CompactionJobQueue queue = new CompactionJobQueue(
-          dataSourcesSnapshot,
-          clusterCompactionConfig,
-          statusTracker,
-          dryRun,
-          taskActionClientFactory,
-          taskLockbox,
-          overlordClient,
-          brokerClient,
-          objectMapper,
-          indexingStateStorage,
-          indexingStateCache
-      );
-      latestJobQueue.set(queue);
+    final Stopwatch runDuration = Stopwatch.createStarted();
+    final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
+    final CompactionJobQueue queue = new CompactionJobQueue(
+        dataSourcesSnapshot,
+        clusterCompactionConfig,
+        statusTracker,
+        dryRun,
+        taskActionClientFactory,
+        taskLockbox,
+        overlordClient,
+        brokerClient,
+        objectMapper,
+        indexingStateStorage,
+        indexingStateCache
+    );
+    latestJobQueue.set(queue);
 
-      statusTracker.resetActiveDatasources(activeSupervisors.keySet());
-      statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
+    statusTracker.resetActiveDatasources(activeSupervisors.keySet());
+    statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
 
-      // Jobs for all active supervisors are being freshly created
-      // recomputation will not be needed
-      shouldRecomputeJobsForAnyDatasource.set(false);
-      activeSupervisors.forEach(this::createAndEnqueueJobs);
-      launchPendingJobs();
+    // Jobs for all active supervisors are being freshly created
+    // recomputation will not be needed
+    shouldRecomputeJobsForAnyDatasource.set(false);
+    activeSupervisors.forEach(this::createAndEnqueueJobs);
+    launchPendingJobs();
 
-      if (!dryRun) {
-        queue.getRunStats().forEachStat(this::emitStat);
-        emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
-      }
+    if (!dryRun) {
+      queue.getRunStats().forEachStat(this::emitStat);
+      emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
     }
   }
 
@@ -531,7 +523,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     CompactionStatusDetailedStats detailedStats = new CompactionStatusDetailedStats();
     if (isRunning()) {
-      resetCompactionJobQueue(true, config, detailedStats);
+      initState();
+      try {
+        resetCompactionJobQueue(true, config, detailedStats);
+      }
+      catch (Exception e) {
+        log.error(e, "Error processing compaction queue. Continuing schedule.");
+      }
     }
     return detailedStats;
   }

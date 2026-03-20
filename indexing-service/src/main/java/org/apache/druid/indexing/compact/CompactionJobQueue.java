@@ -222,7 +222,9 @@ public class CompactionJobQueue
         statusTracker,
         clusterCompactionConfig
     );
-    slotManager.reserveTaskSlotsForRunningCompactionTasks();
+    if (!dryRun) {
+      slotManager.reserveTaskSlotsForRunningCompactionTasks();
+    }
 
     final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
@@ -297,6 +299,12 @@ public class CompactionJobQueue
       return false;
     }
 
+    if (CompactionStatus.State.PENDING.equals(candidate.getCurrentStatus().getState())) {
+      throw DruidException.defensive(
+          "unexpected compaction status[%s], expect PENDING.",
+          candidate.getCurrentStatus().getState()
+      );
+    }
     // Check if the job is already running or skipped or pending
     final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(candidate, null);
 
@@ -306,12 +314,13 @@ public class CompactionJobQueue
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
       case RUNNING:
-        if (!dryRun) {
-          statusTracker.recordSubmittedTask(candidate, job.getEligibility().getMode());
-          return false;
+        if (dryRun) {
+          // In dry run mode, treat running jobs the same as pending jobs.
+          // Both are re-evaluated based on task slot availability.
+          break;
         }
-        // in dryRun mode, ignore the currently running job
-        break;
+        statusTracker.recordSubmittedTask(candidate, job.getEligibility().getMode());
+        return false;
       case PENDING:
         break;
       case COMPLETE:
