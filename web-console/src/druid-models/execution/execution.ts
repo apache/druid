@@ -176,6 +176,7 @@ export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
   sqlQuery?: string;
+  sqlQueryId?: string;
   nativeQuery?: any;
   queryContext?: QueryContext;
   status?: ExecutionStatus;
@@ -396,6 +397,7 @@ export class Execution {
   public readonly engine: DruidEngine;
   public readonly id: string;
   public readonly sqlQuery?: string;
+  public readonly sqlQueryId?: string;
   public readonly nativeQuery?: any;
   public readonly queryContext?: QueryContext;
   public readonly status?: ExecutionStatus;
@@ -419,6 +421,7 @@ export class Execution {
     this.id = value.id;
     if (!this.id) throw new Error('must have an id');
     this.sqlQuery = value.sqlQuery;
+    this.sqlQueryId = value.sqlQueryId;
     this.nativeQuery = value.nativeQuery;
     this.queryContext = value.queryContext;
     this.status = value.status;
@@ -443,6 +446,7 @@ export class Execution {
       engine: this.engine,
       id: this.id,
       sqlQuery: this.sqlQuery,
+      sqlQueryId: this.sqlQueryId,
       nativeQuery: this.nativeQuery,
       queryContext: this.queryContext,
       status: this.status,
@@ -484,6 +488,14 @@ export class Execution {
     }
 
     return new Execution(value);
+  }
+
+  public changeSqlQueryId(sqlQueryId: string | null | undefined): Execution {
+    if (!sqlQueryId) return this;
+    return new Execution({
+      ...this.valueOf(),
+      sqlQueryId,
+    });
   }
 
   public changeDestination(destination: ExecutionDestination): Execution {

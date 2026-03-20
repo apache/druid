@@ -42,7 +42,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     className="execution-details-pane-general"
   >
     <p>
-      General info for 
+      General info for execution ID: 
       <Blueprint5.Tag
         active={false}
         fill={false}
@@ -352,6 +352,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -994,6 +995,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -1681,6 +1683,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+        "sqlQueryId": undefined,
         "stages": Stages {
           "counters": {
             "0": {
