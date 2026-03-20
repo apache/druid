@@ -1095,7 +1095,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             // emit segment count metric:
             int segmentCount = 0;
-            int totalRowCount = 0;
+            long totalRowCount = 0;
             if (publishedSegmentsAndCommitMetadata != null
                 && publishedSegmentsAndCommitMetadata.getSegments() != null) {
               segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
@@ -1106,9 +1106,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 "ingest/segments/count",
                 segmentCount
             );
-            if (totalRowCount > 0) {
-              task.emitMetric(toolbox.getEmitter(), "ingest/rows/published", totalRowCount);
-            }
+            task.emitMetric(toolbox.getEmitter(), "ingest/rows/published", totalRowCount);
           }
 
           @Override

@@ -110,13 +110,13 @@ public class IndexTaskUtils
    * row count populated in the metadata and thus do not contribute to the row
    * count.
    */
-  public static int getTotalRowCount(Collection<DataSegment> segments)
+  public static long getTotalRowCount(Collection<DataSegment> segments)
   {
     return segments
         .stream()
         .map(DataSegment::getTotalRows)
         .filter(Objects::nonNull)
-        .mapToInt(Integer::intValue)
+        .mapToLong(Integer::longValue)
         .sum();
   }
 }
