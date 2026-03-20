@@ -33,9 +33,9 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -56,10 +56,11 @@ public class BuiltInTypesModuleTest
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
   }
   
-  @AfterEach
-  public void beforeEach()
+  @After
+  public void teardownEach()
   {
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
+    BuiltInTypesModule.setMaxStringLength(0);
   }
 
   @AfterClass
@@ -74,6 +75,7 @@ public class BuiltInTypesModuleTest
       );
     }
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
+    BuiltInTypesModule.setMaxStringLength(0);
   }
 
   @Test
@@ -95,6 +97,8 @@ public class BuiltInTypesModuleTest
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
+
+    Assertions.assertEquals(0, BuiltInTypesModule.getMaxStringLength());
   }
 
   @Test
@@ -171,6 +175,34 @@ public class BuiltInTypesModuleTest
     Assertions.assertTrue(exception.getMessage().contains(
         "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
         + " Supported values are [[SORTED_ARRAY, SORTED_SET, ARRAY]]."
+    ));
+  }
+
+  @Test
+  public void testMaxStringLengthOverride()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.maxStringLength", "500");
+    final Injector gadget = makeInjector(props);
+
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
+
+    Assertions.assertEquals(500, BuiltInTypesModule.getMaxStringLength());
+  }
+
+  @Test
+  public void testInvalidMaxStringLength()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.maxStringLength", "-1");
+    final Injector gadget = makeInjector(props);
+
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains(
+        "Invalid value[-1] specified for 'druid.indexing.formats.maxStringLength'"
     ));
   }
 
