@@ -140,10 +140,12 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(new MinorCompactionInputSpec(
-            INTERVAL_TO_INDEX,
-            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
-        ))
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
@@ -204,10 +206,12 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(new MinorCompactionInputSpec(
-            INTERVAL_TO_INDEX,
-            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
-        ))
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
@@ -252,10 +256,12 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(new MinorCompactionInputSpec(
-            INTERVAL_TO_INDEX,
-            segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
-        ))
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
