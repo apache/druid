@@ -164,7 +164,6 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionIOConfig compactionIOConfig
   )
   {
-
     return (compactionIOConfig.getInputSpec() instanceof MinorCompactionInputSpec)
            ? createMinorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig)
            : createMajorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig);
