@@ -54,6 +54,7 @@
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
