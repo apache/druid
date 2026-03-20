@@ -279,7 +279,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
       // Get the backfillTaskCount from config
       int backfillTaskCount = spec.getIoConfig().getBackfillTaskCount();
-      List<KafkaTopicPartition> partitions = new ArrayList<>(startOffsets.keySet());
+      List<KafkaTopicPartition> partitions = new ArrayList<>(endOffsets.keySet());
 
       // Determine actual number of tasks (can't have more tasks than partitions)
       int numTasks = Math.min(backfillTaskCount, partitions.size());
@@ -307,7 +307,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         Map<KafkaTopicPartition, Long> taskStartOffsets = new HashMap<>();
         Map<KafkaTopicPartition, Long> taskEndOffsets = new HashMap<>();
         for (KafkaTopicPartition partition : taskPartitions) {
-          taskStartOffsets.put(partition, startOffsets.get(partition));
+          Long startOffset = startOffsets.get(partition);
+          if (startOffset == null) {
+            log.info("No checkpoint has occurred before for partition [%s], setting startOffset equal to endOffset to skip data consumption", partition);
+            startOffset = endOffsets.get(partition);
+          }
+          taskStartOffsets.put(partition, startOffset);
           taskEndOffsets.put(partition, endOffsets.get(partition));
         }
 
