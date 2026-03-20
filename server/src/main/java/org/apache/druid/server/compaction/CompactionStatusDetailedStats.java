@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.DruidException;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,9 +43,8 @@ public class CompactionStatusDetailedStats
       "uncompactedSegments",
       "uncompactedBytes",
       "uncompactedRows",
-      "reasonToCompact",
-      "mode",
-      "reasonToSkip"
+      "reasonToCompactOrSkip",
+      "mode"
   };
 
   public CompactionStatusDetailedStats()
@@ -66,7 +64,7 @@ public class CompactionStatusDetailedStats
     this.stateToTable = compactionStates != null ? new HashMap<>(compactionStates) : new HashMap<>();
   }
 
-  public void recordCompactionStatus(CompactionCandidate candidate, @Nullable String reasonToSkip)
+  public void recordCompactionStatus(CompactionCandidate candidate)
   {
     final CompactionStatus status = candidate.getCurrentStatus();
     CompactionStatistics stats = GuavaUtils.firstNonNull(candidate.getStats(), new CompactionStatistics());
@@ -86,7 +84,6 @@ public class CompactionStatusDetailedStats
         uncompactedStats.getTotalRows(),
         status.getReason(),
         null,
-        reasonToSkip,
     };
 
     final Table table = stateToTable.get(status.getState());
@@ -116,8 +113,7 @@ public class CompactionStatusDetailedStats
         candidate.getUncompactedStats().getNumSegments(),
         candidate.getUncompactedStats().getTotalRows(),
         candidate.getCurrentStatus().getReason(),
-        compactionMode,
-        null
+        compactionMode
     );
   }
 

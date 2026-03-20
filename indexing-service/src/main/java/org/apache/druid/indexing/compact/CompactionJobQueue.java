@@ -291,7 +291,6 @@ public class CompactionJobQueue
       log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
       statusTracker.collectCompactionStatus(
           candidate.withCurrentStatus(CompactionStatus.skipped(validationResult.getReason())),
-          null,
           null
       );
       snapshotBuilder.moveFromPendingToSkipped(candidate);
@@ -303,7 +302,7 @@ public class CompactionJobQueue
 
     switch (compactionStatus.getState()) {
       case SKIPPED:
-        statusTracker.collectCompactionStatus(candidate.withCurrentStatus(compactionStatus), null, null);
+        statusTracker.collectCompactionStatus(candidate.withCurrentStatus(compactionStatus), null);
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
       case RUNNING:
@@ -323,7 +322,7 @@ public class CompactionJobQueue
     // Check if enough compaction task slots are available
     if (job.getMaxRequiredTaskSlots() > slotManager.getNumAvailableTaskSlots()) {
       pendingJobs.add(job);
-      statusTracker.collectCompactionStatus(candidate, null, null);
+      statusTracker.collectCompactionStatus(candidate, null);
       return false;
     }
 
@@ -338,7 +337,6 @@ public class CompactionJobQueue
         // Mark the job as skipped for now as the intervals might be locked by other tasks
         statusTracker.collectCompactionStatus(
             candidate.withCurrentStatus(CompactionStatus.skipped("task was not submitted")),
-            null,
             null
         );
         snapshotBuilder.moveFromPendingToSkipped(candidate);

@@ -139,12 +139,11 @@ public class CompactionStatusTracker
    */
   public void collectCompactionStatus(
       CompactionCandidate candidateSegments,
-      @Nullable String reason,
       @Nullable DataSourceCompactionConfig config
   )
   {
     if (detailedStats != null) {
-      detailedStats.recordCompactionStatus(candidateSegments, reason);
+      detailedStats.recordCompactionStatus(candidateSegments);
     }
   }
 

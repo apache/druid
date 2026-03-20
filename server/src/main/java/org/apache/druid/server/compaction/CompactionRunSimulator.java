@@ -104,7 +104,6 @@ public class CompactionRunSimulator
       @Override
       public void collectCompactionStatus(
           CompactionCandidate candidateSegments,
-          @Nullable String reason,
           @Nullable DataSourceCompactionConfig config
       )
       {

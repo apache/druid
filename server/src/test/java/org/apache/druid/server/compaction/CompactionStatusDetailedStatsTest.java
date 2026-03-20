@@ -56,10 +56,15 @@ public class CompactionStatusDetailedStatsTest
     CompactionCandidate candidate = CompactionCandidate.from(
         Arrays.asList(SEGMENT_1, SEGMENT_2),
         null,
-        CompactionStatus.pending(compactionStats, uncompactedStats, Arrays.asList(SEGMENT_1, SEGMENT_2), "Not compacted yet")
+        CompactionStatus.pending(
+            compactionStats,
+            uncompactedStats,
+            Arrays.asList(SEGMENT_1, SEGMENT_2),
+            "Not compacted yet"
+        )
     );
 
-    stats.recordCompactionStatus(candidate, null);
+    stats.recordCompactionStatus(candidate);
 
     Map<CompactionStatus.State, Table> result = stats.getCompactionStates();
     Assert.assertEquals(1, result.size());
@@ -67,7 +72,18 @@ public class CompactionStatusDetailedStatsTest
     Table pendingTable = result.get(CompactionStatus.State.PENDING);
     Assert.assertEquals(1, pendingTable.getRows().size());
     Assert.assertEquals(
-        Arrays.asList(DATASOURCE, Intervals.of("2020-01-01/2020-01-02"), 2, 300L, 30L, 2L, 300L, 30L, "Not compacted yet", null, null),
+        Arrays.asList(
+            DATASOURCE,
+            Intervals.of("2020-01-01/2020-01-02"),
+            2,
+            300L,
+            30L,
+            2L,
+            300L,
+            30L,
+            "Not compacted yet",
+            null
+        ),
         pendingTable.getRows().get(0)
     );
   }
@@ -83,7 +99,7 @@ public class CompactionStatusDetailedStatsTest
         CompactionStatus.skipped("Interval locked")
     );
 
-    stats.recordCompactionStatus(candidate, "Interval locked");
+    stats.recordCompactionStatus(candidate);
 
     Map<CompactionStatus.State, Table> result = stats.getCompactionStates();
     Assert.assertEquals(1, result.size());
@@ -91,7 +107,18 @@ public class CompactionStatusDetailedStatsTest
     Table skippedTable = result.get(CompactionStatus.State.SKIPPED);
     Assert.assertEquals(1, skippedTable.getRows().size());
     Assert.assertEquals(
-        Arrays.asList(DATASOURCE, Intervals.of("2020-01-01/2020-01-02"), 1, 100L, 10L, 0L, 0L, null, "Interval locked", null, "Interval locked"),
+        Arrays.asList(
+            DATASOURCE,
+            Intervals.of("2020-01-01/2020-01-02"),
+            1,
+            100L,
+            10L,
+            0L,
+            0L,
+            null,
+            "Interval locked",
+            null
+        ),
         skippedTable.getRows().get(0)
     );
   }
@@ -109,7 +136,7 @@ public class CompactionStatusDetailedStatsTest
         CompactionStatus.complete(compactionStats, uncompactedStats)
     );
 
-    stats.recordCompactionStatus(candidate, null);
+    stats.recordCompactionStatus(candidate);
 
     Map<CompactionStatus.State, Table> result = stats.getCompactionStates();
     Assert.assertEquals(1, result.size());
@@ -117,7 +144,7 @@ public class CompactionStatusDetailedStatsTest
     Table completeTable = result.get(CompactionStatus.State.COMPLETE);
     Assert.assertEquals(1, completeTable.getRows().size());
     Assert.assertEquals(
-        Arrays.asList(DATASOURCE, Intervals.of("2020-01-01/2020-01-02"), 2, 300L, 30L, 0L, 0L, 0L, null, null, null),
+        Arrays.asList(DATASOURCE, Intervals.of("2020-01-01/2020-01-02"), 2, 300L, 30L, 0L, 0L, 0L, null, null),
         completeTable.getRows().get(0)
     );
   }
@@ -144,7 +171,17 @@ public class CompactionStatusDetailedStatsTest
     Assert.assertEquals(1, runningTable.getRows().size());
     // Note: uncompactedBytes column is missing in recordSubmittedTask implementation (bug)
     Assert.assertEquals(
-        Arrays.asList(DATASOURCE, Intervals.of("2020-01-01/2020-01-02"), 2, 300L, 30L, 1L, 10L, "Task submitted", CompactionMode.ALL_SEGMENTS, null),
+        Arrays.asList(
+            DATASOURCE,
+            Intervals.of("2020-01-01/2020-01-02"),
+            2,
+            300L,
+            30L,
+            1L,
+            10L,
+            "Task submitted",
+            CompactionMode.ALL_SEGMENTS
+        ),
         runningTable.getRows().get(0)
     );
   }
@@ -161,14 +198,14 @@ public class CompactionStatusDetailedStatsTest
         null,
         CompactionStatus.pending(stats1, uncompacted1, List.of(SEGMENT_1), "Not yet compacted")
     );
-    stats.recordCompactionStatus(pending, null);
+    stats.recordCompactionStatus(pending);
 
     CompactionCandidate skipped = CompactionCandidate.from(
         List.of(SEGMENT_2),
         null,
         CompactionStatus.skipped("Locked")
     );
-    stats.recordCompactionStatus(skipped, "Locked");
+    stats.recordCompactionStatus(skipped);
 
     Map<CompactionStatus.State, Table> result = stats.getCompactionStates();
     Assert.assertEquals(2, result.size());
@@ -197,7 +234,7 @@ public class CompactionStatusDetailedStatsTest
         null,
         CompactionStatus.pending(compactionStats, uncompactedStats, List.of(SEGMENT_1), "Test")
     );
-    stats.recordCompactionStatus(candidate, null);
+    stats.recordCompactionStatus(candidate);
 
     String json = objectMapper.writeValueAsString(stats);
     CompactionStatusDetailedStats deserialized = objectMapper.readValue(

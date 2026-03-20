@@ -94,9 +94,9 @@ public class CompactionJobParams
     return compactionTaskStatusProvider.getLatestTaskStatus(candidate);
   }
 
-  public void collectCompactionStatus(CompactionCandidate candidateSegments, @Nullable String reason)
+  public void collectCompactionStatus(CompactionCandidate candidateSegments)
   {
-    compactionStatusCollector.collect(candidateSegments, reason, null);
+    compactionStatusCollector.collect(candidateSegments, null);
   }
 
   /**
@@ -134,7 +134,6 @@ public class CompactionJobParams
   {
     void collect(
         CompactionCandidate candidateSegments,
-        @Nullable String reason,
         @Nullable DataSourceCompactionConfig unused
     );
   }

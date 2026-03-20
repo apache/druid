@@ -254,7 +254,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(entry, policy);
       final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
-      statusTracker.collectCompactionStatus(candidatesWithStatus, null, config);
+      statusTracker.collectCompactionStatus(candidatesWithStatus, config);
 
       if (compactionStatus.isComplete()) {
         snapshotBuilder.addToComplete(candidatesWithStatus);
@@ -428,7 +428,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.collectCompactionStatus(entry, null, datasourceToConfig.get(entry.getDataSource()));
+      statusTracker.collectCompactionStatus(entry, datasourceToConfig.get(entry.getDataSource()));
       snapshotBuilder.addToSkipped(entry);
     });
 
