@@ -637,7 +637,7 @@ public class ParallelIndexSupervisorTaskTest
           createDeepStoragePartitionStat(DAY1, 0, "s3", "bucket-1", "key-1"),
           createDeepStoragePartitionStat(DAY1, 1, "s3", "bucket-1", "key-2")
       ), null));
-      reports.put("subtask-2", new GeneratedPartitionsReport("subtask-2", Arrays.asList(
+      reports.put("subtask-2", new GeneratedPartitionsReport("subtask-2", List.of(
           createDeepStoragePartitionStat(DAY2, 0, "s3", "bucket-1", "key-3")
       ), null));
 
@@ -736,7 +736,7 @@ public class ParallelIndexSupervisorTaskTest
       EasyMock.expectLastCall();
       EasyMock.replay(killer);
 
-      boolean phase2Failed = false;
+      boolean phase2Failed;
       try {
         throw new RuntimeException("Simulated phase 2 failure");
       }
@@ -761,7 +761,7 @@ public class ParallelIndexSupervisorTaskTest
     {
       return new DeepStoragePartitionStat(
           interval,
-          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1"), null, null),
+          new DimensionRangeBucketShardSpec(bucketId, List.of("dim1"), null, null),
           ImmutableMap.of("type", type, "bucket", bucket, "key", key)
       );
     }
@@ -773,7 +773,7 @@ public class ParallelIndexSupervisorTaskTest
           8080,
           false,
           interval,
-          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1"), null, null),
+          new DimensionRangeBucketShardSpec(bucketId, List.of("dim1"), null, null),
           null,
           null
       );

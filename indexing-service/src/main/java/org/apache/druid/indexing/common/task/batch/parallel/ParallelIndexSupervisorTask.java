@@ -925,6 +925,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       );
       return TaskStatus.failure(getId(), errMsg);
     }
+
     deepStorageShuffleReports = indexingRunner.getReports();
     indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
