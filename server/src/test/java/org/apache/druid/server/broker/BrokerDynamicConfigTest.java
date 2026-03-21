@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryBlocklistRule;
 import org.junit.Assert;
@@ -130,7 +131,7 @@ public class BrokerDynamicConfigTest
         BrokerDynamicConfig.class
     );
 
-    Assert.assertEquals(ImmutableMap.of("priority", 10, "useCache", false), actual.getQueryContext());
+    Assert.assertEquals(QueryContext.of(ImmutableMap.of("priority", 10, "useCache", false)), actual.getQueryContext());
   }
 
   @Test

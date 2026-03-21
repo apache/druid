@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -31,6 +30,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -56,9 +56,9 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   /**
    * Pre-computed merge of {@link DefaultQueryConfig#getContext()} and
    * {@link BrokerDynamicConfig#getQueryContext()}, recomputed on each config sync.
-   * Dynamic config values override static defaults. Volatile + ImmutableMap ensures lock-free reads.
+   * Dynamic config values override static defaults. {@link QueryContext} provides immutability.
    */
-  private volatile ImmutableMap<String, Object> resolvedDefaultQueryContext;
+  private volatile QueryContext resolvedDefaultQueryContext;
 
   @Inject
   public BrokerViewOfBrokerConfig(
@@ -69,7 +69,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   )
   {
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = ImmutableMap.copyOf(defaultQueryConfig.getContext());
+    this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
     this.coordinatorClient =
         new CoordinatorClientImpl(
             clientFactory.makeClient(
@@ -89,7 +89,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = ImmutableMap.copyOf(defaultQueryConfig.getContext());
+    this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
   }
 
   @Override
@@ -112,9 +112,9 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
   {
     super.setDynamicConfig(updatedConfig);
-    resolvedDefaultQueryContext = ImmutableMap.copyOf(QueryContexts.override(
+    resolvedDefaultQueryContext = QueryContext.of(QueryContexts.override(
         defaultQueryConfig.getContext(),
-        updatedConfig.getQueryContext()
+        updatedConfig.getQueryContext().asMap()
     ));
   }
 
@@ -125,6 +125,6 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   @Override
   public Map<String, Object> getContext()
   {
-    return resolvedDefaultQueryContext;
+    return resolvedDefaultQueryContext.asMap();
   }
 }

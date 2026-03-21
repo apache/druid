@@ -281,7 +281,7 @@ For a given query context, Druid determines the final query context value to use
 
 2. **Runtime properties**: If you configure parameters as `druid.query.default.context.{PARAMETER}` in the configuration files, these override the built-in defaults and act as your system-wide defaults.
 
-3. **Broker Dynamic Config**: If you configure query context parameters in the Broker's dynamic config (see [Broker Dynamic Config](../api-reference/dynamic-configuration-api.md)). Overrides built-in defaults and runtime properties.  
+3. **Broker Dynamic Config**: If you configure query context parameters in the Broker's dynamic config (see [Broker Dynamic Config](../api-reference/dynamic-configuration-api.md)). Overrides built-in defaults and runtime properties.
 
 4. **Context object in HTTP request**: Parameters passed within the JSON `context` object override built-in defaults, runtime properties, and Broker dynamic configs.
 

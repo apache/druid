@@ -86,6 +86,8 @@ public class DartControllerModule implements DruidModule
     {
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".controller", DartControllerConfig.class);
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".query", DefaultQueryConfig.class, Dart.class);
+      // Dart uses its own static DefaultQueryConfig rather than BrokerViewOfBrokerConfig because
+      // DartSqlEngine.initContextMap() manages context merging independently for Dart queries.
       binder.bind(Key.get(QueryConfigProvider.class, Dart.class))
             .to(Key.get(DefaultQueryConfig.class, Dart.class));
 

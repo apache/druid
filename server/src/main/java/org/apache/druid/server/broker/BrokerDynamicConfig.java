@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryBlocklistRule;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -51,16 +51,16 @@ public class BrokerDynamicConfig
    * Default query context values set dynamically by operators. These override static defaults from
    * {@link org.apache.druid.query.DefaultQueryConfig} but are overridden by per-query context.
    */
-  private final Map<String, Object> queryContext;
+  private final QueryContext queryContext;
 
   @JsonCreator
   public BrokerDynamicConfig(
       @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
-      @JsonProperty("queryContext") @Nullable Map<String, Object> queryContext
+      @JsonProperty("queryContext") @Nullable QueryContext queryContext
   )
   {
     this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Collections.emptyList());
-    this.queryContext = Configs.valueOrDefault(queryContext, Collections.emptyMap());
+    this.queryContext = Configs.valueOrDefault(queryContext, QueryContext.empty());
   }
 
   @JsonProperty
@@ -72,7 +72,7 @@ public class BrokerDynamicConfig
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  public Map<String, Object> getQueryContext()
+  public QueryContext getQueryContext()
   {
     return queryContext;
   }
@@ -114,7 +114,7 @@ public class BrokerDynamicConfig
   public static class Builder
   {
     private List<QueryBlocklistRule> queryBlocklist;
-    private Map<String, Object> queryContext;
+    private QueryContext queryContext;
 
     public Builder()
     {
@@ -123,7 +123,7 @@ public class BrokerDynamicConfig
     @JsonCreator
     public Builder(
         @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
-        @JsonProperty("queryContext") @Nullable Map<String, Object> queryContext
+        @JsonProperty("queryContext") @Nullable QueryContext queryContext
     )
     {
       this.queryBlocklist = queryBlocklist;
@@ -136,7 +136,7 @@ public class BrokerDynamicConfig
       return this;
     }
 
-    public Builder withQueryContext(Map<String, Object> queryContext)
+    public Builder withQueryContext(QueryContext queryContext)
     {
       this.queryContext = queryContext;
       return this;

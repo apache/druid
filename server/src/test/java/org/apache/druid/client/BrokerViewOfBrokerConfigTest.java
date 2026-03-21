@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -64,7 +65,7 @@ public class BrokerViewOfBrokerConfigTest
     // Dynamic config overrides "useCache" and adds "priority"; static "timeout" is preserved.
     final BrokerDynamicConfig dynamicConfig = BrokerDynamicConfig.builder()
                                                                  .withQueryContext(
-                                                                     ImmutableMap.of("useCache", false, "priority", 5)
+                                                                     QueryContext.of(ImmutableMap.of("useCache", false, "priority", 5))
                                                                  )
                                                                  .build();
     target.setDynamicConfig(dynamicConfig);

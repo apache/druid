@@ -104,7 +104,7 @@ public class SqlResource
     this.sqlEngineRegistry = Preconditions.checkNotNull(sqlEngineRegistry, "sqlEngineRegistry");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
-    this.queryConfigProvider = Preconditions.checkNotNull(queryConfigProvider, "queryContextProvider");
+    this.queryConfigProvider = Preconditions.checkNotNull(queryConfigProvider, "queryConfigProvider");
     this.serverConfig = serverConfig;
   }
 

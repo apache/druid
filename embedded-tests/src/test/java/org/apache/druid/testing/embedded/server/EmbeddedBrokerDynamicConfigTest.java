@@ -23,6 +23,7 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -133,10 +134,10 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
     String initialResult = cluster.callApi().runSql("SELECT COUNT(*) FROM %s", dataSource);
     Assertions.assertFalse(initialResult.isBlank());
 
-    // Apply a 1ms timeout via dynamic query context — any real query will expire before responding
+    // Apply a 1ms timeout via dynamic query context to force timeout
     updateBrokerDynamicConfig(
         BrokerDynamicConfig.builder()
-                           .withQueryContext(Map.of("timeout", 1))
+                           .withQueryContext(QueryContext.of(Map.of("timeout", 1)))
                            .build()
     );
 

@@ -75,7 +75,7 @@ public class GrpcEndpointInitializer
     this.driver = new QueryDriver(
         jsonMapper,
         sqlStatementFactory,
-        queryConfigProvider.getContext(),
+        queryConfigProvider,
         queryLifecycleFactory,
         queryScheduler
     );
