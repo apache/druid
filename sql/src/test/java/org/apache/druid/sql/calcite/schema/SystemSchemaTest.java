@@ -380,6 +380,9 @@ public class SystemSchemaTest extends CalciteTestBase
       DruidNode.UNKNOWN_VERSION
   );
 
+  // buildRevision is empty string outside a packaged JAR (same behaviour as the buildRevision metric dimension)
+  private final String buildRevision = "";
+
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
       NodeRole.COORDINATOR,
@@ -894,6 +897,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -913,6 +917,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -932,6 +937,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -951,6 +957,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -970,6 +977,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -988,6 +996,7 @@ public class SystemSchemaTest extends CalciteTestBase
         nonLeader,
         startTimeStr,
         version,
+        buildRevision,
         null,
         availableProcessors,
         totalMemory
@@ -1006,6 +1015,7 @@ public class SystemSchemaTest extends CalciteTestBase
             1L,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1025,6 +1035,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             "{\"brokerKey\":\"brokerValue\",\"brokerKey2\":\"brokerValue2\"}",
             availableProcessors,
             totalMemory
@@ -1044,6 +1055,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1063,6 +1075,7 @@ public class SystemSchemaTest extends CalciteTestBase
             1L,
             startTimeStr,
             version,
+            buildRevision,
             "{\"overlordKey\":\"overlordValue\"}",
             availableProcessors,
             totalMemory
@@ -1082,6 +1095,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1101,6 +1115,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1120,6 +1135,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1139,6 +1155,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            buildRevision,
             null,
             availableProcessors,
             totalMemory
@@ -1157,6 +1174,7 @@ public class SystemSchemaTest extends CalciteTestBase
         nonLeader,
         startTimeStr,
         version,
+        buildRevision,
         null,
         availableProcessors,
         totalMemory
@@ -1201,6 +1219,7 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long isLeader,
       String startTime,
       String version,
+      String buildRevision,
       String labels,
       long availableProcessors,
       long totalMemory
@@ -1219,6 +1238,7 @@ public class SystemSchemaTest extends CalciteTestBase
         isLeader,
         startTime,
         version,
+        buildRevision,
         labels,
         availableProcessors,
         totalMemory

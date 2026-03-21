@@ -29,16 +29,21 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.jar.Manifest;
 
 /**
  *
@@ -91,6 +96,10 @@ public class DruidNode
       DruidNode.class.getPackage().getImplementationVersion(),
       UNKNOWN_VERSION
   );
+
+  @JsonProperty
+  @NotNull
+  private final String buildRevision = StringUtils.nullToEmptyNonDruidDataString(readBuildRevisionFromManifest());
 
   @JsonProperty
   private Map<String, String> labels;
@@ -264,6 +273,33 @@ public class DruidNode
   public String getVersion()
   {
     return version;
+  }
+
+  public String getBuildRevision()
+  {
+    return buildRevision;
+  }
+
+  /**
+   * Reads the {@code Build-Revision} attribute from the MANIFEST.MF of the JAR containing this class.
+   * Returns null when running outside a packaged JAR (e.g., during {@code mvn test}).
+   */
+  private static String readBuildRevisionFromManifest()
+  {
+    try {
+      URL classUrl = DruidNode.class.getResource(DruidNode.class.getSimpleName() + ".class");
+      if (classUrl != null && "jar".equals(classUrl.getProtocol())) {
+        String classPath = classUrl.toString();
+        String manifestPath = classPath.substring(0, classPath.lastIndexOf('!') + 1) + "/META-INF/MANIFEST.MF";
+        try (InputStream is = new URL(manifestPath).openStream()) {
+          return new Manifest(is).getMainAttributes().getValue("Build-Revision");
+        }
+      }
+    }
+    catch (IOException e) {
+      // Fall through and return null
+    }
+    return null;
   }
 
   public DruidNode withService(String service)
