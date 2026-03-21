@@ -54,7 +54,7 @@ public class ConsulDruidNodeAnnouncer implements DruidNodeAnnouncer
   private final ConcurrentMap<String, DiscoveryDruidNode> announcedNodes = new ConcurrentHashMap<>();
   private final Set<String> registeringNodes = ConcurrentHashMap.newKeySet();
   private final ScheduledExecutorService healthCheckExecutor;
-  
+
   private static final int MAX_FAILURES_BEFORE_REREGISTER = 3;
   private static final long EXECUTOR_TERMINATION_TIMEOUT_SECONDS = 10;
   private final ConcurrentMap<String, AtomicInteger> consecutiveFailures = new ConcurrentHashMap<>();

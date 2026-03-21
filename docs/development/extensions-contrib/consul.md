@@ -202,7 +202,7 @@ Consul datacenter scope: service catalog, KV, sessions, locks.
 
 ### Health Check TTL Behavior
 
-Service health check TTL = 3 * `healthCheckInterval` (minimum 30s). 
+Service health check TTL = 3 * `healthCheckInterval` (minimum 30s).
 Heartbeats sent every `healthCheckInterval`.
 
 ## Operational Verification

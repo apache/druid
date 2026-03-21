@@ -83,4 +83,3 @@ final class ConsulMetrics
     emitter.emit(b.setMetric(metric, value));
   }
 }
-
