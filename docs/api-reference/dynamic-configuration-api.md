@@ -306,7 +306,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ## Broker dynamic configuration
 
 Broker dynamic configuration is managed through the Coordinator but consumed by Brokers.
-These settings control broker behavior such as query blocking rules.
+These settings control broker behavior such as query blocking rules and default query context values.
+
+> **Note:** Broker dynamic configuration is best-effort. Settings may not be applied in certain
+> cases, such as when a Broker has recently started and hasn't received the config yet, or if the
+> Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every
+> 1 minute) and also receive push updates from the Coordinator for immediate propagation. If a
+> setting is critical and must always be applied, use the equivalent static runtime property instead.
 
 ### Get broker dynamic configuration
 
@@ -366,7 +372,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "dataSources": ["large_table"],
       "queryTypes": ["scan"]
     }
-  ]
+  ],
+  "queryContext": {
+    "priority": 0,
+    "timeout": 300000
+  }
 }
 ```
 
@@ -417,7 +427,7 @@ The endpoint supports a set of optional header parameters to populate the audit 
 curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
 -H "Content-Type: application/json" \
 -H "X-Druid-Author: admin" \
--H "X-Druid-Comment: Add query blocklist rules" \
+-H "X-Druid-Comment: Add query blocklist rules and set default context" \
 -d '{
   "queryBlocklist": [
     {
@@ -431,7 +441,11 @@ curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
         "debug": "true"
       }
     }
-  ]
+  ],
+  "queryContext": {
+    "priority": 0,
+    "timeout": 300000
+  }
 }'
 ```
 
@@ -444,7 +458,7 @@ POST /druid/coordinator/v1/broker/config HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 X-Druid-Author: admin
-X-Druid-Comment: Add query blocklist rules
+X-Druid-Comment: Add query blocklist rules and set default context
 
 {
   "queryBlocklist": [
@@ -459,7 +473,11 @@ X-Druid-Comment: Add query blocklist rules
         "debug": "true"
       }
     }
-  ]
+  ],
+  "queryContext": {
+    "priority": 0,
+    "timeout": 300000
+  }
 }
 ```
 
@@ -477,6 +495,7 @@ The following table shows the dynamic configuration properties for the Broker.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
+|`queryContext`| Map of default query context key-value pairs applied to all queries on this broker. These values override static defaults set via runtime properties (`druid.query.default.context.*`) but are overridden by context values supplied in individual query payloads. Useful for setting cluster-wide defaults such as `priority` or `timeout` without restarting. See [Query context reference](../querying/query-context-reference.md) for available keys.|none|
 
 #### Query blocklist rules
 
@@ -498,8 +517,6 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
 - For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
 - At least one criterion must be specified per rule to prevent accidentally blocking all queries
 - A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
-
-> **Note:** Query blocking is best-effort. Queries may not be blocked in certain cases, such as when a Broker has recently started and hasn't received the config yet, or if the Broker cannot contact the Coordinator. Brokers poll the configuration periodically (default every 1 minute) and also receive push updates from the Coordinator for immediate propagation.
 
 **Error response:**
 
@@ -586,7 +603,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "Add query blocklist rules",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}]}",
+    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"queryContext\":{\"priority\":0,\"timeout\":300000}}",
     "auditTime": "2024-03-06T12:00:00.000Z"
   }
 ]
