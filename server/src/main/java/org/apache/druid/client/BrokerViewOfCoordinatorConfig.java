@@ -63,9 +63,11 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
   public BrokerViewOfCoordinatorConfig(
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
-      @Coordinator final ServiceLocator serviceLocator
+      @Coordinator final ServiceLocator serviceLocator,
+      final BrokerViewOfConfigsConfig startupConfig
   )
   {
+    super(startupConfig);
     this.coordinatorClient =
         new CoordinatorClientImpl(
             clientFactory.makeClient(
@@ -80,6 +82,13 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
   @VisibleForTesting
   public BrokerViewOfCoordinatorConfig(CoordinatorClient coordinatorClient)
   {
+    this(coordinatorClient, new BrokerViewOfConfigsConfig());
+  }
+
+  @VisibleForTesting
+  public BrokerViewOfCoordinatorConfig(CoordinatorClient coordinatorClient, BrokerViewOfConfigsConfig startupConfig)
+  {
+    super(startupConfig);
     this.coordinatorClient = coordinatorClient;
   }
 
@@ -93,6 +102,12 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
   protected String getConfigTypeName()
   {
     return "coordinator";
+  }
+
+  @Override
+  protected CoordinatorDynamicConfig getDefaultConfig()
+  {
+    return CoordinatorDynamicConfig.builder().build();
   }
 
   /**

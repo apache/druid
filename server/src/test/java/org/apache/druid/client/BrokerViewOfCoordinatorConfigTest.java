@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -54,5 +55,18 @@ public class BrokerViewOfCoordinatorConfigTest
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getCoordinatorDynamicConfig();
     Assert.assertEquals(config, target.getDynamicConfig());
+  }
+
+  @Test
+  public void testSkipsStartupFetchWhenNotConfigured() throws Exception
+  {
+    BrokerViewOfConfigsConfig skipConfig = new ObjectMapper().readValue(
+        "{\"awaitInitializationOnStart\": false}",
+        BrokerViewOfConfigsConfig.class
+    );
+    BrokerViewOfCoordinatorConfig skipTarget = new BrokerViewOfCoordinatorConfig(coordinatorClient, skipConfig);
+    skipTarget.start();
+    Mockito.verify(coordinatorClient, Mockito.never()).getCoordinatorDynamicConfig();
+    Assert.assertEquals(CoordinatorDynamicConfig.builder().build(), skipTarget.getDynamicConfig());
   }
 }

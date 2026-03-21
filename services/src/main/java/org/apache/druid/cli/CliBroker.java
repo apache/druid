@@ -30,6 +30,7 @@ import com.google.inject.util.Modules;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
+import org.apache.druid.client.BrokerViewOfConfigsConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -168,6 +169,7 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.configs", BrokerViewOfConfigsConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
 
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);

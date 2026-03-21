@@ -65,9 +65,11 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @Coordinator final ServiceLocator serviceLocator,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final BrokerViewOfConfigsConfig startupConfig
   )
   {
+    super(startupConfig);
     this.defaultQueryConfig = defaultQueryConfig;
     this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
     this.coordinatorClient =
@@ -87,6 +89,17 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
       final DefaultQueryConfig defaultQueryConfig
   )
   {
+    this(coordinatorClient, defaultQueryConfig, new BrokerViewOfConfigsConfig());
+  }
+
+  @VisibleForTesting
+  public BrokerViewOfBrokerConfig(
+      final CoordinatorClient coordinatorClient,
+      final DefaultQueryConfig defaultQueryConfig,
+      final BrokerViewOfConfigsConfig startupConfig
+  )
+  {
+    super(startupConfig);
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
     this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
@@ -102,6 +115,12 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   protected String getConfigTypeName()
   {
     return "broker";
+  }
+
+  @Override
+  protected BrokerDynamicConfig getDefaultConfig()
+  {
+    return BrokerDynamicConfig.builder().build();
   }
 
   /**

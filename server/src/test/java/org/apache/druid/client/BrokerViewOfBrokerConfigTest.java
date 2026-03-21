@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -81,5 +82,18 @@ public class BrokerViewOfBrokerConfigTest
   {
     target.setDynamicConfig(BrokerDynamicConfig.builder().build());
     Assert.assertEquals(defaultQueryConfig.getContext(), target.getContext());
+  }
+
+  @Test
+  public void testSkipsStartupFetchWhenNotConfigured() throws Exception
+  {
+    BrokerViewOfConfigsConfig skipConfig = new ObjectMapper().readValue(
+        "{\"awaitInitializationOnStart\": false}",
+        BrokerViewOfConfigsConfig.class
+    );
+    BrokerViewOfBrokerConfig skipTarget = new BrokerViewOfBrokerConfig(coordinatorClient, defaultQueryConfig, skipConfig);
+    skipTarget.start();
+    Mockito.verify(coordinatorClient, Mockito.never()).getBrokerDynamicConfig();
+    Assert.assertEquals(BrokerDynamicConfig.builder().build(), skipTarget.getDynamicConfig());
   }
 }

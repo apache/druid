@@ -30,6 +30,7 @@ import javax.validation.constraints.NotNull;
  * Subclasses must implement:
  * {@link #fetchConfigFromClient()} to fetch configuration from their specific client</li>
  * {@link #getConfigTypeName()} for logging purposes</li>
+ * {@link #getDefaultConfig()} to provide a safe default when startup fetch is skipped</li>
  *
  * @param <DynamicConfig> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
  */
@@ -37,8 +38,15 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
 {
   private static final Logger log = new Logger(BaseBrokerViewOfConfig.class);
 
+  private final BrokerViewOfConfigsConfig startupConfig;
+
   @GuardedBy("this")
   private DynamicConfig config;
+
+  protected BaseBrokerViewOfConfig(BrokerViewOfConfigsConfig startupConfig)
+  {
+    this.startupConfig = startupConfig;
+  }
 
   /**
    * Fetch the configuration from the Coordinator via the HTTP client.
@@ -53,6 +61,11 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
    * E.g., "coordinator dynamic configuration", "broker dynamic configuration"
    */
   protected abstract String getConfigTypeName();
+
+  /**
+   * Return the default configuration to use when startup fetch is skipped.
+   */
+  protected abstract DynamicConfig getDefaultConfig();
 
   /**
    * Return the current dynamic configuration.
@@ -76,22 +89,24 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
 
   /**
    * Fetch the initial configuration from the Coordinator on broker startup.
-   * If the fetch fails, the broker startup will fail with a RuntimeException,
-   * preventing the broker from serving queries with stale or missing configuration.
+   * If {@code awaitInitializationOnStart} is false, skips the fetch and uses the default config instead.
+   * Otherwise, if the fetch fails, broker startup fails to prevent serving queries with missing configuration.
    */
   @LifecycleStart
   public void start()
   {
+    if (!startupConfig.isAwaitInitializationOnStart()) {
+      setDynamicConfig(getDefaultConfig());
+      log.info("Skipping startup fetch of %s; using default config.", getConfigTypeName());
+      return;
+    }
     try {
       log.info("Fetching %s from Coordinator.", getConfigTypeName());
-
       DynamicConfig fetchedConfig = fetchConfigFromClient();
       setDynamicConfig(fetchedConfig);
-
       log.info("Successfully fetched %s: [%s]", getConfigTypeName(), fetchedConfig);
     }
     catch (Exception e) {
-      // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
       throw new RuntimeException("Failed to initialize " + getConfigTypeName(), e);
     }
   }
