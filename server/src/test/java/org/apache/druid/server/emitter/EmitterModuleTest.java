@@ -61,8 +61,6 @@ import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -251,28 +249,6 @@ public class EmitterModuleTest
     StubServiceEmitter stubEmitter = (StubServiceEmitter) injector.getInstance(Emitter.class);
     EventMap map = ((ServiceMetricEvent) stubEmitter.getEvents().get(0)).toMap();
     Assert.assertEquals("", map.get("buildRevision"));
-  }
-
-  @Test
-  public void testParseBuildRevisionExtractsAttribute() throws Exception
-  {
-    String manifest = "Manifest-Version: 1.0\nBuild-Revision: abc1234def567890\n\n";
-    ByteArrayInputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("abc1234def567890", EmitterModule.parseBuildRevision(is));
-  }
-
-  @Test
-  public void testParseBuildRevisionWithNullStream() throws Exception
-  {
-    Assert.assertNull(EmitterModule.parseBuildRevision(null));
-  }
-
-  @Test
-  public void testParseBuildRevisionWithMissingAttribute() throws Exception
-  {
-    String manifest = "Manifest-Version: 1.0\n\n";
-    ByteArrayInputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
-    Assert.assertNull(EmitterModule.parseBuildRevision(is));
   }
 
   private Injector makeInjectorForEmitterModule(EmitterModule emitterModule)

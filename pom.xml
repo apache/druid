@@ -1885,7 +1885,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+                    <dotGitDirectory>${session.executionRootDirectory}/.git</dotGitDirectory>
                     <dateFormatTimeZone>Etc/UTC</dateFormatTimeZone>
                     <skipPoms>false</skipPoms>
                     <format>json</format>
