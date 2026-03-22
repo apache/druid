@@ -21,7 +21,6 @@ package org.apache.druid.frame.processor;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
