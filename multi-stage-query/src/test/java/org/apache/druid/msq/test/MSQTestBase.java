@@ -313,6 +313,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   )
                   .build();
 
+  public static final Map<String, Object> USE_COMBINER_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_USE_COMBINER, true)
+                  .build();
+
   public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
@@ -333,6 +339,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
   public static final String SUPERUSER = "superuser";
+  public static final String USE_COMBINER = "use_combiner";
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;

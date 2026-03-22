@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.kernel.StagePartition;
 
 import javax.annotation.Nullable;
 
@@ -38,6 +37,16 @@ import javax.annotation.Nullable;
  */
 public class ReadableInput
 {
+  /**
+   * Constant indicating that no stage number is associated with this input.
+   */
+  public static final int NO_STAGE = -1;
+
+  /**
+   * Constant indicating that no partition number is associated with this input.
+   */
+  public static final int NO_PARTITION = -1;
+
   @Nullable
   private final SegmentReferenceHolder segment;
 
@@ -50,22 +59,24 @@ public class ReadableInput
   @Nullable
   private final FrameReader frameReader;
 
-  @Nullable
-  private final StagePartition stagePartition;
+  private final int stageNumber;
+  private final int partitionNumber;
 
   private ReadableInput(
       @Nullable SegmentReferenceHolder segment,
       @Nullable DataServerQueryHandler dataServerQuery,
       @Nullable ReadableFrameChannel channel,
       @Nullable FrameReader frameReader,
-      @Nullable StagePartition stagePartition
+      final int stageNumber,
+      final int partitionNumber
   )
   {
     this.segment = segment;
     this.dataServerQuery = dataServerQuery;
     this.channel = channel;
     this.frameReader = frameReader;
-    this.stagePartition = stagePartition;
+    this.stageNumber = stageNumber;
+    this.partitionNumber = partitionNumber;
 
     if ((segment == null) && (channel == null) && (dataServerQuery == null)) {
       throw new ISE("Provide 'segment', 'dataServerQuery' or 'channel'");
@@ -79,7 +90,7 @@ public class ReadableInput
    */
   public static ReadableInput segment(final SegmentReferenceHolder segment)
   {
-    return new ReadableInput(Preconditions.checkNotNull(segment, "segment"), null, null, null, null);
+    return new ReadableInput(Preconditions.checkNotNull(segment, "segment"), null, null, null, NO_STAGE, NO_PARTITION);
   }
 
   /**
@@ -89,21 +100,22 @@ public class ReadableInput
    */
   public static ReadableInput dataServerQuery(final DataServerQueryHandler dataServerQueryHandler)
   {
-    return new ReadableInput(null, Preconditions.checkNotNull(dataServerQueryHandler, "dataServerQuery"), null, null, null);
+    return new ReadableInput(null, Preconditions.checkNotNull(dataServerQueryHandler, "dataServerQuery"), null, null, NO_STAGE, NO_PARTITION);
   }
 
   /**
    * Create an input associated with a channel.
    *
-   * @param channel        the channel
-   * @param frameReader    reader for the channel
-   * @param stagePartition stage-partition associated with the channel, if meaningful. May be null if this channel
-   *                       does not correspond to any one particular stage-partition.
+   * @param channel         the channel
+   * @param frameReader     reader for the channel
+   * @param stageNumber     stage number associated with the channel
+   * @param partitionNumber partition number associated with the channel
    */
   public static ReadableInput channel(
       final ReadableFrameChannel channel,
       final FrameReader frameReader,
-      @Nullable final StagePartition stagePartition
+      final int stageNumber,
+      final int partitionNumber
   )
   {
     return new ReadableInput(
@@ -111,7 +123,8 @@ public class ReadableInput
         null,
         Preconditions.checkNotNull(channel, "channel"),
         Preconditions.checkNotNull(frameReader, "frameReader"),
-        stagePartition
+        stageNumber,
+        partitionNumber
     );
   }
 
@@ -132,7 +145,7 @@ public class ReadableInput
   }
 
   /**
-   * Whether this input is a channel (from {@link #channel(ReadableFrameChannel, FrameReader, StagePartition)}.
+   * Whether this input is a channel (from {@link #channel(ReadableFrameChannel, FrameReader, int, int)}.
    */
   public boolean hasChannel()
   {
@@ -176,18 +189,21 @@ public class ReadableInput
   }
 
   /**
-   * The stage-partition this input. Only valid if {@link #hasChannel()}, and if a stage-partition was provided
-   * during construction. Throws {@link IllegalStateException} if no stage-partition was provided during construction.
+   * The stage number for this input. Only valid if {@link #hasChannel()}.
    */
-  public StagePartition getStagePartition()
+  public int getStageNumber()
   {
     checkIsChannel();
+    return stageNumber;
+  }
 
-    if (stagePartition == null) {
-      throw new ISE("Stage-partition is not set for this channel");
-    }
-
-    return stagePartition;
+  /**
+   * The partition number for this input. Only valid if {@link #hasChannel()}.
+   */
+  public int getPartitionNumber()
+  {
+    checkIsChannel();
+    return partitionNumber;
   }
 
   private void checkIsSegment()
