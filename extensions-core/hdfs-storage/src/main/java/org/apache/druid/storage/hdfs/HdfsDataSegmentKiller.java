@@ -122,6 +122,37 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
+  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  {
+    if (Strings.isNullOrEmpty(supervisorTaskId)) {
+      return;
+    }
+    if (supervisorTaskId.indexOf('/') >= 0 || supervisorTaskId.indexOf('\\') >= 0) {
+      log.warn("Skipping shuffle prefix kill: task id must be a single path segment, got [%s]", supervisorTaskId);
+      return;
+    }
+    if (storageDirectory == null) {
+      log.warn("Skipping shuffle prefix kill: storage directory not configured");
+      return;
+    }
+
+    final Path taskDir = new Path(new Path(storageDirectory, SHUFFLE_DATA_DIR_NAME), supervisorTaskId);
+    try {
+      final FileSystem fs = taskDir.getFileSystem(config);
+      if (!fs.exists(taskDir)) {
+        return;
+      }
+      log.info("Cleaning up task[%s]. Deleting deep storage shuffle directory[%s]", supervisorTaskId, taskDir);
+      if (!fs.delete(taskDir, true)) {
+        throw new SegmentLoadingException("Failed to delete shuffle directory[%s]", taskDir);
+      }
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "Failed to delete shuffle directory for task[%s]", supervisorTaskId);
+    }
+  }
+
+  @Override
   public void killAll() throws IOException
   {
     if (storageDirectory == null) {

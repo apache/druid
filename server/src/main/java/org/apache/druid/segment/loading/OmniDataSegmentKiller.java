@@ -99,6 +99,27 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
     throw new UnsupportedOperationException("not implemented");
   }
 
+  @Override
+  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  {
+    SegmentLoadingException firstFailure = null;
+    for (Supplier<DataSegmentKiller> supplier : killers.values()) {
+      try {
+        supplier.get().killShuffleSupervisorPrefix(supervisorTaskId);
+      }
+      catch (SegmentLoadingException e) {
+        if (firstFailure == null) {
+          firstFailure = e;
+        } else {
+          firstFailure.addSuppressed(e);
+        }
+      }
+    }
+    if (firstFailure != null) {
+      throw firstFailure;
+    }
+  }
+
   @VisibleForTesting
   public Map<String, Supplier<DataSegmentKiller>> getKillers()
   {

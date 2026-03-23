@@ -39,6 +39,11 @@ public interface DataSegmentKiller
 {
   Logger log = new Logger(DataSegmentKiller.class);
 
+  /**
+   * Must match {@link org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager#SHUFFLE_DATA_DIR_PREFIX}.
+   */
+  String SHUFFLE_DATA_DIR_NAME = "shuffle-data";
+
   static String descriptorPath(String path)
   {
     int lastPathSeparatorIndex = path.lastIndexOf('/');
@@ -98,4 +103,26 @@ public interface DataSegmentKiller
    * is only implemented by local and HDFS.
    */
   void killAll() throws IOException;
+
+  /**
+   * Best-effort removal of all deep-storage shuffle intermediates for a native parallel index supervisor task.
+   * Native parallel indexing writes shuffle files only under {@code shuffle-data/<supervisorTaskId>/} (see
+   * {@link #SHUFFLE_DATA_DIR_NAME} and {@code org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager});
+   * the default implementation is a no-op.
+   * <p>
+   * <b>HDFS-style filesystem deep storage</b>: implement as a recursive delete of directory
+   * {@code <storageDirectory>/shuffle-data/<supervisorTaskId>}. Reject or ignore task ids that contain path separators
+   * so callers cannot widen the delete scope.
+   * <p>
+   * <b>Object stores (S3, GCS, Azure Blob, etc.)</b>: there is usually no recursive-delete primitive; implementors
+   * should list objects under the key prefix {@code shuffle-data/<supervisorTaskId>/} (or the extension's equivalent
+   * layout under the configured bucket/prefix), delete in pages, and tolerate missing keys (idempotent cleanup). Use
+   * batch delete APIs where available. Be careful with listing consistency: eventual consistency and pagination
+   * boundaries may require retries or a second list pass. Never delete keys outside that prefix (other supervisors
+   * share {@code shuffle-data/}). If the supervisor JVM dies before {@code cleanUp}, operators can remove the same
+   * prefix manually.
+   */
+  default void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  {
+  }
 }
