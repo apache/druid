@@ -228,12 +228,6 @@ public class NativeCompactionRunner implements CompactionRunner
         interval
     );
 
-    if (segmentIds.isEmpty()) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                    .ofCategory(DruidException.Category.INVALID_INPUT)
-                    .build("Minor compaction spec submitted targets no segments.");
-    }
-
     return new ParallelIndexIOConfig(
         new DruidInputSource(
             dataSchema.getDataSource(),
