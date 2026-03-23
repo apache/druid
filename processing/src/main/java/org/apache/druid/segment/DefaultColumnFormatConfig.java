@@ -71,12 +71,12 @@ public class DefaultColumnFormatConfig
   @Nullable
   private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
   {
-    if (maxStringLength != null && maxStringLength <= 0) {
+    if (maxStringLength != null && maxStringLength < 0) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               "Invalid value[%s] specified for 'druid.indexing.formats.maxStringLength'."
-                              + " Value must be a positive integer.",
+                              + " Value must be a non-negative integer.",
                               maxStringLength
                           );
     }

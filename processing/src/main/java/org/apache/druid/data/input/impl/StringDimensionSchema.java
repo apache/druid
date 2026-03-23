@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.StringDimensionHandler;
@@ -34,12 +35,25 @@ public class StringDimensionSchema extends DimensionSchema
 {
   private static final boolean DEFAULT_CREATE_BITMAP_INDEX = true;
 
-  public static int getDefaultMaxStringLength()
+  @Nullable
+  public static Integer getDefaultMaxStringLength()
   {
     return BuiltInTypesModule.getMaxStringLength();
   }
 
-  private final int maxStringLength;
+  @Nullable
+  private static Integer validateMaxStringLength(String name, @Nullable Integer maxStringLength)
+  {
+    if (maxStringLength != null && maxStringLength < 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("maxStringLength for column [%s] must be >= 0, got [%s]", name, maxStringLength);
+    }
+    return maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
+  }
+
+  @Nullable
+  private final Integer maxStringLength;
 
   @JsonCreator
   public static StringDimensionSchema create(String name)
@@ -56,7 +70,7 @@ public class StringDimensionSchema extends DimensionSchema
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
-    this.maxStringLength = maxStringLength != null && maxStringLength > 0 ? maxStringLength : getDefaultMaxStringLength();
+    this.maxStringLength = validateMaxStringLength(name, maxStringLength);
   }
 
   public StringDimensionSchema(
@@ -65,17 +79,18 @@ public class StringDimensionSchema extends DimensionSchema
       Boolean createBitmapIndex
   )
   {
-    this(name, multiValueHandling, createBitmapIndex, getDefaultMaxStringLength());
+    this(name, multiValueHandling, createBitmapIndex, null);
   }
 
   public StringDimensionSchema(String name)
   {
-    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, getDefaultMaxStringLength());
+    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null);
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public int getMaxStringLength()
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Integer getMaxStringLength()
   {
     return maxStringLength;
   }
