@@ -52,8 +52,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTest
@@ -228,10 +231,6 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     }
   }
 
-  /**
-   * End-to-end minor compaction: compact a subset of segments with useConcurrentLocks (TIME_CHUNK).
-   * Non-compacted segments in the interval are upgraded via MarkSegmentToUpgradeAction.
-   */
   @Test
   public void testMinorCompactionUpgradesNonCompactedSegments()
   {
@@ -244,17 +243,27 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> hashPartitionedSegments =
         SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
-
     hashPartitionedSegments.values().forEach(
         segmentsInInterval -> segmentsInInterval.sort(
             Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
         )
     );
-    // Pick a subset to compact (e.g. first 2 of each interval)
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
     for (List<DataSegment> segmentsInInterval : hashPartitionedSegments.values()) {
       segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
     }
+    final Set<DataSegment> originalSegments = dataSegmentsWithSchemas.getSegments();
+    final Set<String> compactedSegmentIds =
+        segmentsToCompact.stream().map(segment -> segment.getId().toString()).collect(Collectors.toSet());
+    final Set<String> nonCompactedSegmentIds =
+        originalSegments.stream()
+                        .map(segment -> segment.getId().toString())
+                        .filter(segmentId -> !compactedSegmentIds.contains(segmentId))
+                        .collect(Collectors.toSet());
+    Assert.assertFalse(nonCompactedSegmentIds.isEmpty());
+    final Set<String> originalSegmentIds = new HashSet<>(compactedSegmentIds);
+    originalSegmentIds.addAll(nonCompactedSegmentIds);
+
     final CompactionTask compactionTask = newCompactionTaskBuilder()
         .inputSpec(
             new MinorCompactionInputSpec(
@@ -267,10 +276,100 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .build();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
-    // After minor compaction: compacted subset produces new segments; non-compacted segments were upgraded
-    final Map<Interval, List<DataSegment>> resultSegments =
-        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
-    Assert.assertFalse("Compaction should produce segments", resultSegments.isEmpty());
+
+    final Set<DataSegment> publishedAfterCompaction = dataSegmentsWithSchemas.getSegments();
+    Assert.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
+
+    final Set<String> finalSegmentIds = publishedAfterCompaction.stream()
+                                                                .map(segment -> segment.getId().toString())
+                                                                .collect(Collectors.toSet());
+    final Map<String, String> upgradedFromSegmentIdMap =
+        getStorageCoordinator().retrieveUpgradedFromSegmentIds(DATASOURCE, finalSegmentIds);
+    Assert.assertFalse(upgradedFromSegmentIdMap.isEmpty());
+    Assert.assertTrue(upgradedFromSegmentIdMap.values().stream().noneMatch(compactedSegmentIds::contains));
+    Assert.assertTrue(originalSegmentIds.containsAll(upgradedFromSegmentIdMap.values()));
+    for (final String successorSegmentId : upgradedFromSegmentIdMap.keySet()) {
+      Assert.assertTrue(finalSegmentIds.contains(successorSegmentId));
+    }
+
+    final Set<String> newPublishedSegmentIds = new HashSet<>(finalSegmentIds);
+    newPublishedSegmentIds.removeAll(originalSegmentIds);
+    Assert.assertFalse(newPublishedSegmentIds.isEmpty());
+    Assert.assertTrue(
+        newPublishedSegmentIds.stream().anyMatch(id -> !upgradedFromSegmentIdMap.containsKey(id))
+    );
+
+    final Map<Interval, Set<String>> newSegmentIdsByInterval =
+        publishedAfterCompaction.stream()
+                                .filter(
+                                    segment -> !segment.isTombstone()
+                                               && newPublishedSegmentIds.contains(segment.getId().toString())
+                                )
+                                .collect(Collectors.groupingBy(
+                                    DataSegment::getInterval,
+                                    Collectors.mapping(
+                                        segment -> segment.getId().toString(),
+                                        Collectors.toCollection(HashSet::new)
+                                    )
+                                ));
+
+    for (final String parentSegmentId : nonCompactedSegmentIds) {
+      final List<String> successorSegmentIds = upgradedFromSegmentIdMap.entrySet()
+                                                                       .stream()
+                                                                       .filter(e -> parentSegmentId.equals(e.getValue()))
+                                                                       .map(Map.Entry::getKey)
+                                                                       .toList();
+      if (finalSegmentIds.contains(parentSegmentId)) {
+        Assert.assertTrue(successorSegmentIds.isEmpty());
+      } else if (!successorSegmentIds.isEmpty()) {
+        Assert.assertEquals(1, successorSegmentIds.size());
+        Assert.assertTrue(finalSegmentIds.contains(successorSegmentIds.get(0)));
+      }
+    }
+    for (final DataSegment compactedSource : segmentsToCompact) {
+      final String compactedSourceId = compactedSource.getId().toString();
+      Assert.assertFalse(finalSegmentIds.contains(compactedSourceId));
+      final Set<String> newIdsInSameInterval =
+          newSegmentIdsByInterval.getOrDefault(compactedSource.getInterval(), Set.of());
+      Assert.assertFalse(
+          StringUtils.format(
+              "Expected new published segment ids in interval[%s] after compacting source[%s]; candidates=%s",
+              compactedSource.getInterval(),
+              compactedSourceId,
+              newIdsInSameInterval
+          ),
+          newIdsInSameInterval.isEmpty()
+      );
+    }
+
+    final Set<String> removedNonCompactedParentIds =
+        nonCompactedSegmentIds.stream().filter(id -> !finalSegmentIds.contains(id)).collect(Collectors.toSet());
+    if (!removedNonCompactedParentIds.isEmpty()) {
+      final Map<String, Set<String>> upgradedToSegmentIdsByParent =
+          getStorageCoordinator().retrieveUpgradedToSegmentIds(DATASOURCE, removedNonCompactedParentIds);
+      for (final String parentSegmentId : removedNonCompactedParentIds) {
+        final Set<String> expectedSuccessorIds = upgradedFromSegmentIdMap.entrySet()
+                                                                         .stream()
+                                                                         .filter(e -> parentSegmentId.equals(e.getValue()))
+                                                                         .map(Map.Entry::getKey)
+                                                                         .collect(Collectors.toSet());
+        if (expectedSuccessorIds.isEmpty()) {
+          continue;
+        }
+        final Set<String> coordinatorSuccessorIds =
+            new HashSet<>(upgradedToSegmentIdsByParent.getOrDefault(parentSegmentId, Set.of()));
+        coordinatorSuccessorIds.remove(parentSegmentId);
+        Assert.assertTrue(
+            StringUtils.format(
+                "retrieveUpgradedToSegmentIds(%s) should include %s (actual=%s)",
+                parentSegmentId,
+                expectedSuccessorIds,
+                coordinatorSuccessorIds
+            ),
+            coordinatorSuccessorIds.containsAll(expectedSuccessorIds)
+        );
+      }
+    }
   }
 
   private DataSegmentsWithSchemas runTestTask(
