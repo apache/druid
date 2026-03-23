@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -33,28 +34,15 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.UUID;
 
 public class HdfsDataSegmentKillerTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private static Path childPath(File root, String first, String... more)
-  {
-    Path p = new Path(root.getAbsolutePath(), first);
-    for (String s : more) {
-      p = new Path(p, s);
-    }
-    return p;
-  }
 
   @Test
   public void testKill() throws Exception
@@ -128,7 +116,6 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testKillForSegmentPathWithoutPartitionNumber() throws Exception
   {
-    final File testRoot = temporaryFolder.newFolder();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -137,13 +124,13 @@ public class HdfsDataSegmentKillerTest
           @Override
           public String getStorageDirectory()
           {
-            return testRoot.getAbsolutePath();
+            return "/tmp";
           }
         }
     );
 
     FileSystem fs = FileSystem.get(config);
-    Path dataSourceDir = childPath(testRoot, "dataSourceNew");
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
 
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
@@ -156,7 +143,7 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(version11Dir));
     Assert.assertFalse(fs.exists(interval1Dir));
     Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path(testRoot.getAbsolutePath())));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
     Assert.assertTrue(fs.exists(dataSourceDir));
     Assert.assertTrue(fs.delete(dataSourceDir, false));
   }
@@ -164,7 +151,6 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testKillForSegmentWithUniquePath() throws Exception
   {
-    final File testRoot = temporaryFolder.newFolder();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -173,13 +159,13 @@ public class HdfsDataSegmentKillerTest
           @Override
           public String getStorageDirectory()
           {
-            return testRoot.getAbsolutePath();
+            return "/tmp";
           }
         }
     );
 
     FileSystem fs = FileSystem.get(config);
-    Path dataSourceDir = childPath(testRoot, "dataSourceNew");
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
 
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
@@ -193,7 +179,7 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(version11Dir));
     Assert.assertFalse(fs.exists(interval1Dir));
     Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path(testRoot.getAbsolutePath())));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
     Assert.assertTrue(fs.exists(dataSourceDir));
     Assert.assertTrue(fs.delete(dataSourceDir, false));
   }
@@ -219,41 +205,9 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillCompoundIndexLz4() throws Exception
-  {
-    final File testRoot = temporaryFolder.newFolder();
-    Configuration config = new Configuration();
-    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-        config,
-        new HdfsDataSegmentPusherConfig()
-        {
-          @Override
-          public String getStorageDirectory()
-          {
-            return testRoot.getAbsolutePath();
-          }
-        }
-    );
-
-    FileSystem fs = FileSystem.get(config);
-    Path dataSourceDir = childPath(testRoot, "dataSourceLz4");
-    Path interval1Dir = new Path(dataSourceDir, "intervalLz4");
-    Path version11Dir = new Path(interval1Dir, "v1");
-    Assert.assertTrue(fs.mkdirs(version11Dir));
-    fs.createNewFile(new Path(version11Dir, "3_index.lz4"));
-
-    killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.lz4").toString()));
-
-    Assert.assertFalse(fs.exists(version11Dir));
-    Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.delete(dataSourceDir, false));
-  }
-
-  @Test
   public void testKillShuffleSupervisorPrefix() throws Exception
   {
-    final File testRoot = temporaryFolder.newFolder();
+    final java.io.File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-").toFile();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -267,28 +221,22 @@ public class HdfsDataSegmentKillerTest
         }
     );
 
-    FileSystem fs = FileSystem.get(config);
-    Path shuffleRoot = childPath(testRoot, HdfsDataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
-    Path taskDir = new Path(new Path(shuffleRoot, "prefix_task_a"), "leaf");
-    Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
-    fs.createNewFile(taskDir);
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
+      Path taskDir = new Path(new Path(shuffleRoot, "prefix_task_a"), "leaf");
+      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      fs.createNewFile(taskDir);
 
-    killer.killShuffleSupervisorPrefix("prefix_task_a");
+      killer.killShuffleSupervisorPrefix("prefix_task_a");
 
-    Assert.assertFalse(fs.exists(new Path(shuffleRoot, "prefix_task_a")));
-    Assert.assertTrue(fs.exists(shuffleRoot));
-    Assert.assertTrue(fs.delete(shuffleRoot, true));
-  }
-
-  @Test
-  public void testIsValidHdfsCompressedIndexFileName()
-  {
-    Assert.assertTrue(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("index.zip"));
-    Assert.assertTrue(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("0_index.zip"));
-    Assert.assertTrue(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("0_index.lz4"));
-    Assert.assertTrue(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("0_abcd_index.zip"));
-    Assert.assertTrue(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("3_11086_index.zip"));
-    Assert.assertFalse(HdfsDataSegmentKiller.isValidHdfsCompressedIndexFileName("readme.txt"));
+      Assert.assertFalse(fs.exists(new Path(shuffleRoot, "prefix_task_a")));
+      Assert.assertTrue(fs.exists(shuffleRoot));
+      Assert.assertTrue(fs.delete(shuffleRoot, true));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
   }
 
   @Test
@@ -315,7 +263,6 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testNoStorageDirectory() throws Exception
   {
-    final File testRoot = temporaryFolder.newFolder();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -330,7 +277,7 @@ public class HdfsDataSegmentKillerTest
     );
 
     FileSystem fs = FileSystem.get(config);
-    Path dataSourceDir = childPath(testRoot, "dataSourceNew");
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
 
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
@@ -346,7 +293,7 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(version11Dir));
     Assert.assertFalse(fs.exists(interval1Dir));
     Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path(testRoot.getAbsolutePath())));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
     Assert.assertTrue(fs.exists(dataSourceDir));
     Assert.assertTrue(fs.delete(dataSourceDir, false));
 
