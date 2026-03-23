@@ -110,11 +110,7 @@ public interface DataSegmentKiller
    * {@link #SHUFFLE_DATA_DIR_NAME} and {@code org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager});
    * the default implementation is a no-op.
    * <p>
-   * <b>HDFS-style filesystem deep storage</b>: implement as a recursive delete of directory
-   * {@code <storageDirectory>/shuffle-data/<supervisorTaskId>}. Reject or ignore task ids that contain path separators
-   * so callers cannot widen the delete scope.
-   * <p>
-   * <b>Object stores (S3, GCS, Azure Blob, etc.)</b>: there is usually no recursive-delete primitive; implementors
+   * Object stores (S3, GCS, Azure Blob, etc.): there is usually no recursive-delete primitive; implementors
    * should list objects under the key prefix {@code shuffle-data/<supervisorTaskId>/} (or the extension's equivalent
    * layout under the configured bucket/prefix), delete in pages, and tolerate missing keys (idempotent cleanup). Use
    * batch delete APIs where available. Be careful with listing consistency: eventual consistency and pagination

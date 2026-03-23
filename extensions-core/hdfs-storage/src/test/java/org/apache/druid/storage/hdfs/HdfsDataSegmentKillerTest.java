@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.UUID;
@@ -207,7 +208,7 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testKillShuffleSupervisorPrefix() throws Exception
   {
-    final java.io.File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-").toFile();
+    final File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-").toFile();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -231,6 +232,49 @@ public class HdfsDataSegmentKillerTest
       killer.killShuffleSupervisorPrefix("prefix_task_a");
 
       Assert.assertFalse(fs.exists(new Path(shuffleRoot, "prefix_task_a")));
+      Assert.assertTrue(fs.exists(shuffleRoot));
+      Assert.assertTrue(fs.delete(shuffleRoot, true));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  /**
+   * {@link HdfsDataSegmentPusher#pushToPath} replaces {@code ':'} with {@code '_'} in
+   * shuffle paths; cleanup must accept the canonical task id (with colons) and delete the underscore layout on disk.
+   */
+  @Test
+  public void testKillShuffleSupervisorPrefix_taskIdWithIsoTimestamp() throws Exception
+  {
+    final File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-colon-").toFile();
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      final String taskIdForCleanUp = "index_parallel_opa_affiliate_ams_key_metric_hourly_ph_live_hflgnacd_2026-03-23T10:09:40.697Z";
+      final String onDiskSupervisorDir = taskIdForCleanUp.replace(':', '_');
+      Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
+      Path taskDir = new Path(
+          shuffleRoot + Path.SEPARATOR + onDiskSupervisorDir + Path.SEPARATOR + "leaf"
+      );
+      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      fs.createNewFile(taskDir);
+
+      killer.killShuffleSupervisorPrefix(taskIdForCleanUp);
+
+      Assert.assertFalse(fs.exists(new Path(shuffleRoot + Path.SEPARATOR + onDiskSupervisorDir)));
       Assert.assertTrue(fs.exists(shuffleRoot));
       Assert.assertTrue(fs.delete(shuffleRoot, true));
     }
