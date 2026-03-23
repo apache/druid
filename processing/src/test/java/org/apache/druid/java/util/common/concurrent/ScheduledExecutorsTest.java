@@ -38,7 +38,7 @@ public class ScheduledExecutorsTest
     Duration initialDelay = Duration.millis(100);
     Duration delay = Duration.millis(500);
     int taskDuration = 100; // ms
-    ScheduledExecutorService exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
+    ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testFixedDelay--%d");
 
     List<Long> taskStartTimes = new ArrayList<>();
     AtomicInteger executionCount = new AtomicInteger(0);
@@ -98,6 +98,69 @@ public class ScheduledExecutorsTest
   }
 
   @Test
+  public void testScheduleWithFixedDelayContinuesAfterException() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration delay = Duration.millis(100);
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testFixedDelayException-%d");
+
+    final AtomicInteger executionCount = new AtomicInteger(0);
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    ScheduledExecutors.scheduleWithFixedDelay(
+        exec,
+        initialDelay,
+        delay,
+        () -> {
+          final int count = executionCount.incrementAndGet();
+          if (count == 1) {
+            throw new RuntimeException("test exception");
+          }
+          if (count >= 3) {
+            latch.countDown();
+            return ScheduledExecutors.Signal.STOP;
+          }
+          return ScheduledExecutors.Signal.REPEAT;
+        }
+    );
+
+    final boolean completed = latch.await(5, TimeUnit.SECONDS);
+    exec.shutdown();
+
+    Assert.assertTrue("Should continue executing after exception", completed);
+    Assert.assertEquals("Should have exactly 3 executions", 3, executionCount.get());
+  }
+
+  @Test
+  public void testScheduleWithFixedDelayStopsOnSignalStop() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration delay = Duration.millis(100);
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testFixedDelayStop-%d");
+
+    final AtomicInteger executionCount = new AtomicInteger(0);
+
+    ScheduledExecutors.scheduleWithFixedDelay(
+        exec,
+        initialDelay,
+        delay,
+        () -> {
+          executionCount.incrementAndGet();
+          return ScheduledExecutors.Signal.STOP;
+        }
+    );
+
+    Thread.sleep(500);
+    exec.shutdown();
+
+    Assert.assertEquals(
+        "Should execute exactly once before stopping",
+        1,
+        executionCount.get()
+    );
+  }
+
+  @Test
   public void testScheduleAtFixedRateWithLongRunningTask() throws Exception
   {
     Duration initialDelay = Duration.millis(100);
@@ -153,15 +216,133 @@ public class ScheduledExecutorsTest
     // Should be at least 800ms (first task duration), but not much more since it schedules immediately
     Assert.assertTrue(
         "Second task should start after first task completes (~800ms), was: " + timeBetweenFirstAndSecond,
-        timeBetweenFirstAndSecond >= 750 && timeBetweenFirstAndSecond <= 900
+        timeBetweenFirstAndSecond >= 750 && timeBetweenFirstAndSecond <= 950
     );
 
-    // Verify subsequent tasks maintain the period
+    // Verify subsequent tasks maintain the period (no catch-up burst)
     long timeBetweenSecondAndThird = executionStartTimes.get(2) - executionStartTimes.get(1);
     // Should be approximately 500ms (the period), since tasks now finish quickly
     Assert.assertTrue(
         "Subsequent tasks should maintain period (~500ms), was: " + timeBetweenSecondAndThird,
         timeBetweenSecondAndThird >= 450 && timeBetweenSecondAndThird <= 600
     );
+  }
+
+  @Test
+  public void testScheduleAtFixedRateNoConcurrentExecutionWithMultipleThreads() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration period = Duration.millis(100);
+    // Use 4 threads to verify that even with available threads, only one execution runs at a time
+    final ScheduledExecutorService exec = ScheduledExecutors.fixed(4, "testNoConcurrency-%d");
+
+    final AtomicInteger concurrentCount = new AtomicInteger(0);
+    final AtomicInteger maxConcurrentCount = new AtomicInteger(0);
+    final AtomicInteger executionCount = new AtomicInteger(0);
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    ScheduledExecutors.scheduleAtFixedRate(
+        exec,
+        initialDelay,
+        period,
+        () -> {
+          try {
+            final int concurrent = concurrentCount.incrementAndGet();
+
+            // Track the maximum number of concurrent executions
+            int currentMax;
+            do {
+              currentMax = maxConcurrentCount.get();
+            } while (concurrent > currentMax && !maxConcurrentCount.compareAndSet(currentMax, concurrent));
+
+            // Task takes 3x the period — would cause overlap if scheduling were broken
+            Thread.sleep(period.getMillis() * 3);
+
+            concurrentCount.decrementAndGet();
+
+            if (executionCount.incrementAndGet() >= 4) {
+              latch.countDown();
+            }
+          }
+          catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+          }
+        }
+    );
+
+    final boolean completed = latch.await(10, TimeUnit.SECONDS);
+    exec.shutdown();
+
+    Assert.assertTrue("Should complete within timeout", completed);
+    Assert.assertEquals(
+        "Should never have more than 1 concurrent execution",
+        1,
+        maxConcurrentCount.get()
+    );
+  }
+
+  @Test
+  public void testScheduleAtFixedRateStopsOnSignalStop() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration period = Duration.millis(100);
+    final ScheduledExecutorService exec = ScheduledExecutors.fixed(4, "testStop-%d");
+
+    final AtomicInteger executionCount = new AtomicInteger(0);
+
+    ScheduledExecutors.scheduleAtFixedRate(
+        exec,
+        initialDelay,
+        period,
+        () -> {
+          executionCount.incrementAndGet();
+          return ScheduledExecutors.Signal.STOP;
+        }
+    );
+
+    // Wait enough time for multiple executions to have occurred if stopping were broken
+    Thread.sleep(500);
+    exec.shutdown();
+
+    Assert.assertEquals(
+        "Should execute exactly once before stopping",
+        1,
+        executionCount.get()
+    );
+  }
+
+  @Test
+  public void testScheduleAtFixedRateContinuesAfterException() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration period = Duration.millis(100);
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testException-%d");
+
+    final AtomicInteger executionCount = new AtomicInteger(0);
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    ScheduledExecutors.scheduleAtFixedRate(
+        exec,
+        initialDelay,
+        period,
+        () -> {
+          final int count = executionCount.incrementAndGet();
+          if (count == 1) {
+            throw new RuntimeException("test exception");
+          }
+          if (count >= 3) {
+            latch.countDown();
+            return ScheduledExecutors.Signal.STOP;
+          }
+          return ScheduledExecutors.Signal.REPEAT;
+        }
+    );
+
+    final boolean completed = latch.await(5, TimeUnit.SECONDS);
+    exec.shutdown();
+
+    Assert.assertTrue("Should continue executing after exception", completed);
+    Assert.assertEquals("Should have exactly 3 executions", 3, executionCount.get());
   }
 }

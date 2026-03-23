@@ -39,6 +39,7 @@ import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
@@ -55,7 +56,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -284,6 +287,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                     .toInstance(AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build());
               binder.bind(DefaultQueryConfig.class)
                     .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
+              binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
@@ -1351,6 +1355,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testParameterBinding() throws SQLException
   {
+    testRequestLogger.clear();
     try (PreparedStatement statement = client.prepareStatement(
         "SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?")) {
       statement.setString(1, "abc");
@@ -1362,6 +1367,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of("cnt", 2L)
           ),
           rows
+      );
+      Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+      Assert.assertEquals(
+          List.of(
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
+          ),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
       );
     }
   }

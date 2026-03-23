@@ -54,9 +54,11 @@ public class StringDimensionSchemaTest
     final String json = "{\n"
                         + "  \"name\" : \"dim\",\n"
                         + "  \"multiValueHandling\" : \"SORTED_SET\",\n"
-                        + "  \"createBitmapIndex\" : false\n"
+                        + "  \"createBitmapIndex\" : false,\n"
+                        + "  \"maxStringLength\" : 200\n"
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
     Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
+    Assert.assertEquals(200, schema.getMaxStringLength());
   }
 }

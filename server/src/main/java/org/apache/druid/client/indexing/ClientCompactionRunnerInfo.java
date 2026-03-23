@@ -28,7 +28,12 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
@@ -38,9 +43,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 
 /**
@@ -119,7 +121,8 @@ public class ClientCompactionRunnerInfo
     if (newConfig.getTuningConfig() != null) {
       validationResults.add(validatePartitionsSpecForMSQ(
           newConfig.getTuningConfig().getPartitionsSpec(),
-          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions()
+          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions(),
+          newConfig.getTransformSpec() == null ? VirtualColumns.EMPTY : newConfig.getTransformSpec().getVirtualColumns()
       ));
     }
     if (newConfig.getGranularitySpec() != null) {
@@ -142,7 +145,8 @@ public class ClientCompactionRunnerInfo
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
       @Nullable PartitionsSpec partitionsSpec,
-      @Nullable List<DimensionSchema> dimensionSchemas
+      @Nullable List<DimensionSchema> dimensionSchemas,
+      VirtualColumns virtualColumns
   )
   {
     if (partitionsSpec == null) {
@@ -165,19 +169,36 @@ public class ClientCompactionRunnerInfo
       );
     }
     if (partitionsSpec instanceof DimensionRangePartitionsSpec && dimensionSchemas != null) {
-      Map<String, DimensionSchema> dimensionSchemaMap = dimensionSchemas.stream().collect(
-          Collectors.toMap(DimensionSchema::getName, Function.identity())
-      );
-      Optional<String> nonStringDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
-          .getPartitionDimensions()
-          .stream()
-          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType()))
-          .findAny();
-      if (nonStringDimension.isPresent()) {
+      RowSignature.Builder baseSignatureBuilder = RowSignature.builder().addTimeColumn();
+      for (DimensionSchema dimensionSchema : dimensionSchemas) {
+        baseSignatureBuilder.add(dimensionSchema.getName(), dimensionSchema.getColumnType());
+      }
+      final RowSignature baseSignature = baseSignatureBuilder.build();
+      final ColumnInspector inspector = new VirtualizedColumnInspector(baseSignature, virtualColumns);
+
+      String nonString = null;
+      ColumnType nonStringType = null;
+      for (String dim : ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions()) {
+        ColumnType partitionType = baseSignature.getColumnType(dim).orElse(null);
+        if (partitionType == null) {
+          VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dim);
+          if (virtualColumn != null) {
+            partitionType = ColumnType.fromCapabilities(
+                virtualColumn.capabilities(inspector, virtualColumn.getOutputName())
+            );
+          }
+        }
+        if (!ColumnType.STRING.equals(partitionType)) {
+          nonString = dim;
+          nonStringType = partitionType;
+          break;
+        }
+      }
+      if (nonString != null) {
         return CompactionConfigValidationResult.failure(
             "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
-            nonStringDimension.get(),
-            dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
+            nonString,
+            nonStringType
         );
       }
     }

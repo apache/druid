@@ -264,17 +264,30 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             className: goToTask ? undefined : 'padded',
             width: 95,
             Cell({ value }) {
-              if (!goToTask) return `Worker${value}`;
-              const taskId = `${execution.id}-worker${value}_0`;
-              return (
-                <TableClickableCell
-                  hoverIcon={IconNames.SHARE}
-                  tooltip={`Go to task: ${taskId}`}
-                  onClick={() => {
-                    goToTask(taskId);
-                  }}
-                >{`Worker${value}`}</TableClickableCell>
-              );
+              const workerStates = execution.workers?.[String(value)];
+              const workerState = workerStates?.[workerStates.length - 1];
+              const label = `Worker${value}`;
+
+              const workerRef = workerState?.workerDesc || workerState?.workerId;
+              if (goToTask && workerRef && !/:\d+$/.test(workerRef)) {
+                return (
+                  <TableClickableCell
+                    hoverIcon={IconNames.SHARE}
+                    tooltip={`Go to task: ${workerRef}`}
+                    onClick={() => {
+                      goToTask(workerRef);
+                    }}
+                  >
+                    {label}
+                  </TableClickableCell>
+                );
+              }
+
+              if (workerRef) {
+                return <span data-tooltip={workerRef}>{label}</span>;
+              }
+
+              return label;
             },
           } as Column<SimpleWideCounter>,
           {
@@ -972,7 +985,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <div>{formatInteger(value)}</div>
                   <div
                     className="detail-line"
-                    data-tooltip="Workers are counted as inactive until they report starting to read rows from their input."
+                    data-tooltip="Workers are counted as active once they report any activity."
                   >{`${formatInteger(inactiveWorkers)} inactive`}</div>
                 </div>
               );

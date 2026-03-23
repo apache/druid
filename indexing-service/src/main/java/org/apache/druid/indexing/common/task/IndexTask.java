@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -36,10 +35,9 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -988,6 +986,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         emitMetric(toolbox.getEmitter(), "ingest/segments/count",
                    published.getSegments().size() + tombStones.size()
         );
+        emitMetric(
+            toolbox.getEmitter(),
+            "ingest/rows/published",
+            IndexTaskUtils.getTotalRowCount(published.getSegments())
+        );
 
         log.debugSegments(published.getSegments(), "Published segments");
 
@@ -1060,9 +1063,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       super(dataSchema, ioConfig, tuningConfig);
 
-      if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
-        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
-      }
+      InvalidInput.notNull(ioConfig.getInputSource(), "inputSource");
 
       IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
 
@@ -1072,13 +1073,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
       }
 
-      if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
-        Checks.checkOneNotNullOrEmpty(
-            ImmutableList.of(
-                new Property<>("parser", dataSchema.getParserMap()),
-                new Property<>("inputFormat", ioConfig.getInputFormat())
-            )
-        );
+      if (ioConfig.getInputSource().needsFormat()) {
+        InvalidInput.notNull(ioConfig.getInputFormat(), "inputFormat");
       }
 
       this.dataSchema = dataSchema;

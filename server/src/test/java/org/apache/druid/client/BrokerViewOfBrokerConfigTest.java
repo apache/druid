@@ -19,13 +19,18 @@
 
 package org.apache.druid.client;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.util.Map;
 
 public class BrokerViewOfBrokerConfigTest
 {
@@ -33,15 +38,17 @@ public class BrokerViewOfBrokerConfigTest
 
   private CoordinatorClient coordinatorClient;
   private BrokerDynamicConfig config;
+  private DefaultQueryConfig defaultQueryConfig;
 
 
   @Before
   public void setUp() throws Exception
   {
     config = BrokerDynamicConfig.builder().build();
+    defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of("timeout", 30000, "useCache", true));
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.getBrokerDynamicConfig()).thenReturn(Futures.immediateFuture(config));
-    target = new BrokerViewOfBrokerConfig(coordinatorClient);
+    target = new BrokerViewOfBrokerConfig(coordinatorClient, defaultQueryConfig);
   }
 
   @Test
@@ -50,5 +57,29 @@ public class BrokerViewOfBrokerConfigTest
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getBrokerDynamicConfig();
     Assert.assertEquals(config, target.getDynamicConfig());
+  }
+
+  @Test
+  public void testResolvedContextMergesDynamicOverStaticDefaults()
+  {
+    // Dynamic config overrides "useCache" and adds "priority"; static "timeout" is preserved.
+    final BrokerDynamicConfig dynamicConfig = BrokerDynamicConfig.builder()
+                                                                 .withQueryContext(
+                                                                     QueryContext.of(ImmutableMap.of("useCache", false, "priority", 5))
+                                                                 )
+                                                                 .build();
+    target.setDynamicConfig(dynamicConfig);
+
+    final Map<String, Object> resolved = target.getContext();
+    Assert.assertEquals(30000, resolved.get("timeout"));
+    Assert.assertEquals(false, resolved.get("useCache"));
+    Assert.assertEquals(5, resolved.get("priority"));
+  }
+
+  @Test
+  public void testResolvedContextEqualsStaticDefaultsWhenDynamicContextIsEmpty()
+  {
+    target.setDynamicConfig(BrokerDynamicConfig.builder().build());
+    Assert.assertEquals(defaultQueryConfig.getContext(), target.getContext());
   }
 }

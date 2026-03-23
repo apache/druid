@@ -157,10 +157,8 @@ You must include `bootstrap.servers` in consumer properties with a list of Kafka
 In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static.
 
 The `isolation.level` property in `consumerProperties` determines how Druid reads messages written transactionally.
-If you use older versions of Kafka servers without transaction support or you don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
-With `read_uncommitted`, which is the default setting, Druid reads all messages, including aborted transactional messages.
-Make sure offsets are sequential, since there is no offset gap check in Druid.
-For Druid to consume only committed transactional messages, set `isolation.level` to `read_committed`.
+With `read_committed`, which is the default in Druid, only committed transactions are read.
+If you use older versions of Kafka without transaction support, or you want to read even aborted transactions, set `isolation.level` to `read_uncommitted`.
 
 If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 

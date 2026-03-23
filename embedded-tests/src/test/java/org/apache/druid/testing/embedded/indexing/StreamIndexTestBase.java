@@ -101,7 +101,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
         null,
         DataSchema.builder()
                   .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
                   .withDimensions(DimensionsSpec.EMPTY)
                   .build(),
@@ -129,19 +129,20 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
   }
 
   /**
-   * Waits until number of processed events matches {@code expectedRowCount}.
+   * Waits until the total row count of successfully published segments matches
+   * {@code expectedRowCount}.
    */
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
   {
     indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
+        event -> event.hasMetricName("ingest/rows/published")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expectedRowCount)
     );
 
     final int totalEventsProcessed = indexer
         .latchableEmitter()
-        .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
+        .getMetricValues("ingest/rows/published", Map.of(DruidMetrics.DATASOURCE, dataSource))
         .stream()
         .mapToInt(Number::intValue)
         .sum();

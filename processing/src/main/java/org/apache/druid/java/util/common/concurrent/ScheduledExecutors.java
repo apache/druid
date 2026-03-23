@@ -19,10 +19,13 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
 
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,26 +51,17 @@ public class ScheduledExecutors
         exec,
         initialDelay,
         delay,
-        new Callable<>()
-        {
-          @Override
-          public Signal call()
-          {
-            runnable.run(); // (Exceptions are handled for us)
-            if (exec.isShutdown()) {
-              log.warn("ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)", this, delay);
-              return Signal.STOP;
-            } else {
-              return Signal.REPEAT;
-            }
-          }
+        () -> {
+          runnable.run(); // (Exceptions are handled for us)
+          return Signal.REPEAT;
         }
     );
   }
 
   /**
    * Run callable repeatedly with the given delay between calls, until it
-   * returns Signal.STOP. Exceptions are caught and logged as errors.
+   * returns Signal.STOP or the executor is shut down. Exceptions are caught
+   * and logged as errors, and do not prevent subsequent executions.
    */
   public static void scheduleWithFixedDelay(
       final ScheduledExecutorService exec,
@@ -83,17 +77,21 @@ public class ScheduledExecutors
           @Override
           public void run()
           {
+            Signal signal = Signal.REPEAT;
+
             try {
               log.trace("Running %s (delay %s)", callable, delay);
-              if (callable.call() == Signal.REPEAT) {
-                log.trace("Rescheduling %s (delay %s)", callable, delay);
-                exec.schedule(this, delay.getMillis(), TimeUnit.MILLISECONDS);
-              } else {
-                log.debug("Stopped rescheduling %s (delay %s)", callable, delay);
-              }
+              signal = callable.call();
             }
             catch (Throwable e) {
-              log.error(e, "Uncaught exception.");
+              log.warn(e, "Uncaught exception. Rescheduling.");
+            }
+
+            if (signal == Signal.REPEAT && !exec.isShutdown()) {
+              log.trace("Rescheduling %s (delay %s)", callable, delay);
+              exec.schedule(this, delay.getMillis(), TimeUnit.MILLISECONDS);
+            } else {
+              log.debug("Stopped rescheduling %s (delay %s)", callable, delay);
             }
           }
         },
@@ -108,11 +106,14 @@ public class ScheduledExecutors
    * <p>
    * This differs from {@link #scheduleWithFixedDelay} in that the period is measured from the start of each
    * execution rather than from the completion. If an execution takes longer than the period, the next execution
-   * will begin immediately after the current one starts.
+   * will begin immediately after the current one completes.
    * <p>
    * This also differs from {@link ScheduledExecutorService#scheduleAtFixedRate} in that it prevents task pileup:
    * only one future execution is scheduled at a time rather than scheduling all future executions upfront.
    * This prevents a backlog of pending tasks from building up if the executor is delayed or tasks run slowly.
+   * <p>
+   * Exceptions thrown by the task are caught and logged as errors, and do not prevent subsequent executions.
+   * Scheduling also stops if the executor is shut down.
    *
    * @param exec         the ScheduledExecutorService to use for scheduling
    * @param initialDelay the duration to wait before the first execution
@@ -126,15 +127,15 @@ public class ScheduledExecutors
       final Runnable runnable
   )
   {
-    scheduleAtFixedRate(exec, initialDelay, period, new Callable<Signal>()
-    {
-      @Override
-      public Signal call()
-      {
-        runnable.run();
-        return Signal.REPEAT;
-      }
-    });
+    scheduleAtFixedRate(
+        exec,
+        initialDelay,
+        period,
+        () -> {
+          runnable.run(); // (Exceptions are handled for us)
+          return Signal.REPEAT;
+        }
+    );
   }
 
   public static void scheduleAtFixedRate(ScheduledExecutorService exec, Duration rate, Callable<Signal> callable)
@@ -153,21 +154,26 @@ public class ScheduledExecutors
     exec.schedule(
         new Runnable()
         {
-          private volatile Signal prevSignal = null;
-
           @Override
           public void run()
           {
-            if (prevSignal == null || prevSignal == Signal.REPEAT) {
-              exec.schedule(this, rate.getMillis(), TimeUnit.MILLISECONDS);
-            }
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            Signal signal = Signal.REPEAT;
 
             try {
               log.trace("Running %s (period %s)", callable, rate);
-              prevSignal = callable.call();
+              signal = callable.call();
             }
             catch (Throwable e) {
-              log.error(e, "Uncaught exception.");
+              log.warn(e, "Uncaught exception. Rescheduling.");
+            }
+
+            if (signal == Signal.REPEAT && !exec.isShutdown()) {
+              final long nextDelay = Math.max(0, rate.getMillis() - stopwatch.millisElapsed());
+              log.trace("Rescheduling %s (delay %s)", callable, nextDelay);
+              exec.schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+            } else {
+              log.debug("Stopped rescheduling %s (rate %s)", callable, rate);
             }
           }
         },
@@ -179,6 +185,26 @@ public class ScheduledExecutors
   public enum Signal
   {
     REPEAT, STOP
+  }
+
+  /**
+   * Wraps a {@link ScheduledExecutorService} to emit a metric each time a task from
+   * {@link ScheduledExecutorService#schedule} runs. The metric value is the scheduling lag:
+   * the difference between the actual delay and the intended delay, in milliseconds, floored at zero.
+   *
+   * @param exec             the executor to wrap
+   * @param emitter          the emitter to emit metrics to
+   * @param metricName       the name of the metric to emit
+   * @param metricDimensions dimensions to include with the metric
+   */
+  public static ScheduledExecutorService emittingDelayMetric(
+      final ScheduledExecutorService exec,
+      final ServiceEmitter emitter,
+      final String metricName,
+      final Map<String, Object> metricDimensions
+  )
+  {
+    return new DelayMetricEmittingScheduledExecutorService(exec, emitter, metricName, metricDimensions);
   }
 
   public static ScheduledExecutorFactory createFactory(final Lifecycle lifecycle)
