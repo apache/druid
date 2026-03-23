@@ -71,7 +71,7 @@ public class DefaultColumnFormatConfig
   @Nullable
   private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
   {
-    if (maxStringLength != null && maxStringLength <= 0) {
+    if (maxStringLength != null && maxStringLength < 0) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(

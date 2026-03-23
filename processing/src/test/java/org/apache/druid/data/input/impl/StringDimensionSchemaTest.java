@@ -61,4 +61,14 @@ public class StringDimensionSchemaTest
     Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
     Assert.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
   }
+
+  @Test
+  public void testInvalidMaxStringLength()
+  {
+    final Exception exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new StringDimensionSchema("dim", null, true, -1)
+    );
+    Assert.assertTrue(exception.getMessage().contains("maxStringLength must be >= 0"));
+  }
 }

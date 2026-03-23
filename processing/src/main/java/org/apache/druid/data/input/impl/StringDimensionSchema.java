@@ -41,6 +41,15 @@ public class StringDimensionSchema extends DimensionSchema
   }
 
   @Nullable
+  private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
+  {
+    if (maxStringLength != null && maxStringLength < 0) {
+      throw new IllegalArgumentException("maxStringLength must be >= 0, got " + maxStringLength);
+    }
+    return maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
+  }
+
+  @Nullable
   private final Integer maxStringLength;
 
   @JsonCreator
@@ -58,7 +67,7 @@ public class StringDimensionSchema extends DimensionSchema
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
-    this.maxStringLength = maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
+    this.maxStringLength = validateMaxStringLength(maxStringLength);
   }
 
   public StringDimensionSchema(
