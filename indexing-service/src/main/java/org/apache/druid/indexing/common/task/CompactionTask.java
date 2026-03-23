@@ -230,6 +230,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                             .ofCategory(DruidException.Category.INVALID_INPUT)
                             .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[isDropExisting] to true.");
       }
+
+      boolean usingConcurrentLocks = this.getContextValue(Tasks.USE_CONCURRENT_LOCKS, Tasks.DEFAULT_USE_CONCURRENT_LOCKS);
+
+      if (!usingConcurrentLocks) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[%s] to true.", Tasks.USE_CONCURRENT_LOCKS);
+      }
     }
 
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
