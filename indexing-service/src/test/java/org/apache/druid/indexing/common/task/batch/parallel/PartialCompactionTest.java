@@ -52,7 +52,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -234,12 +233,11 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testMinorCompactionUpgradesNonCompactedSegments()
   {
-    DataSegmentsWithSchemas dataSegmentsWithSchemas =
-        runTestTask(
-            new HashedPartitionsSpec(null, 4, null),
-            TaskState.SUCCESS,
-            false
-        );
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = runTestTask(
+        new HashedPartitionsSpec(null, 4, null),
+        TaskState.SUCCESS,
+        false
+    );
     verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> hashPartitionedSegments =
         SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
@@ -248,13 +246,15 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
             Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
         )
     );
+
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
     for (List<DataSegment> segmentsInInterval : hashPartitionedSegments.values()) {
       segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
     }
     final Set<DataSegment> originalSegments = dataSegmentsWithSchemas.getSegments();
-    final Set<String> compactedSegmentIds =
-        segmentsToCompact.stream().map(segment -> segment.getId().toString()).collect(Collectors.toSet());
+    final Set<String> compactedSegmentIds = segmentsToCompact.stream()
+                                                             .map(segment -> segment.getId().toString())
+                                                             .collect(Collectors.toSet());
     final Set<String> nonCompactedSegmentIds =
         originalSegments.stream()
                         .map(segment -> segment.getId().toString())
@@ -277,12 +277,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
 
+    // Check published segment set after compaction
     final Set<DataSegment> publishedAfterCompaction = dataSegmentsWithSchemas.getSegments();
     Assert.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
 
     final Set<String> finalSegmentIds = publishedAfterCompaction.stream()
                                                                 .map(segment -> segment.getId().toString())
                                                                 .collect(Collectors.toSet());
+
     final Map<String, String> upgradedFromSegmentIdMap =
         getStorageCoordinator().retrieveUpgradedFromSegmentIds(DATASOURCE, finalSegmentIds);
     Assert.assertFalse(upgradedFromSegmentIdMap.isEmpty());
@@ -292,6 +294,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       Assert.assertTrue(finalSegmentIds.contains(successorSegmentId));
     }
 
+    // Validate new segment ids (replacements and/or upgraded replicas)
     final Set<String> newPublishedSegmentIds = new HashSet<>(finalSegmentIds);
     newPublishedSegmentIds.removeAll(originalSegmentIds);
     Assert.assertFalse(newPublishedSegmentIds.isEmpty());
@@ -299,10 +302,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         newPublishedSegmentIds.stream().anyMatch(id -> !upgradedFromSegmentIdMap.containsKey(id))
     );
 
+    // Index newly published ids by day for compacted-source checks below.
     final Map<Interval, Set<String>> newSegmentIdsByInterval =
         publishedAfterCompaction.stream()
-                                .filter(
-                                    segment -> !segment.isTombstone()
+                                .filter(segment -> !segment.isTombstone()
                                                && newPublishedSegmentIds.contains(segment.getId().toString())
                                 )
                                 .collect(Collectors.groupingBy(
@@ -313,6 +316,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
                                     )
                                 ));
 
+    // Verify non-compacted segments are being replaced
     for (final String parentSegmentId : nonCompactedSegmentIds) {
       final List<String> successorSegmentIds = upgradedFromSegmentIdMap.entrySet()
                                                                        .stream()
@@ -326,22 +330,16 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         Assert.assertTrue(finalSegmentIds.contains(successorSegmentIds.get(0)));
       }
     }
+
+    // Verify compacted segments have new published ID
     for (final DataSegment compactedSource : segmentsToCompact) {
       final String compactedSourceId = compactedSource.getId().toString();
       Assert.assertFalse(finalSegmentIds.contains(compactedSourceId));
-      final Set<String> newIdsInSameInterval =
-          newSegmentIdsByInterval.getOrDefault(compactedSource.getInterval(), Set.of());
-      Assert.assertFalse(
-          StringUtils.format(
-              "Expected new published segment ids in interval[%s] after compacting source[%s]; candidates=%s",
-              compactedSource.getInterval(),
-              compactedSourceId,
-              newIdsInSameInterval
-          ),
-          newIdsInSameInterval.isEmpty()
-      );
+      final Set<String> newIdsInSameInterval = newSegmentIdsByInterval.getOrDefault(compactedSource.getInterval(), Set.of());
+      Assert.assertFalse(newIdsInSameInterval.isEmpty());
     }
 
+    // non-compacted parents removed from published set match retrieveUpgradedToSegmentIds
     final Set<String> removedNonCompactedParentIds =
         nonCompactedSegmentIds.stream().filter(id -> !finalSegmentIds.contains(id)).collect(Collectors.toSet());
     if (!removedNonCompactedParentIds.isEmpty()) {
@@ -359,15 +357,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         final Set<String> coordinatorSuccessorIds =
             new HashSet<>(upgradedToSegmentIdsByParent.getOrDefault(parentSegmentId, Set.of()));
         coordinatorSuccessorIds.remove(parentSegmentId);
-        Assert.assertTrue(
-            StringUtils.format(
-                "retrieveUpgradedToSegmentIds(%s) should include %s (actual=%s)",
-                parentSegmentId,
-                expectedSuccessorIds,
-                coordinatorSuccessorIds
-            ),
-            coordinatorSuccessorIds.containsAll(expectedSuccessorIds)
-        );
+        Assert.assertTrue(coordinatorSuccessorIds.containsAll(expectedSuccessorIds));
       }
     }
   }
