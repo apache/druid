@@ -48,6 +48,8 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -77,6 +79,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private static final Logger log = new Logger(GroupByPreShuffleFrameProcessor.class);
   private final GroupByQuery query;
   private final GroupingEngine groupingEngine;
+  private final QueryToolChest<ResultRow, GroupByQuery> toolChest;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
   private final Closer closer = Closer.create();
@@ -91,6 +94,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
+      final QueryToolChest<ResultRow, GroupByQuery> toolChest,
       final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
       final SegmentMapFunction segmentMapFn,
@@ -106,6 +110,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.groupingEngine = groupingEngine;
+    this.toolChest = toolChest;
     this.bufferPool = bufferPool;
     this.frameWriterColumnSelectorFactory = RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
         query,
@@ -120,10 +125,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     if (resultYielder == null || resultYielder.isDone()) {
       if (currentResultsYielder == null) {
         if (dataServerQueryResultFuture == null) {
+          final GroupByQuery preparedQuery = groupingEngine.prepareGroupByQuery(query);
+          final Function<ResultRow, ResultRow> preComputeManipulatorFn =
+              toolChest.makePreComputeManipulatorFn(preparedQuery, MetricManipulatorFns.deserializing());
           dataServerQueryResultFuture =
               dataServerQueryHandler.fetchRowsFromDataServer(
-                  groupingEngine.prepareGroupByQuery(query),
-                  Function.identity(),
+                  preparedQuery,
+                  toolChest.getBaseResultType(),
+                  sequence -> sequence.map(preComputeManipulatorFn),
                   closer
               );
 

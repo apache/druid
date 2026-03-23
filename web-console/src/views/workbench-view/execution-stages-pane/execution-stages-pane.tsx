@@ -382,6 +382,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                         />
                       </>
                     )}
+                    {Boolean(c.queries || c.totalQueries) && (
+                      <>
+                        {' '}
+                        &nbsp;{' '}
+                        <Icon
+                          icon={IconNames.ARROW_BOTTOM_RIGHT}
+                          data-tooltip={`Realtime queries (${formatInteger(
+                            c.queries || 0,
+                          )} / ${formatInteger(c.totalQueries || 0)})`}
+                        />
+                      </>
+                    )}
                   </>
                 );
               },
@@ -554,6 +566,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const loadBytes = stages.getTotalCounterForStage(stage, inputCounter, 'loadBytes');
     const loadTime = stages.getTotalCounterForStage(stage, inputCounter, 'loadTime');
     const loadWait = stages.getTotalCounterForStage(stage, inputCounter, 'loadWait');
+    const queries = stages.getTotalCounterForStage(stage, inputCounter, 'queries');
+    const totalQueries = stages.getTotalCounterForStage(stage, inputCounter, 'totalQueries');
     const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
@@ -594,6 +608,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               className="load-indicator"
               icon={IconNames.IMPORT}
               data-tooltip={formatLoadTooltip(loadFiles, loadBytes, loadTime, loadWait)}
+            />
+          </>
+        )}
+        {Boolean(queries || totalQueries) && (
+          <>
+            {' '}
+            &nbsp;{' '}
+            <Icon
+              icon={IconNames.ARROW_BOTTOM_RIGHT}
+              data-tooltip={`Realtime queries (${formatInteger(queries || 0)} / ${formatInteger(
+                totalQueries || 0,
+              )})`}
             />
           </>
         )}
