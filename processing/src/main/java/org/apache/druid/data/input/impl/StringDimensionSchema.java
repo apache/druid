@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.StringDimensionHandler;
@@ -41,10 +42,12 @@ public class StringDimensionSchema extends DimensionSchema
   }
 
   @Nullable
-  private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
+  private static Integer validateMaxStringLength(String name, @Nullable Integer maxStringLength)
   {
     if (maxStringLength != null && maxStringLength < 0) {
-      throw new IllegalArgumentException("maxStringLength must be >= 0, got " + maxStringLength);
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("maxStringLength for column [%s] must be >= 0, got [%s]", name, maxStringLength);
     }
     return maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
   }
@@ -67,7 +70,7 @@ public class StringDimensionSchema extends DimensionSchema
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
-    this.maxStringLength = validateMaxStringLength(maxStringLength);
+    this.maxStringLength = validateMaxStringLength(name, maxStringLength);
   }
 
   public StringDimensionSchema(

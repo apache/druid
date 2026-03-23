@@ -76,7 +76,7 @@ public class DefaultColumnFormatConfig
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               "Invalid value[%s] specified for 'druid.indexing.formats.maxStringLength'."
-                              + " Value must be a positive integer.",
+                              + " Value must be a non-negative integer.",
                               maxStringLength
                           );
     }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.junit.Assert;
@@ -66,9 +67,9 @@ public class StringDimensionSchemaTest
   public void testInvalidMaxStringLength()
   {
     final Exception exception = Assert.assertThrows(
-        IllegalArgumentException.class,
+        DruidException.class,
         () -> new StringDimensionSchema("dim", null, true, -1)
     );
-    Assert.assertTrue(exception.getMessage().contains("maxStringLength must be >= 0"));
+    Assert.assertTrue(exception.getMessage().contains("maxStringLength for column [dim] must be >= 0"));
   }
 }

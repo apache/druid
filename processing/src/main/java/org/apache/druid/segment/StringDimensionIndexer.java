@@ -89,7 +89,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
    * Truncates the value to the first {@link #maxStringLength} characters if configured, otherwise returns it as-is.
    */
   @Nullable
-  private String truncateIfNeeded(String value)
+  private String truncateIfNeeded(@Nullable String value)
   {
     if (maxStringLength != null && value != null && value.length() > maxStringLength) {
       return value.substring(0, maxStringLength);
