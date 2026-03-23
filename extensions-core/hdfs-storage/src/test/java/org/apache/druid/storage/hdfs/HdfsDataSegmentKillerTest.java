@@ -21,6 +21,7 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -37,7 +38,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.UUID;
 
 public class HdfsDataSegmentKillerTest
@@ -208,7 +208,7 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testKillShuffleSupervisorPrefix() throws Exception
   {
-    final File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-").toFile();
+    final File testRoot = FileUtils.createTempDir();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
@@ -247,7 +247,7 @@ public class HdfsDataSegmentKillerTest
   @Test
   public void testKillShuffleSupervisorPrefix_taskIdWithIsoTimestamp() throws Exception
   {
-    final File testRoot = Files.createTempDirectory("hdfs-killer-shuffle-colon-").toFile();
+    final File testRoot = FileUtils.createTempDir();
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
         config,
