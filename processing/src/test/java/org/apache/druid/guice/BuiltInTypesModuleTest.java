@@ -60,7 +60,7 @@ public class BuiltInTypesModuleTest
   public void teardownEach()
   {
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
-    BuiltInTypesModule.setMaxStringLength(0);
+    BuiltInTypesModule.setMaxStringLength(null);
   }
 
   @AfterClass
@@ -75,7 +75,7 @@ public class BuiltInTypesModuleTest
       );
     }
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
-    BuiltInTypesModule.setMaxStringLength(0);
+    BuiltInTypesModule.setMaxStringLength(null);
   }
 
   @Test
@@ -98,7 +98,7 @@ public class BuiltInTypesModuleTest
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
 
-    Assertions.assertEquals(0, BuiltInTypesModule.getMaxStringLength());
+    Assertions.assertNull(BuiltInTypesModule.getMaxStringLength());
   }
 
   @Test

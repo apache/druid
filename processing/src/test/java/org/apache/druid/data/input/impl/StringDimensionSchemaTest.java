@@ -59,6 +59,6 @@ public class StringDimensionSchemaTest
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
     Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
-    Assert.assertEquals(200, schema.getMaxStringLength());
+    Assert.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
   }
 }
