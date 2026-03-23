@@ -19,7 +19,9 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -98,6 +100,9 @@ import java.util.stream.Collectors;
  */
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
+  public static final JavaType SCAN_RESULT_VALUE_TYPE =
+      TypeFactory.defaultInstance().constructType(ScanResultValue.class);
+
   private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private static final int NO_LIMIT = -1;
 
@@ -229,6 +234,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         dataServerQueryResultFuture =
             dataServerQueryHandler.fetchRowsFromDataServer(
                 preparedQuery,
+                ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
                 ScanQueryFrameProcessor::mappingFunction,
                 closer
             );

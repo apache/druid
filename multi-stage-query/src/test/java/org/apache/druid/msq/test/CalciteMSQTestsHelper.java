@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.test;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -173,6 +174,7 @@ public class CalciteMSQTestsHelper
       @Override
       public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
           Query<QueryType> query,
+          JavaType queryResultType,
           Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
           Closer closer
       )
