@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -63,6 +64,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -79,6 +81,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private static final Logger log = new Logger(GroupByPreShuffleFrameProcessor.class);
   private final GroupByQuery query;
   private final GroupingEngine groupingEngine;
+  @Nullable
   private final QueryToolChest<ResultRow, GroupByQuery> toolChest;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
@@ -94,7 +97,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
-      final QueryToolChest<ResultRow, GroupByQuery> toolChest,
+      @Nullable final QueryToolChest<ResultRow, GroupByQuery> toolChest,
       final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
       final SegmentMapFunction segmentMapFn,
@@ -122,6 +125,11 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
+    if (toolChest == null) {
+      // toolChest is always set in production, but may not always be set in tests.
+      throw DruidException.defensive("toolChest is required for data server queries");
+    }
+
     if (resultYielder == null || resultYielder.isDone()) {
       if (currentResultsYielder == null) {
         if (dataServerQueryResultFuture == null) {

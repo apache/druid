@@ -81,7 +81,7 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
     return new GroupByPreShuffleFrameProcessor(
         query,
         groupingEngine,
-        warehouse.getToolChest(query),
+        warehouse != null ? warehouse.getToolChest(query) : null,
         frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,
