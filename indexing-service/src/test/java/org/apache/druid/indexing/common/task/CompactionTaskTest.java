@@ -2047,7 +2047,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testMinorCompactionShouldAlwaysUseIngestionMode()
+  public void testMinorCompactionShouldAlwaysUseReplaceIngestionMode()
   {
     final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
     final String version = "2024-11-17T23:49:06.823Z";
