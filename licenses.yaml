@@ -191,7 +191,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.793
+version: 1.12.784
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -621,7 +621,7 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.17.0
+version: 2.21.0
 libraries:
   - commons-io: commons-io
 notices:
@@ -693,7 +693,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2
+version: 4.5.0
 libraries:
   - org.apache.commons: commons-collections4
 notices:
@@ -707,7 +707,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.27.0
+version: 1.28.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
