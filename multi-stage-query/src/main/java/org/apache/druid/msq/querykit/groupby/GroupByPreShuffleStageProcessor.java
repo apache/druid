@@ -36,6 +36,7 @@ import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -55,6 +56,10 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
   @JacksonInject
   @Nullable
   private GroupingEngine groupingEngine;
+
+  @JacksonInject
+  @Nullable
+  private QueryToolChestWarehouse warehouse;
 
   @JsonCreator
   public GroupByPreShuffleStageProcessor(@JsonProperty("query") GroupByQuery query)
@@ -81,6 +86,7 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
     return new GroupByPreShuffleFrameProcessor(
         query,
         groupingEngine,
+        warehouse != null ? warehouse.getToolChest(query) : null,
         frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,

@@ -53,7 +53,8 @@ public class BuiltInTypesModule implements DruidModule
    */
   private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
   private static IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.builder().build();
-  private static int MAX_STRING_LENGTH = 0;
+  @Nullable
+  private static Integer MAX_STRING_LENGTH = null;
 
   /**
    * @return the configured string multi value handling mode from the system config if set; otherwise, returns
@@ -138,12 +139,13 @@ public class BuiltInTypesModule implements DruidModule
   }
 
   @VisibleForTesting
-  public static void setMaxStringLength(int maxStringLength)
+  public static void setMaxStringLength(@Nullable Integer maxStringLength)
   {
     MAX_STRING_LENGTH = maxStringLength;
   }
 
-  public static int getMaxStringLength()
+  @Nullable
+  public static Integer getMaxStringLength()
   {
     return MAX_STRING_LENGTH;
   }
