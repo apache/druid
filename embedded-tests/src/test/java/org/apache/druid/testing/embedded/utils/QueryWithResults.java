@@ -17,17 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.utils;
 
-import com.github.rvesse.airline.builder.CliBuilder;
-import org.apache.druid.cli.CliCommandCreator;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.Query;
 
-public class QueryRetryTestCommandCreator implements CliCommandCreator
+import java.util.List;
+import java.util.Map;
+
+public class QueryWithResults extends AbstractQueryWithResults<Query>
 {
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Override
-  public void addCommands(CliBuilder builder)
+  @JsonCreator
+  public QueryWithResults(
+      @JsonProperty("query") Query query,
+      @JsonProperty("description") String description,
+      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults,
+      @JsonProperty("fieldsToTest") List<String> fieldsToTest
+  )
   {
-    builder.withGroup("server").withCommands(CliHistoricalForQueryErrorTest.class);
+    super(query, description, expectedResults, fieldsToTest);
   }
 }

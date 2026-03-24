@@ -17,25 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.Query;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class QueryWithResults extends AbstractQueryWithResults<Query>
+public class MsqQueryWithResults extends AbstractQueryWithResults<String>
 {
+
   @JsonCreator
-  public QueryWithResults(
-      @JsonProperty("query") Query query,
+  public MsqQueryWithResults(
+      @JsonProperty("query") String query,
       @JsonProperty("description") String description,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults,
-      @JsonProperty("fieldsToTest") List<String> fieldsToTest
+      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
   )
   {
-    super(query, description, expectedResults, fieldsToTest);
+    super(query, description, expectedResults, Collections.emptyList());
   }
 }

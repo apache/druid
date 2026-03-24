@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.tools;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -29,6 +27,7 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.testing.embedded.indexing.SchemaRegistryResource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -40,7 +39,6 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
   private static final int MAX_INITIALIZE_RETRIES = 10;
   public static final String TYPE = "avro-schema-registry";
 
-  private final IntegrationTestingConfig config;
   private final CachedSchemaRegistryClient client;
   private int schemaId = -1;
 
@@ -50,17 +48,7 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
       String schemaRegistryHost
   )
   {
-    this.config = null;
-    this.client = KafkaUtil.createSchemaRegistryClient(schemaRegistryHost);
-  }
-
-  @JsonCreator
-  public AvroSchemaRegistryEventSerializer(
-      @JacksonInject IntegrationTestingConfig config
-  )
-  {
-    this.config = config;
-    this.client = KafkaUtil.createSchemaRegistryClient(config.getSchemaRegistryHost());
+    this.client = SchemaRegistryResource.createSchemaRegistryClient(schemaRegistryHost);
   }
 
   @Override
