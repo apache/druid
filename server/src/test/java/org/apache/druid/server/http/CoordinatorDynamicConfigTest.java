@@ -279,6 +279,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null
     );
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
@@ -305,6 +306,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null
     );
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
@@ -643,6 +645,40 @@ public class CoordinatorDynamicConfigTest
   private static int getDefaultNumBalancerThreads()
   {
     return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
+  @Test
+  public void testHistoricalTierAliases() throws Exception
+  {
+    // Basic set and get via builder
+    Map<String, Set<String>> aliases = ImmutableMap.of(
+        "hot", ImmutableSet.of("hot_1", "hot_2"),
+        "cold", ImmutableSet.of("cold_1")
+    );
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
+                                                              .withHistoricalTierAliases(aliases)
+                                                              .build();
+    Assert.assertEquals(aliases, config.getHistoricalTierAliases());
+
+    // build(defaults) propagates aliases when not overridden
+    CoordinatorDynamicConfig updated = CoordinatorDynamicConfig.builder().build(config);
+    Assert.assertEquals(aliases, updated.getHistoricalTierAliases());
+
+    // Serde roundtrip with duplicate values in the JSON array — duplicates must be deduplicated
+    String jsonWithDupes = "{"
+                           + "\"historicalTierAliases\": {"
+                           + "  \"hot\": [\"hot_1\", \"hot_2\", \"hot_1\"]"
+                           + "}"
+                           + "}";
+    CoordinatorDynamicConfig deserialized = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonWithDupes, CoordinatorDynamicConfig.class)),
+        CoordinatorDynamicConfig.class
+    );
+    Assert.assertEquals(ImmutableSet.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
+
+    // Absent field defaults to empty map
+    CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
+    Assert.assertEquals(Map.of(), defaultConfig.getHistoricalTierAliases());
   }
 
   @Test

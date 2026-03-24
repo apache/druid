@@ -107,7 +107,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "smartSegmentLoading": true,
     "debugDimensions": null,
     "turboLoadingNodes": [],
-    "cloneServers": {}
+    "cloneServers": {},
+    "historicalTierAliases": {
+        "hot": ["hot_1", "hot_2"]
+    }
 
 }
 ```
