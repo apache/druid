@@ -140,6 +140,22 @@ public class OmniDataSegmentKillerTest
   }
 
   @Test
+  public void testKillShuffleSupervisorPrefix_delegatesToAllKillers() throws SegmentLoadingException
+  {
+    final DataSegmentKiller killerA = Mockito.mock(DataSegmentKiller.class);
+    final DataSegmentKiller killerB = Mockito.mock(DataSegmentKiller.class);
+    final Injector injector = createInjectorFromMap(
+        ImmutableMap.of("type_a", killerA, "type_b", killerB)
+    );
+    final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
+
+    segmentKiller.killShuffleSupervisorPrefix("supervisor_1");
+
+    Mockito.verify(killerA).killShuffleSupervisorPrefix("supervisor_1");
+    Mockito.verify(killerB).killShuffleSupervisorPrefix("supervisor_1");
+  }
+
+  @Test
   public void testKillMultipleSegmentsWithType() throws SegmentLoadingException
   {
     final DataSegmentKiller killerSane = Mockito.mock(DataSegmentKiller.class);

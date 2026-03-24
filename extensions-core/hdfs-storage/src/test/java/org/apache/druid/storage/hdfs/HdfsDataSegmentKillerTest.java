@@ -206,6 +206,112 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
+  public void testKillShuffleSupervisorPrefix_emptyOrNullTaskIdIsNoOp() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      killer.killShuffleSupervisorPrefix("");
+      killer.killShuffleSupervisorPrefix(null);
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillShuffleSupervisorPrefix_skipsWhenTaskIdContainsPathSeparator() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      final Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
+      final Path nested = new Path(shuffleRoot, "evil");
+      Assert.assertTrue(fs.mkdirs(nested));
+      fs.createNewFile(new Path(nested, "probe"));
+
+      killer.killShuffleSupervisorPrefix("evil/nested");
+
+      Assert.assertTrue(fs.exists(nested));
+      Assert.assertTrue(fs.delete(shuffleRoot, true));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillShuffleSupervisorPrefix_skipsWhenStorageDirectoryNotConfigured() throws Exception
+  {
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "";
+          }
+        }
+    );
+
+    killer.killShuffleSupervisorPrefix("some_supervisor");
+  }
+
+  @Test
+  public void testKillShuffleSupervisorPrefix_missingDirectoryIsNoOp() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      killer.killShuffleSupervisorPrefix("no_such_supervisor_dir");
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
   public void testKillShuffleSupervisorPrefix() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
