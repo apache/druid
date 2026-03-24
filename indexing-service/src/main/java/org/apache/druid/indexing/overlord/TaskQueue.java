@@ -72,7 +72,9 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -416,8 +418,14 @@ public class TaskQueue
     log.info("Notified task runner to clean up [%,d] tasks with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
     // Attain futures for all active tasks (assuming they are ready to run).
-    // Copy tasks list, as notifyStatus may modify it.
-    for (final String queuedTaskId : List.copyOf(activeTasks.keySet())) {
+    // Copy tasks list, as notifyStatus may modify it. Sort by priority (highest first) so that
+    // higher-priority tasks are submitted to the runner before lower-priority ones.
+    final List<String> queuedTaskIds = new ArrayList<>(activeTasks.keySet());
+    queuedTaskIds.sort(Comparator.comparingInt(id -> {
+      final TaskEntry entry = activeTasks.get(id);
+      return entry != null ? -entry.getTask().getPriority() : Tasks.DEFAULT_TASK_PRIORITY;
+    }));
+    for (final String queuedTaskId : queuedTaskIds) {
       updateTaskEntry(
           queuedTaskId,
           entry -> startPendingTaskOnRunner(entry, runnerTaskFutures.get(queuedTaskId))

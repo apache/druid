@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -98,6 +99,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -751,6 +753,41 @@ public class TaskQueueTest extends IngestionTestBase
     serviceEmitter.verifyEmitted("task/run/time", 3);
   }
 
+  @Test
+  public void testTaskSubmissionToTaskRunnerBasedOnPriority() throws Exception
+  {
+    final RecordingTaskRunner recordingRunner = new RecordingTaskRunner(serviceEmitter);
+    final TaskQueue priorityQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(10, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        recordingRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    priorityQueue.setActive(true);
+
+    final NoopTask lowPriority = NoopTask.ofPriority(10);
+    final NoopTask highPriority = NoopTask.ofPriority(100);
+    final NoopTask medPriority = NoopTask.ofPriority(50);
+
+    priorityQueue.add(lowPriority);
+    priorityQueue.add(highPriority);
+    priorityQueue.add(medPriority);
+
+    priorityQueue.manageQueuedTasks();
+
+    final List<String> submitted = recordingRunner.getSubmittedTaskIds();
+    Assert.assertEquals(3, submitted.size());
+    Assert.assertEquals(highPriority.getId(), submitted.get(0));
+    Assert.assertEquals(medPriority.getId(), submitted.get(1));
+    Assert.assertEquals(lowPriority.getId(), submitted.get(2));
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
@@ -902,6 +939,31 @@ public class TaskQueueTest extends IngestionTestBase
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  /**
+   * A task runner that records the order in which tasks are submitted via {@link #run(Task)}.
+   */
+  static class RecordingTaskRunner extends SimpleTaskRunner
+  {
+    private final List<String> submittedTaskIds = new ArrayList<>();
+
+    RecordingTaskRunner(ServiceEmitter emitter)
+    {
+      super(emitter);
+    }
+
+    @Override
+    public ListenableFuture<TaskStatus> run(Task task)
+    {
+      submittedTaskIds.add(task.getId());
+      return Futures.immediateFuture(TaskStatus.success(task.getId()));
+    }
+
+    List<String> getSubmittedTaskIds()
+    {
+      return submittedTaskIds;
     }
   }
 }
