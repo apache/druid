@@ -387,7 +387,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                         {' '}
                         &nbsp;{' '}
                         <Icon
-                          icon={IconNames.ARROW_BOTTOM_RIGHT}
+                          icon={IconNames.ARROW_BOTTOM_LEFT}
                           data-tooltip={`Realtime queries (${formatInteger(
                             c.queries || 0,
                           )} / ${formatInteger(c.totalQueries || 0)})`}
@@ -616,7 +616,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             {' '}
             &nbsp;{' '}
             <Icon
-              icon={IconNames.ARROW_BOTTOM_RIGHT}
+              icon={IconNames.ARROW_BOTTOM_LEFT}
               data-tooltip={`Realtime queries (${formatInteger(queries || 0)} / ${formatInteger(
                 totalQueries || 0,
               )})`}
