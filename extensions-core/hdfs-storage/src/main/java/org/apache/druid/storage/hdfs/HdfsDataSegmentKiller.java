@@ -64,55 +64,6 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
   }
 
-  /**
-   * Resolves {@code shuffle-data/<hdfsSupervisorDir>} under {@code storageDirectory}.
-   * <p>
-   * Shuffle intermediates use {@link HdfsDataSegmentPusher#pushToPath}, which applies {@code storageDirSuffix.replace(':', '_')}
-   * the first directory under {@code shuffle-data/} is the supervisor task id with the same replacement.
-   * <p>
-   * Append via string concat (then one {@link Path} parse) so colons stay inside the URI path; do not use
-   * {@link Path#Path(Path, String)} with the raw task id (Hadoop parses the child as its own URI).
-   */
-  static Path shuffleSupervisorTaskDir(Path storageDirectory, String supervisorTaskId)
-  {
-    final String hdfsSupervisorDir = supervisorTaskId.replace(':', '_');
-    final Path shuffleDir = new Path(storageDirectory, SHUFFLE_DATA_DIR_NAME);
-    final String shuffleDirString = shuffleDir.toString();
-    final String sep = shuffleDirString.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR;
-    return new Path(shuffleDirString + sep + hdfsSupervisorDir);
-  }
-
-  @Override
-  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
-  {
-    if (Strings.isNullOrEmpty(supervisorTaskId)) {
-      return;
-    }
-    if (supervisorTaskId.indexOf('/') >= 0 || supervisorTaskId.indexOf('\\') >= 0) {
-      log.warn("Skipping shuffle prefix kill: task id must be a single path segment, got [%s]", supervisorTaskId);
-      return;
-    }
-    if (storageDirectory == null) {
-      log.warn("Skipping shuffle prefix kill: storage directory not configured");
-      return;
-    }
-
-    final Path taskDir = shuffleSupervisorTaskDir(storageDirectory, supervisorTaskId);
-    try {
-      final FileSystem fs = taskDir.getFileSystem(config);
-      if (!fs.exists(taskDir)) {
-        return;
-      }
-      log.info("Cleaning up task[%s]. Deleting deep storage shuffle directory[%s]", supervisorTaskId, taskDir);
-      if (!fs.delete(taskDir, true)) {
-        throw new SegmentLoadingException("Failed to delete shuffle directory[%s]", taskDir);
-      }
-    }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "Failed to delete shuffle directory for task[%s]", supervisorTaskId);
-    }
-  }
-
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
@@ -196,5 +147,54 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     catch (Exception e) {
       log.makeAlert(e, "uncaught exception during segment killer").emit();
     }
+  }
+
+  @Override
+  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  {
+    if (Strings.isNullOrEmpty(supervisorTaskId)) {
+      return;
+    }
+    if (supervisorTaskId.indexOf('/') >= 0 || supervisorTaskId.indexOf('\\') >= 0) {
+      log.warn("Skipping shuffle prefix kill: task id must be a single path segment, got [%s]", supervisorTaskId);
+      return;
+    }
+    if (storageDirectory == null) {
+      log.warn("Skipping shuffle prefix kill: storage directory not configured");
+      return;
+    }
+
+    final Path taskDir = getShuffleDirectoryPathWithSupervisorId(storageDirectory, supervisorTaskId);
+    try {
+      final FileSystem fs = taskDir.getFileSystem(config);
+      if (!fs.exists(taskDir)) {
+        return;
+      }
+      log.info("Cleaning up task[%s]. Deleting deep storage shuffle directory[%s]", supervisorTaskId, taskDir);
+      if (!fs.delete(taskDir, true)) {
+        throw new SegmentLoadingException("Failed to delete shuffle directory[%s]", taskDir);
+      }
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "Failed to delete shuffle directory for task[%s]", supervisorTaskId);
+    }
+  }
+
+  /**
+   * Resolves {@code shuffle-data/<hdfsSupervisorDir>} under {@code storageDirectory}.
+   * <p>
+   * Shuffle intermediates use {@link HdfsDataSegmentPusher#pushToPath}, which applies {@code storageDirSuffix.replace(':', '_')}
+   * the first directory under {@code shuffle-data/} is the supervisor task id with the same replacement.
+   * <p>
+   * Append via string concat (then one {@link Path} parse) so colons stay inside the URI path; do not use
+   * {@link Path#Path(Path, String)} with the raw task id (Hadoop parses the child as its own URI).
+   */
+  private static Path getShuffleDirectoryPathWithSupervisorId(Path storageDirectory, String supervisorTaskId)
+  {
+    final String hdfsSupervisorDir = supervisorTaskId.replace(':', '_');
+    final Path shuffleDir = new Path(storageDirectory, SHUFFLE_DATA_DIR_NAME);
+    final String shuffleDirString = shuffleDir.toString();
+    final String sep = shuffleDirString.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR;
+    return new Path(shuffleDirString + sep + hdfsSupervisorDir);
   }
 }
