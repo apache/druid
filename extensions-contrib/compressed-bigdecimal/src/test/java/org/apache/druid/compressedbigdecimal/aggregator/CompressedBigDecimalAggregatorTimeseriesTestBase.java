@@ -75,7 +75,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
       ColumnsFilter.all()
   );
 
-  static final InputFormat FORMAT =  new CsvInputFormat(
+  static final InputFormat FORMAT = new CsvInputFormat(
       List.of(
           "timestamp",
           "property",

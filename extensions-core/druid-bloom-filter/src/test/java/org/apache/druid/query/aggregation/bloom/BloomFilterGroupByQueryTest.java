@@ -228,7 +228,9 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
             DimensionsSpec.EMPTY,
             ColumnsFilter.all()
         ),
-        DelimitedInputFormat.forColumns(List.of("timestamp", "market", "placement", "placementish", "index")),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+        ),
         metricSpec,
         0,
         Granularities.NONE,
@@ -236,6 +238,7 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
         query
     );
 
-    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
+    List<ResultRow> results = seq.toList();
+    return results.get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }
