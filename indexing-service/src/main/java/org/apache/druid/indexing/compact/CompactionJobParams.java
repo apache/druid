@@ -24,7 +24,9 @@ import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.DateTime;
 
 /**
@@ -35,6 +37,7 @@ public class CompactionJobParams
   private final DateTime scheduleStartTime;
   private final TimelineProvider timelineProvider;
   private final CompactionTaskStatusProvider compactionTaskStatusProvider;
+  private final CompactionStatusCollector compactionStatusCollector;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final IndexingStateFingerprintMapper fingerprintMapper;
@@ -44,6 +47,7 @@ public class CompactionJobParams
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
       CompactionTaskStatusProvider compactionTaskStatusProvider,
+      CompactionStatusCollector compactionStatusCollector,
       CompactionSnapshotBuilder snapshotBuilder,
       IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
@@ -52,6 +56,7 @@ public class CompactionJobParams
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.compactionTaskStatusProvider = compactionTaskStatusProvider;
+    this.compactionStatusCollector = compactionStatusCollector;
     this.snapshotBuilder = snapshotBuilder;
     this.fingerprintMapper = indexingStateFingerprintMapper;
   }
@@ -89,6 +94,11 @@ public class CompactionJobParams
     return compactionTaskStatusProvider.getLatestTaskStatus(candidate);
   }
 
+  public void collectCompactionStatus(CompactionCandidate candidateSegments)
+  {
+    compactionStatusCollector.collect(candidateSegments, null);
+  }
+
   /**
    * Used to build an {@link org.apache.druid.server.coordinator.AutoCompactionSnapshot}
    * for all the datasources at the end of the current run. During the run, as
@@ -117,5 +127,14 @@ public class CompactionJobParams
   public interface CompactionTaskStatusProvider
   {
     CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidate);
+  }
+
+  @FunctionalInterface
+  public interface CompactionStatusCollector
+  {
+    void collect(
+        CompactionCandidate candidateSegments,
+        @Nullable DataSourceCompactionConfig unused
+    );
   }
 }

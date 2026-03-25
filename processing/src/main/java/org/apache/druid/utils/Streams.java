@@ -27,12 +27,27 @@ import java.util.stream.StreamSupport;
 
 public final class Streams
 {
+  /**
+   * Creates a sequential (non-parallel) stream from an iterator.
+   * The stream is created with unknown size and DISTINCT characteristic.
+   *
+   * @param iterator The iterator to stream from
+   * @param <T> The type of elements in the stream
+   * @return A sequential stream of elements from the iterator
+   */
   public static <T> Stream<T> sequentialStreamFrom(Iterator<T> iterator)
   {
     final Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.DISTINCT);
     return StreamSupport.stream(spliterator, false);
   }
 
+  /**
+   * Creates a sequential (non-parallel) stream from an iterable.
+   *
+   * @param iterable The iterable to stream from
+   * @param <T> The type of elements in the stream
+   * @return A sequential stream of elements from the iterable
+   */
   public static <T> Stream<T> sequentialStreamFrom(Iterable<T> iterable)
   {
     return StreamSupport.stream(iterable.spliterator(), false);

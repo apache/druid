@@ -49,7 +49,7 @@ public class CompactionStatusTrackerTest
   {
     final CompactionCandidate candidateSegments
         = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
-    statusTracker.onTaskSubmitted("task1", candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments, CompactionMode.ALL_SEGMENTS);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
@@ -60,7 +60,7 @@ public class CompactionStatusTrackerTest
   {
     final CompactionCandidate candidateSegments
         = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
-    statusTracker.onTaskSubmitted("task1", candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments, CompactionMode.ALL_SEGMENTS);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -72,7 +72,7 @@ public class CompactionStatusTrackerTest
   {
     final CompactionCandidate candidateSegments
         = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
-    statusTracker.onTaskSubmitted("task1", candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments, CompactionMode.ALL_SEGMENTS);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -86,10 +86,10 @@ public class CompactionStatusTrackerTest
     final CompactionCandidate candidateSegments
         = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
 
-    statusTracker.onTaskSubmitted("task1", candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments, CompactionMode.ALL_SEGMENTS);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
-    statusTracker.onTaskSubmitted("task2", candidateSegments);
+    statusTracker.onTaskSubmitted("task2", candidateSegments, CompactionMode.ALL_SEGMENTS);
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
     Assert.assertEquals(1, status.getNumConsecutiveFailures());
@@ -116,7 +116,7 @@ public class CompactionStatusTrackerTest
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
-    statusTracker.onTaskSubmitted("task1", candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments, CompactionMode.ALL_SEGMENTS);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     status = statusTracker.computeCompactionStatus(candidateSegments, policy);

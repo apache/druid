@@ -49,6 +49,7 @@ import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusDetailedStats;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -60,12 +61,14 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -111,7 +114,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final AtomicBoolean shouldRecomputeJobsForAnyDatasource = new AtomicBoolean(false);
 
   /**
-   * Compaction job queue built in the last invocation of {@link #resetCompactionJobQueue()}.
+   * Compaction job queue built in the last invocation of {@link #resetCompactionJobQueue}.
    */
   private final AtomicReference<CompactionJobQueue> latestJobQueue;
 
@@ -357,7 +360,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isEnabled()) {
       initState();
       try {
-        resetCompactionJobQueue();
+        resetCompactionJobQueue(false, getLatestClusterConfig(), null);
       }
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
@@ -370,19 +373,26 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   /**
-   * Creates and launches eligible compaction jobs.
+   * Creates a new compaction job queue and enqueues eligible jobs.
+   * In dry run mode, no jobs are launched and no metrics are emitted but detailed stats are collected.
    */
-  private synchronized void resetCompactionJobQueue()
+  private synchronized void resetCompactionJobQueue(
+      boolean dryRun,
+      ClusterCompactionConfig clusterCompactionConfig,
+      @Nullable CompactionStatusDetailedStats detailedStats
+  )
   {
     // Remove the old queue so that no more jobs are added to it
     latestJobQueue.set(null);
+    statusTracker.resetCompactionStatusDetailedStats(detailedStats);
 
     final Stopwatch runDuration = Stopwatch.createStarted();
     final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
     final CompactionJobQueue queue = new CompactionJobQueue(
         dataSourcesSnapshot,
-        getLatestClusterConfig(),
+        clusterCompactionConfig,
         statusTracker,
+        dryRun,
         taskActionClientFactory,
         taskLockbox,
         overlordClient,
@@ -400,15 +410,17 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     // recomputation will not be needed
     shouldRecomputeJobsForAnyDatasource.set(false);
     activeSupervisors.forEach(this::createAndEnqueueJobs);
-
     launchPendingJobs();
-    queue.getRunStats().forEachStat(this::emitStat);
-    emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
+
+    if (!dryRun) {
+      queue.getRunStats().forEachStat(this::emitStat);
+      emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
+    }
   }
 
   /**
    * Launches pending compaction jobs if compaction task slots become available.
-   * This method uses the jobs created by the last invocation of {@link #resetCompactionJobQueue()}.
+   * This method uses the jobs created by the last invocation of {@link #resetCompactionJobQueue)}.
    */
   private synchronized void launchPendingJobs()
   {
@@ -459,6 +471,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private void updateCompactionSnapshots(CompactionJobQueue queue)
   {
+    if (queue.isDryRun()) {
+      return;
+    }
     datasourceToCompactionSnapshot.set(queue.getSnapshots());
   }
 
@@ -489,6 +504,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return Map.copyOf(datasourceToCompactionSnapshot.get());
   }
 
+  @Deprecated
   @Override
   public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
   {
@@ -501,6 +517,22 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     } else {
       return new CompactionSimulateResult(Collections.emptyMap());
     }
+  }
+
+  @Override
+  public CompactionStatusDetailedStats dryRunWithConfig(ClusterCompactionConfig config)
+  {
+    CompactionStatusDetailedStats detailedStats = new CompactionStatusDetailedStats();
+    if (isRunning() && isEnabled()) {
+      try {
+        scheduleOnExecutor(() -> resetCompactionJobQueue(true, config, detailedStats), 0L).get();
+      }
+      catch (Exception e) {
+        log.error(e, "Error processing compaction queue");
+        throw new RuntimeException("Error processing compaction queue.", e);
+      }
+    }
+    return detailedStats;
   }
 
   private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)
@@ -539,9 +571,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return segmentManager.getRecentDataSourcesSnapshot();
   }
 
-  private void scheduleOnExecutor(Runnable runnable, long delayMillis)
+  private ScheduledFuture<?> scheduleOnExecutor(Runnable runnable, long delayMillis)
   {
-    executor.schedule(
+    return executor.schedule(
         () -> {
           try {
             runnable.run();

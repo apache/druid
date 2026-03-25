@@ -252,10 +252,9 @@ public class CompactSegments implements CoordinatorCustomDuty
       final String dataSourceName = entry.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionStatus compactionStatus =
-          statusTracker.computeCompactionStatus(entry, policy);
+      final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(entry, policy);
       final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
+      statusTracker.collectCompactionStatus(candidatesWithStatus, config);
 
       if (compactionStatus.isComplete()) {
         snapshotBuilder.addToComplete(candidatesWithStatus);
@@ -279,7 +278,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final String taskId = taskPayload.getId();
       FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
-      statusTracker.onTaskSubmitted(taskId, entry);
+      statusTracker.onTaskSubmitted(taskId, entry, CompactionMode.ALL_SEGMENTS);
 
       LOG.debug(
           "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
@@ -429,7 +428,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.onCompactionStatusComputed(entry, datasourceToConfig.get(entry.getDataSource()));
+      statusTracker.collectCompactionStatus(entry, datasourceToConfig.get(entry.getDataSource()));
       snapshotBuilder.addToSkipped(entry);
     });
 

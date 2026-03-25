@@ -102,9 +102,9 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onCompactionStatusComputed(
+      public void collectCompactionStatus(
           CompactionCandidate candidateSegments,
-          DataSourceCompactionConfig config
+          @Nullable DataSourceCompactionConfig config
       )
       {
         final CompactionStatus status = candidateSegments.getCurrentStatus();
@@ -126,7 +126,7 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
+      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments, CompactionMode unused)
       {
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCurrentStatus();

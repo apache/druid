@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -91,6 +92,11 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         compactionState
     );
 
+    segmentIterator.getSkippedSegments().forEach(entry -> {
+      params.collectCompactionStatus(entry);
+      params.getSnapshotBuilder().addToSkipped(entry);
+    });
+
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
@@ -99,19 +105,12 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
                 .getCompactionPolicy()
                 .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
       if (!eligibility.isEligible()) {
+        params.collectCompactionStatus(candidate.withCurrentStatus(CompactionStatus.skipped(eligibility.getReason())));
         continue;
       }
-      final CompactionCandidate finalCandidate;
       switch (eligibility.getMode()) {
         case ALL_SEGMENTS:
-          finalCandidate = candidate;
-          break;
         case UNCOMPACTED_SEGMENTS_ONLY:
-          finalCandidate = CompactionCandidate.from(
-              candidate.getUncompactedSegments(),
-              null,
-              candidate.getCurrentStatus()
-          );
           break;
         default:
           throw DruidException.defensive("unexpected compaction mode[%s]", eligibility.getMode());
@@ -125,7 +124,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           params.getClusterCompactionConfig().getEngine()
       );
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
-          finalCandidate,
+          candidate,
           eligibility,
           finalConfig,
           engine,
@@ -135,7 +134,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       jobs.add(
           new CompactionJob(
               taskPayload,
-              finalCandidate,
+              candidate,
               CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
               indexingStateFingerprint,
               compactionState,
@@ -184,7 +183,10 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     );
 
     // Collect stats for segments that are already compacted
-    iterator.getCompactedSegments().forEach(entry -> params.getSnapshotBuilder().addToComplete(entry));
+    iterator.getCompactedSegments().forEach(entry -> {
+      params.collectCompactionStatus(entry);
+      params.getSnapshotBuilder().addToComplete(entry);
+    });
 
     return iterator;
   }
