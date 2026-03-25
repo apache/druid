@@ -86,9 +86,9 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
-import org.jetbrains.annotations.Nullable;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -511,14 +511,15 @@ public class AggregationTestHelper implements Closeable
     try {
       InputEntity streamEntity = new InputEntity()
       {
+        @Nullable
         @Override
-        public @Nullable URI getUri()
+        public URI getUri()
         {
           return null;
         }
 
         @Override
-        public InputStream open() throws IOException
+        public InputStream open()
         {
           return inputDataStream;
         }
