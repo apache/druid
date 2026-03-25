@@ -20,6 +20,7 @@ import type { Field } from '../../components';
 
 export interface BrokerDynamicConfig {
   queryBlocklist?: QueryBlocklistRule[];
+  queryContext?: Record<string, unknown>;
 }
 
 export interface QueryBlocklistRule {
@@ -29,4 +30,25 @@ export interface QueryBlocklistRule {
   contextMatches?: Record<string, string>;
 }
 
-export const BROKER_DYNAMIC_CONFIG_FIELDS: Field<BrokerDynamicConfig>[] = [];
+export const BROKER_DYNAMIC_CONFIG_FIELDS: Field<BrokerDynamicConfig>[] = [
+  {
+    name: 'queryContext',
+    type: 'json',
+    info: (
+      <>
+        Default query context values applied to all queries on this broker. These override static
+        defaults from runtime properties but are overridden by per-query context values.
+      </>
+    ),
+  },
+  {
+    name: 'queryBlocklist',
+    type: 'json',
+    info: (
+      <>
+        List of rules to block queries on brokers. Each rule can match by datasource, query type,
+        and/or context parameters.
+      </>
+    ),
+  },
+];

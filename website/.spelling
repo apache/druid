@@ -427,6 +427,7 @@ maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
+maxStringLength
 max_map_count
 memcached
 mergeable

@@ -1221,7 +1221,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
       emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
-
+      emitMetric(toolbox.getEmitter(), "ingest/rows/published", IndexTaskUtils.getTotalRowCount(newSegments));
     } else {
       throw new ISE("Failed to publish segments");
     }

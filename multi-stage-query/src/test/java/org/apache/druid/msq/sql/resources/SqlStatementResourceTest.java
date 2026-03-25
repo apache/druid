@@ -276,7 +276,9 @@ public class SqlStatementResourceTest extends MSQTestBase
                           new long[]{},
                           new long[]{},
                           new long[]{},
-                          new long[]{}
+                          new long[]{},
+                          null,
+                          null
                       )
                   )
                   )

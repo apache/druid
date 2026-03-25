@@ -32,6 +32,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -74,6 +75,7 @@ public class SqlHttpModuleTest
                 .annotatedWith(NativeQuery.class)
                 .toInstance(EasyMock.mock(SqlStatementFactory.class));
           binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
+          binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
         },
         target
     );

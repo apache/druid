@@ -53,6 +53,8 @@ public class BuiltInTypesModule implements DruidModule
    */
   private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
   private static IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.builder().build();
+  @Nullable
+  private static Integer MAX_STRING_LENGTH = null;
 
   /**
    * @return the configured string multi value handling mode from the system config if set; otherwise, returns
@@ -89,6 +91,7 @@ public class BuiltInTypesModule implements DruidModule
   public SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
     setStringMultiValueHandlingModeIfConfigured(formatsConfig.getStringMultiValueHandlingMode());
+    setMaxStringLengthIfConfigured(formatsConfig.getMaxStringLength());
     setIndexSpecDefaults(formatsConfig.getIndexSpec());
     setNestedColumnDefaults(formatsConfig);
 
@@ -126,6 +129,25 @@ public class BuiltInTypesModule implements DruidModule
     if (ComplexMetrics.getSerdeForType(NestedDataComplexTypeSerde.TYPE_NAME) == null) {
       ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
     }
+  }
+
+  private static void setMaxStringLengthIfConfigured(@Nullable Integer maxStringLength)
+  {
+    if (maxStringLength != null) {
+      MAX_STRING_LENGTH = maxStringLength;
+    }
+  }
+
+  @VisibleForTesting
+  public static void setMaxStringLength(@Nullable Integer maxStringLength)
+  {
+    MAX_STRING_LENGTH = maxStringLength;
+  }
+
+  @Nullable
+  public static Integer getMaxStringLength()
+  {
+    return MAX_STRING_LENGTH;
   }
 
   private static void setStringMultiValueHandlingModeIfConfigured(@Nullable String stringMultiValueHandlingMode)

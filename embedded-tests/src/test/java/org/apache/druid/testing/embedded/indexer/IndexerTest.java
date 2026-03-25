@@ -27,7 +27,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -37,10 +36,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -118,9 +117,9 @@ public class QueryLifecycleTest
   @Bind
   AuthorizerMapper authzMapper;
 
-  DefaultQueryConfig queryConfig;
+  QueryConfigProvider queryConfig;
   @Bind(lazy = true)
-  Supplier<DefaultQueryConfig> queryConfigSupplier;
+  QueryConfigProvider queryConfigProvider;
 
   @Bind(lazy = true)
   AuthConfig authConfig;
@@ -151,8 +150,8 @@ public class QueryLifecycleTest
     requestLogger = EasyMock.createNiceMock(RequestLogger.class);
     authorizer = EasyMock.createMock(Authorizer.class);
     authzMapper = new AuthorizerMapper(ImmutableMap.of(AUTHORIZER, authorizer));
-    queryConfig = EasyMock.createMock(DefaultQueryConfig.class);
-    queryConfigSupplier = () -> queryConfig;
+    queryConfig = EasyMock.createMock(QueryConfigProvider.class);
+    queryConfigProvider = queryConfig;
 
     toolChest = EasyMock.createMock(QueryToolChest.class);
     runner = EasyMock.createMock(QueryRunner.class);

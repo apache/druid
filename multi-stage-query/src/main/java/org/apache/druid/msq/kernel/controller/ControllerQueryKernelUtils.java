@@ -26,7 +26,7 @@ import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.InputSpecs;
+import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -330,7 +330,7 @@ public class ControllerQueryKernelUtils
       //      can only support a single reader.
       //   2) Downstream stages can only have a single input stage with output mode MEMORY. This isn't strictly
       //      necessary, but it simplifies the logic around concurrently launching stages.
-      return stageId.equals(getOnlyNonBroadcastInputAsStageId(outflowStageDef));
+      return stageId.equals(getOnlyNonBroadcastStageInputAsStageId(outflowStageDef));
     } else {
       return false;
     }
@@ -365,25 +365,28 @@ public class ControllerQueryKernelUtils
    * This is a helper used by {@link #canUseMemoryOutput}.
    */
   @Nullable
-  public static StageId getOnlyNonBroadcastInputAsStageId(final StageDefinition downstreamStageDef)
+  public static StageId getOnlyNonBroadcastStageInputAsStageId(final StageDefinition downstreamStageDef)
   {
     final List<InputSpec> inputSpecs = downstreamStageDef.getInputSpecs();
     final IntSet broadcastInputNumbers = downstreamStageDef.getBroadcastInputNumbers();
 
-    if (inputSpecs.size() - broadcastInputNumbers.size() != 1) {
-      return null;
-    }
+    StageId found = null;
 
     for (int i = 0; i < inputSpecs.size(); i++) {
-      if (!broadcastInputNumbers.contains(i)) {
-        final IntSet stageNumbers = InputSpecs.getStageNumbers(Collections.singletonList(inputSpecs.get(i)));
-        if (stageNumbers.size() == 1) {
-          return new StageId(downstreamStageDef.getId().getQueryId(), stageNumbers.iterator().nextInt());
+      if (!broadcastInputNumbers.contains(i) && inputSpecs.get(i) instanceof StageInputSpec) {
+        if (found != null) {
+          // More than one non-broadcast stage input.
+          return null;
         }
+
+        found = new StageId(
+            downstreamStageDef.getId().getQueryId(),
+            ((StageInputSpec) inputSpecs.get(i)).getStageNumber()
+        );
       }
     }
 
-    return null;
+    return found;
   }
 
   /**
