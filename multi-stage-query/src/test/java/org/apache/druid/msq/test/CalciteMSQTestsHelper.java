@@ -27,6 +27,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
@@ -89,6 +90,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public SegmentCacheManager provideSegmentCacheManager(ObjectMapper testMapper, TempDirProducer tempDirProducer)
     {
       return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
@@ -96,6 +98,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public LocalDataSegmentPusherConfig provideLocalDataSegmentPusherConfig(TempDirProducer tempDirProducer)
     {
       LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
@@ -104,12 +107,14 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public TestSegmentManager provideTestSegmentManager()
     {
       return new TestSegmentManager();
     }
 
     @Provides
+    @LazySingleton
     public DataSegmentPusher provideDataSegmentPusher(
         LocalDataSegmentPusherConfig config,
         TestSegmentManager testSegmentManager
@@ -119,12 +124,14 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public DataSegmentAnnouncer provideDataSegmentAnnouncer()
     {
       return new NoopDataSegmentAnnouncer();
     }
 
     @Provides
+    @LazySingleton
     public SegmentManager provideSegmentManager(
         TestSegmentManager testSegmentManager,
         SpecificSegmentsQuerySegmentWalker walker
@@ -142,6 +149,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public DataServerQueryHandlerFactory provideDataServerQueryHandlerFactory()
     {
       return getTestDataServerQueryHandlerFactory();
