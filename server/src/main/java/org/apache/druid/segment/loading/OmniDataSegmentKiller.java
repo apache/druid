@@ -100,12 +100,12 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  public void killRecursively(String relativePath) throws SegmentLoadingException
   {
     SegmentLoadingException firstFailure = null;
     for (Supplier<DataSegmentKiller> supplier : killers.values()) {
       try {
-        supplier.get().killShuffleSupervisorPrefix(supervisorTaskId);
+        supplier.get().killRecursively(relativePath);
       }
       catch (SegmentLoadingException e) {
         if (firstFailure == null) {

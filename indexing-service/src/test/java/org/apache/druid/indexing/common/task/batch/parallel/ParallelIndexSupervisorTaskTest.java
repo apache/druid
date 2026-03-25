@@ -37,6 +37,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
@@ -500,7 +501,7 @@ public class ParallelIndexSupervisorTaskTest
               tuningConfig
       );
 
-      // Compaction skips super.cleanUp but still runs killShuffleSupervisorPrefix.
+      // Compaction skips super.cleanUp but still runs killRecursively for intermediary deep-storage files.
       TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final DataSegmentKiller killer = EasyMock.createNiceMock(DataSegmentKiller.class);
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer).anyTimes();
@@ -520,7 +521,7 @@ public class ParallelIndexSupervisorTaskTest
     }
 
     @Test
-    public void testCleanUpInvokesKillShuffleSupervisorPrefix() throws Exception
+    public void testCleanUpInvokesKillRecursivelyForIntermediates() throws Exception
     {
       final boolean appendToExisting = false;
       final boolean forceGuaranteedRollup = true;
@@ -567,11 +568,11 @@ public class ParallelIndexSupervisorTaskTest
           tuningConfig
       );
 
-      final String supervisorTaskId = "shuffle_cleanup_supervisor_id";
+      final String supervisorTaskId = "index_parallel_cleanup_supervisor_id";
       TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killShuffleSupervisorPrefix(supervisorTaskId);
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall();
       EasyMock.replay(toolbox, killer);
 
@@ -599,7 +600,7 @@ public class ParallelIndexSupervisorTaskTest
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killShuffleSupervisorPrefix(supervisorTaskId);
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall();
       EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig).anyTimes();
       EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false).anyTimes();
@@ -619,16 +620,16 @@ public class ParallelIndexSupervisorTaskTest
     }
 
     @Test
-    public void testCleanUp_shufflePrefixKillFailureDoesNotAbortCleanUp() throws Exception
+    public void testCleanUp_killRecursivelyFailureDoesNotAbortCleanUp() throws Exception
     {
       final ParallelIndexIngestionSpec indexIngestionSpec = buildParallelIngestionSpecForCleanUpTests();
 
-      final String supervisorTaskId = "index_parallel_shuffle_fail";
+      final String supervisorTaskId = "index_parallel_deep_storage_cleanup_fail";
       final TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killShuffleSupervisorPrefix(supervisorTaskId);
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall().andThrow(new SegmentLoadingException("deep storage cleanup failed"));
       EasyMock.replay(toolbox, killer);
 

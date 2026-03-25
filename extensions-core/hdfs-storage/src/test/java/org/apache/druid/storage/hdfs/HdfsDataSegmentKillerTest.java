@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -206,7 +205,7 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix_emptyOrNullTaskIdIsNoOp() throws Exception
+  public void testKillRecursively_emptyOrNullPathIsNoOp() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     final Configuration config = new Configuration();
@@ -224,8 +223,8 @@ public class HdfsDataSegmentKillerTest
 
     final FileSystem fs = FileSystem.get(config);
     try {
-      killer.killShuffleSupervisorPrefix("");
-      killer.killShuffleSupervisorPrefix(null);
+      killer.killRecursively("");
+      killer.killRecursively(null);
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -233,7 +232,7 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix_skipsWhenTaskIdContainsPathSeparator() throws Exception
+  public void testKillRecursively_skipsWhenPathContainsParentSegment() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     final Configuration config = new Configuration();
@@ -251,15 +250,15 @@ public class HdfsDataSegmentKillerTest
 
     final FileSystem fs = FileSystem.get(config);
     try {
-      final Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
-      final Path nested = new Path(shuffleRoot, "evil");
+      final Path workspaceRoot = new Path(testRoot.getAbsolutePath(), "workspace");
+      final Path nested = new Path(workspaceRoot, "evil");
       Assert.assertTrue(fs.mkdirs(nested));
       fs.createNewFile(new Path(nested, "probe"));
 
-      killer.killShuffleSupervisorPrefix("evil/nested");
+      killer.killRecursively("workspace/../evil");
 
       Assert.assertTrue(fs.exists(nested));
-      Assert.assertTrue(fs.delete(shuffleRoot, true));
+      Assert.assertTrue(fs.delete(workspaceRoot, true));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -267,7 +266,7 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix_skipsWhenStorageDirectoryNotConfigured() throws Exception
+  public void testKillRecursively_skipsWhenStorageDirectoryNotConfigured() throws Exception
   {
     final Configuration config = new Configuration();
     final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
@@ -282,11 +281,11 @@ public class HdfsDataSegmentKillerTest
         }
     );
 
-    killer.killShuffleSupervisorPrefix("some_supervisor");
+    killer.killRecursively("staging/some_run_id");
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix_missingDirectoryIsNoOp() throws Exception
+  public void testKillRecursively_missingDirectoryIsNoOp() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     final Configuration config = new Configuration();
@@ -304,7 +303,7 @@ public class HdfsDataSegmentKillerTest
 
     final FileSystem fs = FileSystem.get(config);
     try {
-      killer.killShuffleSupervisorPrefix("no_such_supervisor_dir");
+      killer.killRecursively("staging/no_such_directory");
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -312,7 +311,7 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix() throws Exception
+  public void testKillRecursively() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     Configuration config = new Configuration();
@@ -330,16 +329,16 @@ public class HdfsDataSegmentKillerTest
 
     final FileSystem fs = FileSystem.get(config);
     try {
-      Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
-      Path taskDir = new Path(new Path(shuffleRoot, "prefix_task_a"), "leaf");
+      Path parentDir = new Path(testRoot.getAbsolutePath(), "export");
+      Path taskDir = new Path(new Path(parentDir, "run_a"), "leaf");
       Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
       fs.createNewFile(taskDir);
 
-      killer.killShuffleSupervisorPrefix("prefix_task_a");
+      killer.killRecursively("export/run_a");
 
-      Assert.assertFalse(fs.exists(new Path(shuffleRoot, "prefix_task_a")));
-      Assert.assertTrue(fs.exists(shuffleRoot));
-      Assert.assertTrue(fs.delete(shuffleRoot, true));
+      Assert.assertFalse(fs.exists(new Path(parentDir, "run_a")));
+      Assert.assertTrue(fs.exists(parentDir));
+      Assert.assertTrue(fs.delete(parentDir, true));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -348,10 +347,10 @@ public class HdfsDataSegmentKillerTest
 
   /**
    * {@link HdfsDataSegmentPusher#pushToPath} replaces {@code ':'} with {@code '_'} in
-   * shuffle paths; cleanup must accept the canonical task id (with colons) and delete the underscore layout on disk.
+   * storage suffixes; cleanup applies the same normalization to the relative directory path.
    */
   @Test
-  public void testKillShuffleSupervisorPrefix_taskIdWithIsoTimestamp() throws Exception
+  public void testKillRecursively_pathWithColonsMatchesHdfsPusherLayout() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     Configuration config = new Configuration();
@@ -369,20 +368,21 @@ public class HdfsDataSegmentKillerTest
 
     final FileSystem fs = FileSystem.get(config);
     try {
-      final String taskIdForCleanUp = "index_parallel_opa_affiliate_ams_key_metric_hourly_ph_live_hflgnacd_2026-03-23T10:09:40.697Z";
-      final String onDiskSupervisorDir = taskIdForCleanUp.replace(':', '_');
-      Path shuffleRoot = new Path(testRoot.getAbsolutePath(), DataSegmentKiller.SHUFFLE_DATA_DIR_NAME);
+      final String relativePathWithColons =
+          "batch/index_parallel_opa_affiliate_ams_key_metric_hourly_ph_live_hflgnacd_2026-03-23T10:09:40.697Z";
+      final String onDiskRelativePath = relativePathWithColons.replace(':', '_');
+      Path batchRoot = new Path(testRoot.getAbsolutePath(), "batch");
       Path taskDir = new Path(
-          shuffleRoot + Path.SEPARATOR + onDiskSupervisorDir + Path.SEPARATOR + "leaf"
+          testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath + Path.SEPARATOR + "leaf"
       );
       Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
       fs.createNewFile(taskDir);
 
-      killer.killShuffleSupervisorPrefix(taskIdForCleanUp);
+      killer.killRecursively(relativePathWithColons);
 
-      Assert.assertFalse(fs.exists(new Path(shuffleRoot + Path.SEPARATOR + onDiskSupervisorDir)));
-      Assert.assertTrue(fs.exists(shuffleRoot));
-      Assert.assertTrue(fs.delete(shuffleRoot, true));
+      Assert.assertFalse(fs.exists(new Path(testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath)));
+      Assert.assertTrue(fs.exists(batchRoot));
+      Assert.assertTrue(fs.delete(batchRoot, true));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);

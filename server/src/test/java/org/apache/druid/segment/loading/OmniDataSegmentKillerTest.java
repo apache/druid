@@ -140,7 +140,7 @@ public class OmniDataSegmentKillerTest
   }
 
   @Test
-  public void testKillShuffleSupervisorPrefix_delegatesToAllKillers() throws SegmentLoadingException
+  public void testKillRecursively_delegatesToAllKillers() throws SegmentLoadingException
   {
     final DataSegmentKiller killerA = Mockito.mock(DataSegmentKiller.class);
     final DataSegmentKiller killerB = Mockito.mock(DataSegmentKiller.class);
@@ -149,10 +149,11 @@ public class OmniDataSegmentKillerTest
     );
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
 
-    segmentKiller.killShuffleSupervisorPrefix("supervisor_1");
+    final String relativePath = "intermediate/batch_1";
+    segmentKiller.killRecursively(relativePath);
 
-    Mockito.verify(killerA).killShuffleSupervisorPrefix("supervisor_1");
-    Mockito.verify(killerB).killShuffleSupervisorPrefix("supervisor_1");
+    Mockito.verify(killerA).killRecursively(relativePath);
+    Mockito.verify(killerB).killRecursively(relativePath);
   }
 
   @Test

@@ -39,11 +39,6 @@ public interface DataSegmentKiller
 {
   Logger log = new Logger(DataSegmentKiller.class);
 
-  /**
-   * Must match {@link org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager#SHUFFLE_DATA_DIR_PREFIX}.
-   */
-  String SHUFFLE_DATA_DIR_NAME = "shuffle-data";
-
   static String descriptorPath(String path)
   {
     int lastPathSeparatorIndex = path.lastIndexOf('/');
@@ -105,20 +100,12 @@ public interface DataSegmentKiller
   void killAll() throws IOException;
 
   /**
-   * Best-effort removal of all deep-storage shuffle intermediates for a native parallel index supervisor task.
-   * Native parallel indexing writes shuffle files only under {@code shuffle-data/<supervisorTaskId>/} (see
-   * {@link #SHUFFLE_DATA_DIR_NAME} and {@code org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager});
-   * the default implementation is a no-op.
-   * <p>
-   * Object stores (S3, GCS, Azure Blob, etc.): there is usually no recursive-delete primitive; implementors
-   * should list objects under the key prefix {@code shuffle-data/<supervisorTaskId>/} (or the extension's equivalent
-   * layout under the configured bucket/prefix), delete in pages, and tolerate missing keys (idempotent cleanup). Use
-   * batch delete APIs where available. Be careful with listing consistency: eventual consistency and pagination
-   * boundaries may require retries or a second list pass. Never delete keys outside that prefix (other supervisors
-   * share {@code shuffle-data/}). If the supervisor JVM dies before {@code cleanUp}, operators can remove the same
-   * prefix manually.
+   * Recursively removes a directory (or object-store prefix) under the configured deep storage root. The path is
+   * relative to that root: no leading slash, no {@code ..} segments, no backslashes. If the path does not exist, this
+   * is a no-op. The default implementation does nothing; extensions that cannot recurse should keep the default.
+   * HDFS currently only implements this method.
    */
-  default void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  default void killRecursively(String relativePath) throws SegmentLoadingException
   {
   }
 }

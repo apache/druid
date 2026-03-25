@@ -59,6 +59,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -1837,10 +1838,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
     try {
-      toolbox.getDataSegmentKiller().killShuffleSupervisorPrefix(getId());
+      final String taskId = getId();
+      if (taskId != null && taskId.indexOf('/') < 0 && taskId.indexOf('\\') < 0) {
+        toolbox.getDataSegmentKiller().killRecursively(
+            DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(taskId)
+        );
+      } else {
+        LOG.warn("Skipping recursive deep storage cleanup: task id must be a single path segment, got [%s]", taskId);
+      }
     }
     catch (SegmentLoadingException e) {
-      LOG.warn(e, "Failed to delete deep storage shuffle prefix for task[%s]", getId());
+      LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
     }
 
     if (!isCompactionTask) {

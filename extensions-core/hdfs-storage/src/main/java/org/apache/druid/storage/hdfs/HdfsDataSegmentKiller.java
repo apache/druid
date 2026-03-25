@@ -150,51 +150,61 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killShuffleSupervisorPrefix(String supervisorTaskId) throws SegmentLoadingException
+  public void killRecursively(String relativePath) throws SegmentLoadingException
   {
-    if (Strings.isNullOrEmpty(supervisorTaskId)) {
+    final Path dirToDelete = constructHdfsDeletePath(relativePath);
+    if (dirToDelete == null) {
       return;
     }
-    if (supervisorTaskId.indexOf('/') >= 0 || supervisorTaskId.indexOf('\\') >= 0) {
-      log.warn("Skipping shuffle prefix kill: task id must be a single path segment, got [%s]", supervisorTaskId);
-      return;
-    }
-    if (storageDirectory == null) {
-      log.warn("Skipping shuffle prefix kill: storage directory not configured");
-      return;
-    }
-
-    final Path taskDir = getShuffleDirectoryPathWithSupervisorId(storageDirectory, supervisorTaskId);
     try {
-      final FileSystem fs = taskDir.getFileSystem(config);
-      if (!fs.exists(taskDir)) {
+      final FileSystem fs = dirToDelete.getFileSystem(config);
+      if (!fs.exists(dirToDelete)) {
         return;
       }
-      log.info("Cleaning up task[%s]. Deleting deep storage shuffle directory[%s]", supervisorTaskId, taskDir);
-      if (!fs.delete(taskDir, true)) {
-        throw new SegmentLoadingException("Failed to delete shuffle directory[%s]", taskDir);
+      log.info("Deleting deep storage directory [%s]", dirToDelete);
+      if (!fs.delete(dirToDelete, true)) {
+        throw new SegmentLoadingException("Failed to delete deep storage directory [%s]", dirToDelete);
       }
     }
     catch (IOException e) {
-      throw new SegmentLoadingException(e, "Failed to delete shuffle directory for task[%s]", supervisorTaskId);
+      throw new SegmentLoadingException(e, "Failed to delete deep storage directory [%s]", dirToDelete);
     }
   }
 
   /**
-   * Resolves {@code shuffle-data/<hdfsSupervisorDir>} under {@code storageDirectory}.
-   * <p>
-   * Shuffle intermediates use {@link HdfsDataSegmentPusher#pushToPath}, which applies {@code storageDirSuffix.replace(':', '_')}
-   * the first directory under {@code shuffle-data/} is the supervisor task id with the same replacement.
-   * <p>
-   * Append via string concat (then one {@link Path} parse) so colons stay inside the URI path; do not use
-   * {@link Path#Path(Path, String)} with the raw task id (Hadoop parses the child as its own URI).
+   * Construct a path to delete from HDFS. Returns null if the path is invalid.
+   * Replicates how {@link HdfsDataSegmentPusher#pushToPath} handles ':', by replacing that with '_'.
    */
-  private static Path getShuffleDirectoryPathWithSupervisorId(Path storageDirectory, String supervisorTaskId)
+  @Nullable
+  private Path constructHdfsDeletePath(String relativePath)
   {
-    final String hdfsSupervisorDir = supervisorTaskId.replace(':', '_');
-    final Path shuffleDir = new Path(storageDirectory, SHUFFLE_DATA_DIR_NAME);
-    final String shuffleDirString = shuffleDir.toString();
-    final String sep = shuffleDirString.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR;
-    return new Path(shuffleDirString + sep + hdfsSupervisorDir);
+    if (Strings.isNullOrEmpty(relativePath)) {
+      log.warn("Skipping deep storage directory kill: relative path is empty");
+      return null;
+    }
+    if (relativePath.charAt(0) == '/') {
+      log.warn("Skipping deep storage directory kill: relative path must not be absolute, got [%s]", relativePath);
+      return null;
+    }
+    if (relativePath.indexOf('\\') >= 0) {
+      log.warn("Skipping deep storage directory kill: backslash not allowed in path [%s]", relativePath);
+      return null;
+    }
+    for (String segment : StringUtils.split(relativePath, '/')) {
+      if (segment.isEmpty() || segment.equals("..")) {
+        log.warn("Skipping deep storage directory kill: invalid path[%s]", relativePath);
+        return null;
+      }
+    }
+
+    if (storageDirectory == null) {
+      log.warn("Skipping deep storage directory kill: storage directory not configured");
+      return null;
+    }
+
+    final String hdfsRelativePath = relativePath.replace(':', '_');
+    final String storageDirectoryString = storageDirectory.toString();
+    final String sep = storageDirectoryString.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR;
+    return new Path(storageDirectoryString + sep + hdfsRelativePath);
   }
 }
