@@ -162,7 +162,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     }
     log.info("Deleting deep storage directory[%s]", dirToDelete);
     if (!fs.delete(dirToDelete, true)) {
-      throw new IOException(String.format("Failed to delete deep storage directory[%s]", dirToDelete));
+      throw new IOException("Failed to delete deep storage directory.");
     }
   }
 
