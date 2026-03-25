@@ -376,7 +376,7 @@ name: JavaBeans Activation Framework API JAR
 license_category: binary
 module: java-core
 license_name: Eclipse Distribution License 1.0
-version: 1.2.1
+version: 1.2.2
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jakarta.EDL1
 libraries:
@@ -1217,7 +1217,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.81"
+version: "1.82"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1410,7 +1410,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.6.Final
+version: 4.2.7.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -5163,7 +5163,7 @@ name: jakarta.activation
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Eclipse Distribution License 1.0
-version: 1.2.2
+version: 2.0.1
 libraries:
   - com.sun.activation: jakarta.activation
 

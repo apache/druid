@@ -109,7 +109,7 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.2.6.Final</netty4.version>
+        <netty4.version>4.2.7.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -454,7 +454,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.82</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -477,6 +477,11 @@
               <groupId>com.squareup.okhttp3</groupId>
               <artifactId>logging-interceptor</artifactId>
               <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>3.16.4</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
@@ -1009,6 +1014,16 @@
                 <version>${httpclient.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>5.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5</artifactId>
+                <version>5.3.6</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.16</version>
@@ -1148,6 +1163,16 @@
                 <groupId>javax.activation</groupId>
                 <artifactId>activation</artifactId>
                 <version>1.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.activation</groupId>
+                <artifactId>jakarta.activation</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.activation</groupId>
+                <artifactId>jakarta.activation-api</artifactId>
+                <version>1.2.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-pool</groupId>
@@ -1840,24 +1865,13 @@
                                        <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
                                        <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
                                        <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
-                                       <exclude>jakarta.activation:jakarta.activation-api</exclude>
                                        <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
                                        <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
                                        <exclude>com.google.inject:guice</exclude>
-                                       <exclude>redis.clients:jedis</exclude>
-                                       <exclude>com.squareup.okio:okio</exclude>
-                                       <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
-                                       <exclude>com.sun.activation:jakarta.activation</exclude>
-                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
-                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
-                                       <exclude>io.netty:netty-handler-proxy</exclude>
-                                       <exclude>io.netty:netty-handler</exclude>
                                        <exclude>com.google.http-client:google-http-client-jackson2</exclude>
                                        <exclude>com.google.http-client:google-http-client</exclude>
                                        <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
                                        <exclude>com.github.luben:zstd-jni</exclude>
-                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
-                                       <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
                                     </excludes>
