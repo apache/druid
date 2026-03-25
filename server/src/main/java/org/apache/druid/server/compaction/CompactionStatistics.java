@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import javax.annotation.Nullable;
+
 /**
  * Used to track statistics for segments in different states of compaction.
  * totalRows can be null for old segments where row count was not stored.
@@ -45,6 +47,7 @@ public class CompactionStatistics
     return totalBytes;
   }
 
+  @Nullable
   public Long getTotalRows()
   {
     return totalRows;
