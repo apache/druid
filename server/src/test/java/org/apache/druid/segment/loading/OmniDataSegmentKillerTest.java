@@ -37,6 +37,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -140,7 +141,7 @@ public class OmniDataSegmentKillerTest
   }
 
   @Test
-  public void testKillRecursively_delegatesToAllKillers() throws SegmentLoadingException
+  public void testKillRecursively_delegatesToAllKillers() throws IOException
   {
     final DataSegmentKiller killerA = Mockito.mock(DataSegmentKiller.class);
     final DataSegmentKiller killerB = Mockito.mock(DataSegmentKiller.class);

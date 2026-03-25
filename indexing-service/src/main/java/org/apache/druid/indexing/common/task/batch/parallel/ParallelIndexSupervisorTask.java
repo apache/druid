@@ -75,7 +75,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.ChatHandlers;
@@ -1847,7 +1846,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         LOG.warn("Skipping recursive deep storage cleanup: task id must be a single path segment, got [%s]", taskId);
       }
     }
-    catch (SegmentLoadingException e) {
+    catch (IOException e) {
       LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
     }
 

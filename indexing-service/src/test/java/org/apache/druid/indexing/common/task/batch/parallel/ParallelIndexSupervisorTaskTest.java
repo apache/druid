@@ -48,7 +48,6 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
@@ -70,6 +69,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -630,7 +630,7 @@ public class ParallelIndexSupervisorTaskTest
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
       killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
-      EasyMock.expectLastCall().andThrow(new SegmentLoadingException("deep storage cleanup failed"));
+      EasyMock.expectLastCall().andThrow(new IOException("deep storage cleanup failed"));
       EasyMock.replay(toolbox, killer);
 
       new ParallelIndexSupervisorTask(

@@ -150,24 +150,19 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killRecursively(String relativePath) throws SegmentLoadingException
+  public void killRecursively(String relativePath) throws IOException
   {
     final Path dirToDelete = constructHdfsDeletePath(relativePath);
     if (dirToDelete == null) {
       return;
     }
-    try {
-      final FileSystem fs = dirToDelete.getFileSystem(config);
-      if (!fs.exists(dirToDelete)) {
-        return;
-      }
-      log.info("Deleting deep storage directory [%s]", dirToDelete);
-      if (!fs.delete(dirToDelete, true)) {
-        throw new SegmentLoadingException("Failed to delete deep storage directory [%s]", dirToDelete);
-      }
+    final FileSystem fs = dirToDelete.getFileSystem(config);
+    if (!fs.exists(dirToDelete)) {
+      return;
     }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "Failed to delete deep storage directory [%s]", dirToDelete);
+    log.info("Deleting deep storage directory[%s]", dirToDelete);
+    if (!fs.delete(dirToDelete, true)) {
+      throw new IOException(String.format("Failed to delete deep storage directory[%s]", dirToDelete));
     }
   }
 
