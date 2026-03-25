@@ -186,7 +186,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
       return null;
     }
     for (String segment : StringUtils.split(relativePath, '/')) {
-      if (segment.isEmpty() || segment.equals("..")) {
+      if (segment.isEmpty() || "..".equals(segment)) {
         log.warn("Skipping deep storage directory kill: invalid path[%s]", relativePath);
         return null;
       }
