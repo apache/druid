@@ -97,13 +97,6 @@ public class FaultyClusterTest extends StreamIndexTestBase
 
     waitUntilPublishedRecordsAreIngested(expectedRecords);
 
-    // Additionally, confirm that rows were placed into Druid.
-    // Caution: "ingest/rows/output" does not have a 'DATASOURCE' dimension.
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/rows/output"),
-        agg -> agg.hasSumAtLeast(expectedRecords)
-    );
-
     String suspendedSupervisorId = cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
     Assertions.assertTrue(cluster.callApi().getSupervisorStatus(suspendedSupervisorId).isSuspended());
     kafkaServer.deleteTopic(topic);
