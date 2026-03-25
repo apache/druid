@@ -21,6 +21,7 @@
 BrowserOnly
 docusaurus
 1M
+10MiB
 100MiB
 32-bit
 4MiB
@@ -601,6 +602,7 @@ unannouncements
 unary
 unassign
 uncomment
+uncompacted
 underutilization
 unintuitive
 unioned

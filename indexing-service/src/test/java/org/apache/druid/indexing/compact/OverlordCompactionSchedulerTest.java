@@ -394,7 +394,7 @@ public class OverlordCompactionSchedulerTest
     runCompactionTasks(1);
 
     final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
-    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, 1, 1));
+    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, null, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),

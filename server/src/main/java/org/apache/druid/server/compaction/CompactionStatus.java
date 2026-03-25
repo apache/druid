@@ -185,6 +185,14 @@ public class CompactionStatus
     );
   }
 
+  public static CompactionStatus complete(
+      CompactionStatistics compactionStatistics,
+      CompactionStatistics uncompactedStats
+  )
+  {
+    return new CompactionStatus(State.COMPLETE, null, compactionStatistics, uncompactedStats, null);
+  }
+
   /**
    * Computes compaction status for the given field. The status is assumed to be
    * COMPLETE (i.e. no further compaction is required) if the configured value
@@ -439,7 +447,7 @@ public class CompactionStatus
       }
 
       if (reasonsForCompaction.isEmpty()) {
-        return COMPLETE;
+        return CompactionStatus.complete(createStats(this.compactedSegments), createStats(this.uncompactedSegments));
       } else {
         return CompactionStatus.pending(
             createStats(this.compactedSegments),
@@ -483,9 +491,9 @@ public class CompactionStatus
         // Cannot evaluate further without a fingerprint mapper
         uncompactedSegments.addAll(
             mismatchedFingerprintToSegmentMap.values()
-                                            .stream()
-                                            .flatMap(List::stream)
-                                            .toList()
+                                             .stream()
+                                             .flatMap(List::stream)
+                                             .toList()
         );
         return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
       }
@@ -509,7 +517,8 @@ public class CompactionStatus
                 }
                 segments.addAll(e.getValue());
                 return segments;
-              });
+              }
+          );
         }
       }
 
@@ -598,7 +607,8 @@ public class CompactionStatus
       } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
         existingPartionsSpec = new DynamicPartitionsSpec(
             existingPartionsSpec.getMaxRowsPerSegment(),
-            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE)
+        );
       }
       return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
@@ -826,7 +836,13 @@ public class CompactionStatus
       final Set<Interval> segmentIntervals =
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
       final long totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
-      return CompactionStatistics.create(totalBytes, segments.size(), segmentIntervals.size());
+      final Long totalRows;
+      if (segments.stream().allMatch(s -> s.getTotalRows() != null)) {
+        totalRows = segments.stream().mapToLong(DataSegment::getTotalRows).sum();
+      } else {
+        totalRows = null;
+      }
+      return CompactionStatistics.create(totalBytes, totalRows, segments.size(), segmentIntervals.size());
     }
   }
 }
