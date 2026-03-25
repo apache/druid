@@ -22,11 +22,10 @@ package org.apache.druid.query.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -60,14 +59,12 @@ import java.util.Map;
 public class BloomDimFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "dim6"))
-          )
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "dim6"))
+      ),
+      ColumnsFilter.all()
   );
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
@@ -78,12 +75,12 @@ public class BloomDimFilterTest extends BaseFilterTest
                                                                 .build();
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "", ImmutableList.of("a", "b"), "2017-07-25"),
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "10", ImmutableList.of(), "2017-07-25"),
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "2", ImmutableList.of(""), "2017-05-25"),
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "1", ImmutableList.of("a")),
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "def", ImmutableList.of("c")),
-      BaseFilterTest.makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "abc")
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "0", "", ImmutableList.of("a", "b"), "2017-07-25"),
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "1", "10", ImmutableList.of(), "2017-07-25"),
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "2", "2", ImmutableList.of(""), "2017-05-25"),
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "3", "1", ImmutableList.of("a")),
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "4", "def", ImmutableList.of("c")),
+      BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", "abc")
   );
 
   private static DefaultObjectMapper mapper = new DefaultObjectMapper();
@@ -101,7 +98,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
+                .withDimensionsSpec(SCHEMA.getDimensionsSpec()).build()
         ),
         finisher,
         cnf,

@@ -39,6 +39,12 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -126,22 +132,12 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_sketch_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
         ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
         String.join(
             "\n",
             "[",
@@ -208,21 +204,16 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [ \"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDefaultSchemaDimensions(List.of("product"))
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
         "[{\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128},"
         + "{\"type\": \"quantilesDoublesSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"valueWithNulls\", \"k\": 128}]",
@@ -305,21 +296,13 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("sequenceNumber", "product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"},"
         + "{\"type\": \"doubleSum\", \"name\": \"valueWithNulls\", \"fieldName\": \"valueWithNulls\"}]",
@@ -417,22 +400,12 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("sequenceNumber", "product"))),
+            ColumnsFilter.all()
         ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,
@@ -493,22 +466,12 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("sequenceNumber", "product"))),
+            ColumnsFilter.all()
         ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,
@@ -540,22 +503,12 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("sequenceNumber", "product"))),
+            ColumnsFilter.all()
         ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,

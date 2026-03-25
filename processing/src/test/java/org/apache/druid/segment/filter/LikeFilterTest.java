@@ -23,11 +23,10 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -50,20 +49,18 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class LikeFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          DimensionsSpec.builder()
-                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2")))
-                        .build()
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      DimensionsSpec.builder()
+                    .setDimensions(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2")))
+                    .build(),
+      ColumnsFilter.all()
   );
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .add("dim0", ColumnType.STRING)
@@ -72,13 +69,13 @@ public class LikeFilterTest extends BaseFilterTest
                                                                 .build();
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "", ""),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "foo", "aaa"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "foobar", "aab"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "bar", null),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "foobarbaz", "abb"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "foo%bar", "bbb"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "6", "new\nline", "bbz")
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "0", "", ""),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "1", "foo", "aaa"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "2", "foobar", "aab"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "3", "bar", null),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "4", "foobarbaz", "abb"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", "foo%bar", "bbb"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "6", "new\nline", "bbz")
   );
 
   public LikeFilterTest(

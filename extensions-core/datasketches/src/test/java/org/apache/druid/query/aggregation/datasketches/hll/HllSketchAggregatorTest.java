@@ -23,6 +23,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.Intervals;
@@ -107,10 +112,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim"),
-            Arrays.asList("timestamp", "dim", "multiDim", "sketch")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "sketch")),
         buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND, stringEncoding),
         0, // minTimestamp
         Granularities.NONE,
@@ -127,10 +130,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   public void ingestSketchesTimeseries() throws Exception
   {
     final File inputFile = new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile());
-    final String parserJson = buildParserJson(
-        Arrays.asList("dim", "multiDim"),
-        Arrays.asList("timestamp", "dim", "multiDim", "sketch")
-    );
+    final InputRowSchema inputRowSchema = buildInputRowSchema(List.of("dim", "multiDim"));
+    final DelimitedInputFormat inputFormat = buildInputFormat(List.of("timestamp", "dim", "multiDim", "sketch"));
     final String aggregators =
         buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND, HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING);
     final int minTimestamp = 0;
@@ -141,7 +142,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     File segmentDir1 = timeseriesFolder.newFolder();
     timeseriesHelper.createIndex(
         inputFile,
-        parserJson,
+        inputRowSchema,
+        inputFormat,
         aggregators,
         segmentDir1,
         minTimestamp,
@@ -153,7 +155,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     File segmentDir2 = timeseriesFolder.newFolder();
     timeseriesHelper.createIndex(
         inputFile,
-        parserJson,
+        inputRowSchema,
+        inputFormat,
         aggregators,
         segmentDir2,
         minTimestamp,
@@ -174,10 +177,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Collections.singletonList("dim"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         buildAggregatorJson("HLLSketchBuild", "id", !ROUND, stringEncoding),
         0, // minTimestamp
         Granularities.NONE,
@@ -195,10 +196,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<Result> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Collections.singletonList("dim"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         buildAggregatorJson("HLLSketchBuild", "id", !ROUND, stringEncoding),
         0, // minTimestamp
         Granularities.NONE,
@@ -216,10 +215,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim", "id"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim", "id")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         "[]",
         0, // minTimestamp
         Granularities.NONE,
@@ -237,10 +234,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<Result> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim", "id"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim", "id")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         "[]",
         0, // minTimestamp
         Granularities.NONE,
@@ -264,10 +259,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     try {
       Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
-          buildParserJson(
-              Arrays.asList("dim", "multiDim", "id"),
-              Arrays.asList("timestamp", "dim", "multiDim", "id")
-          ),
+          buildInputRowSchema(List.of("dim", "multiDim", "id")),
+          buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
           metricSpec,
           0, // minTimestamp
           Granularities.NONE,
@@ -286,10 +279,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim", "id"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim", "id")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         "[]",
         0, // minTimestamp
         Granularities.NONE,
@@ -307,10 +298,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim", "id"),
-            Arrays.asList("timestamp", "dim", "multiDim", "id")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim", "id")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "id")),
         "[]",
         0, // minTimestamp
         Granularities.NONE,
@@ -328,10 +317,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim"),
-            Arrays.asList("timestamp", "dim", "multiDim", "sketch")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "sketch")),
         buildAggregatorJson("HLLSketchMerge", "sketch", ROUND, stringEncoding),
         0, // minTimestamp
         Granularities.NONE,
@@ -349,10 +336,8 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
-        buildParserJson(
-            Arrays.asList("dim", "multiDim"),
-            Arrays.asList("timestamp", "dim", "multiDim", "sketch")
-        ),
+        buildInputRowSchema(List.of("dim", "multiDim")),
+        buildInputFormat(List.of("timestamp", "dim", "multiDim", "sketch")),
         buildAggregatorJson("HLLSketchMerge", "sketch", ROUND, stringEncoding),
         0, // minTimestamp
         Granularities.NONE,
@@ -437,29 +422,18 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
-  private static String buildParserJson(List<String> dimensions, List<String> columns)
+  private static InputRowSchema buildInputRowSchema(List<String> dimensions)
   {
-    Map<String, Object> timestampSpec = ImmutableMap.of(
-        "column", "timestamp",
-        "format", "yyyyMMdd"
+    return new InputRowSchema(
+        new TimestampSpec("timestamp", "yyyyMMdd", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dimensions)),
+        ColumnsFilter.all()
     );
-    Map<String, Object> dimensionsSpec = ImmutableMap.of(
-        "dimensions", dimensions,
-        "dimensionExclusions", Collections.emptyList(),
-        "spatialDimensions", Collections.emptyList()
-    );
-    Map<String, Object> parseSpec = ImmutableMap.of(
-        "format", "tsv",
-        "timestampSpec", timestampSpec,
-        "dimensionsSpec", dimensionsSpec,
-        "columns", columns,
-        "listDelimiter", ","
-    );
-    Map<String, Object> object = ImmutableMap.of(
-        "type", "string",
-        "parseSpec", parseSpec
-    );
-    return toJson(object);
+  }
+
+  private static DelimitedInputFormat buildInputFormat(List<String> columns)
+  {
+    return new DelimitedInputFormat(columns, ",", null, null, null, 0, null);
   }
 
   private static String toJson(Object object)

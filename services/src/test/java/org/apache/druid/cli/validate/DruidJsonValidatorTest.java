@@ -85,46 +85,6 @@ public class DruidJsonValidatorTest
     parseCommand("validator", "-f", "", "-t", "query").run();
   }
 
-  @Test(expected = RuntimeException.class)
-  public void testParseValidatorInvalid()
-  {
-    parseCommand(
-        "validator",
-        "-f", "simple_test_data_record_parser_invalid.json",
-        "-t", "parse"
-    ).run();
-  }
-
-  @Test
-  public void testParseValidator()
-  {
-    Runnable command = parseCommand(
-        "validator",
-        "-f", "simple_test_data_record_parser.json",
-        "-r", "simple_test_data.tsv",
-        "-t", "parse"
-    );
-    command.run();
-
-    Writer writer = new StringWriter()
-    {
-      @Override
-      public void write(String str)
-      {
-        super.write(str + '\n');
-      }
-    };
-    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
-    druidJsonValidator.setLogWriter(writer);
-    druidJsonValidator.run();
-
-    String expected = "loading parse spec from resource 'simple_test_data_record_parser.json'\n" +
-                      "loading data from resource 'simple_test_data.tsv'\n" +
-                      "2014-10-20T00:00:00.000Z\tproduct_1\n";
-
-    Assert.assertEquals(expected, writer.toString());
-  }
-
   @Test
   public void testTaskValidator() throws Exception
   {

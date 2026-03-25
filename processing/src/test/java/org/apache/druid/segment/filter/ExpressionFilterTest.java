@@ -24,14 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -53,27 +52,24 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class ExpressionFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("dim0"),
-                  new LongDimensionSchema("dim1"),
-                  new FloatDimensionSchema("dim2"),
-                  new StringDimensionSchema("dim3"),
-                  new StringDimensionSchema("dim4"),
-                  new StringDimensionSchema("dim5")
-              )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      new DimensionsSpec(
+          ImmutableList.of(
+              new StringDimensionSchema("dim0"),
+              new LongDimensionSchema("dim1"),
+              new FloatDimensionSchema("dim2"),
+              new StringDimensionSchema("dim3"),
+              new StringDimensionSchema("dim4"),
+              new StringDimensionSchema("dim5")
           )
-      )
+      ),
+      ColumnsFilter.all()
   );
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
@@ -87,18 +83,18 @@ public class ExpressionFilterTest extends BaseFilterTest
 
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", 0L, 0.0f, "", ImmutableList.of("1", "2"), "a"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", 1L, 1.0f, "10", ImmutableList.of(), "b"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", 2L, 2.0f, "2", ImmutableList.of(""), null),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", 3L, 3.0f, "1", ImmutableList.of("3"), "c"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", 4L, 4.0f, "1", ImmutableList.of("4", "5"), ""),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", 5L, 5.0f, "5", ImmutableList.of("4", "5"), "d"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "6", 6L, 6.0f, "1", null, "e"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "7", 7L, 7.0f, "a", null, "f"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "8", 8L, 8.0f, 8L, null, "g"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "0", 0L, 0.0f, "", ImmutableList.of("1", "2"), "a"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "1", 1L, 1.0f, "10", ImmutableList.of(), "b"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "2", 2L, 2.0f, "2", ImmutableList.of(""), null),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "3", 3L, 3.0f, "1", ImmutableList.of("3"), "c"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "4", 4L, 4.0f, "1", ImmutableList.of("4", "5"), ""),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", 5L, 5.0f, "5", ImmutableList.of("4", "5"), "d"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "6", 6L, 6.0f, "1", null, "e"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "7", 7L, 7.0f, "a", null, "f"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "8", 8L, 8.0f, 8L, null, "g"),
       // Note: the "dim3 == 1.234" check in "testOneSingleValuedStringColumn" fails if dim3 is 1.234f instead of 1.234d,
       // because the literal 1.234 is interpreted as a double, and 1.234f cast to double is not equivalent to 1.234d.
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "9", 9L, 9.0f, 1.234d, 1.234d, null)
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "9", 9L, 9.0f, 1.234d, 1.234d, null)
   );
 
   public ExpressionFilterTest(
@@ -114,7 +110,7 @@ public class ExpressionFilterTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
+                .withDimensionsSpec(SCHEMA.getDimensionsSpec()).build()
         ),
         finisher,
         cnf,

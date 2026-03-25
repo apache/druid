@@ -26,15 +26,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregationTestHelper;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -91,19 +90,22 @@ public class SimpleTestIndex
             )
         ));
       }
-
-      return AggregationTestHelper.createIncrementalIndex(
-          inputRows.iterator(),
-          new NoopInputRowParser(null),
-          new AggregatorFactory[]{
-              new CountAggregatorFactory("count"),
-              new DoubleSumAggregatorFactory(DOUBLE_COL, DOUBLE_COL)
-          },
-          0,
-          Granularities.NONE,
-          100,
-          false
-      );
+      return IndexBuilder.create()
+                         .rows(inputRows)
+                         .schema(
+                             IncrementalIndexSchema.builder()
+                                                   .withDimensionsSpec(
+                                                       DimensionsSpec.builder()
+                                                                     .setDefaultSchemaDimensions(DIMENSIONS)
+                                                                     .build()
+                                                   )
+                                                   .withMetrics(
+                                                       new CountAggregatorFactory("count"),
+                                                       new DoubleSumAggregatorFactory(DOUBLE_COL, DOUBLE_COL)
+                                                   )
+                                                   .build()
+                         )
+                         .buildIncrementalIndex();
     }
     catch (Exception ex) {
       throw new RuntimeException(ex);

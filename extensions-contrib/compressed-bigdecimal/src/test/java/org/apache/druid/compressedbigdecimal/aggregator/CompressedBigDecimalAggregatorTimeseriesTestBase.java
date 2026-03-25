@@ -23,6 +23,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import org.apache.druid.compressedbigdecimal.ArrayCompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
@@ -40,6 +49,7 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -50,6 +60,36 @@ import static org.junit.Assert.assertThat;
 
 public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends InitializedNullHandlingTest
 {
+  static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec("timestamp", "yyyyMMdd", null),
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        List.of(
+                            new StringDimensionSchema("property"),
+                            new StringDimensionSchema("revenue"),
+                            new LongDimensionSchema("longRevenue"),
+                            new DoubleDimensionSchema("doubleRevenue")
+                        )
+                    )
+                    .build(),
+      ColumnsFilter.all()
+  );
+
+  static final InputFormat FORMAT =  new CsvInputFormat(
+      List.of(
+          "timestamp",
+          "property",
+          "revenue",
+          "longRevenue",
+          "doubleRevenue"
+      ),
+      null,
+      null,
+      null,
+      0,
+      null
+  );
+
   private final AggregationTestHelper helper;
 
   @Rule
@@ -88,11 +128,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
   {
     Sequence seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        Resources.asCharSource(
-            getClass().getResource(
-                "/" + "bd_test_data_parser.json"),
-            StandardCharsets.UTF_8
-        ).read(),
+        SCHEMA,
+        FORMAT,
         Resources.asCharSource(
             this.getClass().getResource("/" + jsonAggregatorsFile),
             StandardCharsets.UTF_8
@@ -136,10 +173,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
     File segmentDir1 = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
-        Resources.asCharSource(
-            this.getClass().getResource("/" + "bd_test_data_parser.json"),
-            StandardCharsets.UTF_8
-        ).read(),
+        SCHEMA,
+        FORMAT,
         Resources.asCharSource(
             this.getClass().getResource("/" + jsonAggregatorsFile),
             StandardCharsets.UTF_8
@@ -152,10 +187,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
     File segmentDir2 = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
-        Resources.asCharSource(
-            this.getClass().getResource("/" + "bd_test_data_parser.json"),
-            StandardCharsets.UTF_8
-        ).read(),
+        SCHEMA,
+        FORMAT,
         Resources.asCharSource(
             this.getClass().getResource("/" + jsonAggregatorsFile),
             StandardCharsets.UTF_8

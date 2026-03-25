@@ -23,13 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -38,15 +43,18 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TransformSpecTest extends InitializedNullHandlingTest
 {
-  private static final MapInputRowParser PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "auto", DateTimes.of("2000-01-01")),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("f", "x", "y")))
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec("t", "auto", DateTimes.of("2000-01-01")),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("f", "x", "y"))),
+      ColumnsFilter.all()
   );
 
   private static final Map<String, Object> ROW1 = ImmutableMap.<String, Object>builder()
@@ -65,8 +73,30 @@ public class TransformSpecTest extends InitializedNullHandlingTest
                                                               .put("bool", false)
                                                               .build();
 
+  @SafeVarargs
+  private static InputSourceReader makeReader(Map<String, Object>... rows)
+  {
+    final List<InputRow> inputRows = Arrays.stream(rows)
+                                           .map(row -> MapInputRowParser.parse(SCHEMA, row))
+                                           .collect(Collectors.toList());
+    return new InputSourceReader()
+    {
+      @Override
+      public CloseableIterator<InputRow> read(InputStats inputStats)
+      {
+        return CloseableIterators.withEmptyBaggage(inputRows.iterator());
+      }
+
+      @Override
+      public CloseableIterator<InputRowListPlusRawValues> sample()
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   @Test
-  public void testTransforms()
+  public void testTransforms() throws IOException
   {
     final TransformSpec transformSpec = new TransformSpec(
         null,
@@ -82,24 +112,25 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parseBatch(ROW1).get(0);
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1)).read()) {
+      final InputRow row = iterator.next();
 
-    Assert.assertNotNull(row);
-    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
-    Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
-    Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
-    Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
-    Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
-    Assert.assertEquals("foobar", row.getRaw("f"));
-    Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("f"));
-    Assert.assertEquals(ImmutableList.of("5.0"), row.getDimension("g"));
-    Assert.assertEquals(ImmutableList.of(), row.getDimension("h"));
-    Assert.assertEquals(5L, row.getMetric("g").longValue());
+      Assert.assertNotNull(row);
+      Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
+      Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
+      Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
+      Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
+      Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
+      Assert.assertEquals("foobar", row.getRaw("f"));
+      Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("f"));
+      Assert.assertEquals(ImmutableList.of("5.0"), row.getDimension("g"));
+      Assert.assertEquals(ImmutableList.of(), row.getDimension("h"));
+      Assert.assertEquals(5L, row.getMetric("g").longValue());
+    }
   }
 
   @Test
-  public void testTransformOverwriteField()
+  public void testTransformOverwriteField() throws IOException
   {
     // Transforms are allowed to overwrite fields, and to refer to the fields they overwrite; double-check this.
 
@@ -115,20 +146,21 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parseBatch(ROW1).get(0);
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1)).read()) {
+      final InputRow row = iterator.next();
 
-    Assert.assertNotNull(row);
-    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
-    Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
-    Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
-    Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("x"));
-    Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
-    Assert.assertNull(row.getRaw("f"));
+      Assert.assertNotNull(row);
+      Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
+      Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
+      Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
+      Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("x"));
+      Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
+      Assert.assertNull(row.getRaw("f"));
+    }
   }
 
   @Test
-  public void testFilterOnTransforms()
+  public void testFilterOnTransforms() throws IOException
   {
     // Filters are allowed to refer to transformed fields; double-check this.
 
@@ -151,14 +183,16 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
-
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    Assert.assertNotNull(parser.parseBatch(ROW1).get(0));
-    Assert.assertNull(parser.parseBatch(ROW2).get(0));
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1)).read()) {
+      Assert.assertNotNull(iterator.next());
+    }
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW2)).read()) {
+      Assert.assertNull(iterator.next());
+    }
   }
 
   @Test
-  public void testTransformTimeFromOtherFields()
+  public void testTransformTimeFromOtherFields() throws IOException
   {
     final TransformSpec transformSpec = new TransformSpec(
         null,
@@ -172,17 +206,17 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1)).read()) {
+      final InputRow row = iterator.next();
 
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parseBatch(ROW1).get(0);
-
-    Assert.assertNotNull(row);
-    Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z"), row.getTimestamp());
-    Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z").getMillis(), row.getTimestampFromEpoch());
+      Assert.assertNotNull(row);
+      Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z"), row.getTimestamp());
+      Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z").getMillis(), row.getTimestampFromEpoch());
+    }
   }
 
   @Test
-  public void testTransformTimeFromTime()
+  public void testTransformTimeFromTime() throws IOException
   {
     final TransformSpec transformSpec = new TransformSpec(
         null,
@@ -196,16 +230,17 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parseBatch(ROW1).get(0);
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1)).read()) {
+      final InputRow row = iterator.next();
 
-    Assert.assertNotNull(row);
-    Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
-    Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
+      Assert.assertNotNull(row);
+      Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
+      Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
+    }
   }
 
   @Test
-  public void testBoolTransforms()
+  public void testBoolTransforms() throws IOException
   {
     final TransformSpec transformSpec = new TransformSpec(
         null,
@@ -220,18 +255,19 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec.getRequiredColumns()
     );
 
-    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parseBatch(ROW1).get(0);
+    try (CloseableIterator<InputRow> iterator = transformSpec.decorate(makeReader(ROW1, ROW2)).read()) {
+      final InputRow row = iterator.next();
 
-    Assert.assertNotNull(row);
-    Assert.assertEquals(1L, row.getRaw("truthy1"));
-    Assert.assertEquals(1L, row.getRaw("truthy2"));
+      Assert.assertNotNull(row);
+      Assert.assertEquals(1L, row.getRaw("truthy1"));
+      Assert.assertEquals(1L, row.getRaw("truthy2"));
 
-    final InputRow row2 = parser.parseBatch(ROW2).get(0);
+      final InputRow row2 = iterator.next();
 
-    Assert.assertNotNull(row2);
-    Assert.assertEquals(0L, row2.getRaw("truthy1"));
-    Assert.assertEquals(0L, row2.getRaw("truthy2"));
+      Assert.assertNotNull(row2);
+      Assert.assertEquals(0L, row2.getRaw("truthy1"));
+      Assert.assertEquals(0L, row2.getRaw("truthy2"));
+    }
   }
 
   @Test

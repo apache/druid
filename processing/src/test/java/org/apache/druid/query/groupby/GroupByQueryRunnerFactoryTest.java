@@ -20,10 +20,14 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -139,23 +143,25 @@ public class GroupByQueryRunnerFactoryTest
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
-  private Segment createSegment()
+  private Segment createSegment() throws Exception
   {
     IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
         .build();
 
-    StringInputRowParser parser = new StringInputRowParser(
-        new CSVParseSpec(
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags"))),
-            "\t",
-            ImmutableList.of("timestamp", "product", "tags"),
-            false,
-            0
-        ),
-        "UTF-8"
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags"))),
+        ColumnsFilter.all()
+    );
+    CsvInputFormat format = new CsvInputFormat(
+        ImmutableList.of("timestamp", "product", "tags"),
+        "\t",
+        null,
+        false,
+        0,
+        null
     );
 
     String[] rows = new String[]{
@@ -164,8 +170,12 @@ public class GroupByQueryRunnerFactoryTest
         "2011-01-14T00:00:00.000Z,product_3,t2"
     };
 
-    for (String row : rows) {
-      incrementalIndex.add(parser.parse(row));
+    try (CloseableIterator<InputRow> iter = new InlineInputSource(String.join("\n", rows))
+        .reader(schema, format, null)
+        .read()) {
+      while (iter.hasNext()) {
+        incrementalIndex.add(iter.next());
+      }
     }
 
     closerRule.closeLater(incrementalIndex);
