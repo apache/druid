@@ -69,6 +69,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -228,6 +229,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         TestGroupByBuffers.createDefault()
     ).getGroupingEngine();
     ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(GroupingEngine.class, groupingEngine);
+    ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(QueryToolChestWarehouse.class, null);
 
     Module modules = Modules.combine(
         new DruidGuiceExtensions(),

@@ -21,6 +21,7 @@
 BrowserOnly
 docusaurus
 1M
+10MiB
 100MiB
 32-bit
 4MiB
@@ -427,6 +428,7 @@ maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
+maxStringLength
 max_map_count
 memcached
 mergeable
@@ -600,6 +602,7 @@ unannouncements
 unary
 unassign
 uncomment
+uncompacted
 underutilization
 unintuitive
 unioned

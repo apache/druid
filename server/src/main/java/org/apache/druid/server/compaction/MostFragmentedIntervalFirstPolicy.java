@@ -25,6 +25,7 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -41,6 +42,7 @@ import java.util.Objects;
 @UnstableApi
 public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
 {
+  private static final Logger logger = new Logger(MostFragmentedIntervalFirstPolicy.class);
   private static final HumanReadableBytes SIZE_2_GB = new HumanReadableBytes("2GiB");
   private static final HumanReadableBytes SIZE_10_MB = new HumanReadableBytes("10MiB");
 
@@ -255,15 +257,17 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     final Long uncompactedRows = uncompacted.getTotalRows();
     final Long compactedRows = candidate.getCompactedStats().getTotalRows();
     if (uncompactedRows != null && compactedRows != null) {
-      final double uncompactedRowsRatio = (double) uncompactedRows /
-                                          (uncompactedRows + compactedRows)
-                                          * 100;
-      if (uncompactedRowsRatio < minUncompactedRowsPercentForFullCompaction) {
-        return Eligibility.minor(
-            "Uncompacted rows ratio[%.2f] is below threshold[%d]",
-            uncompactedRowsRatio,
-            minUncompactedRowsPercentForFullCompaction
-        );
+      if (uncompactedRows + compactedRows > 0) {
+        final double uncompactedRowsRatio = (double) uncompactedRows / (uncompactedRows + compactedRows) * 100;
+        if (uncompactedRowsRatio < minUncompactedRowsPercentForFullCompaction) {
+          return Eligibility.minor(
+              "Uncompacted rows ratio[%.2f] is below threshold[%d]",
+              uncompactedRowsRatio,
+              minUncompactedRowsPercentForFullCompaction
+          );
+        }
+      } else {
+        logger.error("Zero total rows in compaction candidate, something is wrong");
       }
     }
 

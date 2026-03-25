@@ -295,6 +295,7 @@ describe('Execution', () => {
           )
         ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
         PARTITIONED BY ALL TIME",
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -672,6 +673,7 @@ describe('Execution', () => {
           },
           "segmentStatus": undefined,
           "sqlQuery": undefined,
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -1156,6 +1158,7 @@ describe('Execution', () => {
           "result": undefined,
           "segmentStatus": undefined,
           "sqlQuery": undefined,
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {

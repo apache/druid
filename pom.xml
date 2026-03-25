@@ -268,7 +268,6 @@
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
-        <module>integration-tests-ex/tools</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
