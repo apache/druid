@@ -45,6 +45,7 @@ import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -292,6 +293,40 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     );
 
     Assertions.assertTrue(exception.getMessage().contains("'defaultSegmentGranularity' cannot be null"));
+    EasyMock.verify(mockProvider);
+  }
+
+  @Test
+  public void test_constructor_tuningConfigWithPartitionsSpecThrowsException()
+  {
+    final ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
+    EasyMock.replay(mockProvider);
+
+    UserCompactionTaskQueryTuningConfig tuningWithPartitionsSpec = UserCompactionTaskQueryTuningConfig.builder()
+        .partitionsSpec(new DynamicPartitionsSpec(1000, null))
+        .build();
+
+    DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> new CascadingReindexingTemplate(
+            "testDataSource",
+            null,
+            null,
+            mockProvider,
+            null,
+            null,
+            null,
+            Granularities.DAY,
+            new DynamicPartitionsSpec(5000000, null),
+            null,
+            tuningWithPartitionsSpec
+        )
+    );
+
+    Assertions.assertTrue(
+        exception.getMessage().contains("Cannot set 'partitionsSpec' inside 'tuningConfig'"),
+        "Expected message about partitionsSpec in tuningConfig, got: " + exception.getMessage()
+    );
     EasyMock.verify(mockProvider);
   }
 

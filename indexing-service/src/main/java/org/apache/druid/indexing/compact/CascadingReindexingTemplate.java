@@ -139,6 +139,13 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     this.defaultPartitioningVirtualColumns = defaultPartitioningVirtualColumns;
 
+    if (tuningConfig != null && tuningConfig.getPartitionsSpec() != null) {
+      throw InvalidInput.exception(
+          "Cannot set 'partitionsSpec' inside 'tuningConfig' for a cascading reindexing supervisor. "
+          + "Partitioning is controlled by 'defaultPartitionsSpec' and partitioning rules. "
+          + "Any 'partitionsSpec' in 'tuningConfig' would be ignored."
+      );
+    }
     this.tuningConfig = tuningConfig;
 
     if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
