@@ -205,83 +205,60 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillRecursively_emptyOrNullPathIsNoOp() throws Exception
+  public void testKillRecursive_forWhenConstructedPathReturnsNull() throws Exception
   {
     final File testRoot = FileUtils.createTempDir();
     final Configuration config = new Configuration();
-    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-        config,
-        new HdfsDataSegmentPusherConfig()
-        {
-          @Override
-          public String getStorageDirectory()
-          {
-            return testRoot.getAbsolutePath();
-          }
-        }
-    );
-
     final FileSystem fs = FileSystem.get(config);
     try {
-      killer.killRecursively("");
-      killer.killRecursively(null);
-    }
-    finally {
-      fs.delete(new Path(testRoot.getAbsolutePath()), true);
-    }
-  }
-
-  @Test
-  public void testKillRecursively_skipsWhenPathContainsParentSegment() throws Exception
-  {
-    final File testRoot = FileUtils.createTempDir();
-    final Configuration config = new Configuration();
-    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-        config,
-        new HdfsDataSegmentPusherConfig()
-        {
-          @Override
-          public String getStorageDirectory()
+      final HdfsDataSegmentKiller killerWithStorage = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
           {
-            return testRoot.getAbsolutePath();
+            @Override
+            public String getStorageDirectory()
+            {
+              return testRoot.getAbsolutePath();
+            }
           }
-        }
-    );
+      );
 
-    final FileSystem fs = FileSystem.get(config);
-    try {
       final Path workspaceRoot = new Path(testRoot.getAbsolutePath(), "workspace");
       final Path nested = new Path(workspaceRoot, "evil");
       Assert.assertTrue(fs.mkdirs(nested));
       fs.createNewFile(new Path(nested, "probe"));
 
-      killer.killRecursively("workspace/../evil");
+      final Path stagingRun = new Path(new Path(testRoot.getAbsolutePath(), "staging"), "some_run_id");
+      Assert.assertTrue(fs.mkdirs(stagingRun));
 
-      Assert.assertTrue(fs.exists(nested));
-      Assert.assertTrue(fs.delete(workspaceRoot, true));
+      killerWithStorage.killRecursively(null);
+      killerWithStorage.killRecursively("");
+      killerWithStorage.killRecursively("/absolute/under/root");
+      killerWithStorage.killRecursively("path\\with\\backslashes");
+      killerWithStorage.killRecursively("workspace/../evil");
+      killerWithStorage.killRecursively("only/../dots");
+      killerWithStorage.killRecursively("..");
+
+      Assert.assertTrue("workspace/evil should survive null constructHdfsDeletePath cases", fs.exists(nested));
+      Assert.assertTrue(fs.exists(stagingRun));
+
+      final HdfsDataSegmentKiller killerNoStorage = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
+          {
+            @Override
+            public String getStorageDirectory()
+            {
+              return "";
+            }
+          }
+      );
+      killerNoStorage.killRecursively("staging/some_run_id");
+      Assert.assertTrue("paths must not be deleted when storage directory is unset", fs.exists(stagingRun));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
     }
-  }
-
-  @Test
-  public void testKillRecursively_skipsWhenStorageDirectoryNotConfigured() throws Exception
-  {
-    final Configuration config = new Configuration();
-    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-        config,
-        new HdfsDataSegmentPusherConfig()
-        {
-          @Override
-          public String getStorageDirectory()
-          {
-            return "";
-          }
-        }
-    );
-
-    killer.killRecursively("staging/some_run_id");
   }
 
   @Test
