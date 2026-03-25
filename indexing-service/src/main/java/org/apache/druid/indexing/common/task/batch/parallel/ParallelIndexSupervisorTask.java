@@ -1838,7 +1838,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   {
     try {
       toolbox.getDataSegmentKiller().killRecursively(
-          DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(getId())
+          DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
       );
     }
     catch (IOException e) {

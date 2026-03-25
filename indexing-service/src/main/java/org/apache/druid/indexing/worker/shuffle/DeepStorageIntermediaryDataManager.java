@@ -43,7 +43,7 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
    * Deep storage path (relative to the extension root) of the directory that holds all shuffle intermediate files for
    * {@code supervisorTaskId}, matching the prefix used by {@link #addSegment}.
    */
-  public static String retrieveIntermediaryDataStoragePath(String supervisorTaskId)
+  public static String retrieveShuffleDataStoragePath(String supervisorTaskId)
   {
     return SHUFFLE_DATA_DIR_PREFIX + "/" + supervisorTaskId;
   }
@@ -113,7 +113,7 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
    * <p>
    * Deep storage shuffle cleanup is handled in {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanUp}
    * via {@link org.apache.druid.segment.loading.DataSegmentKiller#killRecursively} on
-   * {@link #retrieveIntermediaryDataStoragePath(String)} (recursive delete of that directory).
+   * {@link #retrieveShuffleDataStoragePath(String)} (recursive delete of that directory).
    */
   @Override
   public void deletePartitions(String supervisorTaskId)

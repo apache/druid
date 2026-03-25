@@ -572,7 +572,7 @@ public class ParallelIndexSupervisorTaskTest
       TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall();
       EasyMock.replay(toolbox, killer);
 
@@ -600,7 +600,7 @@ public class ParallelIndexSupervisorTaskTest
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall();
       EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig).anyTimes();
       EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false).anyTimes();
@@ -629,7 +629,7 @@ public class ParallelIndexSupervisorTaskTest
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(supervisorTaskId));
+      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall().andThrow(new IOException("deep storage cleanup failed"));
       EasyMock.replay(toolbox, killer);
 
