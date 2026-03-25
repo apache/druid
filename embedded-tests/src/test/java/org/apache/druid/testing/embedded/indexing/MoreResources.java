@@ -175,7 +175,7 @@ public class MoreResources
                     .withStartDelay(Period.millis(10))
                     .withSupervisorRunPeriod(Period.millis(500))
                     .withUseEarliestSequenceNumber(true)
-                    .withCompletionTimeout(Period.seconds(60))
+                    .withCompletionTimeout(Period.seconds(30))
             );
   }
 
