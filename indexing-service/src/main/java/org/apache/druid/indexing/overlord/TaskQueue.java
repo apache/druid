@@ -36,6 +36,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -500,9 +501,12 @@ public class TaskQueue
 
   private boolean isTaskPending(Task task)
   {
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
+    // Opt for point lookup on the runner rather than expensive list() call
+    final RunnerTaskState taskState = taskRunner.getRunnerTaskState(task.getId());
+    if (taskState == null) {
+      return false; // we don't know
+    }
+    return taskState == RunnerTaskState.PENDING;
   }
 
   /**

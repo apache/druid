@@ -1088,6 +1088,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
+    public Builder setOrderByColumns(List<OrderByColumnSpec> columnSpec)
+    {
+      ensureExplicitLimitSpecNotSet();
+      this.orderByColumnSpecs = new ArrayList<>(columnSpec);
+      this.postProcessingFn = null;
+      return this;
+    }
+
     public Builder setLimitSpec(LimitSpec limitSpec)
     {
       Preconditions.checkNotNull(limitSpec);

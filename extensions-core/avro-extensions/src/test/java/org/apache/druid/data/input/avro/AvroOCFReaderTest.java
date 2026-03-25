@@ -192,12 +192,11 @@ public class AvroOCFReaderTest
   {
     final GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     final File someAvroFile = AvroStreamInputFormatTest.createAvroFile(someAvroDatum);
-    final TimestampSpec timestampSpec = new TimestampSpec("timestamp", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
         "eventType")));
 
     final AvroOCFInputFormat inputFormat = new AvroOCFInputFormat(mapper, null, readerSchema, null, null);
-    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
+    final InputRowSchema schema = new InputRowSchema(TimestampSpec.DEFAULT, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(someAvroFile);
     return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }

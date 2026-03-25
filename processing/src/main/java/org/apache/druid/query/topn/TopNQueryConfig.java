@@ -19,22 +19,14 @@
 
 package org.apache.druid.query.topn;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-
 /**
+ * Configuration for TopN queries.
+ *
+ * The minTopNThreshold setting has been moved to the query context parameter
+ * {@link org.apache.druid.query.QueryContexts#MIN_TOP_N_THRESHOLD}.
+ * This class is kept for backwards compatibility and to hold the default constant.
  */
 public class TopNQueryConfig
 {
   public static final int DEFAULT_MIN_TOPN_THRESHOLD = 1000;
-
-  @JsonProperty
-  @Min(1)
-  private int minTopNThreshold = DEFAULT_MIN_TOPN_THRESHOLD;
-
-  public int getMinTopNThreshold()
-  {
-    return minTopNThreshold;
-  }
 }

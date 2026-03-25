@@ -67,6 +67,9 @@ public class MockQueryDefinitionBuilder
   // would have an entry like B : [ <A, isBroadcast>, ... ]
   private final Map<Integer, Set<IntBooleanPair>> adjacencyList = new HashMap<>();
 
+  // Maps a stage to the number of non-stage inputs it should have
+  private final Map<Integer, Integer> nonStageInputCounts = new HashMap<>();
+
   // Keeps a collection of those stages that have been already defined
   private final Set<Integer> definedStages = new HashSet<>();
 
@@ -82,6 +85,20 @@ public class MockQueryDefinitionBuilder
   public MockQueryDefinitionBuilder addEdge(final int outVertex, final int inVertex)
   {
     return addEdge(outVertex, inVertex, false);
+  }
+
+  public MockQueryDefinitionBuilder addNonStageInput(final int stageNumber)
+  {
+    Preconditions.checkArgument(
+        stageNumber < numStages,
+        "vertex number can only be from 0 to one less than the total number of stages"
+    );
+    Preconditions.checkArgument(
+        !definedStages.contains(stageNumber),
+        StringUtils.format("%s is already defined, cannot add non-stage inputs", stageNumber)
+    );
+    nonStageInputCounts.merge(stageNumber, 1, Integer::sum);
+    return this;
   }
 
   public MockQueryDefinitionBuilder addEdge(final int outVertex, final int inVertex, final boolean broadcast)
@@ -180,6 +197,11 @@ public class MockQueryDefinitionBuilder
         broadcastInputNumbers.add(inputNumber);
       }
       inputNumber++;
+    }
+
+    final int numNonStageInputs = nonStageInputCounts.getOrDefault(stageNumber, 0);
+    for (int i = 0; i < numNonStageInputs; i++) {
+      inputSpecs.add(new ControllerTestInputSpec());
     }
 
     if (inputSpecs.isEmpty()) {

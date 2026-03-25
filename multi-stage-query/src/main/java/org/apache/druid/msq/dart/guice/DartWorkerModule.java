@@ -60,7 +60,6 @@ import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -159,14 +158,12 @@ public class DartWorkerModule implements DruidModule
     @Provides
     public DartDataServerQueryHandlerFactory createDataServerQueryHandlerFactory(
         @EscalatedGlobal ServiceClientFactory serviceClientFactory,
-        @Smile ObjectMapper smileMapper,
-        QueryToolChestWarehouse queryToolChestWarehouse
+        @Smile ObjectMapper smileMapper
     )
     {
       return new DartDataServerQueryHandlerFactory(
           serviceClientFactory,
-          smileMapper,
-          queryToolChestWarehouse
+          smileMapper
       );
     }
   }

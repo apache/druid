@@ -25,7 +25,7 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 
 import java.io.File;
 import java.io.IOException;

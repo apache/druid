@@ -48,7 +48,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("nestedData"),
@@ -102,7 +102,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/nullable_list.snappy.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         new DimensionsSpec(
             ImmutableList.of(
                 AutoTypeColumnSchema.of("a1"),
@@ -168,7 +168,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(false).build(),
         ColumnsFilter.all(),
         null
@@ -205,7 +205,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
   {
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("timestamp", "auto", null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
         null

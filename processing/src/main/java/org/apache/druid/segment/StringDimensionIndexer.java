@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,6 +58,8 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
+  @Nullable
+  private final Integer maxStringLength;
   private volatile boolean hasMultipleValues = false;
 
   public StringDimensionIndexer(
@@ -65,10 +68,33 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       boolean hasSpatialIndexes
   )
   {
+    this(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+  }
+
+  public StringDimensionIndexer(
+      @Nullable MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      @Nullable Integer maxStringLength
+  )
+  {
     super(new StringDimensionDictionary());
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
+    this.maxStringLength = maxStringLength;
+  }
+
+  /**
+   * Truncates the value to the first {@link #maxStringLength} characters if configured, otherwise returns it as-is.
+   */
+  @Nullable
+  private String truncateIfNeeded(@Nullable String value)
+  {
+    if (maxStringLength != null && value != null && value.length() > maxStringLength) {
+      return value.substring(0, maxStringLength);
+    }
+    return value;
   }
 
   @Override
@@ -92,7 +118,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
         dimLookup.add(null);
         encodedDimensionValues = IntArrays.EMPTY_ARRAY;
       } else if (dimValuesList.size() == 1) {
-        encodedDimensionValues = new int[]{dimLookup.add(Evals.asString(dimValuesList.get(0)))};
+        encodedDimensionValues = new int[]{dimLookup.add(truncateIfNeeded(Evals.asString(dimValuesList.get(0))))};
       } else {
         hasMultipleValues = true;
         final String[] dimensionValues = new String[dimValuesList.size()];
@@ -125,7 +151,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       encodedDimensionValues =
           new int[]{dimLookup.add(Evals.asString(StringUtils.encodeBase64String((byte[]) dimValues)))};
     } else {
-      encodedDimensionValues = new int[]{dimLookup.add(Evals.asString(dimValues))};
+      encodedDimensionValues = new int[]{dimLookup.add(truncateIfNeeded(Evals.asString(dimValues)))};
     }
 
     // If dictionary size has changed, the sorted lookup is no longer valid.

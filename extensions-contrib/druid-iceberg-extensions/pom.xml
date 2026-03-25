@@ -35,7 +35,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <iceberg.core.version>1.6.1</iceberg.core.version>
+    <iceberg.core.version>1.7.2</iceberg.core.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
@@ -253,6 +253,10 @@
           <groupId>io.airlift</groupId>
           <artifactId>aircompressor</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -283,6 +287,7 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sts</artifactId>
       <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- software/amazon/awssdk/services/s3/model/ObjectCannedACL needed for GlueCatalog initialize -->

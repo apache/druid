@@ -21,6 +21,7 @@
 BrowserOnly
 docusaurus
 1M
+10MiB
 100MiB
 32-bit
 4MiB
@@ -219,6 +220,7 @@ pull-deps
 RDBMS
 RDDs
 RDS
+RoleBinding
 ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
@@ -426,6 +428,7 @@ maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
+maxStringLength
 max_map_count
 memcached
 mergeable
@@ -599,6 +602,7 @@ unannouncements
 unary
 unassign
 uncomment
+uncompacted
 underutilization
 unintuitive
 unioned
@@ -1131,6 +1135,7 @@ Env
 POD_NAME
 POD_NAMESPACE
 ConfigMap
+ConfigMaps
 PT17S
 GCS
 gcs-connector
