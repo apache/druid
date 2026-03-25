@@ -1837,14 +1837,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
     try {
-      final String taskId = getId();
-      if (taskId != null && taskId.indexOf('/') < 0 && taskId.indexOf('\\') < 0) {
-        toolbox.getDataSegmentKiller().killRecursively(
-            DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(taskId)
-        );
-      } else {
-        LOG.warn("Skipping recursive deep storage cleanup: task id must be a single path segment, got [%s]", taskId);
-      }
+      toolbox.getDataSegmentKiller().killRecursively(
+          DeepStorageIntermediaryDataManager.retrieveIntermediaryDataStoragePath(getId())
+      );
     }
     catch (IOException e) {
       LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
