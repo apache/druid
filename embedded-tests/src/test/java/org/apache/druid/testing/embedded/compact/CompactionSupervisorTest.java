@@ -220,14 +220,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
   }
 
-  @MethodSource("getPartitionsSpec")
+  @MethodSource("getPolicyAndPartition")
   @ParameterizedTest(name = "partitionsSpec={0}")
-  public void test_minorCompactionWithMSQ(PartitionsSpec partitionsSpec) throws Exception
+  public void test_minorCompactionWithMSQ(MostFragmentedIntervalFirstPolicy policy, PartitionsSpec partitionsSpec)
   {
-    configureCompaction(
-        CompactionEngine.MSQ,
-        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null)
-    );
+    configureCompaction(CompactionEngine.MSQ, policy);
 
     ingest1kRecords();
     ingest1kRecords();
@@ -1026,11 +1023,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task, overlord);
   }
 
-  public static List<PartitionsSpec> getPartitionsSpec()
+  public static List<Object[]> getPolicyAndPartition()
   {
     return List.of(
-        new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false),
-        new DynamicPartitionsSpec(null, null)
+        new Object[]{
+            // decides minor compaction based on bytes percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null),
+            new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false)
+        },
+        new Object[]{
+            // decides minor compaction based on rows percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null),
+            new DynamicPartitionsSpec(null, null)
+        }
     );
   }
 

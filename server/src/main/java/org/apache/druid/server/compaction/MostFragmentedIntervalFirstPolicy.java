@@ -48,6 +48,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   private final HumanReadableBytes minUncompactedBytes;
   private final HumanReadableBytes maxAverageUncompactedBytesPerSegment;
   private final int minUncompactedBytesPercentForFullCompaction;
+  private final int minUncompactedRowsPercentForFullCompaction;
 
   @JsonCreator
   public MostFragmentedIntervalFirstPolicy(
@@ -57,6 +58,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
       HumanReadableBytes maxAverageUncompactedBytesPerSegment,
       @JsonProperty("minUncompactedBytesPercentForFullCompaction") @Nullable
       Integer minUncompactedBytesPercentForFullCompaction,
+      @JsonProperty("minUncompactedRowsPercentForFullCompaction") @Nullable
+      Integer minUncompactedRowsPercentForFullCompaction,
       @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
   )
   {
@@ -79,6 +82,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         "'minUncompactedBytesPercentForFullCompaction'[%s] must be between 0 and 100",
         minUncompactedBytesPercentForFullCompaction
     );
+    InvalidInput.conditionalException(
+        minUncompactedRowsPercentForFullCompaction == null
+        || (minUncompactedRowsPercentForFullCompaction >= 0
+            && minUncompactedRowsPercentForFullCompaction < 100),
+        "'minUncompactedRowsPercentForFullCompaction'[%s] must be between 0 and 100",
+        minUncompactedRowsPercentForFullCompaction
+    );
 
     this.minUncompactedCount = Configs.valueOrDefault(minUncompactedCount, 100);
     this.minUncompactedBytes = Configs.valueOrDefault(minUncompactedBytes, SIZE_10_MB);
@@ -86,6 +96,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         = Configs.valueOrDefault(maxAverageUncompactedBytesPerSegment, SIZE_2_GB);
     this.minUncompactedBytesPercentForFullCompaction =
         Configs.valueOrDefault(minUncompactedBytesPercentForFullCompaction, 0);
+    this.minUncompactedRowsPercentForFullCompaction =
+        Configs.valueOrDefault(minUncompactedRowsPercentForFullCompaction, 0);
   }
 
   /**
@@ -129,6 +141,17 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     return minUncompactedBytesPercentForFullCompaction;
   }
 
+  /**
+   * Threshold percentage of uncompacted rows to total rows below which
+   * minor compaction is eligible instead of full compaction.
+   * Default value is 0.
+   */
+  @JsonProperty
+  public int minUncompactedRowsPercentForFullCompaction()
+  {
+    return minUncompactedRowsPercentForFullCompaction;
+  }
+
   @Override
   protected Comparator<CompactionCandidate> getSegmentComparator()
   {
@@ -148,7 +171,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     return minUncompactedCount == policy.minUncompactedCount
            && Objects.equals(minUncompactedBytes, policy.minUncompactedBytes)
            && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment)
-           && minUncompactedBytesPercentForFullCompaction == policy.minUncompactedBytesPercentForFullCompaction;
+           && minUncompactedBytesPercentForFullCompaction == policy.minUncompactedBytesPercentForFullCompaction
+           && minUncompactedRowsPercentForFullCompaction == policy.minUncompactedRowsPercentForFullCompaction;
   }
 
   @Override
@@ -159,7 +183,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         minUncompactedCount,
         minUncompactedBytes,
         maxAverageUncompactedBytesPerSegment,
-        minUncompactedBytesPercentForFullCompaction
+        minUncompactedBytesPercentForFullCompaction,
+        minUncompactedRowsPercentForFullCompaction
     );
   }
 
@@ -172,6 +197,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         ", minUncompactedBytes=" + minUncompactedBytes +
         ", maxAverageUncompactedBytesPerSegment=" + maxAverageUncompactedBytesPerSegment +
         ", minUncompactedBytesPercentForFullCompaction=" + minUncompactedBytesPercentForFullCompaction +
+        ", minUncompactedRowsPercentForFullCompaction=" + minUncompactedRowsPercentForFullCompaction +
         ", priorityDataSource='" + getPriorityDatasource() + '\'' +
         '}';
   }
@@ -223,9 +249,25 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
           uncompactedBytesRatio,
           minUncompactedBytesPercentForFullCompaction
       );
-    } else {
-      return Eligibility.FULL;
     }
+
+    // Check uncompacted rows ratio if total rows are available
+    final Long uncompactedRows = uncompacted.getTotalRows();
+    final Long compactedRows = candidate.getCompactedStats().getTotalRows();
+    if (uncompactedRows != null && compactedRows != null) {
+      final double uncompactedRowsRatio = (double) uncompactedRows /
+                                          (uncompactedRows + compactedRows)
+                                          * 100;
+      if (uncompactedRowsRatio < minUncompactedRowsPercentForFullCompaction) {
+        return Eligibility.minor(
+            "Uncompacted rows ratio[%.2f] is below threshold[%d]",
+            uncompactedRowsRatio,
+            minUncompactedRowsPercentForFullCompaction
+        );
+      }
+    }
+
+    return Eligibility.FULL;
   }
 
   /**
