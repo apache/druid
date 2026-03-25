@@ -467,7 +467,7 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     streamSupervisor.submitBackfillTask(startOffsets, latestOffsets);
 
-    log.info("Successfully reset supervisor[%s] to latest. Skipped ranges: %s", id, backfillRange);
+    log.info("Successfully reset supervisor[%s] to latest. Backfill range: %s", id, backfillRange);
 
     return ImmutableMap.of(
       "id", id,
