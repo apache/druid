@@ -1849,7 +1849,6 @@
                                        <exclude>com.google.http-client:google-http-client-jackson2</exclude>
                                        <exclude>com.google.http-client:google-http-client</exclude>
                                        <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
-                                       <exclude>com.github.luben:zstd-jni</exclude>
                                        <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
                                        <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
