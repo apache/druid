@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 public class CompactionStatistics
 {
   private long totalBytes;
+  @Nullable
   private Long totalRows;
   private long numSegments;
   private long numIntervals;
