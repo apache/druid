@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -149,7 +148,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
             ), true
         )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
@@ -215,7 +214,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
             ), true
         )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
@@ -272,7 +271,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
             ), true
         )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
-        .context(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
