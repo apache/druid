@@ -401,10 +401,10 @@ public class SupervisorManager implements SupervisorStatsProvider
   /**
    * Resets a supervisor to latest offsets and backfills the skipped offset ranges.
    * Requirements:
-   * - Supervisor must be RUNNING - needs active stream connection
    * - Supervisor must be a SeekableStreamSupervisor
    * - useEarliestOffset must be false (otherwise supervisor always starts from earliest)
    * - useConcurrentLocks must be true
+   * - Supervisor must be RUNNING - needs active stream connection
    * @param id supervisor ID
    * @return Map containing supervisorId and skipped offset ranges
    * @throws IllegalArgumentException if supervisor doesn't exist or if useEarliestOffset is true
