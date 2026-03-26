@@ -46,7 +46,7 @@ The `druid-iceberg-extensions` extension relies on the existing input source con
 For Druid to seamlessly talk to the Hive metastore, ensure that the Hive configuration files such as `hive-site.xml` and `core-site.xml` are available in the Druid classpath for peon processes.  
 You can also specify Hive properties under the `catalogProperties` object in the ingestion spec. 
 
-The `druid-iceberg-extensions` extension presently only supports HDFS, S3 and local warehouse directories.
+The `druid-iceberg-extensions` extension presently supports HDFS, S3, GCS, and local warehouse directories.
 
 ### Read from HDFS warehouse 
 
@@ -105,6 +105,33 @@ The following properties are required in the `catalogProperties`:
 }
 ```
 Since the Hadoop AWS connector uses the `s3a` filesystem client, specify the warehouse path with the `s3a://` protocol instead of `s3://`.
+
+### Read from GCS warehouse
+
+To read from a GCS warehouse, load the `druid-google-extensions` extension. Druid extracts the
+data file paths from the catalog and uses `GoogleCloudStorageInputSource` to ingest these files.
+Set the `type` property of the `warehouseSource` object to `google` in the ingestion spec:
+
+```json
+"warehouseSource": {
+  "type": "google"
+}
+```
+
+For the Iceberg catalog to read its own metadata files from GCS, set `io-impl` to
+`org.apache.iceberg.gcp.gcs.GCSFileIO` in `catalogProperties`:
+
+```json
+"catalogProperties": {
+  "io-impl": "org.apache.iceberg.gcp.gcs.GCSFileIO",
+  "gcs.project-id": "my-gcp-project",
+  "warehouse": "gs://my-bucket/warehouse"
+}
+```
+
+Authentication uses Application Default Credentials (ADC). Ensure that the Druid processes
+have access to valid GCP credentials (e.g., via a service account key file, workload identity,
+or metadata server).
 
 ## Local catalog
 
