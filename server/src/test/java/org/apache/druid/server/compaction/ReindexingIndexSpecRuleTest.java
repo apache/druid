@@ -20,34 +20,30 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.segment.IndexSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ReindexingTuningConfigRuleTest
+public class ReindexingIndexSpecRuleTest
 {
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_21_DAYS = Period.days(21);
 
-  private final ReindexingTuningConfigRule rule = new ReindexingTuningConfigRule(
-      "test-tuning-rule",
-      "Custom tuning config",
+  private final ReindexingIndexSpecRule rule = new ReindexingIndexSpecRule(
+      "test-index-spec-rule",
+      "Custom index spec",
       PERIOD_21_DAYS,
-      createTestTuningConfig()
-
+      IndexSpec.getDefault()
   );
 
   @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
-    // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
-    // Interval ends at 2025-11-25, which is fully before threshold
     Interval interval = Intervals.of("2025-11-24T00:00:00Z/2025-11-25T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
@@ -58,8 +54,6 @@ public class ReindexingTuningConfigRuleTest
   @Test
   public void test_appliesTo_intervalEndsAtThreshold_returnsFull()
   {
-    // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
-    // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = Intervals.of("2025-11-27T12:00:00Z/2025-11-28T12:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
@@ -70,8 +64,6 @@ public class ReindexingTuningConfigRuleTest
   @Test
   public void test_appliesTo_intervalSpansThreshold_returnsPartial()
   {
-    // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
-    // Interval starts before threshold and ends after - PARTIAL
     Interval interval = Intervals.of("2025-11-27T00:00:00Z/2025-11-29T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
@@ -82,8 +74,6 @@ public class ReindexingTuningConfigRuleTest
   @Test
   public void test_appliesTo_intervalStartsAfterThreshold_returnsNone()
   {
-    // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
-    // Interval starts after threshold - NONE
     Interval interval = Intervals.of("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
@@ -92,24 +82,24 @@ public class ReindexingTuningConfigRuleTest
   }
 
   @Test
-  public void test_getTuningConfig_returnsConfiguredValue()
+  public void test_getIndexSpec_returnsConfiguredValue()
   {
-    UserCompactionTaskQueryTuningConfig config = rule.getTuningConfig();
+    IndexSpec indexSpec = rule.getIndexSpec();
 
-    Assertions.assertNotNull(config);
-    Assertions.assertNotNull(config.getPartitionsSpec());
+    Assertions.assertNotNull(indexSpec);
+    Assertions.assertEquals(IndexSpec.getDefault(), indexSpec);
   }
 
   @Test
   public void test_getId_returnsConfiguredId()
   {
-    Assertions.assertEquals("test-tuning-rule", rule.getId());
+    Assertions.assertEquals("test-index-spec-rule", rule.getId());
   }
 
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assertions.assertEquals("Custom tuning config", rule.getDescription());
+    Assertions.assertEquals("Custom index spec", rule.getDescription());
   }
 
   @Test
@@ -123,7 +113,7 @@ public class ReindexingTuningConfigRuleTest
   {
     Assertions.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingTuningConfigRule(null, "description", PERIOD_21_DAYS, createTestTuningConfig())
+        () -> new ReindexingIndexSpecRule(null, "description", PERIOD_21_DAYS, IndexSpec.getDefault())
     );
   }
 
@@ -132,20 +122,19 @@ public class ReindexingTuningConfigRuleTest
   {
     Assertions.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingTuningConfigRule("test-id", "description", null, createTestTuningConfig())
+        () -> new ReindexingIndexSpecRule("test-id", "description", null, IndexSpec.getDefault())
     );
   }
 
   @Test
   public void test_constructor_zeroPeriod_succeeds()
   {
-    // P0D is valid - indicates rules that apply immediately to all data
     Period zeroPeriod = Period.days(0);
-    ReindexingTuningConfigRule rule = new ReindexingTuningConfigRule(
+    ReindexingIndexSpecRule rule = new ReindexingIndexSpecRule(
         "test-id",
         "description",
         zeroPeriod,
-        createTestTuningConfig()
+        IndexSpec.getDefault()
     );
     Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
@@ -156,41 +145,68 @@ public class ReindexingTuningConfigRuleTest
     Period negativePeriod = Period.days(-21);
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingTuningConfigRule("test-id", "description", negativePeriod, createTestTuningConfig())
+        () -> new ReindexingIndexSpecRule("test-id", "description", negativePeriod, IndexSpec.getDefault())
     );
   }
 
   @Test
-  public void test_constructor_nullTuningConfig_throwsDruidException()
+  public void test_constructor_nullIndexSpec_throwsDruidException()
   {
     Assertions.assertThrows(
         DruidException.class,
-        () -> new ReindexingTuningConfigRule("test-id", "description", PERIOD_21_DAYS, null)
+        () -> new ReindexingIndexSpecRule("test-id", "description", PERIOD_21_DAYS, null)
     );
   }
 
-  private UserCompactionTaskQueryTuningConfig createTestTuningConfig()
+  @Test
+  public void test_equals_sameObject_returnsTrue()
   {
-    return new UserCompactionTaskQueryTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+    Assertions.assertEquals(rule, rule);
+  }
+
+  @Test
+  public void test_equals_null_returnsFalse()
+  {
+    Assertions.assertNotEquals(null, rule);
+  }
+
+  @Test
+  public void test_equals_equalObjects_returnsTrue()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "test-index-spec-rule",
+        "Custom index spec",
+        PERIOD_21_DAYS,
+        IndexSpec.getDefault()
     );
+
+    Assertions.assertEquals(rule, other);
+    Assertions.assertEquals(rule.hashCode(), other.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentId_returnsFalse()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "different-id",
+        "Custom index spec",
+        PERIOD_21_DAYS,
+        IndexSpec.getDefault()
+    );
+
+    Assertions.assertNotEquals(rule, other);
+  }
+
+  @Test
+  public void test_equals_differentOlderThan_returnsFalse()
+  {
+    ReindexingIndexSpecRule other = new ReindexingIndexSpecRule(
+        "test-index-spec-rule",
+        "Custom index spec",
+        Period.days(90),
+        IndexSpec.getDefault()
+    );
+
+    Assertions.assertNotEquals(rule, other);
   }
 }
