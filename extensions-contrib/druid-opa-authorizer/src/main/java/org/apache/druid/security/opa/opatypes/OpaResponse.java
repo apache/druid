@@ -19,7 +19,22 @@
 
 package org.apache.druid.security.opa.opatypes;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class OpaResponse
 {
-  public boolean result;
+  private final boolean result;
+
+  @JsonCreator
+  public OpaResponse(@JsonProperty("result") boolean result)
+  {
+    this.result = result;
+  }
+
+  @JsonProperty
+  public boolean isResult()
+  {
+    return result;
+  }
 }

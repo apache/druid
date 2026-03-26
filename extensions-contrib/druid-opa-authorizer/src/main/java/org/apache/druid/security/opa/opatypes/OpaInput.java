@@ -19,23 +19,42 @@
 
 package org.apache.druid.security.opa.opatypes;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.security.AuthenticationResult;
 
 public class OpaInput
 {
-  public AuthenticationResult authenticationResult;
-  public String action;
-  public OpaResource resource;
+  private final AuthenticationResult authenticationResult;
+  private final String action;
+  private final OpaResource resource;
 
   public OpaInput(
-      AuthenticationResult authenticationResult,
-      String action,
-      String resourceName,
-      String resourceType
+      @JsonProperty("authenticationResult") AuthenticationResult authenticationResult,
+      @JsonProperty("action") String action,
+      @JsonProperty("resourceName") String resourceName,
+      @JsonProperty("resourceType") String resourceType
   )
   {
     this.authenticationResult = authenticationResult;
     this.action = action;
     this.resource = new OpaResource(resourceName, resourceType);
+  }
+
+  @JsonProperty
+  public AuthenticationResult getAuthenticationResult()
+  {
+    return authenticationResult;
+  }
+
+  @JsonProperty
+  public String getAction()
+  {
+    return action;
+  }
+
+  @JsonProperty
+  public OpaResource getResource()
+  {
+    return resource;
   }
 }

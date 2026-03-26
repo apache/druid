@@ -43,8 +43,9 @@ import java.net.http.HttpResponse;
 public class OpaAuthorizer implements Authorizer
 {
   private static final Logger LOG = new Logger(OpaAuthorizer.class);
-  private final String opaUri;
+  private final URI opaUri;
   private final ObjectMapper objectMapper;
+  private final HttpClient httpClient;
 
   @JsonCreator
   public OpaAuthorizer(
@@ -52,14 +53,20 @@ public class OpaAuthorizer implements Authorizer
       @JsonProperty("opaUri") String opaUri
   )
   {
-    this.opaUri = opaUri;
-    objectMapper =
+    try {
+      this.opaUri = new URI(opaUri);
+    }
+    catch (Exception e) {
+      throw new IllegalArgumentException("Invalid opaUri: " + opaUri, e);
+    }
+    this.objectMapper =
         new ObjectMapper()
             // https://github.com/stackabletech/druid-opa-authorizer/issues/72
             // OPA server can send other fields, such as `decision_id`` when enabling decision logs
             // We could add all the fields we *currently* know, but it's more future-proof to ignore
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    this.httpClient = HttpClient.newHttpClient();
   }
 
   @Override
@@ -90,22 +97,21 @@ public class OpaAuthorizer implements Authorizer
       return new Access(false, "Failed to create the OPA request JSON: " + e);
     }
 
-    LOG.trace("Creating HTTP Client and executing post.");
-    var client = HttpClient.newHttpClient();
+    LOG.trace("Executing post to OPA.");
     try {
-      var request =
+      HttpRequest request =
           HttpRequest.newBuilder()
-                     .uri(new URI(opaUri))
+                     .uri(opaUri)
                      .header("Content-Type", "application/json")
                      .POST(HttpRequest.BodyPublishers.ofString(msgJson))
                      .build();
 
-      var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       LOG.debug("OPA Response code: %s - %s", response.statusCode(), response.body());
       LOG.trace("Parsing OPA response.");
       OpaResponse opaResponse = objectMapper.readValue(response.body(), OpaResponse.class);
-      if (opaResponse.result) {
+      if (opaResponse.isResult()) {
         return Access.OK;
       } else {
         return new Access(false, "Access denied.");
