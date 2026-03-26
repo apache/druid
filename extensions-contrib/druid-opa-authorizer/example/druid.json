@@ -1,0 +1,76 @@
+{
+    "user_roles": {
+        "alice": [
+            "admin"
+        ],
+        "druid_system": [
+            "admin"
+        ],
+        "bob": [
+            "data_science"
+        ],
+        "christy": [
+            "data_science",
+            "data_manager"
+        ],
+        "dylan": [
+            "data_science",
+            "cluster_admin"
+        ],
+        "eve": [
+            "external"
+        ]
+    },
+    "role_grants": {
+        "data_science": [
+            {
+                "action": "READ",
+                "resource": {
+                    "type": "DATASOURCE",
+                    "name": ".*"
+                }
+            },
+            {
+                "action": "READ",
+                "resource": {
+                    "type": "STATE",
+                    "name": "STATE"
+                }
+            }
+        ],
+        "data_manager": [
+            {
+                "action": "WRITE",
+                "resource": {
+                    "type": "DATASOURCE",
+                    "name": ".*"
+                }
+            }
+        ],
+        "cluster_admin": [
+            {
+                "action": "READ",
+                "resource": {
+                    "type": "CONFIG",
+                    "name": "CONFIG"
+                }
+            },
+            {
+                "action": "WRITE",
+                "resource": {
+                    "type": "CONFIG",
+                    "name": "CONFIG"
+                }
+            }
+        ],
+        "external": [
+            {
+                "action": "READ",
+                "resource": {
+                    "type": "DATASOURCE",
+                    "name": "ReportTable"
+                }
+            }
+        ]
+    }
+}

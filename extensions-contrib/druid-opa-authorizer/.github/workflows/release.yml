@@ -1,0 +1,63 @@
+---
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      druid-version:
+        description: 'Select the Druid version to build the authorizer for.'
+        required: true
+        type: choice
+        options:
+          - druid-30.0.1
+          - druid-34.0.0
+          - druid-35.0.1
+      stackable-version:
+        description: 'The stackable "patch" version to use for this release (e.g., "0").'
+        required: true
+      next-stackable-version:
+        description: 'The next stackable version to use, this updates the POM (without the "-SNAPSHOT"). If stackable-version is 0 then set this to 1 etc.'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set Java Version
+        id: set_java_version
+        run: |
+          if [ "${{ github.event.inputs.druid-version }}" == "druid-30.0.0" ] || [ "${{ github.event.inputs.druid-version }}" == "druid-30.0.1" ] || [ "${{ github.event.inputs.druid-version }}" == "druid-31.0.1" ]; then
+            echo "JAVA_VERSION=17" >> "$GITHUB_ENV"
+          else
+            echo "JAVA_VERSION=unknown" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Release
+        uses: qcastel/github-actions-maven-release@0fd7a9e2ba3a4af8728a88cf57b11592fd8bdd0f # v1.12.43
+        env:
+          # This action uses a Dockerfile with Java preinstalled
+          # See here for the list of supported JDKs: https://github.com/qcastel/docker-maven-release/blob/master/Dockerfile
+          JAVA_HOME: /usr/lib/jvm/java-${{ env.JAVA_VERSION }}-openjdk/
+        with:
+          git-release-bot-name: "stacky-mcstackface"
+          git-release-bot-email: "info@stackable.tech"
+          maven-args: "clean install -P ${{ github.event.inputs.druid-version }}"
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          maven-release-version-number: ${{ github.event.inputs.druid-version }}-stackable${{ github.event.inputs.stackable-version }}
+          maven-development-version-number: ${{ github.event.inputs.druid-version }}-stackable${{ github.event.inputs.next-stackable-version }}-SNAPSHOT
+          release-branch-name: "main"
+
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          files: |
+            target/checkout/target/*.jar
+            target/checkout/target/bom.*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: release/${{ github.event.inputs.druid-version }}-stackable${{ github.event.inputs.stackable-version }}
+          # Due to our current setup it doesn't make sense to generate release notes automatically because the "previous" version might be for something entirely different (e.g. another Druid version)
+          generate_release_notes: false
+          name: ${{ github.event.inputs.druid-version }}-stackable${{ github.event.inputs.stackable-version }}

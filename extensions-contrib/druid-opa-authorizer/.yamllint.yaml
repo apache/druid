@@ -1,0 +1,12 @@
+---
+extends: default
+
+ignore: |
+  deploy/helm/**/templates
+
+rules:
+  line-length: disable
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1  # Needed due to https://github.com/adrienverge/yamllint/issues/443
