@@ -176,12 +176,12 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   /**
    * Service client that adds the {@link DartWorkerResource#HEADER_CONTROLLER_HOST} header.
    */
-  private static class ControllerDecoratedClient implements ServiceClient
+  public static class ControllerDecoratedClient implements ServiceClient
   {
     private final ServiceClient delegate;
     private final String controllerHost;
 
-    ControllerDecoratedClient(final ServiceClient delegate, final String controllerHost)
+    public ControllerDecoratedClient(final ServiceClient delegate, final String controllerHost)
     {
       this.delegate = delegate;
       this.controllerHost = controllerHost;

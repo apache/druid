@@ -612,7 +612,7 @@ public class ForkingTaskRunnerTest
         null,
         DataSchema.builder()
                   .withDataSource("foo")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(new DimensionsSpec(List.of()))
                   .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), List.of()))
                   .build(),

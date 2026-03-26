@@ -222,6 +222,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |------|-----------|----------|------------|
 |`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/rows/published`|Number of rows successfully published by the job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
 The `taskIngestionMode` dimension includes the following modes:
@@ -342,6 +343,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/pending/count`|Number of current pending tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/waiting/count`|Number of current waiting tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
+|`supervisor/count`|Count of active supervisors. Each supervisor emits 1, tagged with its state, datasource, stream (when applicable), and detailed state. For possible `state` and `detailedState` values, see the [supervisor status report](../ingestion/supervisor.md#status-report). This metric is available only if the `SupervisorStatsMonitor` module is included.|`supervisorId`, `type`, `state`, `dataSource`, `stream` (optional), `detailedState` (optional)|1 per supervisor; aggregate by state for totals|
 |`taskSlot/total/count`|Number of total task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|

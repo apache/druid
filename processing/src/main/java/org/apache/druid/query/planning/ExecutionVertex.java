@@ -232,7 +232,8 @@ public class ExecutionVertex
 
     return new FilterSegmentPruner(
         topQuery.getFilter(),
-        baseFields
+        baseFields,
+        topQuery.getVirtualColumns()
     );
   }
 

@@ -36,46 +36,11 @@ is_newer_than() {
   [ "$1" -nt "$2" ]
 }
 
-# Check if SQL docs need to be built
-SQL_DOCS_OUTPUT="lib/sql-docs.ts"
-SQL_DOCS_SCRIPT="script/create-sql-docs.mjs"
-SQL_DOCS_FILELIST="script/sql-doc-files.txt"
-
-BUILD_SQL_DOCS=false
-
-if [ "$FORCE_BUILD" = true ] || [ ! -f "$SQL_DOCS_OUTPUT" ]; then
-  BUILD_SQL_DOCS=true
+# Build SQL docs
+if [ "$FORCE_BUILD" = true ]; then
+  ./script/build-sql-docs --force
 else
-  # Check if create-sql-docs.mjs is newer than output
-  if is_newer_than "$SQL_DOCS_SCRIPT" "$SQL_DOCS_OUTPUT"; then
-    BUILD_SQL_DOCS=true
-  fi
-
-  # Check if sql-doc-files.txt is newer than output
-  if is_newer_than "$SQL_DOCS_FILELIST" "$SQL_DOCS_OUTPUT"; then
-    BUILD_SQL_DOCS=true
-  fi
-
-  # Check if any file listed in sql-doc-files.txt is newer than output
-  if [ -f "$SQL_DOCS_FILELIST" ] && [ "$BUILD_SQL_DOCS" = false ]; then
-    while read -r file; do
-      # Skip empty lines and comments
-      if [[ -z "$file" ]] || [[ "$file" =~ ^[[:space:]]*# ]]; then
-        continue
-      fi
-      if [ -n "$file" ] && is_newer_than "$file" "$SQL_DOCS_OUTPUT"; then
-        BUILD_SQL_DOCS=true
-        break
-      fi
-    done < "$SQL_DOCS_FILELIST"
-  fi
-fi
-
-if [ "$BUILD_SQL_DOCS" = true ]; then
-  echo "Compiling SQL function docs for the web console..."
-  ./script/create-sql-docs.mjs
-else
-  echo "SQL docs are up to date, skipping..."
+  ./script/build-sql-docs
 fi
 
 # Get version from package.json

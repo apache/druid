@@ -77,7 +77,7 @@ public class SinkTest extends InitializedNullHandlingTest
     final DataSchema schema =
         DataSchema.builder()
                   .withDataSource("test")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(DimensionsSpec.EMPTY)
                   .withAggregators(new CountAggregatorFactory("rows"))
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null))
@@ -254,7 +254,7 @@ public class SinkTest extends InitializedNullHandlingTest
     final DataSchema schema =
         DataSchema.builder()
                   .withDataSource("test")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(
                       new StringDimensionSchema("dim1"),
                       new LongDimensionSchema("dimLong")

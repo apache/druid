@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(10);
+  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30);
 
   protected final Map<String, WorkerRunRef> inMemoryWorkers;
   private final ObjectMapper objectMapper;

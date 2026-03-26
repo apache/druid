@@ -198,6 +198,9 @@ public class DimensionRangeBucketShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(DimensionRangeBucketShardSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DimensionRangeBucketShardSpec.class)
+                  .usingGetClass()
+                  .withIgnoredFields("virtualColumns")
+                  .verify();
   }
 }

@@ -53,6 +53,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  private static final String CTX_KEY_MAX_SPILL_FILE_COUNT = "maxSpillFileCount";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
@@ -93,6 +94,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
   private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
+
+  @JsonProperty
+  // Maximum number of spill files per query; when exceeded, the query fails.
+  // This is a safety valve to prevent OOM errors.
+  private int maxSpillFileCount = Integer.MAX_VALUE;
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -240,6 +246,11 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  public int getMaxSpillFileCount()
+  {
+    return maxSpillFileCount;
+  }
+
   /**
    * Mirror maxOnDiskStorage if defaultOnDiskStorage's default is not overridden by cluster operator.
    *
@@ -340,6 +351,11 @@ public class GroupByQueryConfig
 
     newConfig.maxMergingDictionarySize = queryContext
         .getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getConfiguredMaxMergingDictionarySize());
+
+    newConfig.maxSpillFileCount = queryContext.getInt(
+        CTX_KEY_MAX_SPILL_FILE_COUNT,
+        getMaxSpillFileCount()
+    );
 
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(

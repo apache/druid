@@ -211,9 +211,12 @@ public class MSQTaskQueryMaker implements QueryMaker
     return querySpec;
   }
 
-  private static MSQDestination buildMSQDestination(final IngestDestination targetDataSource,
-      final ColumnMappings columnMappings, final PlannerContext plannerContext,
-      final MSQTerminalStageSpecFactory terminalStageSpecFactory)
+  private static MSQDestination buildMSQDestination(
+      final IngestDestination targetDataSource,
+      final ColumnMappings columnMappings,
+      final PlannerContext plannerContext,
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
+  )
   {
     final QueryContext sqlQueryContext = plannerContext.queryContext();
     final Object segmentGranularity = getSegmentGranularity(plannerContext);

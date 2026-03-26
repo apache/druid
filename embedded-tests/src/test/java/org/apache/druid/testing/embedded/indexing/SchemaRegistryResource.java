@@ -19,10 +19,13 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.redpanda.RedpandaContainer;
+
+import java.util.Map;
 
 /**
  * A resource for managing a Schema Registry instance in embedded tests.
@@ -32,6 +35,19 @@ import org.testcontainers.redpanda.RedpandaContainer;
  */
 public class SchemaRegistryResource extends TestcontainerResource<RedpandaContainer>
 {
+  public static CachedSchemaRegistryClient createSchemaRegistryClient(String schemaRegistryHost)
+  {
+    return new CachedSchemaRegistryClient(
+        StringUtils.format("http://%s", schemaRegistryHost),
+        Integer.MAX_VALUE,
+        Map.of(
+            "basic.auth.credentials.source", "USER_INFO",
+            "basic.auth.user.info", "druid:diurd"
+        ),
+        Map.of()
+    );
+  }
+
   private static final String SCHEMA_REGISTRY_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v25.3.5";
   private static final int SCHEMA_REGISTRY_PORT = 8081;
 

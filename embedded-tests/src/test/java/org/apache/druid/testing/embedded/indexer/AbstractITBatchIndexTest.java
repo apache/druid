@@ -44,7 +44,7 @@ import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;

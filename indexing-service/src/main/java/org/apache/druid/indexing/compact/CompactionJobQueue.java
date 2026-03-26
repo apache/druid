@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -45,6 +46,7 @@ import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -62,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Iterates over all eligible compaction jobs in order of their priority.
@@ -128,6 +129,7 @@ public class CompactionJobQueue
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
+        statusTracker::getLatestTaskStatus,
         snapshotBuilder,
         new DefaultIndexingStateFingerprintMapper(indexingStateCache, objectMapper)
     );
@@ -195,7 +197,7 @@ public class CompactionJobQueue
     final List<CompactionJob> jobsToRemove = queue
         .stream()
         .filter(job -> job.getDataSource().equals(dataSource))
-        .collect(Collectors.toList());
+        .toList();
 
     queue.removeAll(jobsToRemove);
     log.info("Removed [%d] jobs for datasource[%s] from queue.", jobsToRemove.size(), dataSource);
@@ -217,8 +219,11 @@ public class CompactionJobQueue
     final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      if (startJobIfPendingAndReady(job, searchPolicy, pendingJobs, slotManager)) {
-        runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
+      if (startJobIfPendingAndReady(job, pendingJobs, slotManager)) {
+        final RowKey rowKey = RowKey
+            .with(Dimension.DATASOURCE, job.getDataSource())
+            .and(Dimension.DESCRIPTION, job.getEligibility().getMode().name());
+        runStats.add(Stats.Compaction.SUBMITTED_TASKS, rowKey, 1);
       }
     }
 
@@ -267,7 +272,6 @@ public class CompactionJobQueue
    */
   private boolean startJobIfPendingAndReady(
       CompactionJob job,
-      CompactionCandidateSearchPolicy policy,
       List<CompactionJob> pendingJobs,
       CompactionSlotManager slotManager
   )
@@ -281,19 +285,21 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
+    // Check if the job is already running or skipped or pending
+    final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
+    final CompactionStatus compactionStatus = statusTracker.deriveCompactionStatus(lastTaskStatus);
+
     switch (compactionStatus.getState()) {
       case RUNNING:
-        return false;
-      case COMPLETE:
-        snapshotBuilder.moveFromPendingToCompleted(candidate);
         return false;
       case SKIPPED:
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
-      default:
+      case PENDING:
         break;
+      case COMPLETE:
+      default:
+        throw DruidException.defensive("unexpected derived compaction state[%s]", compactionStatus.getState());
     }
 
     // Check if enough compaction task slots are available

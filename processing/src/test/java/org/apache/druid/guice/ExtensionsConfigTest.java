@@ -46,8 +46,6 @@ public class ExtensionsConfigTest
 
     Assert.assertTrue(config.searchCurrentClassloader());
     Assert.assertEquals("extensions", config.getDirectory());
-    Assert.assertEquals("hadoop-dependencies", config.getHadoopDependenciesDir());
-    Assert.assertNull(config.getHadoopContainerDruidClasspath());
     Assert.assertNull(config.getLoadList());
   }
 
@@ -57,8 +55,6 @@ public class ExtensionsConfigTest
     String json = "{\n"
                   + "  \"searchCurrentClassloader\": false,\n"
                   + "  \"directory\": \"testExtensions\",\n"
-                  + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
-                  + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
                   + "  \"loadList\": [\"b\",\"a\"]\n"
                   + "}";
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -72,8 +68,6 @@ public class ExtensionsConfigTest
 
     Assert.assertFalse(config.searchCurrentClassloader());
     Assert.assertEquals("testExtensions", config.getDirectory());
-    Assert.assertEquals("testHadoopDependenciesDir", config.getHadoopDependenciesDir());
-    Assert.assertEquals("testHadoopContainerClasspath", config.getHadoopContainerDruidClasspath());
     Assert.assertEquals(ImmutableList.of("b", "a"), new ArrayList<>(config.getLoadList()));
   }
   @Test
@@ -82,8 +76,6 @@ public class ExtensionsConfigTest
     String json = "{\n"
             + "  \"searchCurrentClassloader\": false,\n"
             + "  \"directory\": \"testExtensions\",\n"
-            + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
-            + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
             + "  \"loadList\": [\"b\",\"b\",\"a\",\"c\",\"d\",\"a\"]\n"
             + "}";
     ObjectMapper mapper = TestHelper.makeJsonMapper();

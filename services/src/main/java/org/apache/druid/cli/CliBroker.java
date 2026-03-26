@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import com.google.inject.util.Modules;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
@@ -66,6 +67,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
@@ -131,7 +133,9 @@ public class CliBroker extends ServerRunnable
     return ImmutableList.of(
         new BrokerProcessingModule(),
         new QueryableModule(),
-        new QueryRunnerFactoryModule(),
+        Modules.override(new QueryRunnerFactoryModule()).with(
+            overrideBinder -> overrideBinder.bind(QueryConfigProvider.class).to(BrokerViewOfBrokerConfig.class)
+        ),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new BrokerServiceModule(),
