@@ -1,0 +1,43 @@
+# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+---
+name: Java CI with Maven
+
+on:
+  push:
+    branches:
+      - main
+      - "renovate/**"
+    tags:
+      - "**"
+  pull_request:
+  merge_group:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        profile:
+          - {druid: druid-30.0.1, java: '17'}
+          - {druid: druid-34.0.0, java: '17'}
+          - {druid: druid-35.0.1, java: '21'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up JDK
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          java-version: ${{ matrix.profile.java }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B verify -P${{ matrix.profile.druid }}
+
+      - name: Update dependency graph
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: advanced-security/maven-dependency-submission-action@aeab9f885293af501bae8bdfe88c589528ea5e25 # v4.1.2
+        with:
+          maven-args: '-P${{matrix.profile.druid}}'
