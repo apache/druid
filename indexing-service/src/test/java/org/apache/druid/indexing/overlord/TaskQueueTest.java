@@ -771,21 +771,27 @@ public class TaskQueueTest extends IngestionTestBase
     );
     priorityQueue.setActive(true);
 
-    final NoopTask lowPriority = NoopTask.ofPriority(10);
-    final NoopTask highPriority = NoopTask.ofPriority(100);
+    final NoopTask lowPriority1 = NoopTask.ofPriority(1);
+    final NoopTask lowPriority2 = NoopTask.ofPriority(10);
     final NoopTask medPriority = NoopTask.ofPriority(50);
+    final NoopTask highPriority1 = NoopTask.ofPriority(90);
+    final NoopTask highPriority2 = NoopTask.ofPriority(100);
 
-    priorityQueue.add(lowPriority);
-    priorityQueue.add(highPriority);
+    priorityQueue.add(lowPriority1);
     priorityQueue.add(medPriority);
+    priorityQueue.add(lowPriority2);
+    priorityQueue.add(highPriority2);
+    priorityQueue.add(highPriority1);
 
     priorityQueue.manageQueuedTasks();
 
     final List<String> submitted = recordingRunner.getSubmittedTaskIds();
-    Assert.assertEquals(3, submitted.size());
-    Assert.assertEquals(highPriority.getId(), submitted.get(0));
-    Assert.assertEquals(medPriority.getId(), submitted.get(1));
-    Assert.assertEquals(lowPriority.getId(), submitted.get(2));
+    Assert.assertEquals(5, submitted.size());
+    Assert.assertEquals(highPriority2.getId(), submitted.get(0));
+    Assert.assertEquals(highPriority1.getId(), submitted.get(1));
+    Assert.assertEquals(medPriority.getId(), submitted.get(2));
+    Assert.assertEquals(lowPriority2.getId(), submitted.get(3));
+    Assert.assertEquals(lowPriority1.getId(), submitted.get(4));
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
