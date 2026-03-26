@@ -596,14 +596,14 @@ public class ParallelIndexSupervisorTaskTest
 
       final String supervisorTaskId = "index_parallel_ds_2024-01-01";
       final TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
-      final TaskConfig taskConfig = EasyMock.createNiceMock(TaskConfig.class);
+      final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
       killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall();
-      EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig).anyTimes();
-      EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false).anyTimes();
+      EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig);
+      EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false);
       EasyMock.replay(toolbox, taskConfig, killer);
 
       new ParallelIndexSupervisorTask(
@@ -616,7 +616,7 @@ public class ParallelIndexSupervisorTaskTest
           false
       ).cleanUp(toolbox, null);
 
-      EasyMock.verify(toolbox, killer);
+      EasyMock.verify(toolbox, taskConfig, killer);
     }
 
     @Test
@@ -626,12 +626,15 @@ public class ParallelIndexSupervisorTaskTest
 
       final String supervisorTaskId = "index_parallel_deep_storage_cleanup_fail";
       final TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
+      final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
       final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
 
       EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
       killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
       EasyMock.expectLastCall().andThrow(new IOException("deep storage cleanup failed"));
-      EasyMock.replay(toolbox, killer);
+      EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig);
+      EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false);
+      EasyMock.replay(toolbox, taskConfig, killer);
 
       new ParallelIndexSupervisorTask(
           supervisorTaskId,
@@ -640,10 +643,10 @@ public class ParallelIndexSupervisorTaskTest
           indexIngestionSpec,
           null,
           null,
-          true
+          false
       ).cleanUp(toolbox, null);
 
-      EasyMock.verify(toolbox, killer);
+      EasyMock.verify(toolbox, taskConfig, killer);
     }
 
     private static ParallelIndexIngestionSpec buildParallelIngestionSpecForCleanUpTests()

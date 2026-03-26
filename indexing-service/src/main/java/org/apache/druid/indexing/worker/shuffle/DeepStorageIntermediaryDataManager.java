@@ -40,8 +40,9 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   private final DataSegmentPusher dataSegmentPusher;
 
   /**
-   * Deep storage path (relative to the extension root) of the directory that holds all shuffle intermediate files for
-   * {@code supervisorTaskId}, matching the prefix used by {@link #addSegment}.
+   * Deep storage path to the directory that holds all shuffle intermediate files for {@code supervisorTaskId},
+   * relative to the deep storage root configured for {@link DataSegmentPusher} (for example
+   * {@code druid.storage.storageDirectory} for local and HDFS). Matches the prefix used by {@link #addSegment}.
    */
   public static String retrieveShuffleDataStoragePath(String supervisorTaskId)
   {
