@@ -30,8 +30,6 @@ import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.TestIndex;
@@ -70,14 +68,13 @@ public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
       }
     }
 
-    final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);
-
     final QueryResultsFrameProcessor processor =
         new QueryResultsFrameProcessor(
             ReadableInput.channel(
                 inputChannel.readable(),
                 FrameReader.create(signature),
-                stagePartition
+                0,
+                0
             ).getChannel(),
             outputChannel.writable()
         );
