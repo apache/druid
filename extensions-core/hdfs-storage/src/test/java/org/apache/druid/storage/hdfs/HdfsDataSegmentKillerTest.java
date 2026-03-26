@@ -238,6 +238,8 @@ public class HdfsDataSegmentKillerTest
       killerWithStorage.killRecursively("workspace/../evil");
       killerWithStorage.killRecursively("only/../dots");
       killerWithStorage.killRecursively("..");
+      killerWithStorage.killRecursively("workspace//evil");
+      killerWithStorage.killRecursively("workspace/evil/");
 
       Assert.assertTrue("workspace/evil should survive null constructHdfsDeletePath cases", fs.exists(nested));
       Assert.assertTrue(fs.exists(stagingRun));

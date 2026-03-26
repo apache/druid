@@ -185,7 +185,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
       log.warn("Skipping deep storage directory kill: backslash not allowed in path [%s]", relativePath);
       return null;
     }
-    for (String segment : StringUtils.split(relativePath, '/')) {
+    for (String segment : StringUtils.splitPreserveAllTokens(relativePath, '/')) {
       if (segment.isEmpty() || "..".equals(segment)) {
         log.warn("Skipping deep storage directory kill: invalid path[%s]", relativePath);
         return null;
