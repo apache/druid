@@ -280,10 +280,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     }
 
     try {
-      String backfillSupervisorId = spec.getDataSchema().getDataSource() + "_backfill";
+      String backfillSupervisorId = spec.getSpec().getDataSchema().getDataSource() + "_backfill";
 
       // Get the backfillTaskCount from config
-      int backfillTaskCount = spec.getIoConfig().getBackfillTaskCount();
+      int backfillTaskCount = spec.getSpec().getIOConfig().getBackfillTaskCount();
       List<KafkaTopicPartition> partitions = new ArrayList<>(endOffsets.keySet());
 
       // Determine actual number of tasks (can't have more tasks than partitions)
@@ -325,11 +325,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
             taskStartOffsets,
             null, // minimumMessageTime - process all data in range
             null, // maximumMessageTime - process all data in range
-            spec.getDataSchema(),
-            spec.getTuningConfig()
+            spec.getSpec().getDataSchema(),
+            spec.getSpec().getTuningConfig()
         );
 
-        KafkaSupervisorIOConfig kafkaIoConfig = spec.getIoConfig();
+        KafkaSupervisorIOConfig kafkaIoConfig = spec.getSpec().getIOConfig();
         KafkaIndexTaskIOConfig backfillIoConfig = new KafkaIndexTaskIOConfig(
             taskNum, // taskGroupId
             baseSequenceName,
@@ -359,8 +359,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
             taskId,
             backfillSupervisorId, // Use backfill supervisorId instead of spec.getId()
             new TaskResource(baseSequenceName, 1),
-            spec.getDataSchema(),
-            spec.getTuningConfig(),
+            spec.getSpec().getDataSchema(),
+            spec.getSpec().getTuningConfig(),
             backfillIoConfig,
             context,
             sortingMapper,
