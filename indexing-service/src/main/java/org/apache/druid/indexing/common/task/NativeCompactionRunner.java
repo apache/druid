@@ -105,7 +105,7 @@ public class NativeCompactionRunner implements CompactionRunner
     }
 
     if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
-      boolean usingConcurrentLocks = compactionTask.getContextValue(Tasks.USE_CONCURRENT_LOCKS);
+      boolean usingConcurrentLocks = compactionTask.getContextValue(Tasks.USE_CONCURRENT_LOCKS, Tasks.DEFAULT_USE_CONCURRENT_LOCKS);
       if (!usingConcurrentLocks) {
         return CompactionConfigValidationResult.failure(
             "Task context[%s] must be true when using native minor compaction", Tasks.USE_CONCURRENT_LOCKS
