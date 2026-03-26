@@ -32,7 +32,7 @@ For example, you might want to:
 - Keep recent data in hourly segments, but coarsen to daily segments after 90 days to help reduce segment count and storage footprint.
 - Delete some unwanted rows from data older than 30 days.
 - Change compression settings for older data.
-- Roll up older data to a coarser query granularity for data .
+- Roll up older data to a coarser query granularity
 
 Cascading reindexing handles all of this automatically by generating a timeline of compaction intervals and applying the appropriate rules to each interval.
 
