@@ -212,6 +212,7 @@ OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
 openlineage
@@ -2403,6 +2404,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2645,6 +2647,7 @@ TableSpec
 
 - ../docs/development/extensions-contrib/prometheus.md
 TTL
+<<<<<<< HEAD
 
 - ../docs/development/extensions-contrib/consul.md
 minimum
@@ -2656,3 +2659,20 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+=======
+OPA
+Rego
+opaUri
+rego
+RegoRules
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+OPA
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego
+>>>>>>> a9a1e8b764 (Adjust druid-opa-authorizer files to match Apache Druid repo)

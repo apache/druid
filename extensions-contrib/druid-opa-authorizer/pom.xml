@@ -1,104 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>tech.stackable</groupId>
+  <parent>
+    <groupId>org.apache.druid</groupId>
+    <artifactId>druid</artifactId>
+    <version>37.0.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-opa-authorizer</artifactId>
-  <version>0.8.0-SNAPSHOT</version>
-
-  <name>Apache Druid OpenPolicyAgent Authorizer</name>
-  <url>https://github.com/stackabletech/druid-opa-authorizer/</url>
-  <organization>
-    <name>Stackable GmbH</name>
-    <url>https://stackable.tech</url>
-  </organization>
-  <licenses>
-    <license>
-      <name>OSL-3.0</name>
-    </license>
-  </licenses>
-  <scm>
-    <connection>scm:git:${project.scm.url}</connection>
-    <developerConnection>scm:git:${project.scm.url}</developerConnection>
-    <tag>HEAD</tag>
-    <url>git@github.com:stackabletech/druid-opa-authorizer.git</url>
-  </scm>
-  <issueManagement>
-    <system>GitHub</system>
-    <url>https://github.com/stackabletech/druid-opa-authorizer/issues</url>
-  </issueManagement>
-
-  <properties>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
-    <maven.compiler.release>${java.version}</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-    <cleanthat.version>2.17</cleanthat.version>
-    <error-prone.version>2.27.1</error-prone.version>
-    <google-java-format.version>1.19.2</google-java-format.version>
-
-    <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
-    <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
-    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <maven-clean-plugin.version>3.4.1</maven-clean-plugin.version>
-    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
-    <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
-    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
-    <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
-    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
-    <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
-    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-    <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
-    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
-    <spotbugs-maven-plugin.version>4.9.3.0</spotbugs-maven-plugin.version>
-    <spotbugs.version>4.9.3</spotbugs.version>
-    <spotless-maven-plugin.version>2.44.4</spotless-maven-plugin.version>
-    <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
-  </properties>
+  <name>druid-opa-authorizer</name>
+  <description>Apache Druid extension to request policy decisions from Open Policy Agent (OPA)</description>
 
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
-      <version>${guice.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
-      <version>${druid.version}</version>
+      <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
-      <version>${druid.version}</version>
+      <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -106,304 +75,12 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${maven-checkstyle-plugin.version}</version>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
         <configuration>
-          <configLocation>checkstyle.xml</configLocation>
+          <skip>true</skip>
         </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-clean-plugin</artifactId>
-        <version>${maven-clean-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>${maven-compiler-plugin.version}</version>
-        <configuration>
-          <compilerArgs>
-            <arg>-XDcompilePolicy=simple</arg>
-            <arg>-Xplugin:ErrorProne</arg>
-          </compilerArgs>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>com.google.errorprone</groupId>
-              <artifactId>error_prone_core</artifactId>
-              <version>${error-prone.version}</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>${maven-dependency-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>${maven-deploy-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer-plugin.version}</version>
-        <configuration>
-          <rules>
-            <banDuplicatePomDependencyVersions />
-            <banDynamicVersions />
-            <requireActiveProfile>
-              <profiles>druid-30.0.1,druid-34.0.0,druid-35.0.1</profiles>
-              <all>false</all>
-            </requireActiveProfile>
-            <requireJavaVersion>
-              <version>${java.version}</version>
-            </requireJavaVersion>
-            <requireMavenVersion>
-              <version>3.6.3</version>
-            </requireMavenVersion>
-            <requirePluginVersions />
-          </rules>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>${maven-install-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>${maven-jar-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>${maven-release-plugin.version}</version>
-        <configuration>
-          <!-- We do not currently want to publish the results in a Maven repo and release will fail if the repositories aren't specified -->
-          <arguments>-Dmaven.deploy.skip=true</arguments>
-          <scmCommentPrefix>[ci skip]</scmCommentPrefix>
-          <tagNameFormat>release/@{project.version}</tagNameFormat>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>${maven-resources-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>${maven-site-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>versions-maven-plugin</artifactId>
-        <version>${versions-maven-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.cyclonedx</groupId>
-        <artifactId>cyclonedx-maven-plugin</artifactId>
-        <version>${cyclonedx-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>makeAggregateBom</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.diffplug.spotless</groupId>
-        <artifactId>spotless-maven-plugin</artifactId>
-        <version>${spotless-maven-plugin.version}</version>
-        <configuration>
-          <java>
-            <cleanthat>
-              <version>${cleanthat.version}</version>
-            </cleanthat>
-            <removeUnusedImports />
-            <formatAnnotations />
-            <googleJavaFormat>
-              <version>${google-java-format.version}</version>
-            </googleJavaFormat>
-          </java>
-          <markdown>
-            <includes>
-              <include>**/*.md</include>
-            </includes>
-            <flexmark />
-          </markdown>
-          <json>
-            <includes>
-              <include>src/**/*.json</include>
-            </includes>
-            <jackson />
-          </json>
-          <!--
-           POM rewriting conflicts with the maven-release-plugin.
-           The release plugin rewrites the POM file in a way that is incompatible with spotless, and they change
-           the contents back and forth to match their respective styles. -->
-          <!--pom>
-            <sortPom>
-              <expandEmptyElements>false</expandEmptyElements>
-            </sortPom>
-          </pom-->
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>apply</goal>
-            </goals>
-            <phase>verify</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.github.spotbugs</groupId>
-        <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>${spotbugs-maven-plugin.version}</version>
-        <configuration>
-          <plugins>
-            <plugin>
-              <groupId>com.h3xstream.findsecbugs</groupId>
-              <artifactId>findsecbugs-plugin</artifactId>
-              <version>${findsecbugs-plugin.version}</version>
-            </plugin>
-          </plugins>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs</artifactId>
-            <version>${spotbugs.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
     </plugins>
   </build>
-
-  <!--
-  These profiles are here so it is easier to test whether a code change still works against all supported Druid versions.
-  For the last years the API interface to Druid didn't change and while the versions of dependencies changed and even the location of classes in JARs the actual interface did not.
-  In a compiled Java class the bytecode refers to a String constant of the class it needs to access (e.g. org/apache/druid/server/security/Action) and as long as that name (and its interface) does not change it does not matter in which JAR file the code lives.
-  Using these profiles we can get clean compiles against all supported versions but we only use those for CI.
-  -->
-  <profiles>
-    <profile>
-      <!-- LTS version since SDP 25.3 (30.0.0 in 24.11)-->
-      <id>druid-30.0.1</id>
-      <properties>
-        <java.version>17</java.version>
-        <druid.version>30.0.1</druid.version>
-        <guava.version>32.0.1-jre</guava.version>
-        <guice.version>4.1.0</guice.version>
-        <!--
-        jackson.version in 33.0.1 is actually specified as 2.12.7.20221012 but according to the release notes
-        https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.12#micro-patches that is "only" the BOM which
-        specifies almost all dependencies to be 2.12.7 with the exception of jackson-databind which is at 2.12.7.1:
-        https://repo1.maven.org/maven2/com/fasterxml/jackson/jackson-bom/2.12.7.20221012/jackson-bom-2.12.7.20221012.pom
-        so we override that here
-        -->
-        <jackson.version>2.12.7</jackson.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-          <version>2.12.7.1</version>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <!-- Deprecated in SDP 26.3 -->
-      <id>druid-34.0.0</id>
-      <properties>
-        <java.version>17</java.version>
-        <druid.version>34.0.0</druid.version>
-        <guava.version>32.1.3-jre</guava.version>
-        <guice.version>5.1.0</guice.version>
-        <jackson.version>2.18.4</jackson.version>
-      </properties>
-      <dependencies>
-        <!--
-        In druid-server 34.0.0 all the jackson dependencies are specified to be 2.18.4 with the exception of jackson-core which is at 2.18.4.1:
-        https://github.com/apache/druid/blob/druid-34.0.0/pom.xml#L103, so we override that here
-        -->
-        <dependency>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-          <version>2.18.4.1</version>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
-      <!--
-        We need to override the guice version using <dependencyManagement> here, otherwise maven chooses the highest
-        possible version in the range given by https://github.com/FasterXML/jackson-modules-base/blob/jackson-modules-base-2.18.4/guice/pom.xml#L30
-        which for some reason also wins in the conflict resolution, resulting in another version of the dependency than druid uses
-      -->
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-            <version>${guice.version}</version>
-            <scope>provided</scope>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
-    </profile>
-    <profile>
-      <!-- Supported since SPD 26.3 -->
-      <id>druid-35.0.1</id>
-      <properties>
-        <java.version>21</java.version>
-        <druid.version>35.0.1</druid.version>
-        <guava.version>32.1.3-jre</guava.version>
-        <guice.version>5.1.0</guice.version>
-        <jackson.version>2.19.2</jackson.version>
-      </properties>
-      <!--
-        We need to override the guice version using <dependencyManagement> here, otherwise maven chooses the highest
-        possible version in the range given by https://github.com/FasterXML/jackson-modules-base/blob/jackson-modules-base-2.18.4/guice/pom.xml#L30
-        which for some reason also wins in the conflict resolution, resulting in another version of the dependency than druid uses
-      -->
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-            <version>${guice.version}</version>
-            <scope>provided</scope>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
-    </profile>
-  </profiles>
-
 </project>
