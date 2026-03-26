@@ -19,19 +19,26 @@
 
 package org.apache.druid.security.opa.opatypes;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.security.AuthenticationResult;
 
 public class OpaMessage
 {
-  public OpaInput input;
+  private final OpaInput input;
 
   public OpaMessage(
-      AuthenticationResult authenticationResult,
-      String action,
-      String resourceName,
-      String resourceType
+      @JsonProperty("authenticationResult") AuthenticationResult authenticationResult,
+      @JsonProperty("action") String action,
+      @JsonProperty("resourceName") String resourceName,
+      @JsonProperty("resourceType") String resourceType
   )
   {
     this.input = new OpaInput(authenticationResult, action, resourceName, resourceType);
+  }
+
+  @JsonProperty
+  public OpaInput getInput()
+  {
+    return input;
   }
 }

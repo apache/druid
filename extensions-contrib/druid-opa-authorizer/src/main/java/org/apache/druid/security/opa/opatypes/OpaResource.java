@@ -19,14 +19,31 @@
 
 package org.apache.druid.security.opa.opatypes;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class OpaResource
 {
-  public String name;
-  public String type;
+  private final String name;
+  private final String type;
 
-  public OpaResource(String name, String type)
+  public OpaResource(
+      @JsonProperty("name") String name,
+      @JsonProperty("type") String type
+  )
   {
     this.name = name;
     this.type = type;
+  }
+
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getType()
+  {
+    return type;
   }
 }
