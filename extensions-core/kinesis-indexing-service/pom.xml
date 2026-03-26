@@ -114,6 +114,7 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
             <version>${aws.sdk.v2.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- KCL v2 for deaggregation support -->

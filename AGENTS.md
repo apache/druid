@@ -76,7 +76,12 @@ present, such as `-Dquidem.filter=qaWin/**`.
 
 ### Web Console Development
 
-- Refer to `web-console/README.md` for instructions on developing, linting, and testing web console features.
+Refer to `web-console/README.md` for general instructions on developing the web console.
+
+Run `npm run test-unit` from the `web-console/` directory to verify your work. Before doing this for the first time
+in a fresh checkout, you will also need to run `npm install`.
+
+Run `npm run autofix` from the `web-console/` directory to fix formatting issues.
 
 ### Documentation
 

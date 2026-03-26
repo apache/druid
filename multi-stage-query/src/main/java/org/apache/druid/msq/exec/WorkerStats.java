@@ -20,36 +20,58 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskState;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class WorkerStats
 {
   private final String workerId;
+  @Nullable
+  private final String workerDesc;
   private final TaskState state;
   private final long durationMs;
   private final long pendingMs;
 
   @JsonCreator
   public WorkerStats(
-      @JsonProperty("workerId") String workerId,
-      @JsonProperty("state") TaskState state,
-      @JsonProperty("durationMs") long durationMs,
-      @JsonProperty("pendingMs") long pendingMs
+      @JsonProperty("workerId") final String workerId,
+      @JsonProperty("workerDesc") @Nullable final String workerDesc,
+      @JsonProperty("state") final TaskState state,
+      @JsonProperty("durationMs") final long durationMs,
+      @JsonProperty("pendingMs") final long pendingMs
   )
   {
     this.workerId = workerId;
+    this.workerDesc = workerDesc;
     this.state = state;
     this.durationMs = durationMs;
     this.pendingMs = pendingMs;
   }
 
+  /**
+   * Unique worker ID, same as {@link Worker#id()}.
+   */
   @JsonProperty
   public String getWorkerId()
   {
     return workerId;
+  }
+
+  /**
+   * Worker description. Used by the web console to more easily find where a worker is running. Generally this is
+   * either a task ID or a host:port. It may not be unique; for example, with Dart, if multiple queries run on the
+   * same host:port then they would have unique workerId but would have the same workerDesc.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getWorkerDesc()
+  {
+    return workerDesc;
   }
 
   @JsonProperty
@@ -83,13 +105,14 @@ public class WorkerStats
     return durationMs == that.durationMs
            && pendingMs == that.pendingMs
            && Objects.equals(workerId, that.workerId)
+           && Objects.equals(workerDesc, that.workerDesc)
            && state == that.state;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(workerId, state, durationMs, pendingMs);
+    return Objects.hash(workerId, workerDesc, state, durationMs, pendingMs);
   }
 
   @Override
@@ -97,6 +120,7 @@ public class WorkerStats
   {
     return "WorkerStats{" +
            "workerId='" + workerId + '\'' +
+           ", workerDesc='" + workerDesc + '\'' +
            ", state=" + state +
            ", durationMs=" + durationMs +
            ", pendingMs=" + pendingMs +

@@ -449,16 +449,9 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                public TopNQueryConfig makeTopNQueryConfig(Builder builder)
+                public TopNQueryConfig makeTopNQueryConfig()
                 {
-                  return new TopNQueryConfig()
-                  {
-                    @Override
-                    public int getMinTopNThreshold()
-                    {
-                      return builder.minTopNThreshold;
-                    }
-                  };
+                  return new TopNQueryConfig();
                 }
 
                 @Provides
@@ -757,7 +750,6 @@ public class SqlTestFramework
   public static class Builder
   {
     private final QueryComponentSupplier componentSupplier;
-    private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
@@ -767,12 +759,6 @@ public class SqlTestFramework
     public Builder(QueryComponentSupplier componentSupplier)
     {
       this.componentSupplier = componentSupplier;
-    }
-
-    public Builder minTopNThreshold(int minTopNThreshold)
-    {
-      this.minTopNThreshold = minTopNThreshold;
-      return this;
     }
 
     public Builder mergeBufferCount(int mergeBufferCount)

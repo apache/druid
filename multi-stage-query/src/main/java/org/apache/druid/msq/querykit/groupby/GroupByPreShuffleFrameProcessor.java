@@ -49,6 +49,8 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -59,10 +61,10 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -79,6 +81,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private static final Logger log = new Logger(GroupByPreShuffleFrameProcessor.class);
   private final GroupByQuery query;
   private final GroupingEngine groupingEngine;
+  @Nullable
+  private final QueryToolChest<ResultRow, GroupByQuery> toolChest;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
   private final Closer closer = Closer.create();
@@ -93,6 +97,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
+      @Nullable final QueryToolChest<ResultRow, GroupByQuery> toolChest,
       final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
       final SegmentMapFunction segmentMapFn,
@@ -108,6 +113,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.groupingEngine = groupingEngine;
+    this.toolChest = toolChest;
     this.bufferPool = bufferPool;
     this.frameWriterColumnSelectorFactory = RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
         query,
@@ -119,13 +125,22 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
+    if (toolChest == null) {
+      // toolChest is always set in production, but may not always be set in tests.
+      throw DruidException.defensive("toolChest is required for data server queries");
+    }
+
     if (resultYielder == null || resultYielder.isDone()) {
       if (currentResultsYielder == null) {
         if (dataServerQueryResultFuture == null) {
+          final GroupByQuery preparedQuery = groupingEngine.prepareGroupByQuery(query);
+          final Function<ResultRow, ResultRow> preComputeManipulatorFn =
+              toolChest.makePreComputeManipulatorFn(preparedQuery, MetricManipulatorFns.deserializing());
           dataServerQueryResultFuture =
               dataServerQueryHandler.fetchRowsFromDataServer(
-                  groupingEngine.prepareGroupByQuery(query),
-                  Function.identity(),
+                  preparedQuery,
+                  toolChest.getBaseResultType(),
+                  sequence -> sequence.map(preComputeManipulatorFn),
                   closer
               );
 
@@ -169,24 +184,10 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
-      if (segmentReference == null) {
-        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
-      }
-
-      final Segment segment = segmentReference.getSegmentReference().orElse(null);
-      if (segment == null) {
-        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
-      }
-
-      if (segmentHolder.getInputCounters() != null) {
-        final int rowCount = getSegmentRowCount(segmentReference);
-        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
-      }
-
+      final Segment segment = mapSegment(segmentHolder, closer);
       final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
-
       final Sequence<ResultRow> rowSequence;
+
       if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
         // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
         rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));

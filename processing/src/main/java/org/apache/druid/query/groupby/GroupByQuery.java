@@ -1052,7 +1052,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder setVirtualColumns(VirtualColumn... virtualColumns)
     {
-      this.virtualColumns = VirtualColumns.create(Arrays.asList(virtualColumns));
+      this.virtualColumns = VirtualColumns.create(virtualColumns);
       return this;
     }
 
@@ -1084,6 +1084,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     {
       ensureExplicitLimitSpecNotSet();
       this.orderByColumnSpecs.add(columnSpec);
+      this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setOrderByColumns(List<OrderByColumnSpec> columnSpec)
+    {
+      ensureExplicitLimitSpecNotSet();
+      this.orderByColumnSpecs = new ArrayList<>(columnSpec);
       this.postProcessingFn = null;
       return this;
     }

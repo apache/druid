@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
@@ -103,7 +102,7 @@ public class QueryFrameworkUtils
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         authorizerMapper,
-        Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
+        new DefaultQueryConfig(Map.of()),
         null  // BrokerConfigManager - null for tests
     );
   }

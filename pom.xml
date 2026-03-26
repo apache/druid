@@ -193,11 +193,9 @@
         <module>processing</module>
         <module>server</module>
         <module>indexing-service</module>
-        <module>indexing-hadoop</module>
         <module>multi-stage-query</module>
         <module>services</module>
         <module>sql</module>
-        <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->
@@ -252,8 +250,6 @@
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
-        <module>extensions-contrib/materialized-view-maintenance</module>
-        <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
@@ -272,7 +268,6 @@
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
-        <module>integration-tests-ex/tools</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
@@ -424,14 +419,6 @@
                 <version>2.5.2</version>
             </dependency>
 
-            <!-- transitive dependency of testng
-            this would be resolved by updating
-            testng to 7.8.0 -->
-            <dependency>
-                <groupId>org.apache.ant</groupId>
-                <artifactId>ant</artifactId>
-                <version>1.10.14</version>
-            </dependency>
             <!-- transitive dependency of kafka-clients and kubernetes client
             this should get resolved with the update of above depdendencies -->
             <dependency>
@@ -1399,18 +1386,6 @@
             </dependency>
 
             <dependency>
-                <groupId>org.testng</groupId>
-                <artifactId>testng</artifactId>
-                <version>7.3.0</version>
-                <!-- testng ships guice 4.2, which requires a newer version of guava -->
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.inject</groupId>
-                        <artifactId>guice</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest</artifactId>
                 <version>${hamcrest.version}</version>
@@ -1478,12 +1453,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
-            <version>${hadoop.compile.version}</version>
-            <scope>provided</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-common</artifactId>
             <version>${hadoop.compile.version}</version>
             <scope>provided</scope>
           </dependency>

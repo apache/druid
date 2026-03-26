@@ -385,7 +385,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
+        DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4")
     );
@@ -424,7 +424,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     replayAll();
 
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withDimensionsSpec(
+        DATA_SCHEMA.withDimensionsSpec(
             new DimensionsSpec(
                 ImmutableList.of(
                     new StringDimensionSchema("dim1"),
@@ -453,59 +453,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
   }
 
-  @Test(timeout = 120_000L)
-  public void testRunAfterDataInsertedWithLegacyParser() throws Exception
-  {
-    recordSupplier.assign(EasyMock.anyObject());
-    EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
-
-    recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
-    EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
-            .andReturn(clone(RECORDS, 2, 5)).once();
-
-    recordSupplier.close();
-    EasyMock.expectLastCall().once();
-
-    replayAll();
-
-    final KinesisIndexTask task = createTask(
-        OLD_DATA_SCHEMA,
-        ImmutableMap.of(SHARD_ID1, "2"),
-        ImmutableMap.of(SHARD_ID1, "4")
-    );
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    verifyAll();
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 5))
-                                     .totalProcessed(3));
-
-    // Check published metadata and segments in deep storage
-    assertEqualsExceptVersion(
-        ImmutableList.of(
-            sdd("2010/P1D", 0, ImmutableList.of("c")),
-            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
-        ),
-        publishedDescriptors()
-    );
-    Assert.assertEquals(
-        new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
-        ),
-        newDataSchemaMetadata()
-    );
-  }
-
   DataSourceMetadata newDataSchemaMetadata()
   {
-    return metadataStorageCoordinator.retrieveDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource());
+    return metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource());
   }
 
   @Test(timeout = 120_000L)
@@ -620,7 +570,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(startPartitions)
             )
@@ -712,7 +662,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(STREAM, startOffsets, Collections.emptySet())
@@ -723,7 +673,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
-                NEW_DATA_SCHEMA.getDataSource(),
+                DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(STREAM, currentOffsets, currentOffsets.keySet()))
@@ -907,7 +857,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     replayAll();
 
     final KinesisIndexTask task = createTask(
-        NEW_DATA_SCHEMA.withTransformSpec(
+        DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
@@ -1473,7 +1423,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KinesisIndexTask task1 = createTask(
         0,
         null,
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4"),
         false
@@ -1481,7 +1431,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KinesisIndexTask task2 = createTask(
         1,
         null,
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         ImmutableMap.of(SHARD_ID1, "3"),
         ImmutableMap.of(SHARD_ID1, "9"),
         false
@@ -1953,7 +1903,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KinesisIndexTask task = createTask(
         "task1",
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         new KinesisIndexTaskIOConfig(
             0,
             "sequence0",
@@ -2112,7 +2062,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KinesisIndexTask task = createTask(
         "task1",
-        NEW_DATA_SCHEMA,
+        DATA_SCHEMA,
         new KinesisIndexTaskIOConfig(
             0,
             "sequence0",
@@ -2345,7 +2295,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
       Map<String, String> endSequenceNumbers
   ) throws JsonProcessingException
   {
-    return createTask(groupId, taskId, NEW_DATA_SCHEMA, startSequenceNumbers, endSequenceNumbers, true);
+    return createTask(groupId, taskId, DATA_SCHEMA, startSequenceNumbers, endSequenceNumbers, true);
   }
 
   private KinesisIndexTask createTask(
@@ -2360,7 +2310,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private KinesisIndexTask createTask(KinesisIndexTaskIOConfig ioConfig)
       throws JsonProcessingException
   {
-    return createTask(null, NEW_DATA_SCHEMA, ioConfig, null);
+    return createTask(null, DATA_SCHEMA, ioConfig, null);
   }
 
   private KinesisIndexTask createTask(
@@ -2436,7 +2386,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
+    return DataSchema.builder(dataSchema).build();
   }
 
   @Override

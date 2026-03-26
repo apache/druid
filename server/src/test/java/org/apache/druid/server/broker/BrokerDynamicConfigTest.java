@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryBlocklistRule;
 import org.junit.Assert;
@@ -113,6 +114,32 @@ public class BrokerDynamicConfigTest
     QueryBlocklistRule rule2 = actual.getQueryBlocklist().get(1);
     Assert.assertEquals("block-context", rule2.getRuleName());
     Assert.assertEquals(ImmutableMap.of("priority", "0"), rule2.getContextMatches());
+  }
+
+  @Test
+  public void testSerdeWithQueryContext() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryContext\": {\n"
+                     + "    \"priority\": 10,\n"
+                     + "    \"useCache\": false\n"
+                     + "  }\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, BrokerDynamicConfig.class)),
+        BrokerDynamicConfig.class
+    );
+
+    Assert.assertEquals(QueryContext.of(ImmutableMap.of("priority", 10, "useCache", false)), actual.getQueryContext());
+  }
+
+  @Test
+  public void testNullQueryContextDefaultsToEmptyMap() throws Exception
+  {
+    BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
+    Assert.assertNotNull(actual.getQueryContext());
+    Assert.assertTrue(actual.getQueryContext().isEmpty());
   }
 
   @Test

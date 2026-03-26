@@ -61,24 +61,6 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
     return createKinesisSupervisorSpec(dataSource, topic, inputFormat);
   }
 
-  @Override
-  protected SupervisorSpec createSupervisorWithParser(String dataSource, String topic, Map<String, Object> parserMap)
-  {
-    final KinesisSupervisorSpec baseSpec = createKinesisSupervisorSpec(dataSource, topic, null);
-    return new KinesisSupervisorSpec(
-        dataSource,
-        null,
-        DataSchema.builder(baseSpec.getSpec().getDataSchema())
-                  .withParserMap(parserMap)
-                  .build(),
-        baseSpec.getSpec().getTuningConfig(),
-        baseSpec.getSpec().getIOConfig(),
-        Map.of(),
-        false,
-        null, null, null, null, null, null, null, null, null, null
-    );
-  }
-
   private KinesisSupervisorSpec createKinesisSupervisorSpec(String dataSource, String topic, InputFormat inputFormat)
   {
     return new KinesisSupervisorSpec(
@@ -86,7 +68,7 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
         null,
         DataSchema.builder()
                   .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
                   .withDimensions(DimensionsSpec.EMPTY)
                   .build(),

@@ -46,7 +46,7 @@ the Overlord APIs.
 
 A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
-The reporting feature is supported by [native batch tasks](native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+The reporting feature is supported by [native batch tasks](native-batch.md) and Kafka and Kinesis ingestion tasks.
 
 ### Completion report
 
@@ -244,7 +244,7 @@ The `ingestionState` shows what step of ingestion the task reached. Possible sta
 
 Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as those created by the Kafka Indexing Service do not have a DETERMINE_PARTITIONS phase.
 
-`unparseableEvents` contains lists of exception messages that were caused by unparseable inputs. This can help with identifying problematic input rows. There will be one list each for the DETERMINE_PARTITIONS and BUILD_SEGMENTS phases. Note that the Hadoop batch task does not support saving of unparseable events.
+`unparseableEvents` contains lists of exception messages that were caused by unparseable inputs. This can help with identifying problematic input rows. There will be one list each for the DETERMINE_PARTITIONS and BUILD_SEGMENTS phases.
 
 the `rowStats` map contains information about row counts. There is one entry for each ingestion phase. The definitions of the different row counts are shown below:
 - `processed`: Number of rows successfully ingested without parsing errors
@@ -259,7 +259,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The [native batch task](native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The [native batch task](native-batch.md) and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -388,7 +388,6 @@ Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to u
 Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
 when an overwriting task changes the segment granularity.
 Also, the segment locking is supported by only native indexing tasks and Kafka/Kinesis indexing tasks.
-Hadoop indexing tasks don't support it.
 
 `forceTimeChunkLock` in the task context is only applied to individual tasks.
 If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.md#overlord-operations).
@@ -421,7 +420,7 @@ Each task type has a different default lock priority. The below table shows the 
 |task type|default priority|
 |---------|----------------|
 |Realtime index task|75|
-|Batch index tasks, including [native batch](native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](hadoop.md)|50|
+|Batch index tasks, including [native batch](native-batch.md) and [SQL](../multi-stage-query/index.md)|50|
 |Merge/Append/Compaction task|25|
 |Other tasks|0|
 
@@ -523,10 +522,6 @@ The actual amount of memory assigned to any given task is computed by determinin
 ### `index_parallel`
 
 See [Native batch ingestion (parallel task)](native-batch.md).
-
-### `index_hadoop`
-
-See [Hadoop-based ingestion](hadoop.md).
 
 ### `index_kafka`
 

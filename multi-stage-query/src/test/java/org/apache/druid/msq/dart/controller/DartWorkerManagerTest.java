@@ -62,7 +62,11 @@ public class DartWorkerManagerTest
   public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
-    workerManager = new DartWorkerManager(WORKERS, workerClient);
+    workerManager = new DartWorkerManager(
+        WORKERS,
+        List.of("localhost:1001", "localhost:1002"),
+        workerClient
+    );
   }
 
   @AfterEach
@@ -90,8 +94,8 @@ public class DartWorkerManagerTest
     final Map<Integer, List<WorkerStats>> stats = workerManager.getWorkerStats();
     Assertions.assertEquals(
         ImmutableMap.of(
-            0, Collections.singletonList(new WorkerStats(WORKERS.get(0), TaskState.RUNNING, -1, -1)),
-            1, Collections.singletonList(new WorkerStats(WORKERS.get(1), TaskState.RUNNING, -1, -1))
+            0, Collections.singletonList(new WorkerStats(WORKERS.get(0), "localhost:1001", TaskState.RUNNING, -1, -1)),
+            1, Collections.singletonList(new WorkerStats(WORKERS.get(1), "localhost:1002", TaskState.RUNNING, -1, -1))
         ),
         stats
     );

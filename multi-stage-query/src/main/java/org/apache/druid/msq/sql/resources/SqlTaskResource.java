@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.QueryResponse;
@@ -81,20 +81,20 @@ public class SqlTaskResource
   private static final Logger log = new Logger(SqlTaskResource.class);
 
   private final SqlStatementFactory sqlStatementFactory;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final ObjectMapper jsonMapper;
   private final ServerConfig serverConfig;
 
   @Inject
   public SqlTaskResource(
       final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final ObjectMapper jsonMapper,
       final ServerConfig serverConfig
   )
   {
     this.sqlStatementFactory = sqlStatementFactory;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.jsonMapper = jsonMapper;
     this.serverConfig = serverConfig;
   }
@@ -131,7 +131,7 @@ public class SqlTaskResource
     final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
     try {
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig.getContext());
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {

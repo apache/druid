@@ -366,7 +366,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
