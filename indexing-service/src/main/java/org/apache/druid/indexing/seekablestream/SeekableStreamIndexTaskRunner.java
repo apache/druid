@@ -791,7 +791,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 sequences
             );
 
-            if (ioConfig.isSupervised()) {
+            if (ioConfig.isUseTransaction()) {
               // Normal checkpoint with supervisor coordination
               requestPause();
               final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
@@ -810,9 +810,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 throw new ISE("Checkpoint request with sequences [%s] failed, dying", currOffsets);
               }
             } else {
-              // Unsupervised task: skip supervisor coordination but still create a new sequence to respect maxRowsPerSegment
+              // useTransaction=false: skip supervisor coordination but still create a new sequence to respect maxRowsPerSegment
               log.info(
-                  "Task is unsupervised - skipping checkpoint coordination for sequence [%s], but finalizing sequence to respect segment size limits. Current offsets: [%s]",
+                  "useTransaction=false - skipping checkpoint coordination for sequence [%s], but finalizing sequence to respect segment size limits. Current offsets: [%s]",
                   sequenceToCheckpoint.getSequenceName(),
                   currOffsets
               );

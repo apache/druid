@@ -4781,7 +4781,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Submits a backfill task to process skipped offsets between startOffsets and endOffsets.
-   * The backfill task will use supervisorId = datasource + "_backfill" and supervised = false
+   * The backfill task will use supervisorId = datasource + "_backfill" and useTransaction = false
    * to avoid interference with the main supervisor.
    *
    * Default implementation does nothing. Subclasses should override to implement backfill logic.

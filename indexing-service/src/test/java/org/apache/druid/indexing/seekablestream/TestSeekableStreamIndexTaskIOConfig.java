@@ -38,8 +38,7 @@ public class TestSeekableStreamIndexTaskIOConfig extends SeekableStreamIndexTask
         DateTimes.nowUtc().minusDays(2),
         DateTimes.nowUtc(),
         new CsvInputFormat(null, null, true, null, 0, null),
-        Duration.standardHours(2).getStandardMinutes(),
-        true
+        Duration.standardHours(2).getStandardMinutes()
     );
   }
 }

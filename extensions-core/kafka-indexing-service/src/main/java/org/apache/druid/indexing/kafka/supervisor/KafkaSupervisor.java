@@ -229,8 +229,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
         kafkaIoConfig.isMultiTopic(),
-        ioConfig.getTaskDuration().getStandardMinutes(),
-        true
+        ioConfig.getTaskDuration().getStandardMinutes()
     );
   }
 
@@ -345,8 +344,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
             kafkaIoConfig.getInputFormat(),
             kafkaIoConfig.getConfigOverrides(),
             kafkaIoConfig.isMultiTopic(),
-            null, // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
-            false // supervised = false
+            null // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
         );
 
         // Create backfill task with different supervisorId
