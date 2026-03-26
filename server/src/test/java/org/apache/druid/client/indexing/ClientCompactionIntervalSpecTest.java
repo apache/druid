@@ -136,7 +136,7 @@ public class ClientCompactionIntervalSpecTest
     ObjectMapper mapper = new DefaultObjectMapper();
     Interval interval = Intervals.of("2015-04-11/2015-04-12");
 
-    // Test without uncompactedSegments (full compaction)
+    // Test without segments (full compaction)
     ClientCompactionIntervalSpec withoutSegments = new ClientCompactionIntervalSpec(interval, null);
     String json2 = mapper.writeValueAsString(withoutSegments);
     ClientCompactionIntervalSpec deserialized2 = mapper.readValue(json2, ClientCompactionIntervalSpec.class);
@@ -152,12 +152,12 @@ public class ClientCompactionIntervalSpecTest
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
     );
 
-    // Test with uncompactedSegments (minor compaction)
+    // Test with segments (minor compaction)
     ClientCompactionInputSpec withSegments = new ClientMinorCompactionInputSpec(interval, segments);
     String json1 = mapper.writeValueAsString(withSegments);
     ClientCompactionInputSpec deserialized1 = mapper.readValue(json1, ClientCompactionIntervalSpec.class);
     Assert.assertTrue(deserialized1 instanceof ClientMinorCompactionInputSpec);
     Assert.assertEquals(withSegments, deserialized1);
-    Assert.assertEquals(segments, ((ClientMinorCompactionInputSpec) deserialized1).getUncompactedSegments());
+    Assert.assertEquals(segments, ((ClientMinorCompactionInputSpec) deserialized1).getSegments());
   }
 }

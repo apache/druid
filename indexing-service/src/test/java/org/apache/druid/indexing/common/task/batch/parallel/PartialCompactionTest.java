@@ -31,7 +31,8 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
-import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
+import org.apache.druid.indexing.common.task.MinorCompactionInputSpec;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
@@ -50,8 +51,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTest
 {
@@ -73,7 +77,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   public PartialCompactionTest()
   {
-    super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(LockGranularity.TIME_CHUNK, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
   @Before
@@ -137,8 +141,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
@@ -197,8 +207,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       );
     }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
-        .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
 
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
@@ -209,6 +225,138 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
       for (DataSegment segment : segmentsInInterval) {
         Assert.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
+      }
+    }
+  }
+
+  @Test
+  public void testMinorCompactionUpgradesNonCompactedSegments()
+  {
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = runTestTask(
+        new HashedPartitionsSpec(null, 4, null),
+        TaskState.SUCCESS,
+        false
+    );
+    verifySchema(dataSegmentsWithSchemas);
+    final Map<Interval, List<DataSegment>> hashPartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+    hashPartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
+
+    final List<DataSegment> segmentsToCompact = new ArrayList<>();
+    for (List<DataSegment> segmentsInInterval : hashPartitionedSegments.values()) {
+      segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.min(2, segmentsInInterval.size())));
+    }
+    final Set<DataSegment> originalSegments = dataSegmentsWithSchemas.getSegments();
+    final Set<String> compactedSegmentIds = segmentsToCompact.stream()
+                                                             .map(segment -> segment.getId().toString())
+                                                             .collect(Collectors.toSet());
+    final Set<String> nonCompactedSegmentIds =
+        originalSegments.stream()
+                        .map(segment -> segment.getId().toString())
+                        .filter(segmentId -> !compactedSegmentIds.contains(segmentId))
+                        .collect(Collectors.toSet());
+    Assert.assertFalse(nonCompactedSegmentIds.isEmpty());
+    final Set<String> originalSegmentIds = new HashSet<>(compactedSegmentIds);
+    originalSegmentIds.addAll(nonCompactedSegmentIds);
+
+    final CompactionTask compactionTask = newCompactionTaskBuilder()
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
+        .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
+    verifySchema(dataSegmentsWithSchemas);
+
+    // Check published segment set after compaction
+    final Set<DataSegment> publishedAfterCompaction = dataSegmentsWithSchemas.getSegments();
+    Assert.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
+
+    final Set<String> finalSegmentIds = publishedAfterCompaction.stream()
+                                                                .map(segment -> segment.getId().toString())
+                                                                .collect(Collectors.toSet());
+
+    final Map<String, String> upgradedFromSegmentIdMap =
+        getStorageCoordinator().retrieveUpgradedFromSegmentIds(DATASOURCE, finalSegmentIds);
+    Assert.assertFalse(upgradedFromSegmentIdMap.isEmpty());
+    Assert.assertTrue(upgradedFromSegmentIdMap.values().stream().noneMatch(compactedSegmentIds::contains));
+    Assert.assertTrue(originalSegmentIds.containsAll(upgradedFromSegmentIdMap.values()));
+    for (final String successorSegmentId : upgradedFromSegmentIdMap.keySet()) {
+      Assert.assertTrue(finalSegmentIds.contains(successorSegmentId));
+    }
+
+    // Validate new segment ids (replacements and/or upgraded replicas)
+    final Set<String> newPublishedSegmentIds = new HashSet<>(finalSegmentIds);
+    newPublishedSegmentIds.removeAll(originalSegmentIds);
+    Assert.assertFalse(newPublishedSegmentIds.isEmpty());
+    Assert.assertTrue(
+        newPublishedSegmentIds.stream().anyMatch(id -> !upgradedFromSegmentIdMap.containsKey(id))
+    );
+
+    // Index newly published ids by day for compacted-source checks below.
+    final Map<Interval, Set<String>> newSegmentIdsByInterval =
+        publishedAfterCompaction.stream()
+                                .filter(segment -> !segment.isTombstone()
+                                               && newPublishedSegmentIds.contains(segment.getId().toString())
+                                )
+                                .collect(Collectors.groupingBy(
+                                    DataSegment::getInterval,
+                                    Collectors.mapping(
+                                        segment -> segment.getId().toString(),
+                                        Collectors.toCollection(HashSet::new)
+                                    )
+                                ));
+
+    // Verify non-compacted segments are being replaced
+    for (final String parentSegmentId : nonCompactedSegmentIds) {
+      final List<String> successorSegmentIds = upgradedFromSegmentIdMap.entrySet()
+                                                                       .stream()
+                                                                       .filter(e -> parentSegmentId.equals(e.getValue()))
+                                                                       .map(Map.Entry::getKey)
+                                                                       .toList();
+      if (finalSegmentIds.contains(parentSegmentId)) {
+        Assert.assertTrue(successorSegmentIds.isEmpty());
+      } else if (!successorSegmentIds.isEmpty()) {
+        Assert.assertEquals(1, successorSegmentIds.size());
+        Assert.assertTrue(finalSegmentIds.contains(successorSegmentIds.get(0)));
+      }
+    }
+
+    // Verify compacted segments have new published ID
+    for (final DataSegment compactedSource : segmentsToCompact) {
+      final String compactedSourceId = compactedSource.getId().toString();
+      Assert.assertFalse(finalSegmentIds.contains(compactedSourceId));
+      final Set<String> newIdsInSameInterval = newSegmentIdsByInterval.getOrDefault(compactedSource.getInterval(), Set.of());
+      Assert.assertFalse(newIdsInSameInterval.isEmpty());
+    }
+
+    // non-compacted parents removed from published set match retrieveUpgradedToSegmentIds
+    final Set<String> removedNonCompactedParentIds =
+        nonCompactedSegmentIds.stream().filter(id -> !finalSegmentIds.contains(id)).collect(Collectors.toSet());
+    if (!removedNonCompactedParentIds.isEmpty()) {
+      final Map<String, Set<String>> upgradedToSegmentIdsByParent =
+          getStorageCoordinator().retrieveUpgradedToSegmentIds(DATASOURCE, removedNonCompactedParentIds);
+      for (final String parentSegmentId : removedNonCompactedParentIds) {
+        final Set<String> expectedSuccessorIds = upgradedFromSegmentIdMap.entrySet()
+                                                                         .stream()
+                                                                         .filter(e -> parentSegmentId.equals(e.getValue()))
+                                                                         .map(Map.Entry::getKey)
+                                                                         .collect(Collectors.toSet());
+        if (expectedSuccessorIds.isEmpty()) {
+          continue;
+        }
+        final Set<String> coordinatorSuccessorIds =
+            new HashSet<>(upgradedToSegmentIdsByParent.getOrDefault(parentSegmentId, Set.of()));
+        coordinatorSuccessorIds.remove(parentSegmentId);
+        Assert.assertTrue(coordinatorSuccessorIds.containsAll(expectedSuccessorIds));
       }
     }
   }
