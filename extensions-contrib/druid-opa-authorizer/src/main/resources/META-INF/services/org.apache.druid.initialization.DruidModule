@@ -1,1 +1,1 @@
-tech.stackable.druid.opaauthorizer.OpaDruidModule
+org.apache.druid.security.opa.OpaDruidModule

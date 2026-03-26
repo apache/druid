@@ -1,5 +1,8 @@
 {
     "user_roles": {
+        "admin": [
+            "admin"
+        ],
         "alice": [
             "admin"
         ],

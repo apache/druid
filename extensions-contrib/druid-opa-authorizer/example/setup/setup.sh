@@ -3,7 +3,7 @@
 coordinator_ip=localhost
 coordinator_port=8081
 protocol=http
-authenticator_name=MyBasicMetadataAuthenticator
+authenticator_name=basicAuthenticator
 
 create_user() {
     local user=$1
