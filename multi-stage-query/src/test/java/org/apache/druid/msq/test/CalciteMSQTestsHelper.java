@@ -32,6 +32,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.initialization.DruidModule;
@@ -90,6 +91,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public SegmentCacheManager provideSegmentCacheManager(ObjectMapper testMapper, TempDirProducer tempDirProducer)
     {
       return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
@@ -97,6 +99,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public LocalDataSegmentPusherConfig provideLocalDataSegmentPusherConfig(TempDirProducer tempDirProducer)
     {
       LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
@@ -105,12 +108,14 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public TestSegmentManager provideTestSegmentManager()
     {
       return new TestSegmentManager();
     }
 
     @Provides
+    @LazySingleton
     public DataSegmentPusher provideDataSegmentPusher(
         LocalDataSegmentPusherConfig config,
         TestSegmentManager testSegmentManager
@@ -120,12 +125,14 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public DataSegmentAnnouncer provideDataSegmentAnnouncer()
     {
       return new NoopDataSegmentAnnouncer();
     }
 
     @Provides
+    @LazySingleton
     public SegmentManager provideSegmentManager(
         TestSegmentManager testSegmentManager,
         SpecificSegmentsQuerySegmentWalker walker
@@ -143,6 +150,7 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
+    @LazySingleton
     public DataServerQueryHandlerFactory provideDataServerQueryHandlerFactory()
     {
       return getTestDataServerQueryHandlerFactory();

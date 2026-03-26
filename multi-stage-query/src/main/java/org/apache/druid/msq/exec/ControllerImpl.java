@@ -766,8 +766,9 @@ public class ControllerImpl implements Controller
     }
 
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
+    // When maxParseExceptions == 0, workers post CannotParseExternalDataFault directly via criticalWarningCodes.
     this.faultsExceededChecker = new FaultsExceededChecker(
-        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
+        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions == 0 ? -1 : maxParseExceptions)
     );
 
     stageToStatsMergingMode = new HashMap<>();
