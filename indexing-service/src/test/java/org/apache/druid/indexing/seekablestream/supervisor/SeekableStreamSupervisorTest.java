@@ -20,32 +20,28 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
 
-public class SeekableStreamSupervisorTest
+public class SeekableStreamSupervisorTest extends SeekableStreamSupervisorTestBase
 {
   @Test
   public void testCalculateBackfillRange_withAllOffsetsPresent()
   {
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
 
-    Map<String, Long> startOffsets = ImmutableMap.of(
-        "partition0", 100L,
-        "partition1", 200L,
-        "partition2", 300L
+    Map<String, String> startOffsets = ImmutableMap.of(
+        "0", "100",
+        "1", "200",
+        "2", "300"
     );
 
-    Map<String, Long> endOffsets = ImmutableMap.of(
-        "partition0", 150L,
-        "partition1", 250L,
-        "partition2", 350L
+    Map<String, String> endOffsets = ImmutableMap.of(
+        "0", "150",
+        "1", "250",
+        "2", "350"
     );
 
     Map<String, Object> result = supervisor.calculateBackfillRange(startOffsets, endOffsets);
@@ -68,17 +64,16 @@ public class SeekableStreamSupervisorTest
   @Test
   public void testCalculateBackfillRange_withMissingStartOffsets()
   {
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
 
-    // Only partition0 has a checkpoint
-    Map<String, Long> startOffsets = ImmutableMap.of(
-        "partition0", 100L
+    Map<String, String> startOffsets = ImmutableMap.of(
+        "0", "100"
     );
 
-    Map<String, Long> endOffsets = ImmutableMap.of(
-        "partition0", 150L,
-        "partition1", 250L,
-        "partition2", 350L
+    Map<String, String> endOffsets = ImmutableMap.of(
+        "0", "150",
+        "1", "250",
+        "2", "350"
     );
 
     Map<String, Object> result = supervisor.calculateBackfillRange(startOffsets, endOffsets);
@@ -106,105 +101,22 @@ public class SeekableStreamSupervisorTest
   @Test
   public void testCalculateBackfillRange_withNullStartOffsets()
   {
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
 
-    Map<String, Long> endOffsets = ImmutableMap.of(
-        "partition0", 150L,
-        "partition1", 250L,
-        "partition2", 350L
+    Map<String, String> endOffsets = ImmutableMap.of(
+        "0", "150",
+        "1", "250",
+        "2", "350"
     );
 
     Map<String, Object> result = supervisor.calculateBackfillRange(null, endOffsets);
 
     Assert.assertEquals(3, result.size());
-    for (Map.Entry<String, Long> entry : endOffsets.entrySet()) {
+    for (Map.Entry<String, String> entry : endOffsets.entrySet()) {
       Map<?, ?> partitionResult = (Map<?, ?>) result.get(entry.getKey());
       Assert.assertEquals("none", partitionResult.get("start"));
       Assert.assertEquals(entry.getValue(), partitionResult.get("end"));
       Assert.assertEquals("No committed offset found for this partition", partitionResult.get("note"));
-    }
-  }
-
-  /**
-   * Minimal test implementation of SeekableStreamSupervisor to test calculateBackfillRange
-   */
-  private static class TestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, Long, Object>
-  {
-    public TestSeekableStreamSupervisor()
-    {
-      super(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          false
-      );
-    }
-
-    @Override
-    protected int getTaskGroupIdForPartition(String partition)
-    {
-      return 0;
-    }
-
-    @Override
-    protected boolean checkSourceMetadataMatch(DataSourceMetadata metadata)
-    {
-      return false;
-    }
-
-    @Override
-    protected boolean doesTaskTypeMatchSupervisor(Task task)
-    {
-      return false;
-    }
-
-    @Override
-    protected SeekableStreamDataSourceMetadata<String, Long> createDataSourceMetaDataForReset(
-        String stream,
-        Map<String, Long> map
-    )
-    {
-      return null;
-    }
-
-    @Override
-    protected OrderedSequenceNumber<Long> makeSequenceNumber(Long seq, boolean isExclusive)
-    {
-      return null;
-    }
-
-    @Override
-    protected Long getNotSetMarker()
-    {
-      return null;
-    }
-
-    @Override
-    protected Long getEndOfPartitionMarker()
-    {
-      return null;
-    }
-
-    @Override
-    protected boolean isEndOfShard(Long seqNum)
-    {
-      return false;
-    }
-
-    @Override
-    protected boolean isShardExpirationMarker(Long seqNum)
-    {
-      return false;
-    }
-
-    @Override
-    protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
-    {
-      return false;
     }
   }
 }
