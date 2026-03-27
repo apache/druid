@@ -678,8 +678,8 @@ function getRuleTypeName(rule: ReindexingRule): string {
   const typeMap: Record<string, string> = {
     deletion: 'Deletion Rules',
     dataSchema: 'Data Schema Rules',
-    segmentGranularity: 'Segment Granularity Rules',
-    tuningConfig: 'Tuning Config Rules',
+    partitioning: 'Partitioning Rules',
+    indexSpec: 'Index Spec Rules',
   };
 
   return typeMap[rule.type] || 'Other Rules';

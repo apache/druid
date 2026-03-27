@@ -83,8 +83,8 @@ const mockTimelineData = {
       },
       appliedRules: [
         { type: 'dataSchema', id: 'schema-1' },
-        { type: 'segmentGranularity', id: 'gran-1' },
-        { type: 'tuningConfig', id: 'tuning-1' },
+        { type: 'partitioning', id: 'part-1' },
+        { type: 'indexSpec', id: 'idx-1' },
       ],
     },
     {
