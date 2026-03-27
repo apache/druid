@@ -133,6 +133,16 @@ public class MockQueryDefinitionBuilder
       int maxWorkers
   )
   {
+    return defineStage(stageNumber, shuffleKind, maxWorkers, MAX_NUM_PARTITIONS);
+  }
+
+  public MockQueryDefinitionBuilder defineStage(
+      int stageNumber,
+      @Nullable ShuffleKind shuffleKind,
+      int maxWorkers,
+      int maxPartitions
+  )
+  {
     Preconditions.checkArgument(
         stageNumber < numStages,
         "stageNumber should be between 0 and total stages - 1"
@@ -155,7 +165,7 @@ public class MockQueryDefinitionBuilder
                   ),
                   0
               ),
-              MAX_NUM_PARTITIONS,
+              maxPartitions,
               false,
               ShuffleSpec.UNLIMITED
           );
