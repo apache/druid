@@ -2326,7 +2326,7 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
-      final DateTime queryFailDeadline = getQueryDeadline(querySpec.getContext());
+      final DateTime queryFailDeadline = getQueryDeadline();
 
       // The timeout could have already elapsed while waiting for the controller to start, check it now.
       checkTimeout(queryFailDeadline);
@@ -2358,17 +2358,21 @@ public class ControllerImpl implements Controller
     }
 
     /**
-     * Retrieves the timeout and start time from the query context and calculates the timeout deadline.
+     * Retrieves the timeout and start time from the query context and reads or calculates the deadline.
      */
-    private DateTime getQueryDeadline(QueryContext queryContext)
+    private DateTime getQueryDeadline()
     {
-      // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
-      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
-      // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
-      if (timeout == QueryContexts.NO_TIMEOUT) {
-        return DateTimes.MAX;
+      DateTime deadline = MultiStageQueryContext.getQueryDeadline(querySpec.getContext());
+
+      if (deadline == null) {
+        // Newer Brokers set the deadline, but older ones might not. Fall back to startTime and timeout in this case.
+        final long timeout = querySpec.getContext().getTimeout(QueryContexts.NO_TIMEOUT);
+        if (timeout != QueryContexts.NO_TIMEOUT) {
+          deadline = MultiStageQueryContext.getStartTime(querySpec.getContext()).plus(timeout);
+        }
       }
-      return MultiStageQueryContext.getStartTime(queryContext).plus(timeout);
+
+      return deadline != null ? deadline : DateTimes.MAX;
     }
 
     /**

@@ -35,8 +35,6 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -62,7 +60,6 @@ import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
@@ -154,13 +151,20 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
     ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
 
-    final LegacyMSQSpec querySpec = makeLegacyMSQSpec(
+    final LegacyMSQSpec baseSpec = buildLegacyMSQSpec(
         targetDataSource,
         druidQuery,
-        druidQuery.getQuery().context(),
         columnMappings,
         plannerContext,
         terminalStageSpecFactory
+    );
+
+    final LegacyMSQSpec querySpec = baseSpec.withOverriddenContext(
+        buildTaskOverrides(
+            druidQuery.getQuery(),
+            plannerContext,
+            baseSpec.getDestination()
+        )
     );
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
@@ -178,11 +182,14 @@ public class MSQTaskQueryMaker implements QueryMaker
     return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
-  public static LegacyMSQSpec makeLegacyMSQSpec(
+  /**
+   * Creates a {@link LegacyMSQSpec} based on a {@link Query}. Common context from
+   * {@link MultiStageQueryContext#withCommonContext(QueryContext)} is added to the {@link Query}.
+   */
+  public static LegacyMSQSpec buildLegacyMSQSpec(
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
-      final QueryContext queryContext,
-      ColumnMappings columnMappings,
+      final ColumnMappings columnMappings,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
@@ -194,19 +201,23 @@ public class MSQTaskQueryMaker implements QueryMaker
         terminalStageSpecFactory
     );
 
-    final Map<String, Object> nativeQueryContextOverrides = buildOverrideContext(druidQuery.getQuery(), plannerContext, destination);
+    final QueryContext finalContext = MultiStageQueryContext.withCommonContext(plannerContext.queryContext());
 
     final LegacyMSQSpec querySpec =
         LegacyMSQSpec.builder()
-               .query(druidQuery.getQuery())
-               .queryContext(queryContext.override(nativeQueryContextOverrides))
+               .query(druidQuery.getQuery().withOverriddenContext(finalContext.asMap()))
+               .queryContext(finalContext)
                .columnMappings(columnMappings)
                .destination(destination)
-               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
+               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(finalContext))
                .tuningConfig(makeMSQTuningConfig(plannerContext))
                .build();
 
-    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(
+        querySpec.getContext(),
+        querySpec.getDestination(),
+        druidQuery.getQuery()
+    );
 
     return querySpec;
   }
@@ -255,50 +266,43 @@ public class MSQTaskQueryMaker implements QueryMaker
     return destination;
   }
 
-  private static Map<String, Object> buildOverrideContext(
+  /**
+   * Builds task-specific context overrides that are not shared with other MSQ engines like Dart.
+   *
+   * @param query query being run
+   * @param plannerContext SQL planner context
+   * @param destination query destination
+   */
+  private static Map<String, Object> buildTaskOverrides(
       final Query<?> query,
       final PlannerContext plannerContext,
-      final MSQDestination destination)
+      final MSQDestination destination
+  )
   {
     final QueryContext sqlQueryContext = plannerContext.queryContext();
-    final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
+    final Map<String, Object> overrides = new HashMap<>();
 
-    // Add appropriate finalization to native query context.
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
-    nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);
-
-    // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
-    nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
-    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
-    if (isReindex) {
-      nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination)) {
+      overrides.put(MultiStageQueryContext.CTX_IS_REINDEX, true);
     }
-    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
-    // adding user
-    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+    overrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
 
     final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
+      MSQMode.populateDefaultQueryContext(msqMode, overrides);
     }
 
-    // Use the latest row-based frame type. The default is an older type, to ensure compatibility during rolling
-    // updates. Since the Broker is updated last, it's safe to set this property on the Broker.
-    nativeQueryContextOverrides.putIfAbsent(
-        MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE,
-        (int) FrameType.latestRowBased().version()
-    );
-
-    // Add the start time.
-    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc().toString());
-
-    return nativeQueryContextOverrides;
+    return overrides;
   }
 
-  public static QueryDefMSQSpec makeQueryDefMSQSpec(
-      @Nullable final IngestDestination targetDataSource,
-      final QueryContext queryContext,
+  /**
+   * Creates a {@link QueryDefMSQSpec} based on already-planned {@link QueryDefinition}. Common context
+   * from {@link MultiStageQueryContext#withCommonContext(QueryContext)} is added to the {@link QueryDefinition}.
+   *
+   * Currently only supports SELECT queries, no DML (INSERT/REPLACE).
+   */
+  public static QueryDefMSQSpec buildQueryDefMSQSpec(
       final ColumnMappings columnMappings,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory,
@@ -306,21 +310,20 @@ public class MSQTaskQueryMaker implements QueryMaker
   )
   {
     final MSQDestination destination = buildMSQDestination(
-        targetDataSource,
+        null, // targetDataSource
         columnMappings,
         plannerContext,
         terminalStageSpecFactory
     );
 
-    final QueryDefMSQSpec querySpec = new QueryDefMSQSpec.Builder()
+    final QueryContext finalContext = MultiStageQueryContext.withCommonContext(plannerContext.queryContext());
+    return new QueryDefMSQSpec.Builder()
         .columnMappings(columnMappings)
         .destination(destination)
-        .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
+        .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(finalContext))
         .tuningConfig(makeMSQTuningConfig(plannerContext))
-        .queryDef(queryDef.withOverriddenContext(buildOverrideContext(null, plannerContext, destination)))
+        .queryDef(queryDef.withOverriddenContext(finalContext.asMap()))
         .build();
-
-    return querySpec;
   }
 
   /**

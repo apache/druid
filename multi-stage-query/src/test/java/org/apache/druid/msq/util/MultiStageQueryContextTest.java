@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.msq.exec.Limits;
@@ -36,6 +37,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -466,6 +468,43 @@ public class MultiStageQueryContextTest
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_THREADS, 4);
     Assert.assertEquals(Integer.valueOf(4), MultiStageQueryContext.getMaxThreads(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void withCommonContext_noTimeout_setsStartTimeOnly()
+  {
+    final QueryContext context = MultiStageQueryContext.withCommonContext(QueryContext.empty());
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));
+    Assert.assertFalse(context.containsKey(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+    Assert.assertEquals(true, context.get(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, context.get(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION));
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE));
+  }
+
+  @Test
+  public void withCommonContext_withTimeout_setsDeadline()
+  {
+    final long timeoutMs = 60_000;
+    final QueryContext context = MultiStageQueryContext.withCommonContext(
+        QueryContext.of(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeoutMs))
+    );
+
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+
+    final DateTime startTime = DateTimes.of((String) context.get(MultiStageQueryContext.CTX_START_TIME));
+    final DateTime deadline = DateTimes.of((String) context.get(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+    Assert.assertEquals(timeoutMs, deadline.getMillis() - startTime.getMillis());
+  }
+
+  @Test
+  public void withCommonContext_mergesUserContext()
+  {
+    final QueryContext context = MultiStageQueryContext.withCommonContext(
+        QueryContext.of(ImmutableMap.of("customKey", "customValue"))
+    );
+
+    Assert.assertEquals("customValue", context.get("customKey"));
   }
 
   private static List<String> decodeSortOrder(@Nullable final String input)
