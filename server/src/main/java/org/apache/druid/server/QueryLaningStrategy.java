@@ -28,6 +28,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryLaningStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.WeightedQueryLaningStrategy;
 
 import java.util.Optional;
 import java.util.Set;
@@ -37,7 +38,8 @@ import java.util.Set;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoQueryLaningStrategy.class),
     @JsonSubTypes.Type(name = "hilo", value = HiLoQueryLaningStrategy.class),
-    @JsonSubTypes.Type(name = "manual", value = ManualQueryLaningStrategy.class)
+    @JsonSubTypes.Type(name = "manual", value = ManualQueryLaningStrategy.class),
+    @JsonSubTypes.Type(name = "weighted", value = WeightedQueryLaningStrategy.class)
 })
 public interface QueryLaningStrategy
 {
