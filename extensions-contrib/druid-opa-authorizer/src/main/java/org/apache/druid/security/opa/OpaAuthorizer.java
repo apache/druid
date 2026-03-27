@@ -53,6 +53,15 @@ public class OpaAuthorizer implements Authorizer
       @JsonProperty("opaUri") String opaUri
   )
   {
+    this(name, opaUri, HttpClient.newHttpClient());
+  }
+
+  public OpaAuthorizer(
+      String name,
+      String opaUri,
+      HttpClient httpClient
+  )
+  {
     try {
       this.opaUri = new URI(opaUri);
     }
@@ -66,7 +75,9 @@ public class OpaAuthorizer implements Authorizer
             // We could add all the fields we *currently* know, but it's more future-proof to ignore
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    this.httpClient = HttpClient.newHttpClient();
+    this.httpClient = httpClient;
+    // name is required for @JsonCreator but unused in this implementation
+    LOG.debug("OpaAuthorizer [%s] created", name);
   }
 
   @Override
@@ -94,7 +105,7 @@ public class OpaAuthorizer implements Authorizer
       msgJson = objectMapper.writeValueAsString(msg);
     }
     catch (JsonProcessingException e) {
-      return new Access(false, "Failed to create the OPA request JSON: " + e);
+      return Access.deny("Failed to create the OPA request JSON: " + e);
     }
 
     LOG.trace("Executing post to OPA.");
@@ -114,12 +125,12 @@ public class OpaAuthorizer implements Authorizer
       if (opaResponse.isResult()) {
         return Access.OK;
       } else {
-        return new Access(false, "Access denied.");
+        return Access.deny("Access denied.");
       }
 
     }
     catch (Exception e) {
-      return new Access(false, "An error occurred: " + e);
+      return Access.deny("An error occurred: " + e);
     }
   }
 }
