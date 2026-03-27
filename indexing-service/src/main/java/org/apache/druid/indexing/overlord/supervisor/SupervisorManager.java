@@ -410,7 +410,7 @@ public class SupervisorManager implements SupervisorStatsProvider
    * @param id supervisor ID
    * @return Map containing supervisorId and skipped offset ranges
    * @throws IllegalArgumentException if supervisor doesn't exist or if useEarliestOffset is true
-   * @throws IllegalStateException if supervisor is not running
+   * @throws IllegalStateException if supervisor is not running or if either checkpointed or latest offsets is empty
    */
   public Map<String, Object> resetSupervisorAndBackfill(String id)
   {
