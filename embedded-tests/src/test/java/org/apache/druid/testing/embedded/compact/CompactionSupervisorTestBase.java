@@ -23,20 +23,14 @@ import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
-import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
-import org.apache.druid.segment.metadata.IndexingStateCache;
-import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -50,7 +44,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 
-import java.util.List;
 import java.util.Map;
 
 /**
