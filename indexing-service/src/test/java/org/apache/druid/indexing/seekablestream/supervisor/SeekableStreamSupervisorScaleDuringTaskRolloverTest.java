@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.query.DruidMetrics;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -161,6 +162,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(EasyMock.eq(DruidMetrics.TAGS))).andReturn(null).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
   }
 

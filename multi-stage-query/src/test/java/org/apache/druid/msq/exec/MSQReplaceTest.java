@@ -56,13 +56,16 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -328,7 +331,7 @@ public class MSQReplaceTest extends MSQTestBase
                              SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
                          )
                      )
-                     .setExpectedShardSpec(NumberedShardSpec.class)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{946684800000L, "", 1.0f},
@@ -347,7 +350,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
                              context,
-                             Collections.emptyList(),
+                             List.of("v0"),
                              DimensionsSpec.builder()
                                            .setDimensions(
                                                ImmutableList.of(
@@ -357,13 +360,24 @@ public class MSQReplaceTest extends MSQTestBase
                                            )
                                            .setDimensionExclusions(Collections.singletonList("__time"))
                                            .build(),
+                             new CompactionTransformSpec(
+                                 null,
+                                 VirtualColumns.create(
+                                     new ExpressionVirtualColumn(
+                                         "v0",
+                                         "lower(\"dim1\")",
+                                         ColumnType.STRING,
+                                         TestExprMacroTable.INSTANCE
+                                     )
+                                 )
+                             ),
                              GranularityType.ALL,
                              Intervals.ETERNITY
                          )
                      )
                      .verifyResults();
   }
-
+  
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByExpression(String contextName, Map<String, Object> context)
@@ -2817,10 +2831,30 @@ public class MSQReplaceTest extends MSQTestBase
     return expectedCompactionState(
         context,
         partitionDimensions,
+        dimensions,
+        null,
+        segmentGranularity,
+        interval
+    );
+  }
+
+  private CompactionState expectedCompactionState(
+      Map<String, Object> context,
+      List<String> partitionDimensions,
+      List<DimensionSchema> dimensions,
+      CompactionTransformSpec transformSpec,
+      GranularityType segmentGranularity,
+      Interval interval
+  )
+  {
+    return expectedCompactionState(
+        context,
+        partitionDimensions,
         DimensionsSpec.builder()
                       .setDimensions(dimensions)
                       .setDimensionExclusions(Collections.singletonList("__time"))
                       .build(),
+        transformSpec,
         segmentGranularity,
         interval
     );
@@ -2830,6 +2864,25 @@ public class MSQReplaceTest extends MSQTestBase
       Map<String, Object> context,
       List<String> partitionDimensions,
       DimensionsSpec dimensionsSpec,
+      GranularityType segmentGranularity,
+      Interval interval
+  )
+  {
+    return expectedCompactionState(
+        context,
+        partitionDimensions,
+        dimensionsSpec,
+        null,
+        segmentGranularity,
+        interval
+    );
+  }
+
+  private CompactionState expectedCompactionState(
+      Map<String, Object> context,
+      List<String> partitionDimensions,
+      DimensionsSpec dimensionsSpec,
+      CompactionTransformSpec transformSpec,
       GranularityType segmentGranularity,
       Interval interval
   )
@@ -2866,7 +2919,7 @@ public class MSQReplaceTest extends MSQTestBase
         partitionsSpec,
         dimensionsSpec,
         metricsSpec,
-        null,
+        transformSpec,
         indexSpec,
         granularitySpec,
         null

@@ -428,8 +428,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     replayAll();
 
     int taskCountInit = supervisor.getIoConfig().getTaskCount();
-    // when enable autoScaler the init taskCount will be equal to taskCountMin
-    Assert.assertEquals(1, taskCountInit);
+    Assert.assertEquals(2, taskCountInit);
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();

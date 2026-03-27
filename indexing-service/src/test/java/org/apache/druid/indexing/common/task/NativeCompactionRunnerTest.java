@@ -19,17 +19,16 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -47,24 +46,22 @@ public class NativeCompactionRunnerTest
   public void testVirtualColumnsInTransformSpecAreNotSupported()
   {
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "extractedField",
-                "json_value(metadata, '$.category')",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "extractedField",
+            "json_value(metadata, '$.category')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, virtualColumns);
 
     CompactionTask compactionTask = createCompactionTask(transformSpec);
-    Map<Interval, DataSchema> intervalDataschemas = Collections.emptyMap();
+    Map<QuerySegmentSpec, DataSchema> inputSchemas = Collections.emptyMap();
 
     CompactionConfigValidationResult validationResult = NATIVE_COMPACTION_RUNNER.validateCompactionTask(
         compactionTask,
-        intervalDataschemas
+        inputSchemas
     );
 
     Assert.assertFalse(validationResult.isValid());
@@ -78,11 +75,11 @@ public class NativeCompactionRunnerTest
   public void testNoVirtualColumnsIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(null);
-    Map<Interval, DataSchema> intervalDataschemas = Collections.emptyMap();
+    Map<QuerySegmentSpec, DataSchema> inputSchemas = Collections.emptyMap();
 
     CompactionConfigValidationResult validationResult = NATIVE_COMPACTION_RUNNER.validateCompactionTask(
         compactionTask,
-        intervalDataschemas
+        inputSchemas
     );
 
     Assert.assertTrue(validationResult.isValid());
@@ -94,11 +91,11 @@ public class NativeCompactionRunnerTest
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, VirtualColumns.EMPTY);
 
     CompactionTask compactionTask = createCompactionTask(transformSpec);
-    Map<Interval, DataSchema> intervalDataschemas = Collections.emptyMap();
+    Map<QuerySegmentSpec, DataSchema> inputSchemas = Collections.emptyMap();
 
     CompactionConfigValidationResult validationResult = NATIVE_COMPACTION_RUNNER.validateCompactionTask(
         compactionTask,
-        intervalDataschemas
+        inputSchemas
     );
 
     Assert.assertTrue(validationResult.isValid());

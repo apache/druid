@@ -21,11 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-
-import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Policy used by {@link CompactSegments} duty to pick segments for compaction.
@@ -53,84 +49,11 @@ public interface CompactionCandidateSearchPolicy
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
    *
-   * @return {@link Eligibility#OK} only if eligible.
+   * @return {@link Eligibility#FULL} only if eligible.
    */
   Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
       CompactionTaskStatus latestTaskStatus
   );
 
-  /**
-   * Describes the eligibility of an interval for compaction.
-   */
-  class Eligibility
-  {
-    public static final Eligibility OK = new Eligibility(true, null, CompactionMode.FULL_COMPACTION);
-
-    private final boolean eligible;
-    private final String reason;
-    @Nullable
-    private final CompactionMode mode;
-
-    private Eligibility(boolean eligible, String reason, @Nullable CompactionMode mode)
-    {
-      this.eligible = eligible;
-      this.reason = reason;
-      this.mode = mode;
-    }
-
-    public boolean isEligible()
-    {
-      return eligible;
-    }
-
-    public String getReason()
-    {
-      return reason;
-    }
-
-    /**
-     * The mode of compaction (full or minor). This is non-null only when the
-     * candidate is considered to be eligible for compaction by the policy.
-     */
-    @Nullable
-    public CompactionMode getMode()
-    {
-      return mode;
-    }
-
-    public static Eligibility fail(String messageFormat, Object... args)
-    {
-      return new Eligibility(false, StringUtils.format(messageFormat, args), null);
-    }
-
-    @Override
-    public boolean equals(Object object)
-    {
-      if (this == object) {
-        return true;
-      }
-      if (object == null || getClass() != object.getClass()) {
-        return false;
-      }
-      Eligibility that = (Eligibility) object;
-      return eligible == that.eligible && Objects.equals(reason, that.reason) && Objects.equals(mode, that.mode);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(eligible, reason, mode);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "Eligibility{" +
-             "eligible=" + eligible +
-             ", reason='" + reason +
-             ", mode='" + mode + '\'' +
-             '}';
-    }
-  }
 }

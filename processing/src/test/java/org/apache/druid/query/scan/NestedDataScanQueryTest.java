@@ -76,7 +76,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(NestedDataScanQueryTest.class);
 
-  DefaultColumnFormatConfig DEFAULT_FORMAT = new DefaultColumnFormatConfig(null, null, null);
+  DefaultColumnFormatConfig DEFAULT_FORMAT = new DefaultColumnFormatConfig(null, null, null, null);
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();

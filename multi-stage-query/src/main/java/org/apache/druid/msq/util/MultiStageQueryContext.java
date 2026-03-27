@@ -28,6 +28,7 @@ import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.processor.FrameCombiner;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,6 +39,7 @@ import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
@@ -167,6 +169,13 @@ public class MultiStageQueryContext
 
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
+
+  /**
+   * Hint to {@link StageProcessor} implementations about whether they should attempt to use
+   * {@link FrameCombiner} when doing sort-based aggregations.
+   */
+  public static final String CTX_USE_COMBINER = "useCombiner";
+  public static final boolean DEFAULT_USE_COMBINER = false;
 
   /**
    * Used by {@link #getMaxRowsInMemory(QueryContext)}.
@@ -456,6 +465,11 @@ public class MultiStageQueryContext
   public static boolean removeNullBytes(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
+  }
+
+  public static boolean isUseCombiner(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_USE_COMBINER, DEFAULT_USE_COMBINER);
   }
 
   public static boolean isDartQuery(final QueryContext queryContext)

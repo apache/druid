@@ -27,18 +27,20 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This is not a UT, but very helpful when making changes to ensure things work with real K8S Api Server.
  * It is ignored in the build but checked in the reporitory for running manually by devs.
  */
-@Ignore("Needs K8S API Server")
+@Disabled("Needs K8S API Server")
 public class K8sDruidLeaderElectionIntTest
 {
   private final DiscoveryDruidNode testNode1 = new DiscoveryDruidNode(
@@ -67,7 +69,8 @@ public class K8sDruidLeaderElectionIntTest
   }
 
   // Note: This one is supposed to crash.
-  @Test(timeout = 60000L)
+  @Test
+  @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
   public void test_becomeLeader_exception() throws Exception
   {
     K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(testNode1.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
@@ -102,10 +105,11 @@ public class K8sDruidLeaderElectionIntTest
 
     becomeLeaderLatch.await();
     stopBeingLeaderLatch.await();
-    Assert.assertFalse(failed.get());
+    Assertions.assertFalse(failed.get());
   }
 
-  @Test(timeout = 60000L)
+  @Test
+  @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
   public void test_leaderCandidate_stopped() throws Exception
   {
     K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(testNode1.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
@@ -141,7 +145,7 @@ public class K8sDruidLeaderElectionIntTest
     leaderSelector.unregisterListener();
 
     stopBeingLeaderLatch.await();
-    Assert.assertFalse(failed.get());
+    Assertions.assertFalse(failed.get());
 
     leaderSelector = new K8sDruidLeaderSelector(testNode2.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
 

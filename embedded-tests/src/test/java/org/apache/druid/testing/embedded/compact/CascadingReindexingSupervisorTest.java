@@ -43,8 +43,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
+import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -100,24 +99,21 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
     );
     Assertions.assertEquals(16, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
 
-    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule hourRule = new ReindexingPartitioningRule(
         "hourRule",
         "Compact to HOUR granularity for data older than 1 days",
         Period.days(1),
-        Granularities.HOUR
+        Granularities.HOUR,
+        new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+        null
     );
-    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule dayRule = new ReindexingPartitioningRule(
         "dayRule",
         "Compact to DAY granularity for data older than 7 days",
         Period.days(7),
-        Granularities.DAY
-    );
-
-    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
-        "tuningConfigRule",
-        "Use dimension range partitioning with max 1000 rows per segment",
-        Period.days(1),
-        createTuningConfigWithPartitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
+        Granularities.DAY,
+        new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+        null
     );
 
     ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
@@ -129,8 +125,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
     );
 
     InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
-                                                                            .segmentGranularityRules(List.of(hourRule, dayRule))
-                                                                            .tuningConfigRules(List.of(tuningConfigRule))
+                                                                            .partitioningRules(List.of(hourRule, dayRule))
                                                                             .deletionRules(List.of(deletionRule));
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
@@ -141,7 +136,10 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
         null,
         null,
         null,
-        Granularities.HOUR
+        Granularities.HOUR,
+        new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+        null,
+        null
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
@@ -199,25 +197,20 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
         virtualColumns
     );
 
-    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
-        "tuningConfigRule",
-        null,
-        Period.days(7),
-        createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
-    );
-
     CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
         InlineReindexingRuleProvider.builder()
                                     .deletionRules(List.of(deletionRule))
-                                    .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
         null,
         null,
         null,
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
     );
 
     runCompactionWithSpec(cascadingTemplate);
@@ -235,18 +228,13 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
   @Test
   public void test_getReindexingTimeline_returnsTimelineForCascadingSupervisor()
   {
-    ReindexingSegmentGranularityRule segGranRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule pratitioningRule = new ReindexingPartitioningRule(
         "dayRule",
         "Compact to DAY granularity for data older than 7 days",
         Period.days(7),
-        Granularities.DAY
-    );
-
-    ReindexingTuningConfigRule tuningRule = new ReindexingTuningConfigRule(
-        "tuningRule",
-        "Apply tuning for data older than 1 day",
-        Period.days(1),
-        createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null
     );
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
@@ -254,13 +242,15 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
         null,
         null,
         InlineReindexingRuleProvider.builder()
-                                    .segmentGranularityRules(List.of(segGranRule))
-                                    .tuningConfigRules(List.of(tuningRule))
+                                    .partitioningRules(List.of(pratitioningRule))
                                     .build(),
         null,
         null,
         null,
-        Granularities.HOUR
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
     );
     runCompactionWithSpec(template);
 
@@ -317,11 +307,11 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
         );
 
         for (Object rule : intervalConfig.getAppliedRules()) {
-          if (rule instanceof ReindexingSegmentGranularityRule) {
+          if (rule instanceof ReindexingPartitioningRule) {
             foundSegGranRule = true;
-            ReindexingSegmentGranularityRule segRule = (ReindexingSegmentGranularityRule) rule;
-            Assertions.assertEquals("dayRule", segRule.getId());
-            Assertions.assertEquals(Granularities.DAY, segRule.getSegmentGranularity());
+            ReindexingPartitioningRule partitioningRule = (ReindexingPartitioningRule) rule;
+            Assertions.assertEquals("dayRule", partitioningRule.getId());
+            Assertions.assertEquals(Granularities.DAY, partitioningRule.getSegmentGranularity());
 
             // The config for this interval should reflect DAY segment granularity
             Assertions.assertNotNull(intervalConfig.getConfig().getGranularitySpec());
@@ -329,11 +319,6 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
                 Granularities.DAY,
                 intervalConfig.getConfig().getGranularitySpec().getSegmentGranularity()
             );
-          } else if (rule instanceof ReindexingTuningConfigRule) {
-            foundTuningRule = true;
-            ReindexingTuningConfigRule tunRule = (ReindexingTuningConfigRule) rule;
-            Assertions.assertEquals("tuningRule", tunRule.getId());
-            Assertions.assertNotNull(tunRule.getTuningConfig());
           }
         }
       }

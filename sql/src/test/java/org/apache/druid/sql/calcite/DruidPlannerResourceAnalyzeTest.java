@@ -322,4 +322,18 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testTableAppend()
+  {
+    final String sql = "SELECT * FROM TABLE(APPEND('foo', 'numfoo'))";
+
+    analyzeResources(
+        sql,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
+        )
+    );
+  }
 }

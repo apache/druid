@@ -280,7 +280,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       throws InterruptedException
   {
     Set<IntObjectPair<MSQFault>> failedWorkers = new HashSet<>();
-    
+
     synchronized (taskIds) {
       retryInactiveTasksIfNeeded(workerCount);
 
@@ -294,7 +294,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
         }
-        
+
         // Check for failed workers and collect them
         for (TaskTracker taskTracker : taskTrackers.values()) {
           if (taskTracker.isRetryCandidate()) {
@@ -310,7 +310,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         taskIds.wait(taskIdsLockTimeout);
       }
     }
-    
+
     // this should always be empty
     return Collections.emptySet();
   }
@@ -355,7 +355,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       throws InterruptedException
   {
     Set<IntObjectPair<MSQFault>> failedWorkers = new HashSet<>();
-    
+
     synchronized (taskIds) {
       while (!fullyStartedTasks.containsAll(workerNumbers)) {
         if (stopFuture.isDone() || stopFuture.isCancelled()) {
@@ -425,7 +425,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final long duration = taskStatus != null ? taskStatus.getDuration() : -1;
 
       workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                 .add(new WorkerStats(taskEntry.getKey(), statusCode, duration, taskTracker.taskPendingTimeInMs()));
+                 .add(new WorkerStats(taskEntry.getKey(), taskEntry.getKey(), statusCode, duration, taskTracker.taskPendingTimeInMs()));
     }
 
     for (List<WorkerStats> workerStatsList : workerStats.values()) {

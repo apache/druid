@@ -77,6 +77,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -712,6 +713,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -2563,7 +2565,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     latch.await();
 
     supervisor.emitLag();
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/lag").size());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/maxLag").size());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/avgLag").size());
   }
 
   private void validateSupervisorStateAfterResetOffsets(
@@ -2591,9 +2595,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(2);
+    // ScheduledExecutors.scheduleWithFixedDelay and scheduleAtFixedRate use exec.schedule internally,
+    // so we expect 3 schedule calls (1 for delay-based offset fetching, 2 for fixed-rate lag/queue reporting)
     ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
-    EasyMock.expect(executorService.scheduleWithFixedDelay(EasyMock.anyObject(), EasyMock.eq(86415000L), EasyMock.eq(300000L), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).once();
-    EasyMock.expect(executorService.scheduleAtFixedRate(EasyMock.anyObject(), EasyMock.eq(86425000L), EasyMock.eq(config.getEmissionDuration().getMillis()), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(2);
+    EasyMock.expect(executorService.schedule(EasyMock.anyObject(Runnable.class), EasyMock.anyLong(), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(3);
+    EasyMock.expect(executorService.isShutdown()).andReturn(false).anyTimes();
 
     EasyMock.replay(executorService, spec);
     final BaseTestSeekableStreamSupervisor supervisor = new BaseTestSeekableStreamSupervisor()
@@ -2760,7 +2766,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         "stream",
         null,
         1,
-        99,
+        null,
         new Period("PT1H"),
         new Period("PT1S"),
         new Period("PT30S"),
@@ -3378,17 +3384,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected void scheduleReporting(ScheduledExecutorService reportingExec)
     {
       SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
-      reportingExec.scheduleAtFixedRate(
-          this::emitLag,
-          ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-          TimeUnit.MILLISECONDS
+      ScheduledExecutors.scheduleAtFixedRate(
+          reportingExec,
+          Duration.millis(ioConfig.getStartDelay().getMillis()),
+          Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+          this::emitLag
       );
-      reportingExec.scheduleAtFixedRate(
-          this::emitNoticesQueueSize,
-          ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-          TimeUnit.MILLISECONDS
+      ScheduledExecutors.scheduleAtFixedRate(
+          reportingExec,
+          Duration.millis(ioConfig.getStartDelay().getMillis()),
+          Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+          this::emitNoticesQueueSize
       );
     }
   }

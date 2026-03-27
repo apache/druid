@@ -110,4 +110,14 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
       throw new RuntimeException(e);
     }
   }
+
+  @Override
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    // Wait for full Coordinator cache sync (Druid 31 does not support incremental cache)
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/poll/time")
+                      .hasService("druid/coordinator")
+    );
+  }
 }

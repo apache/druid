@@ -42,7 +42,7 @@ import org.apache.druid.testing.embedded.TestFolder;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.druid.testing.embedded.docker.DruidContainerResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;

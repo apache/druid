@@ -94,7 +94,7 @@ public class SegmentAnalysisTest
                                      .build(),
             16
         )),
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         Granularities.SECOND,
         true
     );

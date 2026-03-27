@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -37,6 +38,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -149,7 +151,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         agg -> agg.hasSumAtLeast(totalRows)
     );
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
@@ -186,6 +188,10 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         Collections.singletonList(new Object[]{totalRows}),
         payload.getResults().getResults()
     );
+
+    // Verify that realtime queries were issued and no files were read (all data is realtime).
+    MatcherAssert.assertThat(msqApis.getQueriesSum(payload), Matchers.greaterThan(0L));
+    Assertions.assertEquals(0, msqApis.getFilesSum(payload));
   }
 
   @Test
@@ -369,7 +375,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
   @Test
   @Timeout(60)
-  public void test_selectJoinwithLookup_dart()
+  public void test_selectJoinWithLookup_dart()
   {
     final String sql = StringUtils.format(
         "SELECT \n"

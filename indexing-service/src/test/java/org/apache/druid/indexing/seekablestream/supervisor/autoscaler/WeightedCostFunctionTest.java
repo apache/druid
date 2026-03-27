@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -156,20 +157,26 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testNoProcessingRateFavorsCurrentTaskCount()
+  public void testZeroProcessingRateUsesDefaultRate()
   {
-    // When the processing rate is unavailable (0), the cost function should favor
-    // maintaining the current task count, rather to scale up decisions with incomplete data.
+    // When the processing rate is zero, the cost function uses a default rate and tries to recover lag
     int currentTaskCount = 10;
-    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.3, 0.0);
+    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 1.0, 0.0);
 
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMin(1)
+        .taskCountMax(100)
+        .idleWeight(0)
+        .lagWeight(1)
+        .build();
     double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config).totalCost();
     double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config).totalCost();
     double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config).totalCost();
 
     Assert.assertTrue(
         "Cost at current should be less than cost for scale up",
-        costAtCurrent < costScaleUp
+        costAtCurrent > costScaleUp
     );
     Assert.assertTrue(
         "Cost at current should be less than cost for scale down",
@@ -178,29 +185,12 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testNoProcessingRateDeviationPenaltyIsSymmetric()
+  public void testNegativeProcessingRate_throwsDefensiveException()
   {
-    // Deviation penalty should be symmetric around current task count
-    int currentTaskCount = 10;
-    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.5, 0.0);
-
-    // Use lag-only config to isolate the lag recovery time component
-    CostBasedAutoScalerConfig lagOnlyConfig = CostBasedAutoScalerConfig.builder()
-                                                                       .taskCountMax(100)
-                                                                       .taskCountMin(1)
-                                                                       .enableTaskAutoScaler(true)
-                                                                       .lagWeight(1.0)
-                                                                       .idleWeight(0.0)
-                                                                       .build();
-
-    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
-    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig).totalCost();
-
-    Assert.assertEquals(
-        "Lag cost for +5 and -5 deviation should be equal",
-        costUp5,
-        costDown5,
-        0.001
+    final CostMetrics metrics = createMetricsWithRate(50000.0, 1, 100, 0.5, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> costFunction.computeCost(metrics, 2, config)
     );
   }
 

@@ -33,7 +33,7 @@ import java.util.stream.Stream;
  * <p>
  * This abstraction allows rules to be sourced from different locations: inline definitions,
  * database storage, external services, or dynamically generated based on metrics. Each method
- * returns rules for a specific reindexing aspect (granularity, filters, tuning, etc.), either
+ * returns rules for a specific reindexing aspect (partitioning, index spec, filters, etc.), either
  * for all rules or filtered by interval applicability.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -90,7 +90,7 @@ public interface ReindexingRuleProvider
   /**
    * Returns the matched reindexing data schema rule that applies to the given interval.
    * <p>
-   * Handling cases of multiple applicable rules and/orpartial overlaps is the responsibility of the provider
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
    * implementation and should be clearly documented.
    * </p>
    *
@@ -108,7 +108,7 @@ public interface ReindexingRuleProvider
   List<ReindexingDataSchemaRule> getDataSchemaRules();
 
   /**
-   * Returns the matched reindexing segment granularity rule that applies to the given interval.
+   * Returns the matched reindexing partitioning rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
    * implementation and should be clearly documented.
@@ -117,18 +117,18 @@ public interface ReindexingRuleProvider
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingSegmentGranularityRule} rule that applies to the given interval.
+   * @return {@link ReindexingPartitioningRule} rule that applies to the given interval.
    */
   @Nullable
-  ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime);
+  ReindexingPartitioningRule getPartitioningRule(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL reindexing segment granularity rules.
+   * Returns ALL reindexing partitioning rules.
    */
-  List<ReindexingSegmentGranularityRule> getSegmentGranularityRules();
+  List<ReindexingPartitioningRule> getPartitioningRules();
 
   /**
-   * Returns the matched reindexing tuning config rule that applies to the given interval.
+   * Returns the matched reindexing index spec rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
    * implementation and should be clearly documented.
@@ -139,28 +139,28 @@ public interface ReindexingRuleProvider
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
    */
   @Nullable
-  ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime);
+  ReindexingIndexSpecRule getIndexSpecRule(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL reindexing tuning config rules.
+   * Returns ALL reindexing index spec rules.
    */
-  List<ReindexingTuningConfigRule> getTuningConfigRules();
+  List<ReindexingIndexSpecRule> getIndexSpecRules();
 
   /**
    * Returns a stream of all reindexing rules across all types.
    * <p>
    * This provides a flexible way to filter, map, and process rules without needing
-   * specific methods for every possible combination. For example, to get all non-segment-granularity
-   * rules, you can filter: {@code streamAllRules().filter(rule -> !(rule instanceof ReindexingSegmentGranularityRule))}
+   * specific methods for every possible combination. For example, to get all non-partitioning
+   * rules, you can filter: {@code streamAllRules().filter(rule -> !(rule instanceof ReindexingPartitioningRule))}
    *
    * @return a stream of all rules from all rule types
    */
   default Stream<ReindexingRule> streamAllRules()
   {
     return Stream.of(
-        getTuningConfigRules().stream(),
+        getIndexSpecRules().stream(),
         getDeletionRules().stream(),
-        getSegmentGranularityRules().stream(),
+        getPartitioningRules().stream(),
         getDataSchemaRules().stream()
     ).flatMap(s -> s);
   }

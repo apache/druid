@@ -22,9 +22,14 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
@@ -42,10 +47,12 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.nested.StructuredData;
@@ -64,14 +71,23 @@ import org.schemarepo.api.converter.AvroSchemaConverter;
 import org.schemarepo.api.converter.IdentityConverter;
 import org.schemarepo.api.converter.IntegerConverter;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * test data row:
@@ -106,6 +122,55 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private static final String NESTED_ARRAY_VAL = "nestedArrayVal";
   private static final String IS_VALID = "isValid";
   private static final String TOPIC = "aTopic";
+  private static final String EVENT_TYPE_VALUE = "type-a";
+  private static final long ID_VALUE = 1976491L;
+  private static final long SOME_OTHER_ID_VALUE = 6568719896L;
+  private static final float SOME_FLOAT_VALUE = 0.23555f;
+  private static final int SOME_INT_VALUE = 1;
+  private static final long SOME_LONG_VALUE = 679865987569912369L;
+  private static final ZonedDateTime DATE_TIME = ZonedDateTime.of(2015, 10, 25, 19, 30, 0, 0, ZoneOffset.UTC);
+  private static final MyFixed SOME_FIXED_VALUE = new MyFixed(ByteBuffer.allocate(16).array());
+  private static final long SUB_LONG_VALUE = 1543698L;
+  private static final int SUB_INT_VALUE = 4892;
+  private static final MySubRecord SOME_RECORD_VALUE = MySubRecord.newBuilder()
+                                                                  .setSubInt(SUB_INT_VALUE)
+                                                                  .setSubLong(SUB_LONG_VALUE)
+                                                                  .build();
+  private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1", null);
+  private static final List<Integer> SOME_INT_ARRAY_VALUE = Arrays.asList(1, 2, 4, 8);
+  static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
+      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<>()
+      {
+        @Nonnull
+        @Override
+        public Integer apply(@Nullable CharSequence input)
+        {
+          return Integer.parseInt(input.toString());
+        }
+      }
+  );
+  static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
+      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<>()
+      {
+        @Nonnull
+        @Override
+        public CharSequence apply(@Nullable CharSequence input)
+        {
+          return input.toString();
+        }
+      }
+  );
+  private static final String SOME_UNION_VALUE = "string as union";
+  private static final Integer SOME_UNION_MEMBER_VALUE = 1;
+  private static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
+  private static final String SOME_RECORD_STRING_VALUE = "string in record";
+  private static final List<MyNestedRecord> SOME_RECORD_ARRAY_VALUE = Collections.singletonList(MyNestedRecord.newBuilder()
+                                                                                                              .setNestedString(
+                                                                                                                  SOME_RECORD_STRING_VALUE)
+                                                                                                              .build());
+  private static final Pattern BRACES_AND_SPACE = Pattern.compile("[{} ]");
+
+
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID, NESTED_ARRAY_VAL);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
       NESTED_ARRAY_VAL,
@@ -129,6 +194,20 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private TimestampSpec timestampSpec;
   private DimensionsSpec dimensionsSpec;
   private JSONPathSpec flattenSpec;
+
+  public static File createAvroFile(GenericRecord datum)
+      throws IOException
+  {
+    final File tmpDir = FileUtils.createTempDir();
+    File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");
+    try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(
+        new SpecificDatumWriter<>()
+    )) {
+      dataFileWriter.create(SomeAvroDatum.getClassSchema(), someAvroDatumFile);
+      dataFileWriter.append(datum);
+    }
+    return someAvroDatumFile;
+  }
 
   @Before
   public void before()
@@ -363,11 +442,11 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(1543698L, inputRow.getTimestampFromEpoch());
     Assert.assertEquals(
-        AvroStreamInputRowParserTest.SOME_INT_VALUE_MAP_VALUE,
+        SOME_INT_VALUE_MAP_VALUE,
         StructuredData.unwrap(inputRow.getRaw("someIntValueMap"))
     );
     Assert.assertEquals(
-        AvroStreamInputRowParserTest.SOME_STRING_VALUE_MAP_VALUE,
+        SOME_STRING_VALUE_MAP_VALUE,
         StructuredData.unwrap(inputRow.getRaw("someStringValueMap"))
     );
     Assert.assertEquals(
@@ -433,5 +512,168 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 
       assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS, false);
     }
+  }
+
+  static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions, boolean isFromPigAvro)
+  {
+    Assert.assertEquals(expectedDimensions, inputRow.getDimensions());
+    Assert.assertEquals(1543698L, inputRow.getTimestampFromEpoch());
+
+    // test dimensions
+    Assert.assertEquals(Collections.singletonList(EVENT_TYPE_VALUE), inputRow.getDimension(EVENT_TYPE));
+    Assert.assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
+    Assert.assertEquals(
+        Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)),
+        inputRow.getDimension(SOME_OTHER_ID)
+    );
+    Assert.assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
+
+    // someRecordArray represents a record generated from Pig using AvroStorage
+    // as it implicitly converts array elements to a record
+    if (isFromPigAvro) {
+      Assert.assertEquals(
+          Collections.singletonList(SOME_RECORD_ARRAY_VALUE.get(0).getNestedString()),
+          inputRow.getDimension("someRecordArray")
+      );
+    } else {
+      Assert.assertEquals(
+          Lists.transform(SOME_INT_ARRAY_VALUE, String::valueOf),
+          inputRow.getDimension("someIntArray")
+      );
+      // For string array, nulls are preserved so use ArrayList (ImmutableList doesn't support nulls)
+      Assert.assertEquals(
+          SOME_STRING_ARRAY_VALUE.stream().map(Evals::asString).collect(Collectors.toList()),
+          inputRow.getDimension("someStringArray")
+      );
+
+      final Object someRecordArrayObj = inputRow.getRaw("someRecordArray");
+      Assert.assertNotNull(someRecordArrayObj);
+      Assert.assertTrue(someRecordArrayObj instanceof List);
+      Assert.assertEquals(1, ((List) someRecordArrayObj).size());
+      final Object recordArrayElementObj = ((List) someRecordArrayObj).get(0);
+      Assert.assertNotNull(recordArrayElementObj);
+      Assert.assertTrue(recordArrayElementObj instanceof LinkedHashMap);
+      LinkedHashMap recordArrayElement = (LinkedHashMap) recordArrayElementObj;
+      Assert.assertEquals("string in record", recordArrayElement.get("nestedString"));
+    }
+
+    final Object someIntValueMapObj = inputRow.getRaw("someIntValueMap");
+    Assert.assertNotNull(someIntValueMapObj);
+    Assert.assertTrue(someIntValueMapObj instanceof LinkedHashMap);
+    LinkedHashMap someIntValueMap = (LinkedHashMap) someIntValueMapObj;
+    Assert.assertEquals(4, someIntValueMap.size());
+    Assert.assertEquals(1, someIntValueMap.get("1"));
+    Assert.assertEquals(2, someIntValueMap.get("2"));
+    Assert.assertEquals(4, someIntValueMap.get("4"));
+    Assert.assertEquals(8, someIntValueMap.get("8"));
+
+
+    final Object someStringValueMapObj = inputRow.getRaw("someStringValueMap");
+    Assert.assertNotNull(someStringValueMapObj);
+    Assert.assertTrue(someStringValueMapObj instanceof LinkedHashMap);
+    LinkedHashMap someStringValueMap = (LinkedHashMap) someStringValueMapObj;
+    Assert.assertEquals(4, someStringValueMap.size());
+    Assert.assertEquals("1", someStringValueMap.get("1"));
+    Assert.assertEquals("2", someStringValueMap.get("2"));
+    Assert.assertEquals("4", someStringValueMap.get("4"));
+    Assert.assertEquals("8", someStringValueMap.get("8"));
+
+
+    final Object someRecordObj = inputRow.getRaw("someRecord");
+    Assert.assertNotNull(someRecordObj);
+    Assert.assertTrue(someRecordObj instanceof LinkedHashMap);
+    LinkedHashMap someRecord = (LinkedHashMap) someRecordObj;
+    Assert.assertEquals(4892, someRecord.get("subInt"));
+    Assert.assertEquals(1543698L, someRecord.get("subLong"));
+
+    final Object someList = inputRow.getDimension("nestedArrayVal");
+    Assert.assertNotNull(someList);
+    Assert.assertTrue(someList instanceof List);
+    List someRecordObj3List = (List) someList;
+    Assert.assertEquals(1, someRecordObj3List.size());
+    Assert.assertEquals("string in record", someRecordObj3List.get(0));
+
+
+    // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
+    Assert.assertEquals(1, inputRow.getDimension("someIntValueMap").size());
+    Assert.assertEquals(
+        SOME_INT_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, Integer>(
+            Maps.transformValues(
+                Splitter
+                    .on(",")
+                    .withKeyValueSeparator("=")
+                    .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll("")),
+                new Function<>()
+                {
+                  @Nullable
+                  @Override
+                  public Integer apply(@Nullable String input)
+                  {
+                    return Integer.valueOf(input);
+                  }
+                }
+            )
+        )
+    );
+    Assert.assertEquals(
+        SOME_STRING_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, CharSequence>(
+            Splitter
+                .on(",")
+                .withKeyValueSeparator("=")
+                .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll(""))
+        )
+    );
+    Assert.assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
+    Assert.assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
+    Assert.assertEquals(
+        Arrays.toString(SOME_FIXED_VALUE.bytes()),
+        Arrays.toString((byte[]) (inputRow.getRaw("someFixed")))
+    );
+    Assert.assertEquals(
+        Arrays.toString(SOME_BYTES_VALUE.array()),
+        Arrays.toString((byte[]) (inputRow.getRaw("someBytes")))
+    );
+    Assert.assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
+    Assert.assertEquals(
+        Collections.singletonList(ImmutableMap.of("subInt", 4892, "subLong", 1543698L).toString()),
+        inputRow.getDimension("someRecord")
+    );
+
+    // test metrics
+    Assert.assertEquals(SOME_FLOAT_VALUE, inputRow.getMetric("someFloat").floatValue(), 0);
+    Assert.assertEquals(SOME_LONG_VALUE, inputRow.getMetric("someLong"));
+    Assert.assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
+  }
+
+  public static SomeAvroDatum buildSomeAvroDatum()
+  {
+    return createSomeAvroDatumBuilderDefaults().build();
+  }
+
+  public static SomeAvroDatum.Builder createSomeAvroDatumBuilderDefaults()
+  {
+    return SomeAvroDatum.newBuilder()
+                        .setTimestamp(DATE_TIME.toInstant().toEpochMilli())
+                        .setEventType(EVENT_TYPE_VALUE)
+                        .setId(ID_VALUE)
+                        .setSomeOtherId(SOME_OTHER_ID_VALUE)
+                        .setIsValid(true)
+                        .setSomeFloat(SOME_FLOAT_VALUE)
+                        .setSomeInt(SOME_INT_VALUE)
+                        .setSomeLong(SOME_LONG_VALUE)
+                        .setSomeIntArray(SOME_INT_ARRAY_VALUE)
+                        .setSomeStringArray(SOME_STRING_ARRAY_VALUE)
+                        .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
+                        .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
+                        .setSomeUnion(SOME_UNION_VALUE)
+                        .setSomeMultiMemberUnion(SOME_UNION_MEMBER_VALUE)
+                        .setSomeFixed(SOME_FIXED_VALUE)
+                        .setSomeBytes(SOME_BYTES_VALUE)
+                        .setSomeNull(null)
+                        .setSomeEnum(MyEnum.ENUM1)
+                        .setSomeRecord(SOME_RECORD_VALUE)
+                        .setSomeRecordArray(SOME_RECORD_ARRAY_VALUE);
   }
 }

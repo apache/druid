@@ -46,7 +46,7 @@ import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryScheduler;
@@ -87,7 +87,7 @@ public class DartSqlEngine implements SqlEngine
   private final ServerConfig serverConfig;
   private final QueryKitSpecFactory queryKitSpecFactory;
   private final MultiQueryKit queryKit;
-  private final DefaultQueryConfig dartQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final SqlToolbox toolbox;
   private final DartSqlClients sqlClients;
 
@@ -100,7 +100,7 @@ public class DartSqlEngine implements SqlEngine
       DartQueryKitSpecFactory queryKitSpecFactory,
       MultiQueryKit queryKit,
       ServerConfig serverConfig,
-      @Dart DefaultQueryConfig dartQueryConfig,
+      @Dart QueryConfigProvider queryConfigProvider,
       SqlToolbox toolbox,
       DartSqlClients sqlClients
   )
@@ -112,7 +112,7 @@ public class DartSqlEngine implements SqlEngine
     this.queryKitSpecFactory = queryKitSpecFactory;
     this.queryKit = queryKit;
     this.serverConfig = serverConfig;
-    this.dartQueryConfig = dartQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.toolbox = toolbox;
     this.sqlClients = sqlClients;
   }
@@ -223,7 +223,7 @@ public class DartSqlEngine implements SqlEngine
   public void initContextMap(Map<String, Object> contextMap)
   {
     // Default context keys from dartQueryConfig.
-    for (Map.Entry<String, Object> entry : dartQueryConfig.getContext().entrySet()) {
+    for (Map.Entry<String, Object> entry : queryConfigProvider.getContext().entrySet()) {
       contextMap.putIfAbsent(entry.getKey(), entry.getValue());
     }
     /**

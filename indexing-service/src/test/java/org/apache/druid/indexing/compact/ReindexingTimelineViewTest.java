@@ -21,11 +21,12 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.SupervisorModule;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -82,11 +83,13 @@ public class ReindexingTimelineViewTest
         1,
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource("testDS").build(),
         List.of(
-            new ReindexingSegmentGranularityRule(
+            new ReindexingPartitioningRule(
                 "day-rule",
                 null,
                 Period.days(7),
-                Granularities.DAY
+                Granularities.DAY,
+                new DynamicPartitionsSpec(null, null),
+                null
             )
         )
     );

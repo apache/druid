@@ -186,7 +186,12 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
-    return new LagBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec, emitter);
+    return new LagBasedAutoScaler(
+        (SeekableStreamSupervisor) supervisor,
+        this,
+        spec,
+        emitter
+    );
   }
 
   @JsonProperty
