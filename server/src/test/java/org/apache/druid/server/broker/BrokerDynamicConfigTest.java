@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 
 public class BrokerDynamicConfigTest
 {
@@ -140,6 +141,36 @@ public class BrokerDynamicConfigTest
     BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
     Assert.assertNotNull(actual.getQueryContext());
     Assert.assertTrue(actual.getQueryContext().isEmpty());
+  }
+
+  @Test
+  public void testSerdeWithPerSegmentTimeoutConfig() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"perSegmentTimeoutConfig\": {\n"
+                     + "    \"my_large_ds\": {\"perSegmentTimeoutMs\": 5000, \"monitorOnly\": true},\n"
+                     + "    \"my_other_ds\": {\"perSegmentTimeoutMs\": 3000}\n"
+                     + "  }\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, BrokerDynamicConfig.class)),
+        BrokerDynamicConfig.class
+    );
+
+    Map<String, PerSegmentTimeoutConfig> expected = ImmutableMap.of(
+        "my_large_ds", new PerSegmentTimeoutConfig(5000, true),
+        "my_other_ds", new PerSegmentTimeoutConfig(3000, null)
+    );
+    Assert.assertEquals(expected, actual.getPerSegmentTimeoutConfig());
+  }
+
+  @Test
+  public void testNullPerSegmentTimeoutConfigDefaultsToEmptyMap() throws Exception
+  {
+    BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
+    Assert.assertNotNull(actual.getPerSegmentTimeoutConfig());
+    Assert.assertTrue(actual.getPerSegmentTimeoutConfig().isEmpty());
   }
 
   @Test

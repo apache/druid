@@ -859,6 +859,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
+        java.util.Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -910,6 +911,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
+        java.util.Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
