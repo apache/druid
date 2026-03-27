@@ -118,13 +118,28 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                     });
                   }}
                 />
-                <MenuDivider />
                 <MenuItem
-                  icon={IconNames.CROSS}
-                  text="Cancel query"
-                  intent={Intent.DANGER}
-                  onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                  icon={IconNames.DUPLICATE}
+                  text="Copy Identity"
+                  onClick={() => {
+                    copy(w.identity, { format: 'text/plain' });
+                    AppToaster.show({
+                      message: `${w.identity} copied to clipboard`,
+                      intent: Intent.SUCCESS,
+                    });
+                  }}
                 />
+                {(w.state === 'ACCEPTED' || w.state === 'RUNNING') && (
+                  <>
+                    <MenuDivider />
+                    <MenuItem
+                      icon={IconNames.CROSS}
+                      text="Cancel query"
+                      intent={Intent.DANGER}
+                      onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                    />
+                  </>
+                )}
               </Menu>
             );
 
@@ -176,18 +191,22 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             if (!confirmCancelId) return;
             try {
               await Api.instance.delete(`/druid/v2/sql/${Api.encodePath(confirmCancelId)}`);
-
-              AppToaster.show({
-                message: 'Query canceled',
-                intent: Intent.SUCCESS,
-              });
-              queryManager.rerunLastQuery();
-            } catch {
-              AppToaster.show({
-                message: 'Could not cancel query',
-                intent: Intent.DANGER,
-              });
+            } catch (e: any) {
+              if (e.response?.status === 404) {
+                // Query may have already completed or been canceled, which is fine.
+              } else {
+                AppToaster.show({
+                  message: 'Could not cancel query',
+                  intent: Intent.DANGER,
+                });
+                return;
+              }
             }
+            AppToaster.show({
+              message: 'Query canceled or no longer running',
+              intent: Intent.SUCCESS,
+            });
+            queryManager.rerunLastQuery();
           }}
           onDismiss={() => setConfirmCancelId(undefined)}
         />

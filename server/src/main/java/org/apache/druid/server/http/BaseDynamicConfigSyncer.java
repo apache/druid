@@ -180,6 +180,9 @@ public abstract class BaseDynamicConfigSyncer<DynamicConfig>
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
     final ServiceLocation brokerLocation = convertDiscoveryNodeToServiceLocation(broker);
+    if (brokerLocation == null) {
+      return;
+    }
     final BrokerClient brokerClient = new BrokerClientImpl(
         clientFactory.makeClient(
             NodeRole.BROKER.getJsonName(),
@@ -255,6 +258,7 @@ public abstract class BaseDynamicConfigSyncer<DynamicConfig>
   {
     final DruidNode druidNode = discoveryDruidNode.getDruidNode();
     if (druidNode == null) {
+      log.warn("Could not determine DruidNode for DiscoveryDruidNode[%s]", discoveryDruidNode);
       return null;
     }
 

@@ -24,7 +24,9 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -46,7 +48,7 @@ class FilterSegmentPrunerTest
   {
     Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> new FilterSegmentPruner(null, null)
+        () -> new FilterSegmentPruner(null, null, null)
     );
     Assertions.assertEquals("filter must not be null", t.getMessage());
   }
@@ -70,12 +72,72 @@ class FilterSegmentPrunerTest
 
     List<DataSegment> segs = List.of(seg1, seg2, seg3, seg4, seg5, seg6, seg7);
 
-    FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null);
-    FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet());
-    FilterSegmentPruner prunerExpression = new FilterSegmentPruner(expression_b, null);
+    FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null, null);
+    FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), null);
+    FilterSegmentPruner prunerExpression = new FilterSegmentPruner(expression_b, null, null);
 
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1, seg4, seg5, seg6, seg7), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.of(seg1, seg4, seg5, seg6, seg7), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerExpression.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerExpression.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+  }
+
+  @Test
+  void testPruneVirtualColumn()
+  {
+    VirtualColumns shardVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    VirtualColumns shardVirtualColumnsDifferentName = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdifferentname", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    String interval1 = "2026-02-18T00:00:00Z/2026-02-19T00:00:00Z";
+
+    DataSegment seg1 = makeDataSegment(
+        interval1,
+        makeRange(List.of("vdim1"), shardVirtualColumns, 0, null, StringTuple.create("abcfoo"))
+    );
+    DataSegment seg2 = makeDataSegment(
+        interval1,
+        makeRange(List.of("vdim1"), shardVirtualColumns, 1, StringTuple.create("abcfoo"), StringTuple.create("lmnfoo"))
+    );
+    // same virtual column with a different name in this segment
+    DataSegment seg3 = makeDataSegment(
+        interval1,
+        makeRange(List.of("vdifferentname"), shardVirtualColumnsDifferentName, 2, StringTuple.create("lmnfoo"), null)
+    );
+
+    List<DataSegment> segs = List.of(seg1, seg2, seg3);
+
+    // same expression, same name
+    VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    DimFilter range_a = new RangeFilter("vdim1", ColumnType.STRING, null, "aaa", null, null, null);
+    FilterSegmentPruner prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
+    FilterSegmentPruner prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+
+    // same expression, different name
+    queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    range_a = new RangeFilter("v0", ColumnType.STRING, null, "aaa", null, null, null);
+    prunerRange = new FilterSegmentPruner(range_a, null, queryVirtualColumns);
+    prunerEmptyFields = new FilterSegmentPruner(range_a, Collections.emptySet(), queryVirtualColumns);
+
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
   }
 
@@ -107,8 +169,26 @@ class FilterSegmentPrunerTest
       @Nullable StringTuple end
   )
   {
+    return makeRange(
+        columns,
+        null,
+        partitionNumber,
+        start,
+        end
+    );
+  }
+
+  private ShardSpec makeRange(
+      List<String> columns,
+      VirtualColumns virtualColumns,
+      int partitionNumber,
+      @Nullable StringTuple start,
+      @Nullable StringTuple end
+  )
+  {
     return new DimensionRangeShardSpec(
         columns,
+        virtualColumns,
         start,
         end,
         partitionNumber,

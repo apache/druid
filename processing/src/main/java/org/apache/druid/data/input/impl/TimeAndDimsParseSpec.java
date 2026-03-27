@@ -37,7 +37,7 @@ public class TimeAndDimsParseSpec extends ParseSpec
   )
   {
     super(
-        timestampSpec != null ? timestampSpec : new TimestampSpec(null, null, null),
+        timestampSpec != null ? timestampSpec : TimestampSpec.DEFAULT,
         dimensionsSpec != null ? dimensionsSpec : DimensionsSpec.EMPTY
     );
   }

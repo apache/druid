@@ -41,12 +41,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-indexing-hadoop</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-mapreduce</artifactId>
             <version>${orc.version}</version>

@@ -74,7 +74,8 @@ public class DartSqlClientImplTest
                 "",
                 "",
                 DateTimes.of("2000"),
-                ControllerHolder.State.RUNNING.toString()
+                ControllerHolder.State.RUNNING.toString(),
+                null
             )
         )
     );
@@ -103,7 +104,8 @@ public class DartSqlClientImplTest
                 "",
                 "",
                 DateTimes.of("2000"),
-                ControllerHolder.State.RUNNING.toString()
+                ControllerHolder.State.RUNNING.toString(),
+                null
             )
         )
     );
@@ -132,7 +134,8 @@ public class DartSqlClientImplTest
                 "",
                 "",
                 DateTimes.of("2000"),
-                ControllerHolder.State.RUNNING.toString()
+                ControllerHolder.State.RUNNING.toString(),
+                null
             )
         )
     );

@@ -779,7 +779,7 @@ public class StorageLocation
     }
     // if we didn't free up enough space, return everything we removed to the cache
     for (WeakCacheEntry entry : droppedEntries) {
-      linkNewWeakEntry(new WeakCacheEntry(entry.cacheEntry));
+      linkNewWeakEntry(entry);
       weakCacheEntries.put(entry.cacheEntry.getId(), entry);
     }
     return ReclaimResult.failed(sizeToReclaim);

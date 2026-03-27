@@ -394,7 +394,7 @@ public class OverlordCompactionSchedulerTest
     runCompactionTasks(1);
 
     final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
-    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, 1, 1));
+    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, null, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),
@@ -478,6 +478,27 @@ public class OverlordCompactionSchedulerTest
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
     scheduler.stopBeingLeader();
+  }
+
+  @Test
+  public void test_getAllCompactionSnapshots_returnsEmpty_beforeFirstRun()
+  {
+    Assert.assertTrue(scheduler.isEnabled());
+    Assert.assertFalse(scheduler.isRunning());
+
+    Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
+  }
+
+  @Test
+  public void test_getCompactionSnapshot_returnsAwaitingFirstRunWithActiveSupervisor_beforeFirstRun()
+  {
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+
+    AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assert.assertEquals(
+        AutoCompactionSnapshot.ScheduleStatus.AWAITING_FIRST_RUN,
+        snapshot.getScheduleStatus()
+    );
   }
 
   private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)

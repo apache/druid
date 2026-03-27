@@ -35,14 +35,12 @@ import org.apache.druid.msq.exec.DataServerQueryHandlerUtils;
 import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -62,7 +60,6 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
-  private final QueryToolChestWarehouse warehouse;
   private final DataServerRequestDescriptor requestDescriptor;
 
   public DartDataServerQueryHandler(
@@ -71,7 +68,6 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       ObjectMapper objectMapper,
-      QueryToolChestWarehouse warehouse,
       DataServerRequestDescriptor requestDescriptor
   )
   {
@@ -80,7 +76,6 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
     this.channelCounters = channelCounters;
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
-    this.warehouse = warehouse;
     this.requestDescriptor = requestDescriptor;
   }
 
@@ -95,33 +90,37 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
   @Override
   public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
+      JavaType queryResultType,
       Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Closer closer
   )
   {
+    if (query.getDataSource() instanceof QueryDataSource) {
+      // Subqueries being included would cause "withQuerySegmentSpec" to not work properly.
+      throw DruidException.defensive("Cannot run query with subquery[%s]", query);
+    }
+
     final Query<QueryType> preparedQuery =
-        Queries.withSpecificSegments(
-            DataServerQueryHandlerUtils.prepareQuery(query, inputNumber, dataSourceName),
-            requestDescriptor.getSegments()
-                             .stream()
-                             .map(RichSegmentDescriptor::toPlainDescriptor)
-                             .collect(Collectors.toList())
+        DataServerQueryHandlerUtils.prepareQuery(query, inputNumber, dataSourceName).withQuerySegmentSpec(
+            new MultipleSpecificSegmentSpec(
+                requestDescriptor.getSegments()
+                                 .stream()
+                                 .map(RichSegmentDescriptor::toPlainDescriptor)
+                                 .collect(Collectors.toList())
+            )
         );
 
     final ServiceLocation serviceLocation =
         ServiceLocation.fromDruidServerMetadata(requestDescriptor.getServerMetadata());
     final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
-    final QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
-    final Function<QueryType, QueryType> preComputeManipulatorFn =
-        toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
-    final JavaType queryResultType = toolChest.getBaseResultType();
     final ResponseContext responseContext = new DefaultResponseContext();
 
     return FutureUtils.transform(
         dataServerClient.run(preparedQuery, responseContext, queryResultType, closer),
         resultSequence -> {
+          channelCounters.incrementQueries();
           final Yielder<RowType> yielder = DataServerQueryHandlerUtils.createYielder(
-              resultSequence.map(preComputeManipulatorFn),
+              resultSequence,
               mappingFunction,
               channelCounters
           );

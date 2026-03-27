@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -36,13 +35,10 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -149,7 +145,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -157,7 +152,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -174,8 +168,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   protected static final ObjectMapper OBJECT_MAPPER;
-  protected static final DataSchema OLD_DATA_SCHEMA;
-  protected static final DataSchema NEW_DATA_SCHEMA =
+  protected static final DataSchema DATA_SCHEMA =
       DataSchema.builder()
                 .withDataSource("test_ds")
                 .withTimestamp(new TimestampSpec("timestamp", "iso", null))
@@ -217,39 +210,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 
   static {
     OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
-    OBJECT_MAPPER.registerSubtypes(new NamedType(JSONParseSpec.class, "json"));
-    OLD_DATA_SCHEMA = DataSchema.builder()
-                                      .withDataSource("test_ds")
-                                      .withParserMap(
-                                          OBJECT_MAPPER.convertValue(
-                                              new StringInputRowParser(
-                                                  new JSONParseSpec(
-                                                      new TimestampSpec("timestamp", "iso", null),
-                                                      new DimensionsSpec(
-                                                          Arrays.asList(
-                                                              new StringDimensionSchema("dim1"),
-                                                              new StringDimensionSchema("dim1t"),
-                                                              new StringDimensionSchema("dim2"),
-                                                              new LongDimensionSchema("dimLong"),
-                                                              new FloatDimensionSchema("dimFloat")
-                                                          )
-                                                      ),
-                                                      new JSONPathSpec(true, ImmutableList.of()),
-                                                      ImmutableMap.of(),
-                                                      false
-                                                  ),
-                                                  StandardCharsets.UTF_8.name()
-                                              ),
-                                              Map.class
-                                          )
-                                      )
-                                      .withAggregators(
-                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
-                                          new CountAggregatorFactory("rows")
-                                      )
-                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                                      .withObjectMapper(OBJECT_MAPPER)
-                                      .build();
   }
 
   public SeekableStreamIndexTaskTestBase(
@@ -268,7 +228,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   }
 
   @After
-  public void tearDownBase() throws IOException
+  public void tearDownBase()
   {
     emitter.close();
   }
@@ -383,7 +343,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         StringUtils.format(
             "%s/%s/%s_%s/%s/%d",
             getSegmentDirectory(),
-            OLD_DATA_SCHEMA.getDataSource(),
+            DATA_SCHEMA.getDataSource(),
             descriptor.getInterval().getStart(),
             descriptor.getInterval().getEnd(),
             descriptor.getVersion(),
@@ -538,7 +498,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(OLD_DATA_SCHEMA.getDataSource())
+                                  .dataSource(DATA_SCHEMA.getDataSource())
                                   .aggregators(
                                       ImmutableList.of(
                                           new LongSumAggregatorFactory("rows", "rows")
@@ -565,7 +525,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected Collection<DataSegment> publishedSegments()
   {
     return metadataStorageCoordinator
-        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE);
+        .retrieveAllUsedSegments(DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE);
   }
 
   protected List<SegmentDescriptor> publishedDescriptors()

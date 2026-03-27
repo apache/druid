@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
@@ -56,6 +59,15 @@ import java.util.Map;
 })
 public interface ShardSpec
 {
+  /**
+   * Returns whether {@link #createChunk} returns a {@link NumberedPartitionChunk} instance.
+   * This is necessary for supporting {@link PartitionHolder#isComplete()} if updating to a new corePartitions spec.
+   */
+  default boolean canCreateNumberedPartitionChunk()
+  {
+    return false;
+  }
+
   @JsonIgnore
   <T> PartitionChunk<T> createChunk(T obj);
 
@@ -65,6 +77,22 @@ public interface ShardSpec
   int getPartitionNum();
 
   int getNumCorePartitions();
+
+  /**
+   * Creates a new ShardSpec with the specified partition number.
+   */
+  default ShardSpec withPartitionNum(int partitionNum)
+  {
+    throw DruidException.defensive("ShardSpec[%s] does not implement withPartitionNum", this.getClass().toString());
+  }
+
+  /**
+   * Creates a new ShardSpec with the specified number of core partitions.
+   */
+  default ShardSpec withCorePartitions(int partitions)
+  {
+    throw DruidException.defensive("ShardSpec[%s] does not implement withCorePartitions", this.getClass().toString());
+  }
 
   /**
    * Returns the start root partition ID of the atomic update group which this segment belongs to.
@@ -110,15 +138,31 @@ public interface ShardSpec
   ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs);
 
   /**
-   * Get dimensions who have possible range for the rows this shard contains.
+   * Get dimensions who have possible range for the rows this shard contains. These columns might be physical columns
+   * stored in the shard, or computed expressions, in which case the manner in which they were computed is available in
+   * {@link #getDomainVirtualColumns()}.
    *
-   * @return list of dimensions who has its possible range. Dimensions with unknown possible range are not listed
+   * @return list of dimensions who has its possible range. Dimensions with unknown possible range are not listed.
    */
   @JsonIgnore
   List<String> getDomainDimensions();
 
   /**
+   * If any of the columns in {@link #getDomainDimensions()} was computed with an expression and was not stored, the
+   * {@link org.apache.druid.segment.VirtualColumn} which computes it is stored here. This allows matching ranges even
+   * when the value is not stored in the shard so long as {@link VirtualColumns#findEquivalent(VirtualColumn)} exists.
+   *
+   * @return {@link VirtualColumns} associated with columns listed in {@link #getDomainDimensions()}.
+   */
+  @JsonIgnore
+  default VirtualColumns getDomainVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
+  }
+
+  /**
    * if given domain ranges are not possible in this shard, return false; otherwise return true;
+   *
    * @return possibility of in domain
    */
   @JsonIgnore

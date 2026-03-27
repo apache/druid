@@ -31,8 +31,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -45,7 +43,8 @@ import java.util.concurrent.TimeUnit;
 
 public class FrameProcessorTestBase extends InitializedNullHandlingTest
 {
-  protected static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
+  protected static final int TEST_STAGE_NUMBER = 0;
+  protected static final int TEST_PARTITION_NUMBER = 0;
 
   private ListeningExecutorService innerExec;
   protected FrameProcessorExecutor exec;
@@ -103,6 +102,6 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
     );
 
     channel.writable().close();
-    return ReadableInput.channel(channel.readable(), FrameReader.create(signature), STAGE_PARTITION);
+    return ReadableInput.channel(channel.readable(), FrameReader.create(signature), TEST_STAGE_NUMBER, TEST_PARTITION_NUMBER);
   }
 }

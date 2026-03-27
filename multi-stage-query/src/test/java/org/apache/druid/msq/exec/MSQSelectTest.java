@@ -145,11 +145,13 @@ public class MSQSelectTest extends MSQTestBase
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
         {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
         {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT},
-        {SUPERUSER, SUPERUSER_MSQ_CONTEXT}
+        {SUPERUSER, SUPERUSER_MSQ_CONTEXT},
+        {USE_COMBINER, USE_COMBINER_MSQ_CONTEXT}
     };
 
     return Arrays.asList(data);
   }
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testCalculator(String contextName, Map<String, Object> context)

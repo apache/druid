@@ -96,7 +96,6 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.md)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.md)|
 |druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.md)|
-|materialized-view-selection, materialized-view-maintenance|Materialized View|[link](../development/extensions-contrib/materialized-view.md)|
 |druid-moving-average-query|Support for [Moving Average](https://en.wikipedia.org/wiki/Moving_average) and other Aggregate [Window Functions](https://en.wikibooks.org/wiki/Structured_Query_Language/Window_functions) in Druid queries.|[link](../development/extensions-contrib/moving-average-query.md)|
 |druid-influxdb-emitter|InfluxDB metrics emitter|[link](../development/extensions-contrib/influxdb-emitter.md)|
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
@@ -153,9 +152,7 @@ for the (hypothetical) extension *com.example:druid-example-extension:1.0.0*, ru
 java \
   -cp "lib/*" \
   -Ddruid.extensions.directory="extensions" \
-  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
   org.apache.druid.cli.Main tools pull-deps \
-  --no-default-hadoop \
   -c "com.example:druid-example-extension:1.0.0"
 ```
 

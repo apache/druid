@@ -21,6 +21,7 @@
 BrowserOnly
 docusaurus
 1M
+10MiB
 100MiB
 32-bit
 4MiB
@@ -28,6 +29,7 @@ docusaurus
 64-bit
 ACL
 ACLs
+ADC
 APIs
 apache.org
 AvroStorage
@@ -114,6 +116,7 @@ Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
+GoogleCloudStorageInputSource
 GSSAPI
 GUIs
 GroupBy
@@ -220,6 +223,7 @@ pull-deps
 RDBMS
 RDDs
 RDS
+RoleBinding
 ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
@@ -427,6 +431,7 @@ maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
+maxStringLength
 max_map_count
 memcached
 mergeable
@@ -564,6 +569,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
 subnet
@@ -599,6 +605,7 @@ unannouncements
 unary
 unassign
 uncomment
+uncompacted
 underutilization
 unintuitive
 unioned
@@ -958,15 +965,12 @@ druid_cache_total
 druid_hits
 druid_query
 historical001
-HadoopTuningConfig
 TuningConfig
 base-dataSource
 baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-druid.extensions.hadoopDependenciesDir
-hadoopDependencyCoordinates
 maxTaskCount
 metricsSpec
 queryType
@@ -1021,7 +1025,6 @@ postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
-HadoopDruidIndexer
 LzoThriftBlock
 SequenceFile
 classname
@@ -1135,8 +1138,11 @@ Env
 POD_NAME
 POD_NAMESPACE
 ConfigMap
+ConfigMaps
 PT17S
+GCP
 GCS
+GCSFileIO
 gcs-connector
 hdfs
 Aotearoa
@@ -1388,7 +1394,6 @@ windowPeriod
 2012-01-07T00
 500MB
 CombineTextInputFormat
-HadoopIndexTask
 InputFormat
 InputSplit
 JobHistory
@@ -1748,7 +1753,6 @@ mapred-default
 mapred-site
 sbt
 scala-2
-org.apache.hadoop
 proxy.com.
 remoteRepository
 JBOD
@@ -1824,6 +1828,7 @@ druid.query.groupBy.maxResults.
 groupByStrategy
 maxOnDiskStorage
 maxResults
+maxSpillFileCount
 orderby
 orderbys
 outputName
@@ -1841,6 +1846,7 @@ DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
 pre-join
+pre-allocate
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs
@@ -1977,8 +1983,8 @@ srcPort
 common_runtime_properties
 druid.extensions.directory
 druid.extensions.loadList
-druid.hadoop.security.kerberos.keytab
 druid.hadoop.security.kerberos.principal
+druid.hadoop.security.kerberos.keytab
 druid.indexer.logs.directory
 druid.indexer.logs.type
 druid.storage.storageDirectory
@@ -2017,7 +2023,6 @@ File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
 GCE
-HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost

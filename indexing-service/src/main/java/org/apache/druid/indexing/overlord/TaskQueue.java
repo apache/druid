@@ -36,6 +36,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -73,6 +74,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -416,8 +418,14 @@ public class TaskQueue
     log.info("Notified task runner to clean up [%,d] tasks with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
     // Attain futures for all active tasks (assuming they are ready to run).
-    // Copy tasks list, as notifyStatus may modify it.
-    for (final String queuedTaskId : List.copyOf(activeTasks.keySet())) {
+    // Sort by priority (highest first) so that higher-priority tasks are submitted
+    // to the runner before lower-priority ones.
+    final List<String> queuedTaskIds = activeTasks.values()
+                                                  .stream()
+                                                  .sorted(Comparator.comparingInt((TaskEntry entry) -> entry.getTask().getPriority()).reversed())
+                                                  .map(entry -> entry.getTask().getId())
+                                                  .toList();
+    for (final String queuedTaskId : queuedTaskIds) {
       updateTaskEntry(
           queuedTaskId,
           entry -> startPendingTaskOnRunner(entry, runnerTaskFutures.get(queuedTaskId))
@@ -500,9 +508,12 @@ public class TaskQueue
 
   private boolean isTaskPending(Task task)
   {
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
+    // Opt for point lookup on the runner rather than expensive list() call
+    final RunnerTaskState taskState = taskRunner.getRunnerTaskState(task.getId());
+    if (taskState == null) {
+      return false; // we don't know
+    }
+    return taskState == RunnerTaskState.PENDING;
   }
 
   /**

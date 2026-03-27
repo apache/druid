@@ -111,9 +111,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                 LatchableEmitterModule.class,
                 PostgreSQLMetadataStorageModule.class
             )
+            .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
             .addResource(kafkaServer)
+            .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
             .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())
             .addCommonProperty("druid.emitter.http.flushMillis", "500")
@@ -364,7 +366,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
@@ -408,9 +410,18 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
+    waitForNextCoordinatorCacheSync();
     eventCollector.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/broker")
+    );
+  }
+
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/coordinator")
     );
   }
 

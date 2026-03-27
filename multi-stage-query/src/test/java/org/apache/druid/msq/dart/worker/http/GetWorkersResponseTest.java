@@ -43,7 +43,8 @@ public class GetWorkersResponseTest
                 "localhost:8101",
                 DateTimes.of("2000")
             )
-        )
+        ),
+        0L
     );
     final GetWorkersResponse response2 =
         jsonMapper.readValue(jsonMapper.writeValueAsBytes(response), GetWorkersResponse.class);

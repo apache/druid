@@ -27,7 +27,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -79,7 +79,7 @@ public class InlineSchemaAvroBytesDecoderTest
   @Test
   public void testParse() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -94,7 +94,7 @@ public class InlineSchemaAvroBytesDecoderTest
   @Test
   public void testParseInvalidEncodedData() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     // Encode data incorrectly
@@ -119,7 +119,7 @@ public class InlineSchemaAvroBytesDecoderTest
   @Test
   public void testParseSmallInvalidChunk() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     // Write a small chunk of data to trigger an AvroRuntimeException

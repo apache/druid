@@ -19,29 +19,21 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
-import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
 import org.apache.druid.data.input.avro.InlineSchemaAvroBytesDecoder;
 import org.apache.druid.data.input.avro.SchemaRegistryBasedAvroBytesDecoder;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
-import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
-import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
+import org.apache.druid.data.input.thrift.ThriftExtensionsModule;
+import org.apache.druid.data.input.thrift.ThriftInputFormat;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
@@ -54,16 +46,18 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.tools.AvroEventSerializer;
-import org.apache.druid.testing.tools.AvroSchemaRegistryEventSerializer;
-import org.apache.druid.testing.tools.CsvEventSerializer;
-import org.apache.druid.testing.tools.DelimitedEventSerializer;
-import org.apache.druid.testing.tools.EventSerializer;
-import org.apache.druid.testing.tools.JsonEventSerializer;
-import org.apache.druid.testing.tools.ProtobufEventSerializer;
-import org.apache.druid.testing.tools.ProtobufSchemaRegistryEventSerializer;
-import org.apache.druid.testing.tools.StreamGenerator;
-import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.testing.embedded.tools.AvroEventSerializer;
+import org.apache.druid.testing.embedded.tools.AvroSchemaRegistryEventSerializer;
+import org.apache.druid.testing.embedded.tools.CsvEventSerializer;
+import org.apache.druid.testing.embedded.tools.DelimitedEventSerializer;
+import org.apache.druid.testing.embedded.tools.EventSerializer;
+import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
+import org.apache.druid.testing.embedded.tools.ProtobufEventSerializer;
+import org.apache.druid.testing.embedded.tools.ProtobufSchemaRegistryEventSerializer;
+import org.apache.druid.testing.embedded.tools.StreamGenerator;
+import org.apache.druid.testing.embedded.tools.ThriftEventSerializer;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaThriftEvent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -81,19 +75,32 @@ import java.util.Map;
  * <li>CSV</li>
  * <li>JSON</li>
  * <li>Protobuf (with and without schema registry)</li>
+ * <li>Thrift</li>
+ * <li>TSV</li>
  * </ul>
- *
- * This tests both InputFormat and Parser. Parser is deprecated for Streaming Ingestion,
- * and those tests will be removed in the future.
  */
 public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTestBase
 {
   private static final long CYCLE_PADDING_MS = 100;
   private static final int EVENTS_PER_SECOND = 6;
-  private static final List<String> WIKI_DIM_LIST = List.of("timestamp", "page", "language", "user",
-                                                            "unpatrolled", "newPage", "robot", "anonymous", "namespace",
-                                                            "continent", "country", "region", "city", "added",
-                                                            "deleted", "delta");
+  private static final List<String> WIKI_DIM_LIST = List.of(
+      "timestamp",
+      "page",
+      "language",
+      "user",
+      "unpatrolled",
+      "newPage",
+      "robot",
+      "anonymous",
+      "namespace",
+      "continent",
+      "country",
+      "region",
+      "city",
+      "added",
+      "deleted",
+      "delta"
+  );
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -112,17 +119,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
       InputFormat inputFormat
   );
 
-  /**
-   * Creates a {@link SupervisorSpec} that uses an {@link InputRowParser} instead
-   * of an {@link InputFormat}. Tests using the parser will be removed in the
-   * future.
-   */
-  protected abstract SupervisorSpec createSupervisorWithParser(
-      String dataSource,
-      String topic,
-      Map<String, Object> parserMap
-  );
-
   @Override
   public EmbeddedDruidCluster createCluster()
   {
@@ -138,6 +134,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
     cluster.addExtension(ProtobufExtensionsModule.class)
            .addExtension(AvroExtensionsModule.class)
+           .addExtension(ThriftExtensionsModule.class)
            .useLatchableEmitter()
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addResource(streamResource)
@@ -149,43 +146,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
            .addServer(historical);
 
     return cluster;
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_avroDataFormat_withParser() throws Exception
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new AvroEventSerializer();
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-
-    Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
-    
-    InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
-        overlord.bindings().jsonMapper(),
-        avroSchema
-    );
-
-    AvroParseSpec parseSpec = new AvroParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        null
-    );
-
-    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
-        parseSpec,
-        avroBytesDecoder,
-        false,
-        null
-    );
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -213,45 +173,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
     
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_avroDataFormatWithSchemaRegistry_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
-    serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
-    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
-        schemaRegistry.getConnectURI(),
-        null,
-        null,
-        null,
-        null,
-        overlord.bindings().jsonMapper()
-    );
-
-    AvroParseSpec parseSpec = new AvroParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        null
-    );
-
-    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
-        parseSpec,
-        avroBytesDecoder,
-        false,
-        null
-    );
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
-
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
@@ -305,59 +226,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_csvDataFormat_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new CsvEventSerializer();
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-    CSVParseSpec parseSpec = new CSVParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        null,
-        WIKI_DIM_LIST,
-        false,
-        0
-    );
-
-    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_jsonDataFormat_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-    JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        new JSONPathSpec(true, null),
-        null,
-        false
-    );
-
-    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
   public void test_jsonDataFormat()
   {
     streamResource.createTopicWithPartitions(dataSource, 3);
@@ -366,37 +234,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_protobufDataFormat_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new ProtobufEventSerializer();
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-
-    FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
-        MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
-        MoreResources.ProbufData.WIKI_PROTO_MESSAGE_TYPE
-    );
-
-    JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        new JSONPathSpec(true, null),
-        null,
-        false
-    );
-
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -421,41 +258,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
 
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
-  public void test_protobufDataFormatWithSchemaRegistry_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
-    serializer.initialize(dataSource);
-    int recordCount = generateStreamAndPublish(dataSource, serializer, true);
-    SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
-        schemaRegistry.getConnectURI(),
-        null,
-        null,
-        null,
-        null,
-        overlord.bindings().jsonMapper()
-    );
-
-    JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        new JSONPathSpec(true, null),
-        null,
-        false
-    );
-
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
 
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -491,35 +293,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   @Test
   @Timeout(30)
-  public void test_tsvDataFormat_withParser()
-  {
-    streamResource.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new DelimitedEventSerializer();
-    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-    // Build DelimitedParseSpec with proper object construction for TSV
-    DelimitedParseSpec parseSpec = new DelimitedParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
-        createWikipediaDimensionsSpec(),
-        "\t",
-        null,
-        WIKI_DIM_LIST,
-        false,
-        0
-    );
-
-    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
-
-    SupervisorSpec supervisorSpec = createSupervisorWithParser(dataSource, dataSource, parser);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
-  }
-
-  @Test
-  @Timeout(30)
   public void test_tsvDataFormat()
   {
     streamResource.createTopicWithPartitions(dataSource, 3);
@@ -536,6 +309,28 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
 
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
+
+    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(supervisorSpec);
+  }
+
+  @Test
+  @Timeout(30)
+  public void test_thriftDataFormat()
+  {
+    streamResource.createTopicWithPartitions(dataSource, 3);
+    EventSerializer serializer = new ThriftEventSerializer();
+    int recordCount = generateStreamAndPublish(dataSource, serializer, false);
+
+    ThriftInputFormat inputFormat = new ThriftInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        WikipediaThriftEvent.class.getName()
+    );
+
+    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
@@ -580,15 +375,6 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
       streamResource.publishRecordsToTopic(topic, records);
     }
     return records.size();
-  }
-
-  private SupervisorSpec createSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
-  {
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(
-        parser,
-        new TypeReference<>() {}
-    );
-    return createSupervisorWithParser(supervisorId, topic, parserMap);
   }
 
   private Map<String, Object> createWikipediaAvroSchemaMap()

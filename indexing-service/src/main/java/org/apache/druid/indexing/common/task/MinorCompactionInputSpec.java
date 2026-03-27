@@ -1,0 +1,132 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexing.common.task;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+/**
+ * Specifies uncompacted segments to compact within an interval.
+ * Used for MSQ-based minor compaction to compact only uncompacted segments while upgrading compacted segments (i.e. no change to physical segment files).
+ */
+public class MinorCompactionInputSpec implements CompactionInputSpec
+{
+  public static final String TYPE = "minor";
+
+  private final Interval interval;
+  private final List<SegmentDescriptor> segments;
+
+  @JsonCreator
+  public MinorCompactionInputSpec(
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("segments") List<SegmentDescriptor> segments
+  )
+  {
+    InvalidInput.conditionalException(interval != null, "Minor compaction interval must not be null");
+    InvalidInput.conditionalException(
+        interval.toDurationMillis() > 0,
+        "Minor compaction interval[%s] is empty, must specify a nonempty interval",
+        interval
+    );
+    InvalidInput.conditionalException(
+        segments != null && !segments.isEmpty(),
+        "Minor compaction specified segments must not be null or empty"
+    );
+
+    // Validate that all segments are within the interval
+    List<SegmentDescriptor> segmentsNotInInterval =
+        segments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+    InvalidInput.conditionalException(
+        segmentsNotInInterval.isEmpty(),
+        "All segments must be within interval[%s], got segments outside interval: %s",
+        interval,
+        segmentsNotInInterval
+    );
+
+    this.interval = interval;
+    this.segments = segments;
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
+  }
+
+  @JsonProperty
+  public List<SegmentDescriptor> getSegments()
+  {
+    return segments;
+  }
+
+  @Override
+  public Interval findInterval(String dataSource)
+  {
+    return interval;
+  }
+
+  @Override
+  public boolean validateSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments)
+  {
+    final Interval segmentsInterval = JodaUtils.umbrellaInterval(
+        latestSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+    );
+    return interval.overlaps(segmentsInterval);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MinorCompactionInputSpec that = (MinorCompactionInputSpec) o;
+    return Objects.equals(interval, that.interval) &&
+           Objects.equals(segments, that.segments);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(interval, segments);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MinorCompactionInputSpec{" +
+           "interval=" + interval +
+           ", segments=" + segments +
+           '}';
+  }
+}

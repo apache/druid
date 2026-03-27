@@ -43,12 +43,16 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,7 +62,7 @@ import java.util.concurrent.Future;
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
  */
-public class SupervisorManager
+public class SupervisorManager implements SupervisorStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
@@ -86,6 +90,32 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  @Override
+  public Collection<SupervisorStatsProvider.SupervisorStats> getSupervisorStats()
+  {
+    List<SupervisorStatsProvider.SupervisorStats> stats = new ArrayList<>();
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+
+      final Pair<Supervisor, SupervisorSpec> pair = entry.getValue();
+      if (pair == null || pair.lhs == null) {
+        continue;
+      }
+      final Supervisor supervisor = pair.lhs;
+      final SupervisorSpec supervisorSpec = pair.rhs;
+      final SupervisorStateManager.State state = supervisor.getState();
+
+      stats.add(new SupervisorStatsProvider.SupervisorStats(
+          supervisorSpec.getId(),
+          supervisorSpec.getType(),
+          state == null ? "UNKNOWN" : state.getBasicState().toString(),
+          DefaultQueryMetrics.getTableNamesAsString(new HashSet<>(supervisorSpec.getDataSources())),
+          supervisorSpec.getSource() == null ? "" : supervisorSpec.getSource(),
+          state == null ? "UNKNOWN" : state.toString()
+      ));
+    }
+    return stats;
   }
 
   /**

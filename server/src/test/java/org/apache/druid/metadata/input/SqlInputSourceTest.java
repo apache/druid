@@ -71,7 +71,7 @@ public class SqlInputSourceTest
   private final String TABLE_2 = "FOOS_TABLE_2";
 
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
-      new TimestampSpec("timestamp", "auto", null),
+      TimestampSpec.DEFAULT,
       new DimensionsSpec(
           DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
       ),

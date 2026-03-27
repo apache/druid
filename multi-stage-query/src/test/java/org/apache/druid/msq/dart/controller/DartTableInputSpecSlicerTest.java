@@ -46,6 +46,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -105,6 +106,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                                          .interval(Intervals.of("2000/2001"))
                                                          .shardSpec(new DimensionRangeShardSpec(
                                                              ImmutableList.of(PARTITION_DIM),
+                                                             VirtualColumns.EMPTY,
                                                              null,
                                                              new StringTuple(new String[]{"foo"}),
                                                              0,
@@ -119,6 +121,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                                          .interval(Intervals.of("2000/2001"))
                                                          .shardSpec(new DimensionRangeShardSpec(
                                                              ImmutableList.of(PARTITION_DIM),
+                                                             VirtualColumns.EMPTY,
                                                              new StringTuple(new String[]{"foo"}),
                                                              null,
                                                              1,
@@ -449,6 +452,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
     );
     final FilterSegmentPruner pruner = new FilterSegmentPruner(
         new EqualityFilter(PARTITION_DIM, ColumnType.STRING, "abc", null),
+        null,
         null
     );
 

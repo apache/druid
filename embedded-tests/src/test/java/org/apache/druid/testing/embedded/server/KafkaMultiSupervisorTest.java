@@ -27,7 +27,7 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
-import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

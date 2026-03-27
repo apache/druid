@@ -212,7 +212,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(
+      String dataSource,
+      List<Interval> intervals
+  )
   {
     return inReadOnlyDatasourceTransaction(
         dataSource,
@@ -492,19 +495,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
-            final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
-
-            Set<DataSegmentPlus> upgradedSegments = createNewIdsOfAppendSegmentsAfterReplace(
+            final Set<DataSegmentPlus> newSegments = createNewSegmentsAfterReplace(
                 dataSource,
                 transaction,
                 replaceSegments,
                 locksHeldByReplaceTask
             );
-
             Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata = new HashMap<>();
             final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-            for (DataSegmentPlus dataSegmentPlus : upgradedSegments) {
-              segmentsToInsert.add(dataSegmentPlus.getDataSegment());
+            for (DataSegmentPlus dataSegmentPlus : newSegments) {
               if (dataSegmentPlus.getSchemaFingerprint() != null && dataSegmentPlus.getNumRows() != null) {
                 upgradeSegmentMetadata.put(
                     dataSegmentPlus.getDataSegment().getId(),
@@ -518,6 +517,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 );
               }
             }
+            final Set<DataSegment> segmentsToInsert = newSegments.stream()
+                                                                 .map(DataSegmentPlus::getDataSegment)
+                                                                 .collect(Collectors.toSet());
             return SegmentPublishResult.ok(
                 insertSegments(
                     transaction,
@@ -1852,9 +1854,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Creates new versions of segments appended while a "REPLACE" task was in progress.
+   * Retrieves segments from the upgrade segments table and creates upgraded versions with new intervals,
+   * versions, and partition numbers. Combines upgraded segments with replace segments and updates shard
+   * specs with correct core partition counts.
+   *
+   * @return segments to insert into segment table
+   * @throws DruidException if a replace interval partially overlaps a segment being upgraded
    */
-  private Set<DataSegmentPlus> createNewIdsOfAppendSegmentsAfterReplace(
+  private Set<DataSegmentPlus> createNewSegmentsAfterReplace(
       final String dataSource,
       final SegmentMetadataTransaction transaction,
       final Set<DataSegment> replaceSegments,
@@ -1867,17 +1874,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptySet();
     }
 
-    // For each replace interval, find the number of core partitions and total partitions
-    final Map<Interval, Integer> intervalToNumCorePartitions = new HashMap<>();
+    // For each replace interval, find the current partition number
     final Map<Interval, Integer> intervalToCurrentPartitionNum = new HashMap<>();
+    // if numChunkNotSupported by all segments in an interval, we can't update the corePartitions in shardSpec
+    final Set<Interval> numChunkNotSupported = new HashSet<>();
     for (DataSegment segment : replaceSegments) {
-      intervalToNumCorePartitions.put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
-
       int partitionNum = segment.getShardSpec().getPartitionNum();
       intervalToCurrentPartitionNum.compute(
           segment.getInterval(),
           (i, value) -> value == null ? partitionNum : Math.max(value, partitionNum)
       );
+      if (!segment.isTombstone() && !segment.getShardSpec().canCreateNumberedPartitionChunk()) {
+        numChunkNotSupported.add(segment.getInterval());
+      }
     }
 
     // Find the segments that need to be upgraded
@@ -1885,18 +1894,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                 .map(ReplaceTaskLock::getSupervisorTaskId)
                                                 .findFirst().orElse(null);
     final Map<String, String> upgradeSegmentToLockVersion
-        = getAppendSegmentsCommittedDuringTask(transaction, taskId);
+        = getSegmentsCoveredByReplaceTaskLock(transaction, taskId);
 
     final List<DataSegmentPlus> segmentsToUpgrade
         = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
 
+    // If there is nothing to upgrade, return the replaceSegments unchanged
     if (segmentsToUpgrade.isEmpty()) {
-      return Collections.emptySet();
+      return replaceSegments.stream()
+                            .map(s -> new DataSegmentPlus(s, null, null, null, null, null, null, null))
+                            .collect(Collectors.toSet());
     }
 
-    final Set<Interval> replaceIntervals = intervalToNumCorePartitions.keySet();
-
-    final Set<DataSegmentPlus> upgradedSegments = new HashSet<>();
+    final Set<Interval> replaceIntervals = intervalToCurrentPartitionNum.keySet();
+    final Map<DataSegment, DataSegmentPlus> upgradedSegments = new HashMap<>();
+    final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
     for (DataSegmentPlus oldSegmentMetadata : segmentsToUpgrade) {
       // Determine interval of the upgraded segment
       DataSegment oldSegment = oldSegmentMetadata.getDataSegment();
@@ -1925,15 +1937,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         // but a (revoked) REPLACE lock covers this segment
         newInterval = oldInterval;
       }
+      if (!oldSegment.getShardSpec().canCreateNumberedPartitionChunk()) {
+        numChunkNotSupported.add(newInterval);
+      }
 
       // Compute shard spec of the upgraded segment
       final int partitionNum = intervalToCurrentPartitionNum.compute(
           newInterval,
           (i, value) -> value == null ? 0 : value + 1
       );
-      final int numCorePartitions = intervalToNumCorePartitions.get(newInterval);
-      ShardSpec shardSpec = new NumberedShardSpec(partitionNum, numCorePartitions);
-
+      final ShardSpec shardSpec = oldSegment.getShardSpec().withPartitionNum(partitionNum);
       // Create upgraded segment with the correct interval, version and shard spec
       String lockVersion = upgradeSegmentToLockVersion.get(oldSegment.getId().toString());
       DataSegment dataSegment = DataSegment.builder(oldSegment)
@@ -1947,7 +1960,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            ? oldSegmentMetadata.getDataSegment().getId().toString()
                                            : oldSegmentMetadata.getUpgradedFromSegmentId();
 
-      upgradedSegments.add(
+      upgradedSegments.put(
+          dataSegment,
           new DataSegmentPlus(
               dataSegment,
               null,
@@ -1959,9 +1973,35 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               oldSegmentMetadata.getIndexingStateFingerprint()
           )
       );
+      segmentsToInsert.add(dataSegment);
     }
 
-    return upgradedSegments;
+    return segmentsToInsert.stream().map(segment -> {
+      // update corePartitions in shard spec
+      Integer partitionNum = intervalToCurrentPartitionNum.get(segment.getInterval());
+      if (!segment.isTombstone() && !numChunkNotSupported.contains(segment.getInterval()) && partitionNum != null) {
+        return segment.withShardSpec(segment.getShardSpec().withCorePartitions(partitionNum + 1));
+      } else {
+        return segment;
+      }
+    }).map(s -> {
+      // wrap with DataSegmentPlus
+      if (upgradedSegments.containsKey(s)) {
+        DataSegmentPlus upgraded = upgradedSegments.get(s);
+        return new DataSegmentPlus(
+            s,
+            upgraded.getCreatedDate(),
+            upgraded.getUsedStatusLastUpdatedDate(),
+            upgraded.getUsed(),
+            upgraded.getSchemaFingerprint(),
+            upgraded.getNumRows(),
+            upgraded.getUpgradedFromSegmentId(),
+            upgraded.getIndexingStateFingerprint()
+        );
+      } else {
+        return new DataSegmentPlus(s, null, null, null, null, null, null, null);
+      }
+    }).collect(Collectors.toSet());
   }
 
   /**
@@ -2097,17 +2137,27 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return segmentMetadata;
   }
 
+  @Override
+  public int insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock)
+  {
+    final String dataSource = verifySegmentsToCommit(segmentToReplaceLock.keySet());
+    return inReadWriteDatasourceTransaction(
+        dataSource,
+        transaction -> insertIntoUpgradeSegmentsTable(transaction, segmentToReplaceLock)
+    );
+  }
+
   /**
    * Inserts entries into the upgrade_segments table in batches of size
    * {@link #MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}.
    */
-  private void insertIntoUpgradeSegmentsTable(
+  private int insertIntoUpgradeSegmentsTable(
       SegmentMetadataTransaction transaction,
       Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
   )
   {
     if (segmentToReplaceLock.isEmpty()) {
-      return;
+      return 0;
     }
 
     final PreparedBatch batch = transaction.getHandle().prepareBatch(
@@ -2118,6 +2168,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         )
     );
 
+    int inserted = 0;
     final List<List<Map.Entry<DataSegment, ReplaceTaskLock>>> partitions = Lists.partition(
         new ArrayList<>(segmentToReplaceLock.entrySet()),
         MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
@@ -2137,6 +2188,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       for (int i = 0; i < partition.size(); ++i) {
         if (affectedAppendRows[i] != 1) {
           failedInserts.add(partition.get(i).getKey());
+        } else {
+          inserted++;
         }
       }
       if (!failedInserts.isEmpty()) {
@@ -2146,6 +2199,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         );
       }
     }
+    return inserted;
   }
 
   private List<DataSegmentPlus> retrieveSegmentsById(
@@ -2169,13 +2223,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Finds the append segments that were covered by the given task REPLACE locks.
-   * These append segments must now be upgraded to the same version as the segments
+   * Finds segments that were covered by the given task REPLACE locks.
+   * These segments must now be upgraded to the same version as the segments
    * being committed by this replace task.
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  private Map<String, String> getAppendSegmentsCommittedDuringTask(
+  private Map<String, String> getSegmentsCoveredByReplaceTaskLock(
       SegmentMetadataTransaction transaction,
       String taskId
   )
@@ -2185,13 +2239,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         dbTables.getUpgradeSegmentsTable()
     );
 
-    ResultIterator<Pair<String, String>> resultIterator = transaction.getHandle()
-        .createQuery(sql)
-        .bind("task_id", taskId)
-        .map(
-            (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
-        )
-        .iterator();
+    ResultIterator<Pair<String, String>> resultIterator =
+        transaction.getHandle()
+                   .createQuery(sql)
+                   .bind("task_id", taskId)
+                   .map((index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version")))
+                   .iterator();
 
     final Map<String, String> segmentIdToLockVersion = new HashMap<>();
     while (resultIterator.hasNext()) {
@@ -2359,8 +2412,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                      .execute();
 
       publishResult = numRows == 1
-          ? SegmentPublishResult.ok(Set.of())
-          : SegmentPublishResult.retryableFailure("Insert failed");
+                      ? SegmentPublishResult.ok(Set.of())
+                      : SegmentPublishResult.retryableFailure("Insert failed");
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final String updateSql = StringUtils.format(
@@ -2378,8 +2431,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                      .execute();
 
       publishResult = numRows == 1
-          ? SegmentPublishResult.ok(Set.of())
-          : SegmentPublishResult.retryableFailure("Compare-and-swap update failed");
+                      ? SegmentPublishResult.ok(Set.of())
+                      : SegmentPublishResult.retryableFailure("Compare-and-swap update failed");
     }
 
     if (publishResult.isSuccess()) {
@@ -2462,8 +2515,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String dataSource = verifySegmentsToCommit(segments);
     final Set<SegmentId> idsToDelete = segments.stream()
-                                            .map(DataSegment::getId)
-                                            .collect(Collectors.toSet());
+                                               .map(DataSegment::getId)
+                                               .collect(Collectors.toSet());
     int numDeletedSegments = inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.deleteSegments(idsToDelete)
@@ -2735,10 +2788,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Collect unique non-null indexing state fingerprints
     final List<String> fingerprints = segments.stream()
-                                             .map(DataSegment::getIndexingStateFingerprint)
-                                             .filter(fp -> fp != null && !fp.isEmpty())
-                                             .distinct()
-                                             .collect(Collectors.toList());
+                                              .map(DataSegment::getIndexingStateFingerprint)
+                                              .filter(fp -> fp != null && !fp.isEmpty())
+                                              .distinct()
+                                              .collect(Collectors.toList());
 
     try {
       int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprints);
@@ -2749,7 +2802,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     catch (Exception e) {
       // Log but don't fail the overall operation - the fingerprint will stay pending
       // and be cleaned up by the pending grace period
-      log.warn(e, "Failed to mark indexing states for the following fingerprints as active (Future segments publishes may remediate): %s", fingerprints);
+      log.warn(
+          e,
+          "Failed to mark indexing states for the following fingerprints as active (Future segments publishes may remediate): %s",
+          fingerprints
+      );
     }
   }
 

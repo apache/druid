@@ -44,8 +44,6 @@ import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.IndexingHadoopModule;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.UOE;
@@ -128,7 +126,6 @@ public class DruidJsonValidator extends GuiceRunnable
         Iterables.concat(
             extnLoader.getModules(),
             Arrays.asList(
-                new IndexingHadoopModule(),
                 new IndexingServiceInputSourceModule(),
                 new LocalDataStorageDruidModule()
             )
@@ -158,8 +155,6 @@ public class DruidJsonValidator extends GuiceRunnable
     try {
       if ("query".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Query.class);
-      } else if ("hadoopConfig".equalsIgnoreCase(type)) {
-        jsonMapper.readValue(file, HadoopDruidIndexerConfig.class);
       } else if ("task".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Task.class);
       } else if ("parse".equalsIgnoreCase(type)) {
