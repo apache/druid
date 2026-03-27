@@ -152,8 +152,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
     final LegacyMSQSpec querySpec = baseSpec.withOverriddenContext(
-        buildTaskOverrides(
+        withTaskOverrides(
             druidQuery.getQuery(),
+            baseSpec.getContext(),
             plannerContext,
             baseSpec.getDestination()
         )
@@ -259,33 +260,32 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   /**
-   * Builds task-specific context overrides that are not shared with other MSQ engines like Dart.
-   *
-   * @param query query being run
-   * @param plannerContext SQL planner context
-   * @param destination query destination
+   * Returns a combined context map: starts with {@code baseContext}, adds mode defaults (which do not override
+   * existing keys), then adds task-specific overrides that are not shared with other MSQ engines like Dart.
    */
-  private static Map<String, Object> buildTaskOverrides(
+  private static Map<String, Object> withTaskOverrides(
       final Query<?> query,
+      final QueryContext baseContext,
       final PlannerContext plannerContext,
       final MSQDestination destination
   )
   {
-    final QueryContext sqlQueryContext = plannerContext.queryContext();
-    final Map<String, Object> overrides = new HashMap<>();
+    final Map<String, Object> context = new HashMap<>(baseContext.asMap());
 
-    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination)) {
-      overrides.put(MultiStageQueryContext.CTX_IS_REINDEX, true);
-    }
-
-    overrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
-
-    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
+    // Add mode defaults (putIfAbsent, so user-provided values like maxParseExceptions take precedence).
+    final String msqMode = MultiStageQueryContext.getMSQMode(baseContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, overrides);
+      MSQMode.populateDefaultQueryContext(msqMode, context);
     }
 
-    return overrides;
+    // Add task-specific overrides.
+    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination)) {
+      context.put(MultiStageQueryContext.CTX_IS_REINDEX, true);
+    }
+
+    context.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+
+    return context;
   }
 
   /**
