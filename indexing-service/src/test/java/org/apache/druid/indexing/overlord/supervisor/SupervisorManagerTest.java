@@ -1068,6 +1068,115 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
   }
 
+  @Test
+  public void testCalculateBackfillRangeWithBothStartAndEndOffsets() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of(
+        "0", 100L,
+        "1", 200L,
+        "2", 300L
+    );
+    Map<String, Long> endOffsets = ImmutableMap.of(
+        "0", 150L,
+        "1", 250L,
+        "2", 350L
+    );
+
+    Map<?, Object> result = manager.calculateBackfillRange(startOffsets, endOffsets);
+
+    Assert.assertEquals(3, result.size());
+    Assert.assertEquals(ImmutableMap.of("start", 100L, "end", 150L), result.get("0"));
+    Assert.assertEquals(ImmutableMap.of("start", 200L, "end", 250L), result.get("1"));
+    Assert.assertEquals(ImmutableMap.of("start", 300L, "end", 350L), result.get("2"));
+  }
+
+  @Test
+  public void testCalculateBackfillRangeWithNullStartOffsets() throws Exception
+  {
+    Map<String, Long> endOffsets = ImmutableMap.of(
+        "0", 150L,
+        "1", 250L
+    );
+
+    Map<?, Object> result = manager.calculateBackfillRange(null, endOffsets);
+
+    Assert.assertEquals(2, result.size());
+    Map<?, ?> partition0 = (Map<?, ?>) result.get("0");
+    Assert.assertEquals("none", partition0.get("start"));
+    Assert.assertEquals(150L, partition0.get("end"));
+    Assert.assertEquals("No committed offset found for this partition", partition0.get("note"));
+
+    Map<?, ?> partition1 = (Map<?, ?>) result.get("1");
+    Assert.assertEquals("none", partition1.get("start"));
+    Assert.assertEquals(250L, partition1.get("end"));
+    Assert.assertEquals("No committed offset found for this partition", partition1.get("note"));
+  }
+
+  @Test
+  public void testCalculateBackfillRangeWithMissingStartOffsetsForSomePartitions() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of(
+        "0", 100L,
+        "2", 300L
+    );
+    Map<String, Long> endOffsets = ImmutableMap.of(
+        "0", 150L,
+        "1", 250L,
+        "2", 350L
+    );
+
+    Map<?, Object> result = manager.calculateBackfillRange(startOffsets, endOffsets);
+
+    Assert.assertEquals(3, result.size());
+
+    // Partition 0 has start offset
+    Assert.assertEquals(ImmutableMap.of("start", 100L, "end", 150L), result.get("0"));
+
+    // Partition 1 has no start offset
+    Map<?, ?> partition1 = (Map<?, ?>) result.get("1");
+    Assert.assertEquals("none", partition1.get("start"));
+    Assert.assertEquals(250L, partition1.get("end"));
+    Assert.assertEquals("No committed offset found for this partition", partition1.get("note"));
+
+    // Partition 2 has start offset
+    Assert.assertEquals(ImmutableMap.of("start", 300L, "end", 350L), result.get("2"));
+  }
+
+  @Test
+  public void testCalculateBackfillRangeWithEmptyOffsets() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of();
+    Map<String, Long> endOffsets = ImmutableMap.of();
+
+    Map<?, Object> result = manager.calculateBackfillRange(startOffsets, endOffsets);
+
+    Assert.assertEquals(0, result.size());
+  }
+
+  @Test
+  public void testCalculateBackfillRangeWithEmptyStartOffsets() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of();
+    Map<String, Long> endOffsets = ImmutableMap.of(
+        "0", 150L,
+        "1", 250L
+    );
+
+    Map<?, Object> result = manager.calculateBackfillRange(startOffsets, endOffsets);
+
+    Assert.assertEquals(2, result.size());
+
+    Map<?, ?> partition0 = (Map<?, ?>) result.get("0");
+    Assert.assertEquals("none", partition0.get("start"));
+    Assert.assertEquals(150L, partition0.get("end"));
+    Assert.assertEquals("No committed offset found for this partition", partition0.get("note"));
+
+    Map<?, ?> partition1 = (Map<?, ?>) result.get("1");
+    Assert.assertEquals("none", partition1.get("start"));
+    Assert.assertEquals(250L, partition1.get("end"));
+    Assert.assertEquals("No committed offset found for this partition", partition1.get("note"));
+  }
+
   private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;

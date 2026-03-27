@@ -1926,51 +1926,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     checkTaskDuration();
   }
 
-  /**
-   * Calculates the backfill range between start and end offsets.
-   * Returns a map with partition ID as key and [startOffset, endOffset] array as value.
-   *
-   * @param startOffsets Starting offsets (last checkpointed)
-   * @param endOffsets Ending offsets (latest from stream)
-   * @return Map of partition ID to offset range [start, end]
-   */
-  public Map<PartitionIdType, Object> calculateBackfillRange(
-      Map<PartitionIdType, SequenceOffsetType> startOffsets,
-      Map<PartitionIdType, SequenceOffsetType> endOffsets
-  )
-  {
-    Map<PartitionIdType, Object> skippedRanges = new HashMap<>();
-
-    for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-      PartitionIdType partition = entry.getKey();
-      SequenceOffsetType endOffset = entry.getValue();
-      SequenceOffsetType startOffset = (startOffsets != null) ? startOffsets.get(partition) : null;
-
-      if (startOffset != null) {
-        // Both start and end exist - calculate range
-        skippedRanges.put(
-            partition,
-            ImmutableMap.of(
-                "start", startOffset,
-                "end", endOffset
-            )
-        );
-      } else {
-        // No checkpoint exists for this partition
-        skippedRanges.put(
-            partition,
-            ImmutableMap.of(
-                "start", "none",
-                "end", endOffset,
-                "note", "No committed offset found for this partition"
-            )
-        );
-      }
-    }
-
-    return skippedRanges;
-  }
-
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +56,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -463,7 +465,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       autoscaler.reset();
     }
 
-    Map<?, Object> backfillRange = streamSupervisor.calculateBackfillRange(startOffsets, latestOffsets);
+    Map<?, Object> backfillRange = calculateBackfillRange(startOffsets, latestOffsets);
 
     streamSupervisor.submitBackfillTask(startOffsets, latestOffsets);
 
@@ -473,6 +475,52 @@ public class SupervisorManager implements SupervisorStatsProvider
       "id", id,
       "backfillRange", backfillRange
     );
+  }
+
+  /**
+   * Calculates the backfill range between start and end offsets for display purposes.
+   * Returns a map with partition ID as key and offset range details as value.
+   *
+   * @param startOffsets Starting offsets (last checkpointed)
+   * @param endOffsets Ending offsets (latest from stream)
+   * @return Map of partition ID to offset range [start, end]
+   */
+  @VisibleForTesting
+  public Map<?, Object> calculateBackfillRange(
+      Map<?, ?> startOffsets,
+      Map<?, ?> endOffsets
+  )
+  {
+    Map<Object, Object> backfillRange = new HashMap<>();
+
+    for (Map.Entry<?, ?> entry : endOffsets.entrySet()) {
+      Object partition = entry.getKey();
+      Object endOffset = entry.getValue();
+      Object startOffset = (startOffsets != null) ? startOffsets.get(partition) : null;
+
+      if (startOffset != null) {
+        // Both start and end exist - calculate range
+        backfillRange.put(
+            partition,
+            ImmutableMap.of(
+                "start", startOffset,
+                "end", endOffset
+            )
+        );
+      } else {
+        // No checkpoint exists for this partition
+        backfillRange.put(
+            partition,
+            ImmutableMap.of(
+                "start", "none",
+                "end", endOffset,
+                "note", "No committed offset found for this partition"
+            )
+        );
+      }
+    }
+
+    return backfillRange;
   }
 
   public boolean checkPointDataSourceMetadata(
