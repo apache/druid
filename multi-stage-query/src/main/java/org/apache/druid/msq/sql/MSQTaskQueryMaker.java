@@ -20,7 +20,6 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rel.type.RelDataType;
@@ -42,7 +41,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -105,28 +103,22 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final IngestDestination targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
-  private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
-  private final QueryKitSpecFactory queryKitSpecFactory;
 
   MSQTaskQueryMaker(
       @Nullable final IngestDestination targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
-      final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
-      final MSQTerminalStageSpecFactory terminalStageSpecFactory,
-      final QueryKitSpecFactory queryKitSpecFactory
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.targetDataSource = targetDataSource;
     this.overlordClient = Preconditions.checkNotNull(overlordClient, "indexingServiceClient");
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
-    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
     this.terminalStageSpecFactory = terminalStageSpecFactory;
-    this.queryKitSpecFactory = queryKitSpecFactory;
   }
 
   @Override
