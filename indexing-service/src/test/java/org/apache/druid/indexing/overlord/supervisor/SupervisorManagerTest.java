@@ -908,6 +908,95 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testResetSupervisorAndBackfillWithEmptyLatestOffsets()
+  {
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).anyTimes();
+
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false);
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).anyTimes();
+
+    // Mock empty latest offsets
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of());
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    IllegalStateException exception = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetSupervisorAndBackfill("id1")
+    );
+    Assert.assertTrue(
+        "Expected error message about failing to get latest offsets",
+        exception.getMessage().contains("Skipping reset: Failed to get latest offsets from stream for supervisor")
+    );
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithEmptyStartOffsets()
+  {
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).anyTimes();
+
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false);
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).anyTimes();
+
+    // Mock non-empty latest offsets but empty start offsets
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of("0", 100L));
+    EasyMock.expect(streamSupervisor.getOffsetsFromMetadataStorage()).andReturn(ImmutableMap.of());
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    IllegalStateException exception = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetSupervisorAndBackfill("id1")
+    );
+    Assert.assertTrue(
+        "Expected error message about failing to get checkpointed offsets",
+        exception.getMessage().contains("Skipping reset: Failed to get checkpointed offsets for supervisor")
+    );
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
+  }
+
+  @Test
   public void testCreateSuspendResumeAndStopSupervisor()
   {
     Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
