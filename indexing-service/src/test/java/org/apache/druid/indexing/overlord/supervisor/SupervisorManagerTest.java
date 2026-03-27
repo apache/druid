@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -682,6 +683,228 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", datasourceMetadata));
 
     verifyAll();
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfill()
+  {
+    // Create mock SeekableStreamSupervisor and spec
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    // Setup expectations for supervisor startup
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).anyTimes();
+
+    // Expectations for resetSupervisorAndBackfill
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false);
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).anyTimes();
+
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream())
+            .andReturn(ImmutableMap.of("0", 150L, "1", 250L));
+
+    EasyMock.expect(streamSupervisor.getOffsetsFromMetadataStorage())
+            .andReturn(ImmutableMap.of("0", 100L, "1", 200L));
+
+    EasyMock.expect(ioConfig.getStream()).andReturn("test-stream");
+    EasyMock.expect(streamSupervisor.createDataSourceMetaDataForReset(
+        EasyMock.eq("test-stream"),
+        EasyMock.anyObject()
+    )).andReturn(new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>("test-stream", ImmutableMap.of("0", "150", "1", "250"), ImmutableSet.of())
+    ));
+
+    streamSupervisor.resetOffsets(EasyMock.anyObject(DataSourceMetadata.class));
+    streamSupervisor.submitBackfillTask(
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
+    );
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    Map<String, Object> result = manager.resetSupervisorAndBackfill("id1");
+
+    Assert.assertEquals("id1", result.get("id"));
+    Assert.assertNotNull(result.get("backfillRange"));
+
+    Map<?, ?> backfillRange = (Map<?, ?>) result.get("backfillRange");
+    Assert.assertEquals(2, backfillRange.size());
+    Assert.assertEquals(ImmutableMap.of("start", 100L, "end", 150L), backfillRange.get("0"));
+    Assert.assertEquals(ImmutableMap.of("start", 200L, "end", 250L), backfillRange.get("1"));
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithNonExistentSupervisor()
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    replayAll();
+
+    manager.start();
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("nonexistent")
+    );
+    Assert.assertEquals("Supervisor[nonexistent] does not exist", exception.getMessage());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithNonStreamSupervisor()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    manager.start();
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id3")
+    );
+    Assert.assertEquals("Supervisor[id3] is not a SeekableStreamSupervisor", exception.getMessage());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithUseConcurrentLocksDisabled()
+  {
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    // useConcurrentLocks is false
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", false)).anyTimes();
+
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false);
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id1")
+    );
+    Assert.assertTrue(
+        "Expected error message about useConcurrentLocks",
+        exception.getMessage().contains("Backfill tasks require 'useConcurrentLocks'")
+    );
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithUseEarliestOffsetEnabled()
+  {
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).anyTimes();
+
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    // useEarliestOffset is true
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(true);
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id1")
+    );
+    Assert.assertTrue(
+        "Expected error message about useEarliestOffset",
+        exception.getMessage().contains("Reset with skipped offsets is not supported when useEarliestOffset is true")
+    );
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
+  }
+
+  @Test
+  public void testResetSupervisorAndBackfillWithNonRunningSupervisor()
+  {
+    SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", streamSpec);
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    EasyMock.expect(streamSpec.getId()).andReturn("id1").anyTimes();
+    EasyMock.expect(streamSpec.getDataSources()).andReturn(ImmutableList.of("datasource")).anyTimes();
+    EasyMock.expect(streamSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(streamSpec.createSupervisor()).andReturn(streamSupervisor).anyTimes();
+    EasyMock.expect(streamSpec.createAutoscaler(streamSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).anyTimes();
+
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false);
+    // Supervisor is IDLE, not RUNNING
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.IDLE).anyTimes();
+
+    replayAll();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+
+    manager.start();
+
+    IllegalStateException exception = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetSupervisorAndBackfill("id1")
+    );
+    Assert.assertTrue(
+        "Expected error message about running supervisor",
+        exception.getMessage().contains("A running supervisor is required")
+    );
+
+    verifyAll();
+    EasyMock.verify(streamSupervisor, streamSpec, ioConfig);
   }
 
   @Test
