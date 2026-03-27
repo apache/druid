@@ -19,8 +19,6 @@
 
 package org.apache.druid.testing.embedded.compact;
 
-import org.apache.druid.catalog.guice.CatalogClientModule;
-import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -33,7 +31,6 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -42,13 +39,9 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -72,26 +65,14 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedHistorical;
-import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.indexing.MoreResources;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.tools.EventSerializer;
 import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
 import org.apache.druid.testing.embedded.tools.StreamGenerator;
 import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -108,42 +89,8 @@ import java.util.stream.Collectors;
 /**
  * Embedded test that runs compaction supervisors of various types.
  */
-public class CompactionSupervisorTest extends EmbeddedClusterTestBase
+public class CompactionSupervisorTest extends CompactionSupervisorTestBase
 {
-  private final EmbeddedBroker broker = new EmbeddedBroker();
-  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .setServerMemory(2_000_000_000L)
-      .addProperty("druid.worker.capacity", "20");
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord()
-      .addProperty("druid.manager.segments.pollDuration", "PT1s")
-      .addProperty("druid.manager.segments.useIncrementalCache", "always");
-  private final EmbeddedHistorical historical = new EmbeddedHistorical();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
-      .addProperty("druid.manager.segments.useIncrementalCache", "always");
-
-  @Override
-  public EmbeddedDruidCluster createCluster()
-  {
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .useDefaultTimeoutForLatchableEmitter(600)
-                               .addCommonProperty("druid.auth.authorizers", "[\"allowAll\"]")
-                               .addCommonProperty("druid.auth.authorizer.allowAll.type", "allowAll")
-                               .addCommonProperty("druid.auth.authorizer.allowAll.policy.type", "noRestriction")
-                               .addCommonProperty(
-                                   "druid.policy.enforcer.allowedPolicies",
-                                   "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
-                               )
-                               .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
-                               .addExtensions(CatalogClientModule.class, CatalogCoordinatorModule.class)
-                               .addServer(coordinator)
-                               .addServer(overlord)
-                               .addServer(indexer)
-                               .addServer(historical)
-                               .addServer(broker)
-                               .addServer(new EmbeddedRouter());
-  }
-
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
   public void test_ingestDayGranularity_andCompactToMonthGranularity_andCompactToYearGranularity_withInlineConfig(
@@ -697,39 +644,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return Numbers.parseInt(cluster.runSql("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource));
   }
 
-  private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
-  {
-    String result = cluster.runSql(
-        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
-        dataSource,
-        nestedColumn,
-        field,
-        value
-    );
-    Assertions.assertEquals(
-        0,
-        Numbers.parseInt(result),
-        StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
-    );
-  }
-
-  private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
-  {
-    List<String> events = new ArrayList<>();
-
-    for (int i = 1; i <= numEvents; i++) {
-      DateTime eventTime = interval.getStart().plus(spacingMillis * i);
-      if (eventTime.isAfter(interval.getEnd())) {
-        throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
-      }
-      String item = i % 2 == 0 ? "hat" : "shirt";
-      int metricValue = 100 + i * 5;
-      events.add(eventTime + "," + item + "," + metricValue);
-    }
-
-    return String.join("\n", events);
-  }
-
   private void verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint()
   {
     overlord
@@ -773,67 +687,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         });
   }
 
-  private void runCompactionWithSpec(DataSourceCompactionConfig config)
-  {
-    cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, false, null));
-  }
-
   private void pauseCompaction(DataSourceCompactionConfig config)
   {
     cluster.callApi().postSupervisor(new CompactionSupervisorSpec(config, true, null));
-  }
-
-  private void waitForAllCompactionTasksToFinish()
-  {
-    // Wait for all intervals to be compacted
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("interval/waitCompact/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueMatching(Matchers.equalTo(0L))
-    );
-
-    // Wait for all submitted compaction jobs to finish
-    int numSubmittedTasks = overlord.latchableEmitter().getMetricValues(
-        "compact/task/count",
-        Map.of(DruidMetrics.DATASOURCE, dataSource)
-    ).stream().mapToInt(Number::intValue).sum();
-
-    final Matcher<Object> taskTypeMatcher = Matchers.anyOf(
-        Matchers.equalTo("query_controller"),
-        Matchers.equalTo("compact")
-    );
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimensionMatching(DruidMetrics.TASK_TYPE, taskTypeMatcher)
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(numSubmittedTasks)
-    );
-  }
-
-  private int getNumSegmentsWith(Granularity granularity)
-  {
-    return (int) overlord
-        .bindings()
-        .segmentsMetadataStorage()
-        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
-        .stream()
-        .filter(segment -> !segment.isTombstone())
-        .filter(segment -> granularity.isAligned(segment.getInterval()))
-        .count();
-  }
-
-  private void runIngestionAtGranularity(
-      String granularity,
-      String inlineDataCsv
-  )
-  {
-    final IndexTask task = MoreResources.Task.BASIC_INDEX
-        .get()
-        .segmentGranularity(granularity)
-        .inlineInputSourceWithData(inlineDataCsv)
-        .dataSource(dataSource)
-        .withId(IdUtils.getRandomId());
-    cluster.callApi().runTask(task, overlord);
   }
 
   public static List<Object[]> getPolicyAndPartition()
@@ -875,28 +731,4 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return params;
   }
 
-  private void verifyEventCountOlderThan(Period period, String dimension, String value, int expectedCount)
-  {
-    DateTime now = DateTimes.nowUtc();
-    DateTime threshold = now.minus(period);
-
-    String result = cluster.runSql(
-        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE %s = '%s' AND __time < MILLIS_TO_TIMESTAMP(%d)",
-        dataSource,
-        dimension,
-        value,
-        threshold.getMillis()
-    );
-    Assertions.assertEquals(
-        expectedCount,
-        Numbers.parseInt(result),
-        StringUtils.format(
-            "Expected %d events where %s='%s' older than %s",
-            expectedCount,
-            dimension,
-            value,
-            period
-        )
-    );
-  }
 }

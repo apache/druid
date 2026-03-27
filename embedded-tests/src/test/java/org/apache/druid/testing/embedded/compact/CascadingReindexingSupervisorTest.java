@@ -46,6 +46,7 @@ import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -289,8 +290,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
     }
 
     // Verify each interval's structural consistency and track which configured rules appear
-    boolean foundSegGranRule = false;
-    boolean foundTuningRule = false;
+    boolean foundPartitioningRule = false;
 
     for (ReindexingTimelineView.IntervalConfig intervalConfig : intervals) {
       Assertions.assertNotNull(intervalConfig.getInterval());
@@ -308,7 +308,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
 
         for (Object rule : intervalConfig.getAppliedRules()) {
           if (rule instanceof ReindexingPartitioningRule) {
-            foundSegGranRule = true;
+            foundPartitioningRule = true;
             ReindexingPartitioningRule partitioningRule = (ReindexingPartitioningRule) rule;
             Assertions.assertEquals("dayRule", partitioningRule.getId());
             Assertions.assertEquals(Granularities.DAY, partitioningRule.getSegmentGranularity());
@@ -324,8 +324,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
       }
     }
 
-    Assertions.assertTrue(foundSegGranRule, "Timeline should contain the configured segmentGranularity rule");
-    Assertions.assertTrue(foundTuningRule, "Timeline should contain the configured tuningConfig rule");
+    Assertions.assertTrue(foundPartitioningRule, "Timeline should contain the configured segmentGranularity rule");
   }
 
   @Test
@@ -342,7 +341,7 @@ public class CascadingReindexingSupervisorTest extends CompactionSupervisorTestB
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
+                UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(new DynamicPartitionsSpec(null, null)).build()
             )
             .build();
 
