@@ -32,6 +32,8 @@ import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -70,6 +72,7 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -379,6 +382,102 @@ public class OverlordCompactionSchedulerTest
     Assert.assertFalse(result.isValid());
     Assert.assertEquals(
         "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        result.getReason()
+    );
+  }
+
+  @Test
+  public void test_validateCompactionConfig_returnsValid_forCascadingReindexingTemplate()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertTrue(result.isValid());
+  }
+
+  @Test
+  public void test_validateCompactionConfig_returnsInvalid_forCascadingReindexingWithOneMaxTasks()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1),
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertFalse(result.isValid());
+    Assert.assertEquals(
+        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        result.getReason()
+    );
+  }
+
+  @Test
+  public void test_validateCompactionConfig_returnsInvalid_forCascadingReindexingWithMaxTotalRows()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, 1000L),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertFalse(result.isValid());
+    Assert.assertEquals(
+        "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning",
+        result.getReason()
+    );
+  }
+
+  @Test
+  public void test_validateCompactionConfig_returnsInvalid_forCascadingReindexingWithHashedPartitionsSpec()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new HashedPartitionsSpec(null, 3, null),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertFalse(result.isValid());
+    Assert.assertEquals(
+        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
         result.getReason()
     );
   }
