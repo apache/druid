@@ -244,6 +244,39 @@ public class EmbeddedBrokerServerViewOfLatestUsedSegmentsTest extends EmbeddedCl
     assertTimelineMatchesMetadata(loadedTimeline, getMetadataSegments(metadataOnlyDataSource), false);
   }
 
+  @Test
+  public void testTimelineIsRebuiltAfterBrokerRestart() throws Exception
+  {
+    final Set<DataSegment> metadataSegmentsBefore = getMetadataSegments(dataSource);
+    Assertions.assertFalse(metadataSegmentsBefore.isEmpty(), "Expected segments in metadata before restart");
+
+    // Verify timeline exists before restart
+    final var viewBefore = broker.bindings().getInstance(BrokerServerViewOfLatestUsedSegments.class);
+    Assertions.assertTrue(
+        viewBefore.getTimeline(TableDataSource.create(dataSource)).isPresent(),
+        "Expected timeline before restart"
+    );
+
+    // Restart the broker
+    broker.stop();
+    broker.start();
+
+    // After restart, a new injector is created — get the new view instance
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    final var viewAfter = broker.bindings().getInstance(BrokerServerViewOfLatestUsedSegments.class);
+    final TimelineLookup<String, ServerSelector> rebuiltTimeline =
+        viewAfter.getTimeline(TableDataSource.create(dataSource)).orElse(null);
+    Assertions.assertNotNull(rebuiltTimeline, "Expected merged timeline to be rebuilt after broker restart");
+
+    final Set<DataSegment> metadataSegmentsAfter = getMetadataSegments(dataSource);
+    assertTimelineMatchesMetadata(rebuiltTimeline, metadataSegmentsAfter, false);
+
+    // Verify SQL still works after restart
+    String result = cluster.callApi().runSql("SELECT COUNT(*) FROM %s", dataSource);
+    Assertions.assertFalse(result.isBlank(), "Expected SQL query to succeed after broker restart");
+  }
+
   private void ingestData(final String targetDataSource)
   {
     cluster.callApi().runTask(
