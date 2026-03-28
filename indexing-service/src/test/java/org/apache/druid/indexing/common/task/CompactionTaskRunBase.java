@@ -1614,7 +1614,6 @@ public abstract class CompactionTaskRunBase
         null,
         null,
         IndexTaskTest.createIngestionSpec(
-            objectMapper,
             tmpDir,
             parseSpec,
             null,
