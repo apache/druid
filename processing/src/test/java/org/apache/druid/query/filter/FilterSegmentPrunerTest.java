@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -139,6 +140,76 @@ class FilterSegmentPrunerTest
     Assertions.assertEquals(Set.of(seg1), prunerRange.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
     Assertions.assertEquals(Set.copyOf(segs), prunerEmptyFields.prune(segs, Function.identity()));
+  }
+
+  @Test
+  void testCombineWithFilterPruner()
+  {
+    DimFilter filterA = new RangeFilter("dim1", ColumnType.STRING, null, "aaa", null, null, null);
+    DimFilter filterB = new RangeFilter("dim2", ColumnType.STRING, null, "bbb", null, null, null);
+
+    FilterSegmentPruner prunerA = new FilterSegmentPruner(filterA, null, VirtualColumns.EMPTY);
+    FilterSegmentPruner prunerB = new FilterSegmentPruner(filterB, null, VirtualColumns.EMPTY);
+
+    SegmentPruner combined = prunerA.combine(prunerB);
+    Assertions.assertInstanceOf(FilterSegmentPruner.class, combined);
+
+    // combined pruner should prune based on both filters
+    String interval1 = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    DataSegment includedByBoth = makeDataSegment(interval1, makeRange("dim1", 0, null, "abc"));
+    DataSegment excludedByDim1 = makeDataSegment(interval1, makeRange("dim1", 1, "lmn", null));
+    DataSegment excludedByDim2 = makeDataSegment(interval1, makeRange("dim2", 0, "ccc", null));
+
+    Assertions.assertTrue(combined.include(includedByBoth));
+    Assertions.assertFalse(combined.include(excludedByDim1));
+    Assertions.assertFalse(combined.include(excludedByDim2));
+  }
+
+  @Test
+  void testCombineWithCompositePruner()
+  {
+    DimFilter filterA = new RangeFilter("dim1", ColumnType.STRING, null, "aaa", null, null, null);
+    DimFilter filterB = new RangeFilter("dim2", ColumnType.STRING, null, "bbb", null, null, null);
+
+    FilterSegmentPruner filterPrunerA = new FilterSegmentPruner(filterA, null, VirtualColumns.EMPTY);
+    FilterSegmentPruner filterPrunerB = new FilterSegmentPruner(filterB, null, VirtualColumns.EMPTY);
+
+    Set<SegmentPruner> pruners = new LinkedHashSet<>();
+    pruners.add(filterPrunerB);
+    CompositeSegmentPruner composite = new CompositeSegmentPruner(pruners);
+
+    // FilterSegmentPruner.combine(CompositeSegmentPruner) should delegate to composite
+    SegmentPruner combined = filterPrunerA.combine(composite);
+    Assertions.assertInstanceOf(CompositeSegmentPruner.class, combined);
+
+    String interval1 = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    DataSegment excludedByDim1 = makeDataSegment(interval1, makeRange("dim1", 0, "lmn", null));
+    Assertions.assertFalse(combined.include(excludedByDim1));
+  }
+
+  @Test
+  void testCombineWithUnknownPrunerType()
+  {
+    DimFilter filterA = new RangeFilter("dim1", ColumnType.STRING, null, "aaa", null, null, null);
+    FilterSegmentPruner filterPruner = new FilterSegmentPruner(filterA, null, VirtualColumns.EMPTY);
+
+    SegmentPruner other = new SegmentPruner()
+    {
+      @Override
+      public boolean include(DataSegment segment)
+      {
+        return false;
+      }
+
+      @Override
+      public SegmentPruner combine(SegmentPruner other)
+      {
+        return this;
+      }
+    };
+
+    SegmentPruner combined = filterPruner.combine(other);
+    Assertions.assertInstanceOf(CompositeSegmentPruner.class, combined);
   }
 
   @Test
