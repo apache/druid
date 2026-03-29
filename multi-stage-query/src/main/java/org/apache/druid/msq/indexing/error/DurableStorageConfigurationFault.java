@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
@@ -54,6 +55,15 @@ public class DurableStorageConfigurationFault extends BaseMSQFault
   public String getMessage()
   {
     return errorMessage;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

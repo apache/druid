@@ -60,7 +60,7 @@ public class MSQErrorReportTest
     Assert.assertEquals(new RowTooLargeFault(10), MSQErrorReport.getFaultFromException(tooLargeException));
 
     UnexpectedMultiValueDimensionException mvException = new UnexpectedMultiValueDimensionException(ERROR_MESSAGE);
-    Assert.assertEquals(QueryRuntimeFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
+    Assert.assertEquals(DruidExceptionFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
 
     QueryTimeoutException queryException = new QueryTimeoutException(ERROR_MESSAGE);
     Assert.assertEquals(

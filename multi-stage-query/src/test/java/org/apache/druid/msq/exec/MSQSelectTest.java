@@ -2808,9 +2808,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedMSQFault(CanceledFault.timeout())
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                " Query canceled due to [Configured query timeout].")
-            )
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Query timed out"))
         ))
         .verifyExecutionError();
   }

@@ -31,7 +31,6 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -292,17 +291,21 @@ public class MSQErrorReport
         );
 
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
-        return new QueryRuntimeFault(
-            StringUtils.format(
-                "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
-                ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
-            ), cause.getMessage()
+        return DruidExceptionFault.fromDruidException(
+            DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                .build(
+                    cause,
+                    "Column [%s] is a multi-value string. "
+                    + "Please wrap the column using MV_TO_ARRAY() to proceed further.",
+                    ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
+                )
         );
       } else if (cause instanceof InterruptedException) {
         return CanceledFault.unknown();
-      } else if (cause.getClass().getPackage().getName().startsWith("org.apache.druid.query")) {
-        // catch all for all query runtime exception faults.
-        return new QueryRuntimeFault(e.getMessage(), null);
+      } else if (cause instanceof DruidException) {
+        return DruidExceptionFault.fromDruidException((DruidException) cause);
       } else {
         cause = cause.getCause();
       }

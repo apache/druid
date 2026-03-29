@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -58,6 +59,15 @@ public class UnknownFault extends BaseMSQFault
   public String getMessage()
   {
     return message;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                         .ofCategory(DruidException.Category.UNCATEGORIZED)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

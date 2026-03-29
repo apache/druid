@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -63,6 +64,15 @@ public class BroadcastTablesTooLargeFault extends BaseMSQFault
   public JoinAlgorithm getConfiguredJoinAlgorithm()
   {
     return configuredJoinAlgorithm;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

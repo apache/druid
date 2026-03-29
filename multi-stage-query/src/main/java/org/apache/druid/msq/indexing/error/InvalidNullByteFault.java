@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -120,6 +121,15 @@ public class InvalidNullByteFault extends BaseMSQFault
   public Integer getPosition()
   {
     return position;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override
