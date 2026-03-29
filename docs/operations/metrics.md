@@ -32,7 +32,7 @@ All Druid metrics share a common set of fields:
 * `service`: the service name that emitted the metric
 * `host`: the host name that emitted the metric
 * `version`: the Druid version of the service that emitted the metric
-* `buildRevision`: the git commit of the build that produced the service binary. Useful for verifying that all nodes in a cluster are running the intended revision during rolling deployments. Empty string when running outside a packaged binary (e.g., during `mvn test`).
+* `buildRevision`: the git commit of the build that produced the service binary. Useful for verifying that all nodes in a cluster are running the intended revision during rolling deployments.
 * `value`: some numeric value associated with the metric
 
 Metrics may have additional dimensions beyond those listed above.

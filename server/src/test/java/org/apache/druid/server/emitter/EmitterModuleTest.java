@@ -231,14 +231,13 @@ public class EmitterModuleTest
   @Test
   public void testBuildRevisionDimensionFallsBackToEmptyStringWhenUnavailable()
   {
-    // When getBuildRevision() returns null (e.g. manifest absent), buildRevision dimension is an empty string,
-    // consistent with how the "version" dimension behaves during `mvn test`.
+    // When getBuildRevision() returns "" (e.g. running outside a packaged JAR), buildRevision dimension is an empty string.
     EmitterModule emitterModule = new EmitterModule()
     {
       @Override
       protected String getBuildRevision()
       {
-        return null;
+        return "";
       }
     };
     Injector injector = makeInjectorForEmitterModule(emitterModule);

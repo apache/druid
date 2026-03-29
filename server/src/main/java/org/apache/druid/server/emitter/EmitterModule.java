@@ -43,17 +43,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
+import org.apache.druid.server.BuildInfo;
 import org.apache.druid.server.DruidNode;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.jar.Manifest;
 
 /**
  *
@@ -98,7 +95,7 @@ public class EmitterModule implements Module
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
     extraServiceDimensions
         .addBinding("buildRevision")
-        .toInstance(StringUtils.nullToEmptyNonDruidDataString(getBuildRevision()));
+        .toInstance(getBuildRevision());
   }
 
   @Provides
@@ -186,24 +183,11 @@ public class EmitterModule implements Module
   }
 
   /**
-   * Reads the {@code Build-Revision} attribute from the MANIFEST.MF of the JAR that contains this class.
-   * Returns null when running outside a packaged JAR (e.g., during {@code mvn test}).
+   * Returns the {@code Build-Revision} for the current build, delegating to {@link BuildInfo}.
+   * Overridable for testing.
    */
   protected String getBuildRevision()
   {
-    try {
-      URL classUrl = EmitterModule.class.getResource(EmitterModule.class.getSimpleName() + ".class");
-      if (classUrl != null && "jar".equals(classUrl.getProtocol())) {
-        String classPath = classUrl.toString();
-        String manifestPath = classPath.substring(0, classPath.lastIndexOf('!') + 1) + "/META-INF/MANIFEST.MF";
-        try (InputStream is = new URL(manifestPath).openStream()) {
-          return new Manifest(is).getMainAttributes().getValue("Build-Revision");
-        }
-      }
-    }
-    catch (IOException e) {
-      // Fall through and return null
-    }
-    return null;
+    return BuildInfo.getBuildRevision();
   }
 }

@@ -1899,7 +1899,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <dotGitDirectory>${session.executionRootDirectory}/.git</dotGitDirectory>
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
                     <dateFormatTimeZone>Etc/UTC</dateFormatTimeZone>
                     <skipPoms>false</skipPoms>
                     <format>json</format>
