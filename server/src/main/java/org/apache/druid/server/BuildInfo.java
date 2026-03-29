@@ -51,8 +51,7 @@ public class BuildInfo
         String classPath = classUrl.toString();
         String manifestPath = classPath.substring(0, classPath.lastIndexOf('!') + 1) + "/META-INF/MANIFEST.MF";
         try (InputStream is = new URL(manifestPath).openStream()) {
-          String revision = new Manifest(is).getMainAttributes().getValue("Build-Revision");
-          return revision != null ? revision : "";
+          return readRevisionFromManifest(is);
         }
       }
     }
@@ -60,5 +59,15 @@ public class BuildInfo
       log.warn(e, "Failed to read Build-Revision from JAR manifest");
     }
     return "";
+  }
+
+  /**
+   * Reads the {@code Build-Revision} attribute from a manifest {@link InputStream}.
+   * Returns an empty string if the attribute is absent.
+   */
+  static String readRevisionFromManifest(InputStream is) throws IOException
+  {
+    String revision = new Manifest(is).getMainAttributes().getValue("Build-Revision");
+    return revision != null ? revision : "";
   }
 }
