@@ -64,33 +64,24 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
 
   private final int segmentCountThreshold;
   @Nullable
-  private final Duration periodThreshold;
+  private final Period periodThreshold;
   @Nullable
   private final Duration durationThreshold;
   @Nullable
   private final Duration segmentRangeThreshold;
+
+  @JsonProperty
   private final Map<String, LaneConfig> lanes;
 
   @JsonCreator
   public WeightedQueryLaningStrategy(
-      @JsonProperty("periodThreshold") @Nullable String periodThresholdString,
-      @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
+      @JsonProperty("periodThreshold") @Nullable String periodThreshold,
+      @JsonProperty("durationThreshold") @Nullable String durationThreshold,
       @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,
-      @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThresholdString,
+      @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThreshold,
       @JsonProperty("lanes") Map<String, LaneConfig> lanes
   )
   {
-    this.segmentCountThreshold = segmentCountThreshold == null ? DEFAULT_SEGMENT_THRESHOLD : segmentCountThreshold;
-    this.periodThreshold = periodThresholdString == null
-                           ? null
-                           : new Period(periodThresholdString).toDurationFrom(DateTimes.nowUtc());
-    this.durationThreshold = durationThresholdString == null
-                             ? null
-                             : new Period(durationThresholdString).toStandardDuration();
-    this.segmentRangeThreshold = segmentRangeThresholdString == null
-                                 ? null
-                                 : new Period(segmentRangeThresholdString).toStandardDuration();
-
     Preconditions.checkArgument(
         segmentCountThreshold != null || periodThreshold != null || durationThreshold != null || segmentRangeThreshold != null,
         "At least one of periodThreshold, durationThreshold, segmentCountThreshold, or segmentRangeThreshold must be set"
@@ -99,6 +90,15 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
         lanes != null && !lanes.isEmpty(),
         "At least one lane must be defined"
     );
+
+    this.segmentCountThreshold = segmentCountThreshold == null ? DEFAULT_SEGMENT_THRESHOLD : segmentCountThreshold;
+    this.periodThreshold = periodThreshold == null ? null : new Period(periodThreshold);
+    this.durationThreshold = durationThreshold == null
+                             ? null
+                             : new Period(durationThreshold).toStandardDuration();
+    this.segmentRangeThreshold = segmentRangeThreshold == null
+                                 ? null
+                                 : new Period(segmentRangeThreshold).toStandardDuration();
     this.lanes = lanes;
   }
 
@@ -143,7 +143,8 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     int score = 0;
 
     if (periodThreshold != null) {
-      final DateTime cutoff = DateTimes.nowUtc().minus(periodThreshold);
+      final DateTime now = DateTimes.nowUtc();
+      final DateTime cutoff = now.minus(periodThreshold.toDurationFrom(now));
       if (query.getIntervals().stream().anyMatch(interval -> interval.getStart().isBefore(cutoff))) {
         score++;
       }
@@ -174,9 +175,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
 
   public static class LaneConfig
   {
-    @JsonProperty
     private final int minScore;
-    @JsonProperty
     private final int maxPercent;
 
     @JsonCreator
@@ -194,11 +193,13 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       this.maxPercent = maxPercent;
     }
 
+    @JsonProperty
     public int getMinScore()
     {
       return minScore;
     }
 
+    @JsonProperty
     public int getMaxPercent()
     {
       return maxPercent;

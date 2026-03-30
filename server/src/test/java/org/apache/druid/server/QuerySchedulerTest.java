@@ -80,7 +80,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -639,7 +641,7 @@ public class QuerySchedulerTest
             null,
             1,
             null,
-            ImmutableMap.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
+            Map.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
         ),
         SERVER_CONFIG_WITH_TOTAL
     );
@@ -647,7 +649,7 @@ public class QuerySchedulerTest
     // Query with 2 segments exceeds segmentCountThreshold=1 → "low" lane
     Query<?> query = weightedScheduler.prioritizeAndLaneQuery(
         QueryPlus.wrap(makeDefaultQuery()),
-        ImmutableSet.of(
+        Set.of(
             EasyMock.createMock(SegmentServerSelector.class),
             EasyMock.createMock(SegmentServerSelector.class)
         )
@@ -657,7 +659,7 @@ public class QuerySchedulerTest
     // Query with 0 segments → no lane
     Query<?> noLaneQuery = weightedScheduler.prioritizeAndLaneQuery(
         QueryPlus.wrap(makeDefaultQuery()),
-        ImmutableSet.of()
+        Set.of()
     );
     Assert.assertNull(noLaneQuery.context().getLane());
   }
@@ -673,12 +675,12 @@ public class QuerySchedulerTest
             null,
             1,
             null,
-            ImmutableMap.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
+            Map.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
         ),
         SERVER_CONFIG_WITH_TOTAL
     );
 
-    ImmutableSet<SegmentServerSelector> manySegments = ImmutableSet.of(
+    Set<SegmentServerSelector> manySegments = Set.of(
         EasyMock.createMock(SegmentServerSelector.class),
         EasyMock.createMock(SegmentServerSelector.class)
     );
