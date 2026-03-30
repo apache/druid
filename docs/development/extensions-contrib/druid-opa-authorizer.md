@@ -135,3 +135,55 @@ You can increase log output for the authorizer by adding this snippet to your `l
   <Appender-ref ref="Console"/>
 </Logger>
 ```
+
+## Example: Testing with LDAP Authentication
+
+To test LDAP authentication with the OPA authorizer, you can use the provided LDAP example files in the `extensions-contrib/druid-opa-authorizer/example/ldap/` directory.
+
+### Run a local LDAP server
+
+Navigate to the `extensions-contrib/druid-opa-authorizer/example/ldap/` directory and run the `run-ldap.sh` script to start a mock LDAP server:
+
+```bash
+./run-ldap.sh
+```
+
+This will start an OpenLDAP server on port `8389` with the users `alice`, `bob`, `christy`, `dylan`, `eve`, and `druid_system`.
+
+### Configure Druid for LDAP and OPA
+
+In your common `runtime.properties`, replace the `basicAuthenticator` configuration with the following:
+
+```properties
+# Druid basic security with LDAP
+druid.auth.authenticatorChain=["ldapAuthenticator"]
+druid.auth.authenticator.ldapAuthenticator.type=basic
+
+# LDAP Validator Configuration
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.type=ldap
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.url=ldap://localhost:8389
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.bindUser=cn=admin,dc=example,dc=org
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.bindPassword=admin
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.baseDn=ou=Users,dc=example,dc=org
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.userSearch=(&(uid=%s)(objectClass=inetOrgPerson))
+druid.auth.authenticator.ldapAuthenticator.credentialsValidator.userAttribute=uid
+
+# Redirect to OPA authorizer
+druid.auth.authenticator.ldapAuthenticator.authorizerName=opaAuthorizer
+
+# Escalator using LDAP system user
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=druid_system
+druid.escalator.internalClientPassword=password2
+druid.escalator.authorizerName=opaAuthorizer
+
+# OPA Authorizer
+druid.auth.authorizers=["opaAuthorizer"]
+druid.auth.authorizer.opaAuthorizer.type=opa
+druid.auth.authorizer.opaAuthorizer.opaUri=http://localhost:8181/v1/data/app/druid/allow
+```
+
+### Verify
+
+Log in to the Druid Console as `alice` with password `alice`. OPA will receive the identity `alice` and authorize based on the roles defined in your OPA policy.
+
