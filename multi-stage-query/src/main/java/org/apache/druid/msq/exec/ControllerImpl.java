@@ -249,6 +249,13 @@ public class ControllerImpl implements Controller
   // For system error reporting. This is the very first error we got from a worker. (We only report that one.)
   private final AtomicReference<MSQErrorReport> workerErrorRef = new AtomicReference<>();
 
+  /**
+   * Set by {@link #stop(CancellationReason)}. If non-null, this reason takes priority over any exception
+   * encountered during execution when building the error report. If we didn't do this, interrupts arising
+   * from cancellation could produce errors that are less informative than the actual cancellation reason.
+   */
+  private volatile CancellationReason cancelReason;
+
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
 
@@ -373,6 +380,7 @@ public class ControllerImpl implements Controller
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
     log.info("Query [%s] canceled.", queryDef != null ? queryDef.getQueryId() : "<no id yet>");
 
+    cancelReason = reason;
     stopExternalFetchers();
     kernelManipulationQueue.clear(); // No point processing any possibly-queued commands.
     addToKernelManipulationQueue(
@@ -469,7 +477,12 @@ public class ControllerImpl implements Controller
       MSQErrorReport workerError = workerErrorRef.get();
 
       taskStateForReport = TaskState.FAILED;
-      errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
+
+      if (cancelReason != null) {
+        errorForReport = MSQErrorReport.fromFault(queryId(), selfHost, null, new CanceledFault(cancelReason));
+      } else {
+        errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
+      }
 
       // Log the errors we encountered.
       if (controllerError != null) {
@@ -667,8 +680,7 @@ public class ControllerImpl implements Controller
    * If the consumer throws an exception, the query fails.
    * <p>
    * Consumers must not perform blocking operations (network calls, waiting on futures, sleeping, etc.), because
-   * the main controller loop executes them in sequence and blocking would delay timeout handling and other
-   * controller operations.
+   * the main controller loop executes them in sequence and blocking would delay controller operations.
    */
   public void addToKernelManipulationQueue(Consumer<ControllerQueryKernel> kernelConsumer)
   {
@@ -2446,25 +2458,14 @@ public class ControllerImpl implements Controller
     {
       if (!queryKernel.isDone()) {
         // Run the next command, waiting for it if necessary.
-        Consumer<ControllerQueryKernel> command;
-        try {
-          command = kernelManipulationQueue.take();
-        }
-        catch (InterruptedException e) {
-          // If interrupted (e.g., by ControllerHolder.cancel), process remaining commands.
-          // This gives us a nice CanceledFault from stop() rather than an opaque
-          // InterruptedException.
-          command = kernelManipulationQueue.poll();
-          if (command == null) {
-            throw e;
-          }
-        }
+        final Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
         command.accept(queryKernel);
 
         // Run all pending commands after that one. Helps avoid deep queues.
         // After draining the command queue, move on to the next iteration of the controller loop.
-        while ((command = kernelManipulationQueue.poll()) != null) {
-          command.accept(queryKernel);
+        Consumer<ControllerQueryKernel> next;
+        while ((next = kernelManipulationQueue.poll()) != null) {
+          next.accept(queryKernel);
         }
       }
     }
