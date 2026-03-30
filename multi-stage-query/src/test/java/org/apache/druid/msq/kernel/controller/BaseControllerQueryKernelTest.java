@@ -303,6 +303,15 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
                            .forEach(n -> controllerQueryKernel.setDoneReadingInputForStageAndWorker(stageId, n));
     }
 
+    public void doneReadingInputForWorkers(int stageNumber, int... workers)
+    {
+      Preconditions.checkArgument(initialized);
+      final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      for (int worker : workers) {
+        controllerQueryKernel.setDoneReadingInputForStageAndWorker(stageId, worker);
+      }
+    }
+
     public void finishStage(int stageNumber)
     {
       finishStage(stageNumber, true);
