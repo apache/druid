@@ -90,6 +90,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'Build revision',
     'Available processors',
     'Total memory',
     'Labels',
@@ -117,6 +118,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'Build revision',
   ],
 };
 
@@ -159,6 +161,7 @@ interface ServiceResultRow {
   readonly tls_port: number;
   readonly start_time: string;
   readonly version: string;
+  readonly build_revision: string;
   readonly labels: string | null;
   readonly available_processors: number;
   readonly total_memory: number;
@@ -266,6 +269,7 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "is_leader",
   "start_time",
   "version",
+  "build_revision",
   "labels",
   "available_processors",
   "total_memory"
@@ -325,6 +329,7 @@ ORDER BY
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
+                build_revision: '',
                 labels: null,
                 available_processors: -1,
                 total_memory: -1,
@@ -742,6 +747,14 @@ ORDER BY
           accessor: 'version',
           width: 200,
           Cell: this.renderFilterableCell('version'),
+          Aggregated: () => '',
+        },
+        {
+          Header: twoLines('Build', 'revision'),
+          show: visibleColumns.shown('Build revision'),
+          accessor: 'build_revision',
+          width: 200,
+          Cell: this.renderFilterableCell('build_revision'),
           Aggregated: () => '',
         },
         {

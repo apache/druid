@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -97,6 +98,27 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public void killRecursively(String relativePath) throws IOException
+  {
+    IOException firstFailure = null;
+    for (Supplier<DataSegmentKiller> supplier : killers.values()) {
+      try {
+        supplier.get().killRecursively(relativePath);
+      }
+      catch (IOException e) {
+        if (firstFailure == null) {
+          firstFailure = e;
+        } else {
+          firstFailure.addSuppressed(e);
+        }
+      }
+    }
+    if (firstFailure != null) {
+      throw firstFailure;
+    }
   }
 
   @VisibleForTesting
