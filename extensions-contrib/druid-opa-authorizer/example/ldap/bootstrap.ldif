@@ -1,0 +1,76 @@
+dn: ou=Users,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: Users
+
+dn: uid=alice,ou=Users,dc=example,dc=org
+uid: alice
+cn: alice
+sn: alice
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/alice
+uidNumber: 1
+gidNumber: 1
+userPassword: alice
+
+dn: uid=bob,ou=Users,dc=example,dc=org
+uid: bob
+cn: bob
+sn: bob
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/bob
+uidNumber: 2
+gidNumber: 2
+userPassword: bob
+
+dn: uid=christy,ou=Users,dc=example,dc=org
+uid: christy
+cn: christy
+sn: christy
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/christy
+uidNumber: 3
+gidNumber: 3
+userPassword: christy
+
+dn: uid=dylan,ou=Users,dc=example,dc=org
+uid: dylan
+cn: dylan
+sn: dylan
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/dylan
+uidNumber: 4
+gidNumber: 4
+userPassword: dylan
+
+dn: uid=eve,ou=Users,dc=example,dc=org
+uid: eve
+cn: eve
+sn: eve
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/eve
+uidNumber: 5
+gidNumber: 5
+userPassword: eve
+
+dn: uid=druid_system,ou=Users,dc=example,dc=org
+uid: druid_system
+cn: druid_system
+sn: druid_system
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/druid_system
+uidNumber: 6
+gidNumber: 6
+userPassword: password2
