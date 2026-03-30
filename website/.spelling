@@ -54,6 +54,7 @@ Base64-encoded
 ByteBuffer
 blocklist
 bottlenecked
+build_revision
 cartesian
 concat
 CIDR
