@@ -41,7 +41,9 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerHolder;
@@ -73,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 
 @JsonTypeName(MSQControllerTask.TYPE)
 public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
@@ -291,8 +294,18 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         resultsContext
     );
 
-    controllerHolder.runAsync(queryListener, null, Execs.directExecutor()).get();
-    return queryListener.getStatusReport().toTaskStatus(getId());
+    final ScheduledExecutorService timeoutExec = ScheduledExecutors.fixed(
+        1,
+        "controller-timeout[" + StringUtils.encodeForFormat(controller.queryId()) + "]-%s"
+    );
+
+    try {
+      controllerHolder.runAsync(queryListener, null, Execs.directExecutor(), timeoutExec).get();
+      return queryListener.getStatusReport().toTaskStatus(getId());
+    }
+    finally {
+      timeoutExec.shutdownNow();
+    }
   }
 
   @Override

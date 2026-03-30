@@ -267,7 +267,12 @@ public class DartQueryMaker implements QueryMaker
 
     try {
       // Submit controller and wait for it to finish.
-      controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool.getExecutorService()).get();
+      controllerHolder.runAsync(
+          listener,
+          controllerRegistry,
+          controllerThreadPool.getRunExecutorService(),
+          controllerThreadPool.getTimeoutExecutorService()
+      ).get();
 
       // Return a sequence with just one row (the report).
       final TaskReport.ReportMap reportMap =
@@ -296,7 +301,12 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     final SequenceQueryListener listener = new SequenceQueryListener();
-    controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool.getExecutorService());
+    controllerHolder.runAsync(
+        listener,
+        controllerRegistry,
+        controllerThreadPool.getRunExecutorService(),
+        controllerThreadPool.getTimeoutExecutorService()
+    );
 
     return Sequences.wrap(
         listener.getSequence().flatMap(

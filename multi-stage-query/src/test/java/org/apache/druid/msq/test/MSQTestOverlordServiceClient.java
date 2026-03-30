@@ -40,8 +40,10 @@ import org.apache.druid.indexer.report.TaskReport.ReportMap;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
@@ -56,6 +58,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -67,6 +70,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -189,12 +193,26 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
               resultsContext
           );
 
+      final ControllerHolder controllerHolder = new ControllerHolder(
+          controller,
+          controller.getQueryContext().getString(QueryContexts.CTX_SQL_QUERY_ID, controller.queryId()),
+          null,
+          null,
+          DateTimes.nowUtc()
+      );
+
+      final ScheduledExecutorService timeoutExec =
+          Execs.scheduledSingleThreaded("msq-test-controller-timeout-%s");
+
       try {
-        controller.run(queryListener);
+        controllerHolder.runAsync(queryListener, null, Execs.directExecutor(), timeoutExec).get();
         testTaskDetails.taskStatus = queryListener.getStatusReport().toTaskStatus(cTask.getId());
       }
       catch (Exception e) {
         testTaskDetails.taskStatus = TaskStatus.failure(cTask.getId(), e.toString());
+      }
+      finally {
+        timeoutExec.shutdownNow();
       }
       return Futures.immediateFuture(null);
     }

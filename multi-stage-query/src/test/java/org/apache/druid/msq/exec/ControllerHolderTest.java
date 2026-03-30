@@ -33,6 +33,7 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.NoopQueryListener;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,24 +42,32 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ControllerHolderTest
 {
   private static final Logger log = new Logger(ControllerHolderTest.class);
   private ListeningExecutorService exec;
+  private ScheduledExecutorService scheduledExec;
 
   @Before
   public void setUp()
   {
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "controller-holder-test-%s"));
+    scheduledExec = Executors.newSingleThreadScheduledExecutor(
+        Execs.makeThreadFactory("controller-holder-test-timeout-%s")
+    );
   }
 
   @After
   public void tearDown() throws InterruptedException
   {
     exec.shutdownNow();
+    scheduledExec.shutdownNow();
     if (!exec.awaitTermination(5, TimeUnit.MINUTES)) {
       log.warn("Could not terminate executor within 5 minutes");
     }
@@ -90,7 +99,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
 
     controllerStarted.await();
     holder.cancel(CancellationReason.USER_REQUEST);
@@ -139,7 +148,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    holder.runAsync(new NoopQueryListener(), null, exec);
+    holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
 
     controllerStarted.await();
     holder.cancel(CancellationReason.USER_REQUEST);
@@ -161,7 +170,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
@@ -188,7 +197,7 @@ public class ControllerHolderTest
     Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
 
     // Run should complete quickly without running the controller
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertFalse("Controller should not have run", controllerRan.get());
@@ -219,7 +228,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    holder.runAsync(new NoopQueryListener(), null, exec);
+    holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
 
     controllerStarted.await();
 
@@ -244,7 +253,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
@@ -267,7 +276,12 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "id", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, Execs.directExecutor());
+    final ListenableFuture<?> future = holder.runAsync(
+        new NoopQueryListener(),
+        null,
+        Execs.directExecutor(),
+        scheduledExec
+    );
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
@@ -303,11 +317,58 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), registry, exec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), registry, exec, scheduledExec);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertTrue("Should have been registered", registered.get());
     Assert.assertTrue("Should have been deregistered", deregistered.get());
+  }
+
+  @Test
+  public void testTimeout() throws Exception
+  {
+    final CountDownLatch controllerStarted = new CountDownLatch(1);
+    final CountDownLatch controllerFinished = new CountDownLatch(1);
+    final AtomicReference<CancellationReason> stopReason = new AtomicReference<>();
+    final Controller controller = new TestController("test-query")
+    {
+      @Override
+      public QueryContext getQueryContext()
+      {
+        return QueryContext.of(Map.of(QueryContexts.TIMEOUT_KEY, 1));
+      }
+
+      @Override
+      public void run(final QueryListener listener)
+      {
+        try {
+          controllerStarted.countDown();
+          Thread.sleep(300_000);
+        }
+        catch (InterruptedException e) {
+          // expected — canceled due to timeout
+        }
+        finally {
+          listener.onQueryComplete(makeSuccessReport());
+          controllerFinished.countDown();
+        }
+      }
+
+      @Override
+      public void stop(final CancellationReason reason)
+      {
+        stopReason.set(reason);
+      }
+    };
+
+    final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
+    holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+
+    controllerStarted.await();
+    controllerFinished.await(30, TimeUnit.SECONDS);
+
+    Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+    Assert.assertEquals(CancellationReason.QUERY_TIMEOUT, stopReason.get());
   }
 
   private static MSQTaskReportPayload makeSuccessReport()

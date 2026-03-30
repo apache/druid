@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -34,17 +35,22 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Holder for a {@link Controller} that manages its lifecycle.
+ * Holder for a {@link Controller} that manages its lifecycle, including cancellation and timeouts.
  */
 public class ControllerHolder
 {
@@ -60,7 +66,9 @@ public class ControllerHolder
   private final AuthenticationResult authenticationResult;
 
   private final DateTime startTime;
-  private final AtomicReference<State> state = new AtomicReference<>(State.ACCEPTED);
+
+  @GuardedBy("this")
+  private State state = State.ACCEPTED;
 
   /**
    * Thread running the controller. Set inside the {@link #runAsync} runnable, cleared in its finally block.
@@ -128,21 +136,23 @@ public class ControllerHolder
     return startTime;
   }
 
-  public State getState()
+  public synchronized State getState()
   {
-    return state.get();
+    return state;
   }
 
   /**
    * Runs {@link Controller#run(QueryListener)} in the provided executor. Optionally registers the controller with
-   * the provided registry while it is running.
+   * the provided registry while it is running. Schedules a timeout on the provided {@code scheduledExec} based
+   * on the query deadline from the controller's query context.
    *
    * @return future that resolves when the controller is done or canceled
    */
   public ListenableFuture<?> runAsync(
       final QueryListener listener,
       @Nullable final ControllerRegistry controllerRegistry,
-      final ListeningExecutorService exec
+      final ListeningExecutorService exec,
+      final ScheduledExecutorService scheduledExec
   )
   {
     if (controllerRegistry != null) {
@@ -150,6 +160,10 @@ public class ControllerHolder
       // "active controllers" lists.
       controllerRegistry.register(this);
     }
+
+    // Schedule timeout based on the query deadline. The scheduled task calls cancel(), which is
+    // safe even if the controller has already finished (cancel is a no-op for terminal states).
+    final ScheduledFuture<?> timeoutFuture = scheduleTimeout(scheduledExec);
 
     final ListenableFuture<?> future = exec.submit(() -> {
       final String threadName = Thread.currentThread().getName();
@@ -159,20 +173,7 @@ public class ControllerHolder
         final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
 
         try {
-          if (state.compareAndSet(State.ACCEPTED, State.RUNNING)) {
-            synchronized (this) {
-              // Capture the controller thread.
-              controllerThread = Thread.currentThread();
-
-              // It is possible cancel() was called between "state.compareAndSet" and this synchronized block.
-              // In that case, the controllerThread would not have been interrupted by cancel(). Check for
-              // cancelReason here to cover this case.
-              if (cancelReason != null) {
-                reportListener.onQueryComplete(makeCanceledReport(cancelReason));
-                return; // Skip controller.run, go straight to deregister.
-              }
-            }
-
+          if (transitionToRunning()) {
             try {
               controller.run(reportListener);
             }
@@ -188,11 +189,9 @@ public class ControllerHolder
             updateStateOnQueryComplete(reportListener.getReport());
           } else {
             // Canceled before running.
-            final CancellationReason reason;
             synchronized (this) {
-              reason = cancelReason;
+              reportListener.onQueryComplete(makeCanceledReport(cancelReason));
             }
-            reportListener.onQueryComplete(makeCanceledReport(reason));
           }
         }
         catch (Throwable e) {
@@ -224,6 +223,10 @@ public class ControllerHolder
       }
       finally {
         Thread.currentThread().setName(threadName);
+
+        if (timeoutFuture != null) {
+          timeoutFuture.cancel(false);
+        }
       }
     });
 
@@ -234,38 +237,117 @@ public class ControllerHolder
   }
 
   /**
-   * Places this holder into {@link State#CANCELED}. Interrupts the controller thread if currently running,
-   * and calls {@link Controller#stop} as a failsafe.
+   * Places this holder into {@link State#CANCELED} and stops the controller.
    */
   public void cancel(final CancellationReason reason)
   {
-    if (state.compareAndSet(State.ACCEPTED, State.CANCELED)) {
-      synchronized (this) {
+    final State prevState;
+    synchronized (this) {
+      prevState = state;
+
+      if (state == State.ACCEPTED || state == State.RUNNING) {
+        state = State.CANCELED;
         cancelReason = reason;
       }
-    } else if (state.compareAndSet(State.RUNNING, State.CANCELED)) {
-      // Primary mechanism of stopping the controller: interrupt the controller thread.
+    }
+
+    if (prevState == State.RUNNING) {
+      controller.stop(reason);
+
+      // Interrupt the controller thread as a failsafe, in case the controller is blocked on something.
       synchronized (this) {
-        cancelReason = reason;
         if (controllerThread != null) {
           controllerThread.interrupt();
         }
       }
-
-      // Failsafe: call "stop", which throws a CanceledFault into the controller thread.
-      controller.stop(reason);
     }
   }
 
-  private void updateStateOnQueryComplete(final MSQTaskReportPayload report)
+  /**
+   * Attempts to transition from {@link State#ACCEPTED} to {@link State#RUNNING} and capture the controller thread.
+   * If a cancellation arrived between the state transition and capturing the thread, generates a canceled report
+   * on the provided listener and returns false.
+   *
+   * @return true if the controller should proceed to run, false if it was canceled
+   */
+  private synchronized boolean transitionToRunning()
   {
+    if (state != State.ACCEPTED) {
+      return false;
+    }
+
+    state = State.RUNNING;
+    controllerThread = Thread.currentThread();
+    return true;
+  }
+
+  /**
+   * Schedules a timeout task that cancels the controller when the query deadline elapses. If the deadline has
+   * already passed, cancels immediately without scheduling. Returns null if no timeout is configured or if
+   * an immediate cancellation was performed.
+   */
+  @Nullable
+  private ScheduledFuture<?> scheduleTimeout(final ScheduledExecutorService scheduledExec)
+  {
+    final DateTime deadline = getQueryDeadline();
+
+    if (deadline == null) {
+      return null;
+    }
+
+    final long delayMs = deadline.getMillis() - DateTimes.nowUtc().getMillis();
+
+    if (delayMs <= 0) {
+      // Deadline has already passed. Cancel immediately rather than scheduling, so the cancellation
+      // takes effect even when using a direct executor for the controller thread.
+      cancel(CancellationReason.QUERY_TIMEOUT);
+      return null;
+    }
+
+    return scheduledExec.schedule(
+        () -> cancel(CancellationReason.QUERY_TIMEOUT),
+        delayMs,
+        TimeUnit.MILLISECONDS
+    );
+  }
+
+  /**
+   * Retrieves the query deadline from the controller's query context. Returns null if no timeout is configured.
+   */
+  @Nullable
+  private DateTime getQueryDeadline()
+  {
+    final QueryContext queryContext = controller.getQueryContext();
+    DateTime deadline = MultiStageQueryContext.getQueryDeadline(queryContext);
+
+    if (deadline == null) {
+      // Newer Brokers set the deadline, but older ones might not. Fall back to startTime and timeout in this case.
+      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
+      if (timeout != QueryContexts.NO_TIMEOUT) {
+        deadline = MultiStageQueryContext.getStartTime(queryContext).plus(timeout);
+      }
+    }
+
+    return deadline;
+  }
+
+  /**
+   * If {@link #state} is {@link State#RUNNING}, update it based on the outcome of a query.
+   * Otherwise do nothing.
+   */
+  private synchronized void updateStateOnQueryComplete(final MSQTaskReportPayload report)
+  {
+    if (state != State.RUNNING) {
+      return;
+    }
+
     switch (report.getStatus().getStatus()) {
       case SUCCESS:
-        state.compareAndSet(State.RUNNING, State.SUCCESS);
+        state = State.SUCCESS;
         break;
 
       case FAILED:
-        state.compareAndSet(State.RUNNING, State.FAILED);
+        state = State.FAILED;
         break;
     }
   }
