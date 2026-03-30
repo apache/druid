@@ -27,6 +27,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -35,14 +36,53 @@ import javax.naming.directory.SearchResult;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Flow;
 
 public class OpaAuthorizerTest
 {
   private HttpClient httpClient;
   private OpaAuthorizer opaAuthorizer;
   private static final String OPA_URI = "http://localhost:8181/v1/data/druid/allow";
+
+  // Helper to extract body from HttpRequest for testing
+  private static String getBody(HttpRequest request)
+  {
+    if (request.bodyPublisher().isEmpty()) {
+      return "";
+    }
+    StringBuilder sb = new StringBuilder();
+    request.bodyPublisher().get().subscribe(new Flow.Subscriber<>()
+    {
+      @Override
+      public void onSubscribe(Flow.Subscription subscription)
+      {
+        subscription.request(Long.MAX_VALUE);
+      }
+
+      @Override
+      public void onNext(ByteBuffer item)
+      {
+        byte[] bytes = new byte[item.remaining()];
+        item.get(bytes);
+        sb.append(new String(bytes, StandardCharsets.UTF_8));
+      }
+
+      @Override
+      public void onError(Throwable throwable)
+      {
+      }
+
+      @Override
+      public void onComplete()
+      {
+      }
+    });
+    return sb.toString();
+  }
 
   @Before
   public void setUp()
@@ -114,13 +154,18 @@ public class OpaAuthorizerTest
     HttpResponse<String> response = Mockito.mock(HttpResponse.class);
     Mockito.when(response.statusCode()).thenReturn(200);
     Mockito.when(response.body()).thenReturn("{\"result\": true}");
-    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+    
+    ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+    Mockito.when(httpClient.send(requestCaptor.capture(), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
            .thenReturn(response);
 
     // Mimic LDAP SearchResult which has non-serializable elements
     BasicAttributes attributes = new BasicAttributes();
     attributes.put("uid", "user");
-    SearchResult searchResult = new SearchResult("user", null, attributes);
+    byte[] photoBytes = new byte[]{1, 2, 3};
+    attributes.put("jpegPhoto", photoBytes);
+    SearchResult searchResult = new SearchResult("uid=user", "java.lang.Object", null, attributes, false);
+    searchResult.setNameInNamespace("dc=example,dc=org");
 
     Map<String, Object> context = new HashMap<>();
     context.put("searchResult", searchResult);
@@ -130,5 +175,13 @@ public class OpaAuthorizerTest
     Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertTrue(access.isAllowed());
+    
+    HttpRequest capturedRequest = requestCaptor.getValue();
+    String requestBody = getBody(capturedRequest);
+    
+    Assert.assertTrue(requestBody.contains("\"name\":\"uid=user\""));
+    Assert.assertTrue(requestBody.contains("\"nameInNamespace\":\"dc=example,dc=org\""));
+    Assert.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));
+    Assert.assertTrue(requestBody.contains("\"jpegphoto\":[\"AQID\"]")); // Base64 for [1, 2, 3]
   }
 }
