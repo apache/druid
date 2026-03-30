@@ -30,9 +30,13 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.SearchResult;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 public class OpaAuthorizerTest
 {
@@ -101,5 +105,30 @@ public class OpaAuthorizerTest
   {
     OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", httpClient);
     Assert.assertNotNull(ignored);
+  }
+
+  @Test
+  public void testAuthorizeWithNonSerializableContext() throws Exception
+  {
+    @SuppressWarnings("unchecked")
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    Mockito.when(response.statusCode()).thenReturn(200);
+    Mockito.when(response.body()).thenReturn("{\"result\": true}");
+    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+           .thenReturn(response);
+
+    // Mimic LDAP SearchResult which has non-serializable elements
+    BasicAttributes attributes = new BasicAttributes();
+    attributes.put("uid", "user");
+    SearchResult searchResult = new SearchResult("user", null, attributes);
+
+    Map<String, Object> context = new HashMap<>();
+    context.put("searchResult", searchResult);
+
+    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", context);
+    Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+
+    Assert.assertTrue(access.isAllowed());
   }
 }

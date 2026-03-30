@@ -20,6 +20,7 @@
 package org.apache.druid.security.opa;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -38,6 +39,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
 @JsonTypeName("opa")
 public class OpaAuthorizer implements Authorizer
@@ -46,6 +48,12 @@ public class OpaAuthorizer implements Authorizer
   private final URI opaUri;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+
+  public interface AuthenticationResultMixIn
+  {
+    @JsonIgnore
+    Map<String, Object> getContext();
+  }
 
   @JsonCreator
   public OpaAuthorizer(
@@ -75,6 +83,10 @@ public class OpaAuthorizer implements Authorizer
             // We could add all the fields we *currently* know, but it's more future-proof to ignore
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    // LDAP auth can send additional info in "context" which OPA is not able to deserialize
+    // Replace "context" with null as a short-term fix
+    this.objectMapper.addMixIn(AuthenticationResult.class, AuthenticationResultMixIn.class);
     this.httpClient = httpClient;
     // name is required for @JsonCreator but unused in this implementation
     LOG.debug("OpaAuthorizer [%s] created", name);
