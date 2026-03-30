@@ -226,6 +226,11 @@ public class MSQErrorReport
 
     Throwable cause = e;
 
+    // Remember the first DruidException we encounter, but keep walking the cause chain in case a more specific
+    // exception type is nested inside (e.g. when Either.valueOrThrow() wraps an InvalidNullByteException in a
+    // DruidException).
+    DruidException firstDruidException = null;
+
     // This method will grow as we try to add more faults and exceptions
     // One way of handling this would be to extend the faults to have a method like
     // public MSQFault fromException(@Nullable Throwable e) which returns the specific fault if it can be reconstructed
@@ -304,13 +309,18 @@ public class MSQErrorReport
         );
       } else if (cause instanceof InterruptedException) {
         return CanceledFault.unknown();
-      } else if (cause instanceof DruidException) {
-        return DruidExceptionFault.fromDruidException((DruidException) cause);
-      } else {
-        cause = cause.getCause();
+      } else if (cause instanceof DruidException && firstDruidException == null) {
+        firstDruidException = (DruidException) cause;
       }
+
+      cause = cause.getCause();
     }
 
-    return UnknownFault.forException(e);
+    if (firstDruidException != null) {
+      // Didn't find any more specific exception wrapped underneath the first DruidException, so go with that one.
+      return DruidExceptionFault.fromDruidException(firstDruidException);
+    } else {
+      return UnknownFault.forException(e);
+    }
   }
 }

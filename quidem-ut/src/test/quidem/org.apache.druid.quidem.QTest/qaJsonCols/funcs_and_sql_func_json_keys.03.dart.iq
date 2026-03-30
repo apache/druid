@@ -371,7 +371,7 @@ WHERE json_keys(c1, '$.a_obj.a_num_int') = json_keys(c2, '$.a_obj.a_num_int');
 SELECT count(*) c
 FROM test_json_cols t1
 INNER JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj')=json_keys(t2.c1, '$.a_obj');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -380,7 +380,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 INNER JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj.a_str')=json_keys(t2.c1, '$.a_obj.a_str');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -389,7 +389,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 INNER JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj.a_num_int')=json_keys(t2.c1, '$.a_obj.a_num_int');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -398,7 +398,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 LEFT JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj')=json_keys(t2.c1, '$.a_obj');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -407,7 +407,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 LEFT JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj.a_str')=json_keys(t2.c1, '$.a_obj.a_str');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -416,7 +416,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 LEFT JOIN test_json_cols t2 ON json_keys(t1.c1, '$.a_obj.a_num_int')=json_keys(t2.c1, '$.a_obj.a_num_int');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -426,7 +426,7 @@ SELECT count(*) c
 FROM test_json_cols t1,
      test_json_cols t2
 WHERE json_keys(t1.c1, '$.a_obj')=json_keys(t2.c1, '$.a_obj');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -436,7 +436,7 @@ SELECT count(*) c
 FROM test_json_cols t1,
      test_json_cols t2
 WHERE json_keys(t1.c1, '$.a_obj.a_str')=json_keys(t2.c1, '$.a_obj.a_str');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -446,7 +446,7 @@ SELECT count(*) c
 FROM test_json_cols t1,
      test_json_cols t2
 WHERE json_keys(t1.c1, '$.a_obj.a_num_int')=json_keys(t2.c1, '$.a_obj.a_num_int');
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
