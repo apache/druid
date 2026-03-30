@@ -20,9 +20,6 @@
 package org.apache.druid.server.scheduling;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,13 +37,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 public class WeightedQueryLaningStrategyTest
 {
-  private static final Map<String, WeightedQueryLaningStrategy.LaneConfig> TWO_LANES = ImmutableMap.of(
+  private static final Map<String, WeightedQueryLaningStrategy.LaneConfig> TWO_LANES = Map.of(
       "low", new WeightedQueryLaningStrategy.LaneConfig(1, 30),
       "very-low", new WeightedQueryLaningStrategy.LaneConfig(3, 10)
   );
@@ -58,7 +56,7 @@ public class WeightedQueryLaningStrategyTest
   {
     queryBuilder = Druids.newTimeseriesQueryBuilder()
                          .dataSource("test")
-                         .intervals(ImmutableList.of(Intervals.of("2020-01-01/2020-01-02")))
+                         .intervals(List.of(Intervals.of("2020-01-01/2020-01-02")))
                          .granularity(Granularities.DAY)
                          .aggregators(new CountAggregatorFactory("count"));
   }
@@ -79,14 +77,14 @@ public class WeightedQueryLaningStrategyTest
   {
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 10000, null);
     TimeseriesQuery query = queryBuilder.build();
-    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of());
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
     Assert.assertFalse(lane.isPresent());
   }
 
   @Test
   public void testComputeLane_oneViolation_segmentCount()
   {
-    // segmentCountThreshold=1, query has 5 segments → score 1 → "low"
+    // segmentCountThreshold=1, query has 5 segments → score=1 → "low"
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 1, null);
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
@@ -96,14 +94,14 @@ public class WeightedQueryLaningStrategyTest
   }
 
   @Test
-  public void testComputeLane_multipleViolations_higherLane()
+  public void testComputeLane_twoViolations_matchesLowerMinScore()
   {
-    // segmentCountThreshold=1 + durationThreshold very short → score >= 2
-    // With a wide interval query, durationThreshold breached too
+    // segmentCountThreshold=1 + durationThreshold=PT1S → score=2
+    // Matches "low" (minScore=1) but NOT "very-low" (minScore=3)
     WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(
         null,
-        "PT1S",  // 1 second duration threshold — query covers 1 day, will breach
-        1,       // segment count threshold — 5 segments will breach
+        "PT1S",
+        1,
         null,
         TWO_LANES
     );
@@ -111,26 +109,24 @@ public class WeightedQueryLaningStrategyTest
     Set<SegmentServerSelector> segments = makeSegments(5);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
     Assert.assertTrue(lane.isPresent());
-    // score=2, meets "low" (minScore=1) but not "very-low" (minScore=3)
     Assert.assertEquals("low", lane.get());
   }
 
   @Test
   public void testComputeLane_allViolations_mostRestrictiveLane()
   {
-    // All 4 thresholds set very low — all will breach
+    // All 4 thresholds set very low → score=4 → meets "very-low" (minScore=3)
     WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(
-        "PT1S",  // period threshold — query interval in 2020 is far in the past
-        "PT1S",  // duration threshold — 1 day query > 1 second
-        1,       // segment count threshold — 5 > 1
-        "PT1S",  // segment range threshold — will breach with segments spanning time
+        "PT1S",
+        "PT1S",
+        1,
+        "PT1S",
         TWO_LANES
     );
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
     Assert.assertTrue(lane.isPresent());
-    // score=4: all 4 thresholds breached → meets "very-low" (minScore=3)
     Assert.assertEquals("very-low", lane.get());
   }
 
@@ -139,11 +135,30 @@ public class WeightedQueryLaningStrategyTest
   {
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 10000, null);
     TimeseriesQuery query = queryBuilder
-        .context(ImmutableMap.of(QueryContexts.LANE_KEY, "custom"))
+        .context(Map.of(QueryContexts.LANE_KEY, "custom"))
         .build();
-    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of());
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
     Assert.assertTrue(lane.isPresent());
     Assert.assertEquals("custom", lane.get());
+  }
+
+  @Test
+  public void testComputeLane_segmentRangeWithDifferentIntervals()
+  {
+    // Segments spanning different intervals to validate segmentRange summing
+    WeightedQueryLaningStrategy strategy = newStrategy(null, null, null, "PT1S");
+    TimeseriesQuery query = queryBuilder.build();
+    Set<SegmentServerSelector> segments = new HashSet<>();
+    segments.add(new SegmentServerSelector(
+        new SegmentDescriptor(Intervals.of("2020-01-01/2020-01-02"), "v1", 0)
+    ));
+    segments.add(new SegmentServerSelector(
+        new SegmentDescriptor(Intervals.of("2020-01-02/2020-01-03"), "v1", 1)
+    ));
+    // Total range = 1 day + 1 day = 2 days > 1 second → score=1 → "low"
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("low", lane.get());
   }
 
   @Test
@@ -165,7 +180,7 @@ public class WeightedQueryLaningStrategyTest
             null,
             10,
             null,
-            ImmutableMap.of()
+            Map.of()
         )
     );
   }
