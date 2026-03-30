@@ -67,6 +67,7 @@ DruidSort(fetch=[2], druid=[logical])
           "maxScatterGatherBytes" : "9223372036854775807",
           "outputformat" : "MYSQL",
           "plannerStrategy" : "DECOUPLED",
+          "remoteAddress" : "127.0.0.1",
           "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
           "sqlQueryId" : "dummy",
           "sqlStringifyArrays" : false
@@ -95,6 +96,7 @@ DruidSort(fetch=[2], druid=[logical])
           "maxScatterGatherBytes" : "9223372036854775807",
           "outputformat" : "MYSQL",
           "plannerStrategy" : "DECOUPLED",
+          "remoteAddress" : "127.0.0.1",
           "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
           "sqlQueryId" : "dummy",
           "sqlStringifyArrays" : false
@@ -122,6 +124,7 @@ DruidSort(fetch=[2], druid=[logical])
           "maxScatterGatherBytes" : "9223372036854775807",
           "outputformat" : "MYSQL",
           "plannerStrategy" : "DECOUPLED",
+          "remoteAddress" : "127.0.0.1",
           "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
           "sqlQueryId" : "dummy",
           "sqlStringifyArrays" : false

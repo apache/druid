@@ -51,7 +51,8 @@ public class SqlStatementFactory
 
   public DirectStatement directStatement(final SqlQueryPlus sqlRequest)
   {
-    return new DirectStatement(lifecycleToolbox, sqlRequest);
+    String remoteAddr = (String) sqlRequest.context().get("remoteAddress");
+    return new DirectStatement(lifecycleToolbox, sqlRequest, remoteAddr);
   }
 
   public PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest)

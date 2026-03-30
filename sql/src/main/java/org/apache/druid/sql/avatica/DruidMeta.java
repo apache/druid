@@ -119,6 +119,18 @@ public class DruidMeta extends MetaImpl
 
   private static final Logger LOG = new Logger(DruidMeta.class);
 
+  private static final ThreadLocal<String> THREAD_LOCAL_REMOTE_ADDRESS = new ThreadLocal<>();
+
+  public static void setThreadLocalRemoteAddress(String remoteAddress)
+  {
+    THREAD_LOCAL_REMOTE_ADDRESS.set(remoteAddress);
+  }
+
+  public static void clearThreadLocalRemoteAddress()
+  {
+    THREAD_LOCAL_REMOTE_ADDRESS.remove();
+  }
+
   /**
    * Items passed in via the connection context which are not query
    * context values. Instead, these are used at connection time to validate
@@ -804,6 +816,11 @@ public class DruidMeta extends MetaImpl
       final Map<String, Object> context
   )
   {
+    String remoteAddress = THREAD_LOCAL_REMOTE_ADDRESS.get();
+    if (remoteAddress != null) {
+      context.put("remoteAddress", remoteAddress);
+    }
+
     if (connectionCount.incrementAndGet() > config.getMaxConnections()) {
       // O(connections) but we don't expect this to happen often (it's a last-ditch effort to clear out
       // abandoned connections) or to have too many connections.
