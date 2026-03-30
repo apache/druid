@@ -20,7 +20,6 @@
 package org.apache.druid.security.opa;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,10 +34,20 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
 
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.SearchResult;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @JsonTypeName("opa")
@@ -48,12 +57,6 @@ public class OpaAuthorizer implements Authorizer
   private final URI opaUri;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
-
-  public interface AuthenticationResultMixIn
-  {
-    @JsonIgnore
-    Map<String, Object> getContext();
-  }
 
   @JsonCreator
   public OpaAuthorizer(
@@ -84,9 +87,6 @@ public class OpaAuthorizer implements Authorizer
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    // LDAP auth can send additional info in "context" which OPA is not able to deserialize
-    // Replace "context" with null as a short-term fix
-    this.objectMapper.addMixIn(AuthenticationResult.class, AuthenticationResultMixIn.class);
     this.httpClient = httpClient;
     // name is required for @JsonCreator but unused in this implementation
     LOG.debug("OpaAuthorizer [%s] created", name);
@@ -105,9 +105,17 @@ public class OpaAuthorizer implements Authorizer
         action.name(),
         resource.toString()
     );
+
+    AuthenticationResult sanitizedAuthResult = new AuthenticationResult(
+        authenticationResult.getIdentity(),
+        authenticationResult.getAuthorizerName(),
+        authenticationResult.getAuthenticatedBy(),
+        sanitizeContext(authenticationResult.getContext())
+    );
+
     LOG.trace("Creating OPA request JSON.");
     OpaMessage msg = new OpaMessage(
-        authenticationResult,
+        sanitizedAuthResult,
         action.name(),
         resource.getName(),
         resource.getType()
@@ -144,5 +152,64 @@ public class OpaAuthorizer implements Authorizer
     catch (Exception e) {
       return Access.deny("An error occurred: " + e);
     }
+  }
+
+  protected Map<String, Object> sanitizeContext(Map<String, Object> context)
+  {
+    if (context == null || context.isEmpty()) {
+      return context;
+    }
+
+    Map<String, Object> sanitizedContext = new HashMap<>();
+    for (Map.Entry<String, Object> entry : context.entrySet()) {
+      if (entry.getValue() instanceof SearchResult) {
+        try {
+          sanitizedContext.put(entry.getKey(), sanitizeSearchResult((SearchResult) entry.getValue()));
+        }
+        catch (NamingException e) {
+          LOG.warn(e, "Failed to sanitize SearchResult in context key: %s", entry.getKey());
+        }
+      } else {
+        // Keep other types as is, assuming they are serializable or handled by other means
+        sanitizedContext.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return sanitizedContext;
+  }
+
+  private Map<String, Object> sanitizeSearchResult(SearchResult searchResult) throws NamingException
+  {
+    Map<String, Object> sanitized = new HashMap<>();
+    sanitized.put("name", searchResult.getName());
+    
+    try {
+      sanitized.put("nameInNamespace", searchResult.getNameInNamespace());
+    }
+    catch (UnsupportedOperationException e) {
+      // SearchResult.getNameInNamespace() throws UnsupportedOperationException if the result is relative
+      // and the full name hasn't been set by the context. It's safe to ignore.
+    }
+
+    Map<String, List<Object>> attributesMap = new HashMap<>();
+    Attributes attributes = searchResult.getAttributes();
+    if (attributes != null) {
+      NamingEnumeration<? extends Attribute> attrEnum = attributes.getAll();
+      while (attrEnum != null && attrEnum.hasMore()) {
+        Attribute attr = attrEnum.next();
+        List<Object> values = new ArrayList<>();
+        NamingEnumeration<?> valueEnum = attr.getAll();
+        while (valueEnum != null && valueEnum.hasMore()) {
+          Object val = valueEnum.next();
+          if (val instanceof byte[]) {
+            values.add(Base64.getEncoder().encodeToString((byte[]) val));
+          } else if (val != null) {
+            values.add(val.toString());
+          }
+        }
+        attributesMap.put(attr.getID().toLowerCase(Locale.ENGLISH), values);
+      }
+    }
+    sanitized.put("attributes", attributesMap);
+    return sanitized;
   }
 }
