@@ -57,7 +57,7 @@ public class SupervisorStatus
   )
   {
     this.id = Preconditions.checkNotNull(builder.id, "id");
-    this.dataSource = builder.dataSource;
+    this.dataSource = builder.dataSource != null ? builder.dataSource : this.id;
     this.state = builder.state;
     this.detailedState = builder.detailedState;
     this.healthy = builder.healthy;
