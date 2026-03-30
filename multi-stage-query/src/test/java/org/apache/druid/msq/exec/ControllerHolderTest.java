@@ -73,7 +73,7 @@ public class ControllerHolderTest
     final Controller controller = new TestController("test-query")
     {
       @Override
-      public void run(final QueryListener listener) throws Exception
+      public void run(final QueryListener listener)
       {
         try {
           controllerStarted.countDown();
@@ -116,7 +116,7 @@ public class ControllerHolderTest
     final Controller controller = new TestController("test-query")
     {
       @Override
-      public void run(final QueryListener listener) throws Exception
+      public void run(final QueryListener listener)
       {
         try {
           controllerStarted.countDown();
@@ -202,7 +202,7 @@ public class ControllerHolderTest
     final Controller controller = new TestController("test-query")
     {
       @Override
-      public void run(final QueryListener listener) throws Exception
+      public void run(final QueryListener listener)
       {
         try {
           controllerStarted.countDown();
