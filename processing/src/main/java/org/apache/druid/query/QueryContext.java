@@ -570,6 +570,11 @@ public class QueryContext
     return getPerSegmentTimeout() != QueryContexts.NO_TIMEOUT;
   }
 
+  public int getPerSegmentSamplingWindow()
+  {
+    return getInt(QueryContexts.PER_SEGMENT_SAMPLING_WINDOW_KEY, 0);
+  }
+
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
   {
     long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
