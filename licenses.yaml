@@ -2891,6 +2891,20 @@ notices:
 ---
 
 
+name: JTS
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Eclipse Public License 2.0
+version: 1.20.0
+libraries:
+  - org.locationtech.jts: jts-core
+notices:
+  - jts-core: |
+      The JTS Topology Suite is a Java library for creating and manipulating vector geometry.
+      Eclipse Distribution License 1.0 / Eclipse Public License 2.0
+---
+
+
 name: Apache Directory
 license_category: binary
 module: hadoop-client
@@ -3249,6 +3263,20 @@ notices:
 
 ---
 
+name: Apache Avro
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.12.0
+libraries:
+  - org.apache.avro: avro
+notices:
+  - avro: |
+      Apache Avro
+      Copyright 2010-2019 The Apache Software Foundation
+
+---
+
 name: Javax Annotation API
 license_category: binary
 module: extensions/druid-avro-extensions
@@ -3399,7 +3427,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.15.2
+version: 1.16.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
