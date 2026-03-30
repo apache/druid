@@ -162,6 +162,8 @@ public class OpaAuthorizerTest
     // Mimic LDAP SearchResult which has non-serializable elements
     BasicAttributes attributes = new BasicAttributes();
     attributes.put("uid", "user");
+    attributes.put("memberOf", "cn=group1,ou=Groups,dc=example,dc=org");
+    attributes.add("memberOf", "cn=group2,ou=Groups,dc=example,dc=org");
     byte[] photoBytes = new byte[]{1, 2, 3};
     attributes.put("jpegPhoto", photoBytes);
     SearchResult searchResult = new SearchResult("uid=user", "java.lang.Object", null, attributes, false);
@@ -182,6 +184,7 @@ public class OpaAuthorizerTest
     Assert.assertTrue(requestBody.contains("\"name\":\"uid=user\""));
     Assert.assertTrue(requestBody.contains("\"nameInNamespace\":\"dc=example,dc=org\""));
     Assert.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));
+    Assert.assertTrue(requestBody.contains("\"memberof\":[\"cn=group1,ou=Groups,dc=example,dc=org\",\"cn=group2,ou=Groups,dc=example,dc=org\"]"));
     Assert.assertTrue(requestBody.contains("\"jpegphoto\":[\"AQID\"]")); // Base64 for [1, 2, 3]
   }
 }
