@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.dart.controller.sql;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.report.TaskReport;
@@ -30,13 +29,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
-import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.ControllerRegistry;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.SequenceQueryListener;
@@ -85,7 +84,7 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Controller registry, used to register and remove controllers as they start and finish.
    */
-  private final DartControllerRegistry controllerRegistry;
+  private final ControllerRegistry controllerRegistry;
 
   /**
    * Controller config.
@@ -105,7 +104,7 @@ public class DartQueryMaker implements QueryMaker
       List<Entry<Integer, String>> fieldMapping,
       DartControllerContextFactory controllerContextFactory,
       PlannerContext plannerContext,
-      DartControllerRegistry controllerRegistry,
+      ControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
       ControllerThreadPool controllerThreadPool,
       QueryKitSpecFactory queryKitSpecFactory,
@@ -256,7 +255,7 @@ public class DartQueryMaker implements QueryMaker
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
+   * Arranges for {@link ControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
   private Sequence<Object[]> runWithReport(
       final ControllerHolder controllerHolder,
@@ -286,7 +285,7 @@ public class DartQueryMaker implements QueryMaker
 
     try {
       // Submit controller and wait for it to finish.
-      controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool).get();
+      controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool.getExecutorService()).get();
 
       // Return a sequence with just one row (the report).
       final TaskReport.ReportMap reportMap =
@@ -306,7 +305,7 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Run a query and return the results only, streamed back using {@link SequenceQueryListener}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
+   * Arranges for {@link ControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
   private Sequence<Object[]> runWithSequence(
       final ControllerHolder controllerHolder,
@@ -315,8 +314,7 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     final SequenceQueryListener listener = new SequenceQueryListener();
-    final ListenableFuture<?> runFuture =
-        controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool);
+    controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool.getExecutorService());
 
     return Sequences.wrap(
         listener.getSequence().flatMap(
@@ -334,7 +332,7 @@ public class DartQueryMaker implements QueryMaker
           public void after(final boolean isDone, final Throwable thrown)
           {
             if (!isDone || thrown != null) {
-              runFuture.cancel(true); // Cancel on early stop or failure
+              controllerHolder.cancel(CancellationReason.UNKNOWN);
             }
           }
         }
