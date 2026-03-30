@@ -55,8 +55,8 @@ The input format is configured like so:
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|type|String|Must be `influx`.|yes|
-|whitelistMeasurements|List of String|If present, measurements that do not match one of the strings in the list will be ignored.|no|
+|`type`|String|Must be `influx`.|yes|
+|`whitelistMeasurements`|List of String|If present, measurements that do not match one of the strings in the list will be ignored.|no|
 
 When using the `influx` input format, the timestamp spec should be configured with column `__ts` and format `millis`:
 
