@@ -776,7 +776,7 @@ public class QueryResourceTest
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
                 null,
-                java.util.Collections.emptyMap(),
+                Collections.emptyMap(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )

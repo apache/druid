@@ -20,6 +20,7 @@
 package org.apache.druid.server.broker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.query.QueryContext;
@@ -86,6 +87,7 @@ public class BrokerDynamicConfig
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public Map<String, PerSegmentTimeoutConfig> getPerSegmentTimeoutConfig()
   {
     return perSegmentTimeoutConfig;

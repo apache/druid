@@ -223,7 +223,7 @@ public class QueryLifecycle
 
     // Start with system defaults, apply per-datasource override, then user context wins
     Map<String, Object> contextWithDefaults = new HashMap<>(queryConfigProvider.getContext());
-    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults);
+    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
     Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
     finalContext.put(BaseQuery.QUERY_ID, queryId);
 
@@ -238,7 +238,8 @@ public class QueryLifecycle
    */
   private void applyPerDatasourcePerSegmentTimeout(
       final Query<?> query,
-      final Map<String, Object> contextWithDefaults
+      final Map<String, Object> contextWithDefaults,
+      final String queryId
   )
   {
     if (perSegmentTimeoutConfig.isEmpty()) {
@@ -249,11 +250,11 @@ public class QueryLifecycle
       PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
       if (dsConfig != null) {
         if (dsConfig.isMonitorOnly()) {
-          log.info(
+          log.debug(
               "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
               dsConfig.getPerSegmentTimeoutMs(),
               tableName,
-              query.getId()
+              queryId
           );
         } else {
           contextWithDefaults.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());

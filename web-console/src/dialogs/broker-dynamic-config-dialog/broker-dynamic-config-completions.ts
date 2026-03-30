@@ -115,8 +115,7 @@ export const BROKER_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
       },
       {
         value: 'monitorOnly',
-        documentation:
-          'If true, log the configured timeout without enforcing it (default: false)',
+        documentation: 'If true, log the configured timeout without enforcing it (default: false)',
       },
     ],
   },

@@ -19,8 +19,6 @@
 
 package org.apache.druid.server;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids;
@@ -44,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class PerSegmentTimeoutInjectionTest
@@ -61,7 +60,7 @@ public class PerSegmentTimeoutInjectionTest
 
   private final TimeseriesQuery baseQuery = Druids.newTimeseriesQueryBuilder()
       .dataSource(DATASOURCE)
-      .intervals(ImmutableList.of(Intervals.ETERNITY))
+      .intervals(List.of(Intervals.ETERNITY))
       .aggregators(new CountAggregatorFactory("count"))
       .build();
 
@@ -87,7 +86,7 @@ public class PerSegmentTimeoutInjectionTest
   @Test
   public void testPerDatasourceTimeout_applied()
   {
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
     );
 
@@ -102,14 +101,14 @@ public class PerSegmentTimeoutInjectionTest
   @Test
   public void testPerDatasourceTimeout_userOverrideWins()
   {
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
     );
 
     expectDefaults();
 
     TimeseriesQuery queryWithUserTimeout = baseQuery.withOverriddenContext(
-        ImmutableMap.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
+        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
     );
 
     QueryLifecycle lifecycle = createLifecycle(config);
@@ -122,7 +121,7 @@ public class PerSegmentTimeoutInjectionTest
   public void testPerDatasourceTimeout_monitorOnlyDoesNotInject()
   {
     // monitorOnly=true: config exists but should NOT be enforced
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         DATASOURCE, new PerSegmentTimeoutConfig(5000, true)
     );
 
@@ -140,7 +139,7 @@ public class PerSegmentTimeoutInjectionTest
   @Test
   public void testPerDatasourceTimeout_noMatchingDatasource()
   {
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         "other_datasource", new PerSegmentTimeoutConfig(5000, false)
     );
 
@@ -155,13 +154,13 @@ public class PerSegmentTimeoutInjectionTest
   @Test
   public void testPerDatasourceTimeout_overridesSystemDefault()
   {
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
     );
 
     // System default sets perSegmentTimeout to 10000
     EasyMock.expect(queryConfig.getContext())
-            .andReturn(ImmutableMap.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
+            .andReturn(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
             .anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.replay(conglomerate, queryConfig);
@@ -176,18 +175,18 @@ public class PerSegmentTimeoutInjectionTest
   public void testPrecedence_userOverridesPerDatasourceOverridesSystemDefault()
   {
     // System default: 10000, per-datasource: 5000, user: 2000 — user should win
-    Map<String, PerSegmentTimeoutConfig> config = ImmutableMap.of(
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
         DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
     );
 
     EasyMock.expect(queryConfig.getContext())
-            .andReturn(ImmutableMap.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
+            .andReturn(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
             .anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.replay(conglomerate, queryConfig);
 
     TimeseriesQuery queryWithUserTimeout = baseQuery.withOverriddenContext(
-        ImmutableMap.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
+        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
     );
 
     QueryLifecycle lifecycle = createLifecycle(config);
@@ -198,7 +197,7 @@ public class PerSegmentTimeoutInjectionTest
 
   private void expectDefaults()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.replay(conglomerate, queryConfig);
   }

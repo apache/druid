@@ -80,6 +80,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -859,7 +860,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
-        java.util.Collections.emptyMap(),
+        Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -911,7 +912,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
-        java.util.Collections.emptyMap(),
+        Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
