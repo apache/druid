@@ -901,6 +901,9 @@ public class SuperSorterTest
       );
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           2,
@@ -929,6 +932,9 @@ public class SuperSorterTest
       }
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           1,
@@ -969,7 +975,15 @@ public class SuperSorterTest
           new Object[][]{{"a", 10L}, {"b", 20L}, {"c", 30L}, {"d", 40L}}
       );
 
-      final List<List<Object>> rows = runCombiningSuperSorter(channelData, partitions, 2, SuperSorter.UNLIMITED);
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          partitions,
+          2,
+          SuperSorter.UNLIMITED
+      );
 
       Assert.assertEquals(
           ImmutableList.of(
@@ -994,6 +1008,9 @@ public class SuperSorterTest
       }
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           2,
@@ -1020,6 +1037,9 @@ public class SuperSorterTest
 
       for (int limit = 1; limit <= 3; limit++) {
         final List<List<Object>> rows = runCombiningSuperSorter(
+            SIGNATURE,
+            CLUSTER_BY,
+            SORTABLE_SIGNATURE,
             channelData,
             ClusterByPartitions.oneUniversalPartition(),
             2,
@@ -1054,6 +1074,9 @@ public class SuperSorterTest
       );
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           2,
@@ -1078,6 +1101,9 @@ public class SuperSorterTest
       );
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           1,
@@ -1102,6 +1128,9 @@ public class SuperSorterTest
       final List<Object[][]> channelData = ImmutableList.of(new Object[][]{});
 
       final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
           channelData,
           ClusterByPartitions.oneUniversalPartition(),
           1,
@@ -1112,21 +1141,69 @@ public class SuperSorterTest
     }
 
     /**
-     * Helper that runs a combining SuperSorter with the given channel data, partitions, maxActiveProcessors,
-     * and rowLimit. Returns all output rows across all partitions.
+     * Test combining with a LONG key column, which exercises {@link TrackingColumnValueSelector}.
+     */
+    @Test
+    public void testCombineWithLongKey() throws Exception
+    {
+      final RowSignature longKeySignature =
+          RowSignature.builder()
+                      .add("key", ColumnType.LONG)
+                      .add("value", ColumnType.LONG)
+                      .build();
+
+      final ClusterBy longKeyClusterBy = new ClusterBy(
+          ImmutableList.of(new KeyColumn("key", KeyOrder.ASCENDING)),
+          0
+      );
+
+      final RowSignature longKeySortableSignature =
+          FrameWriters.sortableSignature(longKeySignature, longKeyClusterBy.getColumns());
+
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{1L, 10L}, {2L, 20L}, {3L, 30L}},
+          new Object[][]{{1L, 100L}, {2L, 200L}, {3L, 300L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          longKeySignature,
+          longKeyClusterBy,
+          longKeySortableSignature,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          SuperSorter.UNLIMITED
+      );
+
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(1L, 110L),
+              ImmutableList.of(2L, 220L),
+              ImmutableList.of(3L, 330L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Helper that runs a combining SuperSorter with the given signature, channel data, partitions,
+     * maxActiveProcessors, and rowLimit. Returns all output rows across all partitions.
      */
     private List<List<Object>> runCombiningSuperSorter(
+        final RowSignature signature,
+        final ClusterBy clusterBy,
+        final RowSignature sortableSignature,
         final List<Object[][]> channelData,
         final ClusterByPartitions partitions,
         final int maxActiveProcessors,
         final long rowLimit
     ) throws Exception
     {
-      final FrameReader frameReader = FrameReader.create(SORTABLE_SIGNATURE);
+      final FrameReader frameReader = FrameReader.create(sortableSignature);
 
       final List<ReadableFrameChannel> channels = new ArrayList<>();
       for (final Object[][] data : channelData) {
-        channels.add(makeFrameChannel(data));
+        channels.add(makeFrameChannel(signature, clusterBy, data));
       }
 
       final File tempFolder = temporaryFolder.newFolder();
@@ -1134,7 +1211,7 @@ public class SuperSorterTest
       final SuperSorter superSorter = new SuperSorter(
           channels,
           frameReader,
-          CLUSTER_BY.getColumns(),
+          clusterBy.getColumns(),
           Futures.immediateFuture(partitions),
           exec,
           FrameProcessorDecorator.NONE,
@@ -1147,7 +1224,7 @@ public class SuperSorterTest
           null,
           new SuperSorterProgressTracker(),
           false,
-          () -> new SummingFrameCombiner(SORTABLE_SIGNATURE, 1)
+          () -> new SummingFrameCombiner(sortableSignature, 1)
       );
 
       final OutputChannels outputChannels = superSorter.run().get();
@@ -1161,13 +1238,17 @@ public class SuperSorterTest
       return rows;
     }
 
-    private ReadableFrameChannel makeFrameChannel(final Object[][] rows) throws IOException
+    private ReadableFrameChannel makeFrameChannel(
+        final RowSignature signature,
+        final ClusterBy clusterBy,
+        final Object[][] rows
+    ) throws IOException
     {
       final List<Row> rowList = new ArrayList<>();
       for (final Object[] row : rows) {
         final Map<String, Object> map = new HashMap<>();
-        for (int i = 0; i < SIGNATURE.size(); i++) {
-          map.put(SIGNATURE.getColumnName(i), row[i]);
+        for (int i = 0; i < signature.size(); i++) {
+          map.put(signature.getColumnName(i), row[i]);
         }
         rowList.add(new MapBasedRow(0L, map));
       }
@@ -1176,13 +1257,13 @@ public class SuperSorterTest
           new RowBasedCursorFactory<>(
               Sequences.simple(rowList),
               RowAdapters.standardRow(),
-              SIGNATURE
+              signature
           );
 
       final Sequence<Frame> frames =
           FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .maxRowsPerFrame(maxRowsPerFrame)
-                              .sortBy(CLUSTER_BY.getColumns())
+                              .sortBy(clusterBy.getColumns())
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(FRAME_SIZE)))
                               .frameType(FrameType.latestRowBased())
                               .frames();
