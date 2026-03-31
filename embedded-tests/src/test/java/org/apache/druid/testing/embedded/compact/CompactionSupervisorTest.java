@@ -57,8 +57,10 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
@@ -69,8 +71,8 @@ import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
+import org.apache.druid.server.compaction.ReindexingIndexSpecRule;
+import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -90,10 +92,10 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.tools.EventSerializer;
-import org.apache.druid.testing.tools.JsonEventSerializer;
-import org.apache.druid.testing.tools.StreamGenerator;
-import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.druid.testing.embedded.tools.EventSerializer;
+import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
+import org.apache.druid.testing.embedded.tools.StreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
@@ -180,9 +182,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                createTuningConfigWithPartitionsSpec(
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
-                )
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false))
+                    .build()
             )
             .build();
 
@@ -203,9 +206,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
             )
             .withTuningConfig(
-                createTuningConfigWithPartitionsSpec(
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
-                )
+                  UserCompactionTaskQueryTuningConfig
+                      .builder()
+                      .partitionsSpec(new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false))
+                      .build()
             )
             .build();
 
@@ -220,14 +224,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
   }
 
-  @MethodSource("getPartitionsSpec")
+  @MethodSource("getPolicyAndPartition")
   @ParameterizedTest(name = "partitionsSpec={0}")
-  public void test_minorCompactionWithMSQ(PartitionsSpec partitionsSpec) throws Exception
+  public void test_minorCompactionWithMSQ(MostFragmentedIntervalFirstPolicy policy, PartitionsSpec partitionsSpec)
   {
-    configureCompaction(
-        CompactionEngine.MSQ,
-        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null)
-    );
+    configureCompaction(CompactionEngine.MSQ, policy);
 
     ingest1kRecords();
     ingest1kRecords();
@@ -324,9 +325,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                createTuningConfigWithPartitionsSpec(
-                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false)
-                )
+                  UserCompactionTaskQueryTuningConfig
+                      .builder()
+                      .partitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
+                      .build()
             )
             .build();
 
@@ -377,24 +379,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(16, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
 
-    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule hourRule = new ReindexingPartitioningRule(
         "hourRule",
         "Compact to HOUR granularity for data older than 1 days",
         Period.days(1),
-        Granularities.HOUR
+        Granularities.HOUR,
+        new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+        null
     );
-    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule(
+    ReindexingPartitioningRule dayRule = new ReindexingPartitioningRule(
         "dayRule",
         "Compact to DAY granularity for data older than 7 days",
         Period.days(7),
-        Granularities.DAY
-    );
-
-    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
-        "tuningConfigRule",
-        "Use dimension range partitioning with max 1000 rows per segment",
-        Period.days(1),
-        createTuningConfigWithPartitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
+        Granularities.DAY,
+        new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+        null
     );
 
     ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
@@ -405,11 +404,18 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null
     );
 
+    ReindexingIndexSpecRule indexSpecRule = new ReindexingIndexSpecRule(
+        "indexSpecRule",
+        null,
+        Period.days(7),
+        new IndexSpec.Builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+    );
+
     InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider
         .builder()
-        .segmentGranularityRules(List.of(hourRule, dayRule))
-        .tuningConfigRules(List.of(tuningConfigRule))
+        .partitioningRules(List.of(hourRule, dayRule))
         .deletionRules(List.of(deletionRule))
+        .indexSpecRules(List.of(indexSpecRule))
         .build();
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
@@ -420,7 +426,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         null,
-        Granularities.HOUR
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
@@ -480,25 +489,20 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         virtualColumns
     );
 
-    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
-        "tuningConfigRule",
-        null,
-        Period.days(7),
-        createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
-    );
-
     CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
         InlineReindexingRuleProvider.builder()
                                     .deletionRules(List.of(deletionRule))
-                                    .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
         null,
         null,
         null,
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
     );
 
     runCompactionWithSpec(cascadingTemplate);
@@ -755,17 +759,22 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       );
     }
 
-    // Add partitioning spec based on test parameter
     if ("range".equals(partitionType)) {
-      PartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false);
-      builder.withTuningConfig(UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build());
+      builder.withTuningConfig(
+          UserCompactionTaskQueryTuningConfig
+              .builder()
+              .partitionsSpec(new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false))
+              .maxNumConcurrentSubTasks(2)
+              .build()
+      );
     } else {
-      // Hash partitioning
-      PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, null, null);
-      builder.withTuningConfig(UserCompactionTaskQueryTuningConfig.builder()
-                                                                  .partitionsSpec(partitionsSpec)
-                                                                  .maxNumConcurrentSubTasks(2)
-                                                                  .build());
+      builder.withTuningConfig(
+          UserCompactionTaskQueryTuningConfig
+              .builder()
+              .partitionsSpec(new HashedPartitionsSpec(null, null, null))
+              .maxNumConcurrentSubTasks(2)
+              .build()
+      );
     }
 
     InlineSchemaDataSourceCompactionConfig compactionConfig = builder.build();
@@ -821,7 +830,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
             )
-            .withTuningConfig(createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null)))
+            .withTuningConfig(
+                  UserCompactionTaskQueryTuningConfig
+                      .builder()
+                      .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                      .build()
+            )
             .build();
 
     runCompactionWithSpec(config);
@@ -1026,11 +1040,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(task, overlord);
   }
 
-  public static List<PartitionsSpec> getPartitionsSpec()
+  public static List<Object[]> getPolicyAndPartition()
   {
     return List.of(
-        new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false),
-        new DynamicPartitionsSpec(null, null)
+        new Object[]{
+            // decides minor compaction based on bytes percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null),
+            new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false)
+        },
+        new Object[]{
+            // decides minor compaction based on rows percent
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null),
+            new DynamicPartitionsSpec(null, null)
+        }
     );
   }
 
@@ -1079,31 +1101,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             value,
             period
         )
-    );
-  }
-
-  private UserCompactionTaskQueryTuningConfig createTuningConfigWithPartitionsSpec(PartitionsSpec partitionsSpec)
-  {
-    return new UserCompactionTaskQueryTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        partitionsSpec,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
     );
   }
 }

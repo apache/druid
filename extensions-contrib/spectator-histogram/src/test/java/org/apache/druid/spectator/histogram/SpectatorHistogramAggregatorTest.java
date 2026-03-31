@@ -23,9 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.netflix.spectator.api.histogram.PercentileBuckets;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -52,6 +56,7 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -59,6 +64,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -80,21 +86,14 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTest
 {
-  public static final String INPUT_DATA_PARSE_SPEC = String.join(
-      "\n",
-      "{",
-      "  \"type\": \"string\",",
-      "  \"parseSpec\": {",
-      "    \"format\": \"tsv\",",
-      "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-      "    \"dimensionsSpec\": {",
-      "      \"dimensions\": [\"product\"],",
-      "      \"dimensionExclusions\": [],",
-      "      \"spatialDimensions\": []",
-      "    },",
-      "    \"columns\": [\"timestamp\", \"product\", \"cost\"]",
-      "  }",
-      "}"
+  private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
+      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+      ColumnsFilter.all()
+  );
+
+  private static final DelimitedInputFormat INPUT_FORMAT = DelimitedInputFormat.forColumns(
+      List.of("timestamp", "product", "cost")
   );
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -168,7 +167,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -204,7 +204,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -246,7 +247,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Object rawseq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -289,7 +291,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -343,7 +346,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -384,7 +388,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -446,7 +451,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -488,7 +494,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -530,7 +537,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Object rawseq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("pre_agg_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -574,7 +582,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     File segmentDir = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -625,7 +634,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     File segmentDir = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -675,7 +685,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -747,18 +758,23 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
       ));
     }
 
-    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
-        inputRows.iterator(),
-        new NoopInputRowParser(null),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count"),
-            new SpectatorHistogramAggregatorFactory("histogram", "x")
-        },
-        0,
-        Granularities.NONE,
-        100,
-        false
-    );
+    IncrementalIndex index = IndexBuilder.create()
+                                         .rows(inputRows)
+                                         .schema(
+                                             IncrementalIndexSchema.builder()
+                                                                   .withDimensionsSpec(
+                                                                       DimensionsSpec.builder()
+                                                                                     .setDefaultSchemaDimensions(dimensions)
+                                                                                     .build()
+                                                                   )
+                                                                   .withMetrics(
+                                                                       new CountAggregatorFactory("count"),
+                                                                       new SpectatorHistogramAggregatorFactory("histogram", "x")
+                                                                   )
+                                                                   .withQueryGranularity(Granularities.NONE)
+                                                                   .build()
+                                         )
+                                         .buildIncrementalIndex();
 
     ImmutableList<Segment> segments = ImmutableList.of(
         new IncrementalIndexSegment(index, SegmentId.dummy("test")),
@@ -788,7 +804,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -837,7 +854,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -889,7 +907,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",
@@ -929,7 +948,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
-        INPUT_DATA_PARSE_SPEC,
+        INPUT_ROW_SCHEMA,
+        INPUT_FORMAT,
         String.join(
             "\n",
             "[",

@@ -35,22 +35,22 @@ import java.util.stream.Collectors;
  */
 public class ClientMinorCompactionInputSpec extends ClientCompactionIntervalSpec
 {
-  public static final String TYPE = "uncompacted";
+  public static final String TYPE = "minor";
 
-  private final List<SegmentDescriptor> uncompactedSegments;
+  private final List<SegmentDescriptor> segments;
 
   @JsonCreator
   public ClientMinorCompactionInputSpec(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("uncompactedSegments") List<SegmentDescriptor> uncompactedSegments
+      @JsonProperty("segments") List<SegmentDescriptor> segments
   )
   {
     super(interval, null);
-    if (uncompactedSegments == null || uncompactedSegments.isEmpty()) {
-      throw InvalidInput.exception("'uncompactedSegments' must be non-empty.");
+    if (segments == null || segments.isEmpty()) {
+      throw InvalidInput.exception("'segments' must be non-empty.");
     } else if (interval != null) {
       List<SegmentDescriptor> segmentsNotInInterval =
-          uncompactedSegments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+          segments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
       if (!segmentsNotInInterval.isEmpty()) {
         throw new IAE(
             "Can not supply segments outside interval[%s], got segments[%s].",
@@ -59,13 +59,13 @@ public class ClientMinorCompactionInputSpec extends ClientCompactionIntervalSpec
         );
       }
     }
-    this.uncompactedSegments = uncompactedSegments;
+    this.segments = segments;
   }
 
   @JsonProperty
-  public List<SegmentDescriptor> getUncompactedSegments()
+  public List<SegmentDescriptor> getSegments()
   {
-    return uncompactedSegments;
+    return segments;
   }
 
   @Override
@@ -81,13 +81,13 @@ public class ClientMinorCompactionInputSpec extends ClientCompactionIntervalSpec
       return false;
     }
     ClientMinorCompactionInputSpec that = (ClientMinorCompactionInputSpec) object;
-    return Objects.equals(uncompactedSegments, that.uncompactedSegments);
+    return Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), uncompactedSegments);
+    return Objects.hash(super.hashCode(), segments);
   }
 
   @Override
@@ -95,7 +95,7 @@ public class ClientMinorCompactionInputSpec extends ClientCompactionIntervalSpec
   {
     return "ClientMinorCompactionInputSpec{" +
            "interval=" + getInterval() +
-           ",uncompactedSegments=" + uncompactedSegments +
+           ",segments=" + segments +
            '}';
   }
 }

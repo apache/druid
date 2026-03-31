@@ -89,6 +89,30 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
     throw new UnsupportedOperationException();
   }
 
+  public Builder toBuilder()
+  {
+    return new Builder()
+        .maxRowsInMemory(getMaxRowsInMemory())
+        .appendableIndexSpec(getAppendableIndexSpec())
+        .maxBytesInMemory(getMaxBytesInMemory())
+        .maxTotalRows(getMaxTotalRows())
+        .splitHintSpec(getSplitHintSpec())
+        .partitionsSpec(getPartitionsSpec())
+        .indexSpec(getIndexSpec())
+        .indexSpecForIntermediatePersists(getIndexSpecForIntermediatePersists())
+        .maxPendingPersists(getMaxPendingPersists())
+        .pushTimeout(getPushTimeout())
+        .segmentWriteOutMediumFactory(getSegmentWriteOutMediumFactory())
+        .maxNumConcurrentSubTasks(getMaxNumConcurrentSubTasks())
+        .maxRetry(getMaxRetry())
+        .taskStatusCheckPeriodMs(getTaskStatusCheckPeriodMs())
+        .chatHandlerTimeout(getChatHandlerTimeout())
+        .chatHandlerNumRetries(getChatHandlerNumRetries())
+        .maxNumSegmentsToMerge(getMaxNumSegmentsToMerge())
+        .totalNumMergeTasks(getTotalNumMergeTasks())
+        .maxColumnsToMerge(getMaxColumnsToMerge());
+  }
+
   public static Builder builder()
   {
     return new Builder();

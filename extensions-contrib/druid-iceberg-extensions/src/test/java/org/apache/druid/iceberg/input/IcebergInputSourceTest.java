@@ -333,7 +333,7 @@ public class IcebergInputSourceTest
     DataWriter<GenericRecord> dataWriter =
         Parquet.writeData(file)
                .schema(tableSchema)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .build();
@@ -376,7 +376,7 @@ public class IcebergInputSourceTest
     DataWriter<GenericRecord> dataWriter =
         Parquet.writeData(file)
                .schema(tableSchema)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(partitionSpec)
                .withPartition(partitionKey)

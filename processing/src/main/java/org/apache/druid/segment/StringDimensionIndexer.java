@@ -58,7 +58,8 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
-  private final int maxStringLength;
+  @Nullable
+  private final Integer maxStringLength;
   private volatile boolean hasMultipleValues = false;
 
   public StringDimensionIndexer(
@@ -74,7 +75,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @Nullable MultiValueHandling multiValueHandling,
       boolean hasBitmapIndexes,
       boolean hasSpatialIndexes,
-      int maxStringLength
+      @Nullable Integer maxStringLength
   )
   {
     super(new StringDimensionDictionary());
@@ -84,9 +85,13 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     this.maxStringLength = maxStringLength;
   }
 
-  private String truncateIfNeeded(String value)
+  /**
+   * Truncates the value to the first {@link #maxStringLength} characters if configured, otherwise returns it as-is.
+   */
+  @Nullable
+  private String truncateIfNeeded(@Nullable String value)
   {
-    if (maxStringLength > 0 && value != null && value.length() > maxStringLength) {
+    if (maxStringLength != null && value != null && value.length() > maxStringLength) {
       return value.substring(0, maxStringLength);
     }
     return value;

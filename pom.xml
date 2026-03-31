@@ -83,7 +83,8 @@
         <gson.version>2.13.2</gson.version>
         <scala.library.version>2.13.16</scala.library.version>
         <avatica.version>1.27.0</avatica.version>
-        <avro.version>1.11.5</avro.version>
+        <avro.version>1.12.0</avro.version>
+        <parquet.version>1.16.0</parquet.version>
         <bytebuddy.version>1.18.5</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -238,6 +239,7 @@
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
+        <module>extensions-contrib/consul-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/druid-exact-count-bitmap</module>
@@ -268,7 +270,6 @@
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
-        <module>integration-tests-ex/tools</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
@@ -451,6 +452,11 @@
             </dependency>
             <!-- Transitive dependency of kubernetes-client java and docker-java-core
             in kubernetes-extensions and it-integration tests -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.81</version>
+            </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>

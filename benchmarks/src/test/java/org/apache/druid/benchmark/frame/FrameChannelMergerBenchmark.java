@@ -359,6 +359,7 @@ public class FrameChannelMergerBenchmark
         ),
         sortKey,
         null,
+        null,
         -1
     );
 

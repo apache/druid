@@ -23,12 +23,14 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
@@ -430,7 +432,7 @@ public class ReindexingDeletionRuleOptimizerTest
         new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     );
 
-    // Create a filter that only references vc1 and vc3 (vc2 is unreferenced)
+    // Create a filter that only references vc1 and vc3 (vc2 is unreferenced by deletion rules)
     DimFilter filter = new OrDimFilter(
         Arrays.asList(
             new SelectorDimFilter("vc1", "value1", null),
@@ -439,17 +441,18 @@ public class ReindexingDeletionRuleOptimizerTest
     );
     NotDimFilter notFilter = new NotDimFilter(filter);
 
-    // Candidate has no filters applied, so all filters remain
+    // Candidate has no filters applied (null fingerprints), so no deletion rules are pruned
     CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    // Filter remains, but vc2 should be filtered out
+    // Subtractive approach: since no deletion rules were pruned, all VCs are preserved
+    // (vc2 may be a partitioning VC or belong to unapplied deletion rules)
     VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
     Assertions.assertNotNull(resultVCs);
-    Assertions.assertEquals(2, resultVCs.getVirtualColumns().length);
+    Assertions.assertEquals(3, resultVCs.getVirtualColumns().length);
 
     Set<String> outputNames = new HashSet<>();
     for (org.apache.druid.segment.VirtualColumn vc : resultVCs.getVirtualColumns()) {
@@ -457,14 +460,14 @@ public class ReindexingDeletionRuleOptimizerTest
     }
 
     Assertions.assertTrue(outputNames.contains("vc1"));
-    Assertions.assertFalse(outputNames.contains("vc2")); // vc2 should be filtered out
+    Assertions.assertTrue(outputNames.contains("vc2"));
     Assertions.assertTrue(outputNames.contains("vc3"));
   }
 
   @Test
   public void testOptimize_FilterVirtualColumns_NoColumnsReferenced()
   {
-    // Create virtual columns
+    // Create virtual columns (could be partitioning VCs unrelated to deletion rules)
     VirtualColumns virtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
         new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
@@ -474,14 +477,131 @@ public class ReindexingDeletionRuleOptimizerTest
     DimFilter filter = new SelectorDimFilter("regularColumn", "value", null);
     NotDimFilter notFilter = new NotDimFilter(filter);
 
-    // Candidate has no filters applied
+    // Candidate has no filters applied (null fingerprints), so no deletion rules are pruned
     CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
     CompactionJobParams params = createParams();
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assertions.assertEquals(VirtualColumns.EMPTY, result.getTransformSpec().getVirtualColumns());
+    // Subtractive approach: since no deletion rules were pruned, all VCs are preserved
+    // (vc1 and vc2 may be partitioning VCs)
+    VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
+    Assertions.assertNotNull(resultVCs);
+    Assertions.assertEquals(2, resultVCs.getVirtualColumns().length);
+  }
+
+  @Test
+  public void testOptimize_PartiallyApplied_PreservesPartitioningVCsAndUnappliedDeletionVCs()
+  {
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion_b", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+
+    DimFilter filterA = new SelectorDimFilter("vc_deletion_a", "value_a", null);
+    DimFilter filterB = new SelectorDimFilter("vc_deletion_b", "value_b", null);
+    NotDimFilter notFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB)));
+
+    // filterA already applied in previous compaction
+    CompactionState state = createStateWithSingleFilter(filterA);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionJobParams params = createParams();
+
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // filterA pruned, filterB remains
+    // vc_deletion_a removed (only needed by pruned filterA)
+    // vc_deletion_b preserved (needed by remaining filterB)
+    // vc_partition preserved (not referenced by any deletion filter)
+    VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
+    Assertions.assertNotNull(resultVCs);
+    Assertions.assertEquals(2, resultVCs.getVirtualColumns().length);
+
+    Set<String> outputNames = new HashSet<>();
+    for (VirtualColumn vc : resultVCs.getVirtualColumns()) {
+      outputNames.add(vc.getOutputName());
+    }
+    Assertions.assertTrue(outputNames.contains("vc_partition"));
+    Assertions.assertTrue(outputNames.contains("vc_deletion_b"));
+    Assertions.assertFalse(outputNames.contains("vc_deletion_a"));
+  }
+
+  @Test
+  public void testOptimize_AllFiltersApplied_PreservesPartitioningVCs()
+  {
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_deletion", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+
+    DimFilter filter = new SelectorDimFilter("vc_deletion", "value", null);
+    NotDimFilter notFilter = new NotDimFilter(filter);
+
+    // filter already applied
+    CompactionState state = createStateWithSingleFilter(filter);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionJobParams params = createParams();
+
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // All deletion filters pruned → reducedFilter == null
+    // vc_deletion removed, vc_partition preserved
+    // Transform spec has null filter but non-null VCs containing only vc_partition
+    Assertions.assertNotNull(result.getTransformSpec());
+    Assertions.assertNull(result.getTransformSpec().getFilter());
+    VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
+    Assertions.assertNotNull(resultVCs);
+    Assertions.assertEquals(1, resultVCs.getVirtualColumns().length);
+    Assertions.assertEquals("vc_partition", resultVCs.getVirtualColumns()[0].getOutputName());
+  }
+
+  @Test
+  public void testOptimize_PartiallyApplied_PreservesSharedVC()
+  {
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vc_shared", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_only_a", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+
+    // filterA references both vc_shared and vc_only_a
+    DimFilter filterA = new AndDimFilter(
+        Arrays.asList(
+            new SelectorDimFilter("vc_shared", "val1", null),
+            new SelectorDimFilter("vc_only_a", "val2", null)
+        )
+    );
+    // filterB references only vc_shared
+    DimFilter filterB = new SelectorDimFilter("vc_shared", "val3", null);
+    NotDimFilter notFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB)));
+
+    // filterA already applied
+    CompactionState state = createStateWithSingleFilter(filterA);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionJobParams params = createParams();
+
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // filterA pruned, filterB remains
+    // vc_only_a removed (only needed by pruned filterA)
+    // vc_shared preserved (still needed by remaining filterB)
+    VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
+    Assertions.assertNotNull(resultVCs);
+    Assertions.assertEquals(1, resultVCs.getVirtualColumns().length);
+    Assertions.assertEquals("vc_shared", resultVCs.getVirtualColumns()[0].getOutputName());
   }
 
   @Test

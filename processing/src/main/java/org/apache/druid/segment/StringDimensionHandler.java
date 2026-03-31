@@ -32,6 +32,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableDimensionValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;
@@ -104,7 +105,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
-  private final int maxStringLength;
+  @Nullable
+  private final Integer maxStringLength;
 
   public StringDimensionHandler(
       String dimensionName,
@@ -121,7 +123,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       MultiValueHandling multiValueHandling,
       boolean hasBitmapIndexes,
       boolean hasSpatialIndexes,
-      int maxStringLength
+      @Nullable Integer maxStringLength
   )
   {
     this.dimensionName = dimensionName;

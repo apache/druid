@@ -38,40 +38,40 @@ import java.util.stream.Collectors;
  */
 public class MinorCompactionInputSpec implements CompactionInputSpec
 {
-  public static final String TYPE = "uncompacted";
+  public static final String TYPE = "minor";
 
   private final Interval interval;
-  private final List<SegmentDescriptor> uncompactedSegments;
+  private final List<SegmentDescriptor> segments;
 
   @JsonCreator
   public MinorCompactionInputSpec(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("uncompactedSegments") List<SegmentDescriptor> uncompactedSegments
+      @JsonProperty("segments") List<SegmentDescriptor> segments
   )
   {
-    InvalidInput.conditionalException(interval != null, "Uncompacted interval must not be null");
+    InvalidInput.conditionalException(interval != null, "Minor compaction interval must not be null");
     InvalidInput.conditionalException(
         interval.toDurationMillis() > 0,
-        "Uncompacted interval[%s] is empty, must specify a nonempty interval",
+        "Minor compaction interval[%s] is empty, must specify a nonempty interval",
         interval
     );
     InvalidInput.conditionalException(
-        uncompactedSegments != null && !uncompactedSegments.isEmpty(),
-        "Uncompacted segments must not be null or empty"
+        segments != null && !segments.isEmpty(),
+        "Minor compaction specified segments must not be null or empty"
     );
 
     // Validate that all segments are within the interval
     List<SegmentDescriptor> segmentsNotInInterval =
-        uncompactedSegments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
+        segments.stream().filter(s -> !interval.contains(s.getInterval())).collect(Collectors.toList());
     InvalidInput.conditionalException(
         segmentsNotInInterval.isEmpty(),
-        "All uncompacted segments must be within interval[%s], got segments outside interval: %s",
+        "All segments must be within interval[%s], got segments outside interval: %s",
         interval,
         segmentsNotInInterval
     );
 
     this.interval = interval;
-    this.uncompactedSegments = uncompactedSegments;
+    this.segments = segments;
   }
 
   @JsonProperty
@@ -81,9 +81,9 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
   }
 
   @JsonProperty
-  public List<SegmentDescriptor> getUncompactedSegments()
+  public List<SegmentDescriptor> getSegments()
   {
-    return uncompactedSegments;
+    return segments;
   }
 
   @Override
@@ -112,13 +112,13 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
     }
     MinorCompactionInputSpec that = (MinorCompactionInputSpec) o;
     return Objects.equals(interval, that.interval) &&
-           Objects.equals(uncompactedSegments, that.uncompactedSegments);
+           Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, uncompactedSegments);
+    return Objects.hash(interval, segments);
   }
 
   @Override
@@ -126,7 +126,7 @@ public class MinorCompactionInputSpec implements CompactionInputSpec
   {
     return "MinorCompactionInputSpec{" +
            "interval=" + interval +
-           ", uncompactedSegments=" + uncompactedSegments +
+           ", segments=" + segments +
            '}';
   }
 }
