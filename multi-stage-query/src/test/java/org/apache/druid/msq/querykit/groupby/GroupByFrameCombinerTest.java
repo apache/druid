@@ -60,11 +60,6 @@ import java.util.stream.IntStream;
 
 /**
  * Tests for {@link GroupByFrameCombiner} used with {@link FrameChannelMerger}.
- *
- * The existing combiner tests in SuperSorterTest use {@link org.apache.druid.frame.processor.SummingFrameCombiner},
- * which creates a new ColumnSelectorFactory each call to getCombinedColumnSelectorFactory(). That avoids the bug
- * where dimension selectors become stale when the underlying frame cursor changes. This test uses the real
- * {@link GroupByFrameCombiner} to verify correct behavior across frame boundaries.
  */
 public class GroupByFrameCombinerTest extends InitializedNullHandlingTest
 {

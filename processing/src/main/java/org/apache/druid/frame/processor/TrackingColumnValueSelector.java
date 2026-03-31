@@ -89,7 +89,7 @@ public class TrackingColumnValueSelector implements ColumnValueSelector<Object>
   @Override
   public Class<?> classOfObject()
   {
-    return Object.class;
+    return delegate().classOfObject();
   }
 
   @Override
