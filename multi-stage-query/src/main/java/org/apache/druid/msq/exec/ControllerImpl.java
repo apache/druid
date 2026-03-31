@@ -36,6 +36,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -417,7 +418,7 @@ public class ControllerImpl implements Controller
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
+          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager), context.taskAuthContext());
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
@@ -2128,12 +2129,15 @@ public class ControllerImpl implements Controller
     );
   }
 
-  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final InputSpecSlicer tableInputSpecSlicer)
+  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(
+      final InputSpecSlicer tableInputSpecSlicer,
+      @Nullable final TaskAuthContext taskAuthContext
+  )
   {
     return (stagePartitionsMap, stageOutputChannelModeMap) -> new MapInputSpecSlicer(
         ImmutableMap.<Class<? extends InputSpec>, InputSpecSlicer>builder()
                     .put(StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap))
-                    .put(ExternalInputSpec.class, new ExternalInputSpecSlicer())
+                    .put(ExternalInputSpec.class, new ExternalInputSpecSlicer(taskAuthContext))
                     .put(InlineInputSpec.class, new InlineInputSpecSlicer())
                     .put(LookupInputSpec.class, new LookupInputSpecSlicer())
                     .put(TableInputSpec.class, tableInputSpecSlicer)

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -201,6 +202,12 @@ public class IndexerControllerContext implements ControllerContext
   public WorkerClient newWorkerClient()
   {
     return new IndexerWorkerClient(clientFactory, overlordClient, jsonMapper());
+  }
+
+  @Override
+  public TaskAuthContext taskAuthContext()
+  {
+    return task.getTaskAuthContext();
   }
 
   @Override

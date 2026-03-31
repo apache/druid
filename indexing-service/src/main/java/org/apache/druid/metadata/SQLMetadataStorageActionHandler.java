@@ -27,6 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.apache.druid.auth.TaskAuthContext;
+import org.apache.druid.auth.TaskAuthContextRedactionMixIn;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskIdStatus;
@@ -96,7 +98,9 @@ public abstract class SQLMetadataStorageActionHandler
   )
   {
     this.connector = connector;
-    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.jsonMapper = jsonMapper.copy()
+        .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class)
+        .addMixIn(TaskAuthContext.class, TaskAuthContextRedactionMixIn.class);
     this.entryTable = entryTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper(jsonMapper);

@@ -79,6 +79,16 @@ public interface OverlordClient
   ListenableFuture<Void> runTask(String taskId, Object taskObject);
 
   /**
+   * Run a task with the provided ID, payload, and additional HTTP headers to include on the request.
+   * Used for forwarding caller identity context (e.g., auth tokens) from Broker to Overlord during
+   * MSQ task submission.
+   */
+  default ListenableFuture<Void> runTask(String taskId, Object taskObject, Map<String, String> extraHeaders)
+  {
+    return runTask(taskId, taskObject);
+  }
+
+  /**
    * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
    * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
    * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to

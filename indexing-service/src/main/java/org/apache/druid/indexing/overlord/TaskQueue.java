@@ -32,6 +32,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.auth.TaskAuthContext;
+import org.apache.druid.auth.TaskAuthContextRedactionMixIn;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
@@ -197,7 +199,8 @@ public class TaskQueue
         "TaskQueue-OnComplete-%d"
     );
     this.passwordRedactingMapper = mapper.copy()
-                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class)
+                                         .addMixIn(TaskAuthContext.class, TaskAuthContextRedactionMixIn.class);
     this.taskContextEnricher = Preconditions.checkNotNull(taskContextEnricher, "taskContextEnricher");
   }
 

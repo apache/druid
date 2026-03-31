@@ -21,24 +21,32 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.iceberg.guice.HiveConf;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.SessionCatalog;
-import org.apache.iceberg.rest.HTTPClient;
-import org.apache.iceberg.rest.RESTCatalog;
+import org.apache.iceberg.rest.RESTSessionCatalog;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Catalog implementation for Iceberg REST catalogs.
+ *
+ * <p>Uses {@link RESTSessionCatalog} so that a per-request {@link SessionCatalog.SessionContext}
+ * carrying credentials from {@link TaskAuthContext} is passed to every catalog operation.
  */
 public class RestIcebergCatalog extends IcebergCatalog
 {
@@ -52,13 +60,16 @@ public class RestIcebergCatalog extends IcebergCatalog
 
   private final Configuration configuration;
 
-  private Catalog restCatalog;
+  @JsonIgnore
+  private transient TaskAuthContext taskAuthContext;
+
+  private volatile RESTSessionCatalog restSessionCatalog;
 
   @JsonCreator
   public RestIcebergCatalog(
       @JsonProperty("catalogUri") String catalogUri,
       @JsonProperty("catalogProperties") @Nullable
-          Map<String, Object> catalogProperties,
+      Map<String, Object> catalogProperties,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject @HiveConf Configuration configuration
   )
@@ -75,13 +86,15 @@ public class RestIcebergCatalog extends IcebergCatalog
     this.configuration = configuration;
   }
 
+  /**
+   * Returns a Catalog instance that uses the current session context for all operations.
+   * The returned Catalog wraps the underlying RESTSessionCatalog and passes session
+   * credentials to all catalog operations (listTables, loadTable, etc.).
+   */
   @Override
   public Catalog retrieveCatalog()
   {
-    if (restCatalog == null) {
-      restCatalog = setupCatalog();
-    }
-    return restCatalog;
+    return getOrCreateSessionCatalog().asCatalog(buildSessionContext());
   }
 
   public String getCatalogUri()
@@ -94,15 +107,72 @@ public class RestIcebergCatalog extends IcebergCatalog
     return catalogProperties;
   }
 
-  private RESTCatalog setupCatalog()
+  @Override
+  public void setTaskAuthContext(@Nullable TaskAuthContext taskAuthContext)
   {
-    RESTCatalog restCatalog = new RESTCatalog(
-        SessionCatalog.SessionContext.createEmpty(),
-        config -> HTTPClient.builder(config).uri(config.get(CatalogProperties.URI)).build()
-    );
-    restCatalog.setConf(configuration);
-    catalogProperties.put(CatalogProperties.URI, catalogUri);
-    restCatalog.initialize("rest", catalogProperties);
-    return restCatalog;
+    this.taskAuthContext = taskAuthContext;
+  }
+
+  private RESTSessionCatalog getOrCreateSessionCatalog()
+  {
+    RESTSessionCatalog catalog = restSessionCatalog;
+    if (catalog == null) {
+      synchronized (this) {
+        catalog = restSessionCatalog;
+        if (catalog == null) {
+          catalog = setupCatalog();
+          restSessionCatalog = catalog;
+        }
+      }
+    }
+    return catalog;
+  }
+
+  private RESTSessionCatalog setupCatalog()
+  {
+    RESTSessionCatalog catalog = new RESTSessionCatalog();
+    catalog.setConf(configuration);
+    Map<String, String> props = new HashMap<>(catalogProperties);
+    props.put(CatalogProperties.URI, catalogUri);
+    catalog.initialize("rest", props);
+    return catalog;
+  }
+
+  /**
+   * Builds a session context from TaskAuthContext credentials if available,
+   * or an empty context otherwise.
+   */
+  private SessionCatalog.SessionContext buildSessionContext()
+  {
+    if (taskAuthContext != null) {
+      Map<String, String> credentials = taskAuthContext.getCredentials();
+      if (credentials != null && !credentials.isEmpty()) {
+        return new SessionCatalog.SessionContext(
+            UUID.randomUUID().toString(),
+            taskAuthContext.getIdentity(),
+            credentials,
+            Collections.emptyMap()
+        );
+      }
+    }
+    return SessionCatalog.SessionContext.createEmpty();
+  }
+
+  @Override
+  @Nullable
+  protected VendedCredentials extractCredentials(Table table)
+  {
+    VendedCredentials credentials = VendedCredentials.extractFrom(table.properties());
+    if (credentials != null) {
+      return credentials;
+    }
+
+    // Fall back to FileIO properties; don't let extraction failures block the scan
+    try {
+      return VendedCredentials.extractFrom(table.io().properties());
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 }

@@ -21,9 +21,11 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -96,6 +98,17 @@ public abstract class AbstractTask implements Task
   private final String dataSource;
 
   private final Map<String, Object> context;
+
+  /**
+   * Task auth context for accessing external services that require user credentials.
+   * Serialized with the task payload so it survives the Overlord -> worker boundary,
+   * but credentials are redacted before metadata storage via
+   * {@link org.apache.druid.auth.TaskAuthContextRedactionMixIn}.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  private TaskAuthContext taskAuthContext;
 
   private File reportsFile;
   private File statusFile;
@@ -293,6 +306,19 @@ public abstract class AbstractTask implements Task
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @Override
+  @Nullable
+  public TaskAuthContext getTaskAuthContext()
+  {
+    return taskAuthContext;
+  }
+
+  @Override
+  public void setTaskAuthContext(@Nullable TaskAuthContext authContext)
+  {
+    this.taskAuthContext = authContext;
   }
 
   @Override

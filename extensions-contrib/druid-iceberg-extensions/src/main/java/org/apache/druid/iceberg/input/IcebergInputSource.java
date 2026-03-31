@@ -22,7 +22,7 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.Configs;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -33,6 +33,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.TaskAuthContextAware;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -51,7 +52,7 @@ import java.util.stream.Stream;
  * This inputsource talks to the configured catalog, executes any configured filters and retrieves the data file paths upto the latest snapshot associated with the iceberg table.
  * The data file paths are then provided to a native {@link SplittableInputSource} implementation depending on the warehouse source defined.
  */
-public class IcebergInputSource implements SplittableInputSource<List<String>>
+public class IcebergInputSource implements SplittableInputSource<List<String>>, TaskAuthContextAware
 {
   public static final String TYPE_KEY = "iceberg";
 
@@ -97,7 +98,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.icebergFilter = icebergFilter;
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
-    this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
+    this.residualFilterMode = residualFilterMode != null ? residualFilterMode : ResidualFilterMode.IGNORE;
   }
 
   @Override
@@ -183,6 +184,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return snapshotTime;
   }
 
+  @Nullable
   @JsonProperty
   public ResidualFilterMode getResidualFilterMode()
   {
@@ -194,19 +196,31 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return delegateInputSource;
   }
 
+  @Override
+  public void setTaskAuthContext(@Nullable TaskAuthContext taskAuthContext)
+  {
+    icebergCatalog.setTaskAuthContext(taskAuthContext);
+  }
+
   protected void retrieveIcebergDatafiles()
   {
-    List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
+    IcebergDataFilesWithCredentials result = icebergCatalog.extractSnapshotDataFilesWithCredentials(
         getNamespace(),
         getTableName(),
         getIcebergFilter(),
         getSnapshotTime(),
         getResidualFilterMode()
     );
-    if (snapshotDataFiles.isEmpty()) {
+
+    if (result.getDataFilePaths().isEmpty()) {
       delegateInputSource = new EmptyInputSource();
     } else {
-      delegateInputSource = warehouseSource.create(snapshotDataFiles);
+      // Pass vended credentials to the warehouse source if available
+      VendedCredentials vendedCreds = result.getVendedCredentials();
+      delegateInputSource = warehouseSource.create(
+          result.getDataFilePaths(),
+          vendedCreds != null ? vendedCreds.getRawCredentials() : null
+      );
     }
     isLoaded = true;
   }
