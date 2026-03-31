@@ -32,9 +32,6 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <properties>
-    <parquet.version>1.15.2</parquet.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
