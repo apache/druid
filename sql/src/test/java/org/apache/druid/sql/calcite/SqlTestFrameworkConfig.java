@@ -44,7 +44,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Configuration;
 import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
@@ -514,7 +514,7 @@ public class SqlTestFrameworkConfig
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
           Configuration cfg = new ConfigurationBuilder()
-              .setScanners(new SubTypesScanner(true))
+              .setScanners(Scanners.SubTypes)
               .setUrls(ClasspathHelper.forJavaClassPath())
               .filterInputsBy(
                   new FilterBuilder()
