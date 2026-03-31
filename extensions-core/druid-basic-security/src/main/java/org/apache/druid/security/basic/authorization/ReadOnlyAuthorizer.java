@@ -21,13 +21,13 @@ package org.apache.druid.security.basic.authorization;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
-import org.apache.druid.java.util.common.IAE;
 
 @JsonTypeName("readonly")
 public class ReadOnlyAuthorizer implements Authorizer
@@ -35,7 +35,10 @@ public class ReadOnlyAuthorizer implements Authorizer
   private static final Logger LOG = new Logger(ReadOnlyAuthorizer.class);
 
   @JsonCreator
-  public ReadOnlyAuthorizer() {}
+  public ReadOnlyAuthorizer()
+  {
+
+  }
 
   @Override
   @SuppressWarnings("unchecked")

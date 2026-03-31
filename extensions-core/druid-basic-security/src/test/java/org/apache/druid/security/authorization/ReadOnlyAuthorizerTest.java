@@ -25,8 +25,8 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Test;
 
 public class ReadOnlyAuthorizerTest
 {
