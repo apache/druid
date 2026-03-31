@@ -58,11 +58,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HeapMemorySegmentMetadataCacheTest
 {
@@ -886,6 +888,64 @@ public class HeapMemorySegmentMetadataCacheTest
         segmentId,
         "sequence1", null, null, "allocator1", createdTime
     );
+  }
+
+  /**
+   * Place breakpoints accoding the comments.
+   *
+   * release B2
+   * release B1
+   * release B3
+   * release B4
+   *
+   */
+  @Test
+  public void testMarkCacheSynced_doesNotDeadlock_whenWriteTransactionReadsCache()
+      throws Exception
+  {
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
+    cache.start();
+    cache.becomeLeader();
+    syncCacheAfterBecomingLeader();
+
+
+    final HeapMemoryDatasourceSegmentCache hookedCache =
+        new HeapMemoryDatasourceSegmentCache(TestDataSource.WIKI) {
+          @Override
+          boolean isEmpty()
+          {
+            boolean empty = super.isEmpty();
+            // B1
+            return empty;
+
+          }
+        };
+
+    // Inject the hooked cache into the map so markCacheSynced() iterates over it.
+    final Field mapField = HeapMemorySegmentMetadataCache.class
+        .getDeclaredField("datasourceToSegmentCache");
+    mapField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    final ConcurrentHashMap<String, HeapMemoryDatasourceSegmentCache> map =
+        (ConcurrentHashMap<String, HeapMemoryDatasourceSegmentCache>) mapField.get(cache);
+    map.put(TestDataSource.WIKI, hookedCache);
+
+    final Thread writerThread = new Thread(() -> {
+      // B2
+      cache.writeCacheForDataSource(TestDataSource.WIKI, wikiCache -> {
+        // B3 : should be inside this method's readAction.perform
+        return cache.readCacheForDataSource(TestDataSource.WIKI, c -> null);
+      });
+    });
+
+    // B4
+    // should be inside the if containing: existingCache.isEmpty()
+
+    writerThread.setDaemon(true);
+    writerThread.start();
+
+    syncCache();
+    writerThread.join();
   }
 
 }
