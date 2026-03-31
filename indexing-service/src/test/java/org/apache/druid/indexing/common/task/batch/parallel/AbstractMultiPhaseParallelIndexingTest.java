@@ -19,12 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -80,18 +78,15 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   );
 
   private final LockGranularity lockGranularity;
-  private final boolean useInputFormatApi;
 
   AbstractMultiPhaseParallelIndexingTest(
       LockGranularity lockGranularity,
-      boolean useInputFormatApi,
       double transientTaskFailureRate,
       double transientApiCallFailureRate
   )
   {
     super(transientTaskFailureRate, transientApiCallFailureRate);
     this.lockGranularity = lockGranularity;
-    this.useInputFormatApi = useInputFormatApi;
     getObjectMapper().registerSubtypes(
         ParallelIndexTuningConfig.class,
         DruidInputSource.class,
@@ -99,16 +94,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     );
   }
 
-  boolean isUseInputFormatApi()
-  {
-    return useInputFormatApi;
-  }
-
   DataSegmentsWithSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDir,
       String filter,
@@ -121,7 +110,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         timestampSpec,
         dimensionsSpec,
         inputFormat,
-        parseSpec,
         interval,
         inputDir,
         filter,
@@ -137,7 +125,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDirectory,
       String filter,
@@ -152,7 +139,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         timestampSpec,
         dimensionsSpec,
         inputFormat,
-        parseSpec,
         interval,
         inputDirectory,
         filter,
@@ -188,7 +174,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDirectory,
       String filter,
@@ -210,47 +195,23 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         !appendToExisting
     );
 
-    final ParallelIndexIngestionSpec ingestionSpec;
-
-    if (useInputFormatApi) {
-      Preconditions.checkArgument(parseSpec == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalInputSource(inputDirectory, filter),
-          inputFormat,
-          appendToExisting,
-          dropExisting
-      );
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource(DATASOURCE)
-                    .withTimestamp(timestampSpec)
-                    .withDimensions(dimensionsSpec)
-                    .withAggregators(DEFAULT_METRICS_SPEC)
-                    .withGranularity(granularitySpec)
-                    .build(),
-          ioConfig,
-          tuningConfig
-      );
-    } else {
-      Preconditions.checkArgument(inputFormat == null && parseSpec != null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalInputSource(inputDirectory, filter),
-          createInputFormatFromParseSpec(parseSpec),
-          appendToExisting,
-          dropExisting
-      );
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource(DATASOURCE)
-                    .withTimestamp(parseSpec.getTimestampSpec())
-                    .withDimensions(parseSpec.getDimensionsSpec())
-                    .withAggregators(DEFAULT_METRICS_SPEC)
-                    .withGranularity(granularitySpec)
-                    .build(),
-          ioConfig,
-          tuningConfig
-      );
-    }
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        new LocalInputSource(inputDirectory, filter),
+        inputFormat,
+        appendToExisting,
+        dropExisting
+    );
+    ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
+        DataSchema.builder()
+                  .withDataSource(DATASOURCE)
+                  .withTimestamp(timestampSpec)
+                  .withDimensions(dimensionsSpec)
+                  .withAggregators(DEFAULT_METRICS_SPEC)
+                  .withGranularity(granularitySpec)
+                  .build(),
+        ioConfig,
+        tuningConfig
+    );
 
     // set up test tools
     return new ParallelIndexSupervisorTask(

@@ -36,10 +36,8 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -151,14 +149,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   static final AggregatorFactory[] DEFAULT_METRICS_SPEC = new AggregatorFactory[]{
       new LongSumAggregatorFactory("val", "val")
   };
-  static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      DEFAULT_TIMESTAMP_SPEC,
-      DEFAULT_DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim", "val"),
-      false,
-      0
-  );
   static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
       null,
