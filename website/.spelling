@@ -214,8 +214,6 @@ OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
-ParseSpec
-ParseSpecs
 PathChildrenCache
 Protobuf
 protobuf
@@ -1032,7 +1030,6 @@ hadoop-lzo
 inputFormat
 inputSpec
 ioConfig
-parseSpec
 thriftClass
 thriftJar
 timeMax

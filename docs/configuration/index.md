@@ -676,7 +676,7 @@ the following properties.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.javascript.enabled`|Set to "true" to enable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, post-aggregator, router strategy, and worker selection strategy.|false|
+|`druid.javascript.enabled`|Set to "true" to enable JavaScript functionality. This affects the JavaScript filter, extractionFn, aggregator, post-aggregator, router strategy, and worker selection strategy.|false|
 
 :::info
  JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.

@@ -77,7 +77,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   public PartialCompactionTest()
   {
-    super(LockGranularity.TIME_CHUNK, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(LockGranularity.TIME_CHUNK, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
   @Before
@@ -371,7 +371,6 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         TIMESTAMP_SPEC,
         DIMENSIONS_SPEC,
         INPUT_FORMAT,
-        null,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",

@@ -996,7 +996,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                     .build(),
           new ParallelIndexIOConfig(
               new LocalInputSource(inputDir, inputSourceFilter),
-              createInputFormatFromParseSpec(DEFAULT_PARSE_SPEC),
+              DEFAULT_INPUT_FORMAT,
               appendToExisting,
               null
           ),
