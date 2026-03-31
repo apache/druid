@@ -41,17 +41,16 @@ public class ReadOnlyAuthorizer implements Authorizer
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
     if (authenticationResult == null) {
       throw new IAE("authenticationResult is null where it should never be.");
     }
     if (action == Action.READ) {
-      return new Access(true);
+      return Access.allow();
     }
     LOG.info("Authorization failed for user=%s on action=%s, %s", authenticationResult.getIdentity(), action, resource);
-    return new Access(false);
+    return Access.deny(null);
   }
 
 }
