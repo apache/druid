@@ -384,7 +384,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // With selfOnly = null, the endpoint returns both queries.
@@ -415,7 +415,7 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder localHolder = setUpMockRunningQuery(REGULAR_USER_NAME);
 
     // Remote call fails.
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFailedFuture(new IOException("something went wrong")));
 
     // We only see local queries, because the remote call failed. (The entire call doesn't fail; we see what we
@@ -453,7 +453,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by REGULAR_USER_NAME.
@@ -491,7 +491,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
