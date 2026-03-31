@@ -24,7 +24,12 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.UpdateSketch;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -104,7 +109,12 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
 
     final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
         readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
         0,
         Granularities.NONE,
@@ -143,7 +153,12 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
 
     final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,

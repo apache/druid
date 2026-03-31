@@ -180,6 +180,8 @@ export interface ChannelCounter {
   loadTime?: number[];
   loadWait?: number[];
   loadFiles?: number[];
+  queries?: number[];
+  totalQueries?: number[];
 }
 
 export type ChannelFields =
@@ -191,7 +193,9 @@ export type ChannelFields =
   | 'loadBytes'
   | 'loadTime'
   | 'loadWait'
-  | 'loadFiles';
+  | 'loadFiles'
+  | 'queries'
+  | 'totalQueries';
 
 export interface SortProgressCounter {
   type: 'sortProgress';
@@ -325,6 +329,8 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     loadTime: 0,
     loadWait: 0,
     loadFiles: 0,
+    queries: 0,
+    totalQueries: 0,
   };
 }
 
@@ -627,6 +633,8 @@ export class Stages {
               loadTime: sum(c.loadTime || []),
               loadWait: sum(c.loadWait || []),
               loadFiles: sum(c.loadFiles || []),
+              queries: sum(c.queries || []),
+              totalQueries: sum(c.totalQueries || []),
             }
           : zeroChannelFields();
       }

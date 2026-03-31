@@ -39,8 +39,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
@@ -205,8 +203,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
               .columns(cursorFactory.getRowSignature().getColumnNames())
               .build();
 
-    final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);
-
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeFrameWriterFactory(
@@ -223,7 +219,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         query,
         null,
         new DefaultObjectMapper(),
-        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
+        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
         SegmentMapFunction.IDENTITY,
         new ResourceHolder<>()
         {

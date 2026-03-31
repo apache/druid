@@ -484,7 +484,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       indexIngestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, dimensionsSpec, listDelimiter, columns, false, 0),
           transformSpec,
@@ -892,7 +891,6 @@ public class IndexTaskTest extends IngestionTestBase
     final IndexIngestionSpec ingestionSpec;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, null, true, 0),
           null,
@@ -954,7 +952,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
@@ -1354,7 +1351,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       parseExceptionIgnoreSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
@@ -1404,7 +1400,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       indexIngestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
@@ -1490,7 +1485,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null),
           null,
@@ -1649,7 +1643,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
           null,
@@ -1773,7 +1766,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
           null,
@@ -1871,7 +1863,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, null, true, 0),
           null,
@@ -1941,7 +1932,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       ingestionSpec = createIngestionSpec(
-          jsonMapper,
           tmpDir,
           new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
@@ -2601,7 +2591,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
     } else {
       return createIngestionSpec(
-          jsonMapper,
           tmpDir,
           DEFAULT_PARSE_SPEC,
           null,
@@ -2614,7 +2603,6 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   static IndexIngestionSpec createIngestionSpec(
-      ObjectMapper objectMapper,
       File baseDir,
       @Nullable ParseSpec parseSpec,
       @Nullable TransformSpec transformSpec,
@@ -2625,7 +2613,6 @@ public class IndexTaskTest extends IngestionTestBase
   )
   {
     return createIngestionSpec(
-        objectMapper,
         baseDir,
         parseSpec,
         null,
@@ -2651,7 +2638,6 @@ public class IndexTaskTest extends IngestionTestBase
   )
   {
     return createIngestionSpec(
-        jsonMapper,
         tmpDir,
         null,
         timestampSpec,
@@ -2666,7 +2652,6 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   private static IndexIngestionSpec createIngestionSpec(
-      ObjectMapper objectMapper,
       File baseDir,
       @Nullable ParseSpec parseSpec,
       @Nullable TimestampSpec timestampSpec,

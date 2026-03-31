@@ -20,14 +20,12 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -54,24 +52,23 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2")))
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2"))),
+      ColumnsFilter.all()
   );
 
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("1", "2"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("3"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "1", "dim2", ImmutableList.of("4", "5"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "5", "dim2", ImmutableList.of("4", "5"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "1")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "a")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "8", "dim1", 8L)).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f)).get(0)
+  private static final List<InputRow> ROWS = List.of(
+      makeMapRow(SCHEMA, Map.of("dim0", "0", "dim1", "", "dim2", List.of("1", "2"))),
+      makeMapRow(SCHEMA, Map.of("dim0", "1", "dim1", "10", "dim2", List.of())),
+      makeMapRow(SCHEMA, Map.of("dim0", "2", "dim1", "2", "dim2", List.of(""))),
+      makeMapRow(SCHEMA, Map.of("dim0", "3", "dim1", "1", "dim2", List.of("3"))),
+      makeMapRow(SCHEMA, Map.of("dim0", "4", "dim1", "1", "dim2", List.of("4", "5"))),
+      makeMapRow(SCHEMA, Map.of("dim0", "5", "dim1", "5", "dim2", List.of("4", "5"))),
+      makeMapRow(SCHEMA, Map.of("dim0", "6", "dim1", "1")),
+      makeMapRow(SCHEMA, Map.of("dim0", "7", "dim1", "a")),
+      makeMapRow(SCHEMA, Map.of("dim0", "8", "dim1", 8L)),
+      makeMapRow(SCHEMA, Map.of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f))
   );
 
   public ColumnComparisonFilterTest(
@@ -99,23 +96,23 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     if (isAutoSchema()) {
       return;
     }
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1")
-    )), ImmutableList.of("2", "5", "8"));
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    )), List.of("2", "5", "8"));
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.of("3", "4", "5"));
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    )), List.of("3", "4", "5"));
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.of("5", "9"));
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    )), List.of("5", "9"));
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.of("5"));
+    )), List.of("5"));
   }
 
   @Test
@@ -126,34 +123,34 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     if (isAutoSchema()) {
       return;
     }
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim6"),
         DefaultDimensionSpec.of("dim7")
-    )), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    )), List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
 
     // "" is not equivalent to a missing dimension
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim6")
     )), Collections.emptyList());
 
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         DefaultDimensionSpec.of("dim2"),
         DefaultDimensionSpec.of("dim6")
-    )), ImmutableList.of("1", "6", "7", "8"));
+    )), List.of("1", "6", "7", "8"));
 
     assertFilterMatchesSkipVectorize(
         new ColumnComparisonDimFilter(
-            ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
+            List.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
         ),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatchesSkipVectorize(
         new ColumnComparisonDimFilter(
-            ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
+            List.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
         ),
-        ImmutableList.of("1", "6", "7", "8")
+        List.of("1", "6", "7", "8")
     );
   }
 
@@ -166,10 +163,10 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
     LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, true, null, false, true);
 
-    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(List.of(
         new ExtractionDimensionSpec("dim0", "dim0", lookupFn),
         new ExtractionDimensionSpec("dim1", "dim1", lookupFn)
-    )), ImmutableList.of("2", "5", "7", "8"));
+    )), List.of("2", "5", "7", "8"));
   }
 
   @Test

@@ -26,15 +26,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
@@ -237,11 +237,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .build()
   );
 
-  static final InputRowParser<Map<String, Object>> DEFAULT_PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          DEFAULT_TIMESTAMP_SPEC,
-          DEFAULT_DIM_SPEC
-      )
+  static final InputRowSchema DEFAULT_SCHEMA = new InputRowSchema(
+      DEFAULT_TIMESTAMP_SPEC,
+      DEFAULT_DIM_SPEC,
+      ColumnsFilter.all()
   );
 
   // missing 'dim3' because makeDefaultSchemaRow does not expect to set it...
@@ -418,12 +417,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       @Nullable Object... elements
   )
   {
-    return makeSchemaRow(DEFAULT_PARSER, DEFAULT_ROW_SIGNATURE, elements);
+    return makeSchemaRow(DEFAULT_SCHEMA, DEFAULT_ROW_SIGNATURE, elements);
   }
 
-
   public static InputRow makeSchemaRow(
-      final InputRowParser<Map<String, Object>> parser,
+      final InputRowSchema schema,
       final RowSignature signature,
       @Nullable Object... elements
   )
@@ -438,7 +436,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         mapRow.put(columnName, null);
       }
     }
-    return parser.parseBatch(mapRow).get(0);
+    return MapInputRowParser.parse(schema, mapRow);
+  }
+
+  public static InputRow makeMapRow(InputRowSchema rowSchema, Map<String, Object> row)
+  {
+    return MapInputRowParser.parse(rowSchema, row);
   }
 
 

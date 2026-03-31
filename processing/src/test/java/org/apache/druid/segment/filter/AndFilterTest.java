@@ -22,11 +22,10 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -45,18 +44,16 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class AndFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          DimensionsSpec.EMPTY
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      DimensionsSpec.EMPTY,
+      ColumnsFilter.all()
   );
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
@@ -66,12 +63,12 @@ public class AndFilterTest extends BaseFilterTest
                                                                 .build();
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "0", "a"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "0", null),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "0", "b"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "0", null),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "0", "c"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "0", null)
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "0", "0", "a"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "1", "0", null),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "2", "0", "b"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "3", "0", null),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "4", "0", "c"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", "0", null)
   );
 
   public AndFilterTest(

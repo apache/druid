@@ -86,6 +86,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   public ListenableFuture<Long> execute(ExecutionContext context)
   {
     final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+    configureStageRunner(stageRunner, context);
     final List<InputSlice> inputSlices = context.workOrder().getInputs();
     final StageDefinition stageDefinition = context.workOrder().getStageDefinition();
     final FrameContext frameContext = context.frameContext();
@@ -228,6 +229,17 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     );
   }
 
+  /**
+   * Hook for subclasses to configure the stage runner before execution.
+   */
+  protected void configureStageRunner(
+      final StandardStageRunner<Object, Long> stageRunner,
+      final ExecutionContext context
+  )
+  {
+    // Default: no-op
+  }
+
   protected abstract FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
       SegmentMapFunction segmentMapFn,
@@ -278,7 +290,6 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     final Integer segmentLoadAheadCount =
         MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
     return new ReadableInputQueue(
-        stageDef.getId().getQueryId(),
         new StandardPartitionReader(context),
         filteredSlices,
         segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
@@ -319,7 +330,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
               )
           );
           final FrameReader frameReader = partitionReader.frameReader(slice.getStageNumber());
-          broadcastInputs.put(inputNumber, ReadableInput.channel(channel, frameReader, null));
+          broadcastInputs.put(inputNumber, ReadableInput.channel(channel, frameReader, slice.getStageNumber(), ReadableInput.NO_PARTITION));
         }
       }
 

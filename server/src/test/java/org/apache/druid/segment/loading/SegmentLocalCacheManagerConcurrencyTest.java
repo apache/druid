@@ -416,15 +416,15 @@ class SegmentLocalCacheManagerConcurrencyTest
           Assertions.assertTrue(t instanceof TimeoutException || t instanceof ExecutionException, t.toString());
         }
         Thread.sleep(20);
-        Assertions.assertEquals(0, location.getActiveWeakHolds());
-        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
 
         currentBatch.clear();
       }
     }
 
-    Assertions.assertEquals(0, location.getActiveWeakHolds());
-    Assertions.assertEquals(0, location2.getActiveWeakHolds());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     // 5 because __drop path
@@ -482,8 +482,8 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
           Thread.sleep(5);
         }
-        Assertions.assertEquals(0, location.getActiveWeakHolds());
-        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
         currentBatch.clear();
       }
     }
@@ -551,8 +551,8 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
         }
 
-        Assertions.assertEquals(0, location.getActiveWeakHolds());
-        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
         totalSuccess += success;
         totalEmpty += empty;
         totalRows += rows;
@@ -759,8 +759,8 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
           Thread.sleep(5);
         }
-        Assertions.assertEquals(0, location.getActiveWeakHolds());
-        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
         currentBatch.clear();
       }
     }
@@ -787,8 +787,8 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
     Assertions.assertEquals(iterations, totalSuccess);
     Assertions.assertEquals(0, totalFailures);
-    Assertions.assertEquals(0, location.getActiveWeakHolds());
-    Assertions.assertEquals(0, location2.getActiveWeakHolds());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     // 5 because __drop path
@@ -798,8 +798,8 @@ class SegmentLocalCacheManagerConcurrencyTest
 
   private void assertNoLooseEnds()
   {
-    Assertions.assertEquals(0, location.getActiveWeakHolds());
-    Assertions.assertEquals(0, location2.getActiveWeakHolds());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     // 5 because __drop path

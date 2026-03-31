@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -104,6 +105,19 @@ public interface DataSource extends Cacheable
    * Returns a segment function on to how to segment should be modified.
    */
   SegmentMapFunction createSegmentMapFunction(Query query);
+
+  /**
+   * Returns a {@link SegmentPruner} if this datasource embeds in any information which can be used to determine if a
+   * segment needs processed or not. Note that callers of this method will always only be processing segments for the
+   * datasource, so there is no need for a 'default' pruner that ensures the segment has the proper datasource. A return
+   * value of null indicates that no pruning can be performed from this datasource, though other sources of pruning,
+   * such as filters may still be used.
+   */
+  @Nullable
+  default SegmentPruner createSegmentPruner()
+  {
+    return null;
+  }
 
   /**
    * Returns an updated datasource based on the policy restrictions on tables.
