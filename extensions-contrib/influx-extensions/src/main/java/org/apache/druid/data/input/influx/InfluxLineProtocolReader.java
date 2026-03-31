@@ -19,44 +19,78 @@
 
 package org.apache.druid.data.input.influx;
 
-import com.google.common.collect.ImmutableList;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.TokenStream;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.TextReader;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.java.util.common.parsers.Parser;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class InfluxParser implements Parser<String, Object>
+public class InfluxLineProtocolReader extends TextReader.Strings
 {
-  public static final String TIMESTAMP_KEY = "__ts";
-  private static final String MEASUREMENT_KEY = "measurement";
+  static final String TIMESTAMP_KEY = "__ts";
+  static final String MEASUREMENT_KEY = "measurement";
 
   private static final Pattern BACKSLASH_PATTERN = Pattern.compile("\\\\\"");
   private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("\\\\([,= ])");
 
+  @Nullable
   private final Set<String> measurementWhitelist;
 
-  public InfluxParser(Set<String> measurementWhitelist)
+  InfluxLineProtocolReader(
+      InputRowSchema inputRowSchema,
+      InputEntity source,
+      @Nullable Set<String> measurementWhitelist
+  )
   {
+    super(inputRowSchema, source);
     this.measurementWhitelist = measurementWhitelist;
   }
 
   @Override
-  public void startFileFromBeginning()
+  public List<InputRow> parseInputRows(String intermediateRow) throws ParseException
   {
+    final Map<String, Object> parsed = parseLineToMap(intermediateRow);
+    return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), parsed));
   }
 
-  @Nullable
   @Override
-  public Map<String, Object> parseToMap(String input)
+  protected List<Map<String, Object>> toMap(String intermediateRow)
+  {
+    return Collections.singletonList(parseLineToMap(intermediateRow));
+  }
+
+  @Override
+  public int getNumHeaderLinesToSkip()
+  {
+    return 0;
+  }
+
+  @Override
+  public boolean needsToProcessHeaderLine()
+  {
+    return false;
+  }
+
+  @Override
+  public void processHeaderLine(String line)
+  {
+    // no header lines in influx line protocol
+  }
+
+  private Map<String, Object> parseLineToMap(String input)
   {
     CharStream charStream = new ANTLRInputStream(input);
     InfluxLineProtocolLexer lexer = new InfluxLineProtocolLexer(charStream);
@@ -65,10 +99,10 @@ public class InfluxParser implements Parser<String, Object>
 
     List<InfluxLineProtocolParser.LineContext> lines = parser.lines().line();
     if (parser.getNumberOfSyntaxErrors() != 0) {
-      throw new ParseException(null, "Unable to parse line.");
+      throw new ParseException(input, "Unable to parse line.");
     }
     if (lines.size() != 1) {
-      throw new ParseException(null, "Multiple lines present; unable to parse more than one per record.");
+      throw new ParseException(input, "Multiple lines present; unable to parse more than one per record.");
     }
 
     Map<String, Object> out = new LinkedHashMap<>();
@@ -77,7 +111,7 @@ public class InfluxParser implements Parser<String, Object>
     String measurement = parseIdentifier(line.identifier());
 
     if (!checkWhitelist(measurement)) {
-      throw new ParseException(null, "Metric [%s] not whitelisted.", measurement);
+      throw new ParseException(input, "Metric [%s] not whitelisted.", measurement);
     }
 
     out.put(MEASUREMENT_KEY, measurement);
@@ -94,14 +128,14 @@ public class InfluxParser implements Parser<String, Object>
     return out;
   }
 
-  private void parseTag(InfluxLineProtocolParser.Tag_pairContext tag, Map<String, Object> out)
+  private static void parseTag(InfluxLineProtocolParser.Tag_pairContext tag, Map<String, Object> out)
   {
     String key = parseIdentifier(tag.identifier(0));
     String value = parseIdentifier(tag.identifier(1));
     out.put(key, value);
   }
 
-  private void parseField(InfluxLineProtocolParser.Field_pairContext field, Map<String, Object> out)
+  private static void parseField(InfluxLineProtocolParser.Field_pairContext field, Map<String, Object> out)
   {
     String key = parseIdentifier(field.identifier());
     InfluxLineProtocolParser.Field_valueContext valueContext = field.field_value();
@@ -116,21 +150,20 @@ public class InfluxParser implements Parser<String, Object>
     out.put(key, value);
   }
 
-  private Object parseQuotedString(String text)
+  private static Object parseQuotedString(String text)
   {
     return BACKSLASH_PATTERN.matcher(text.substring(1, text.length() - 1)).replaceAll("\"");
   }
 
-  private Object parseNumber(String raw)
+  private static Object parseNumber(String raw)
   {
     if (raw.endsWith("i")) {
       return Long.valueOf(raw.substring(0, raw.length() - 1));
     }
-
     return Double.valueOf(raw);
   }
 
-  private Object parseBool(String raw)
+  private static Object parseBool(String raw)
   {
     char first = raw.charAt(0);
     if (first == 't' || first == 'T') {
@@ -140,12 +173,11 @@ public class InfluxParser implements Parser<String, Object>
     }
   }
 
-  private String parseIdentifier(InfluxLineProtocolParser.IdentifierContext ctx)
+  private static String parseIdentifier(InfluxLineProtocolParser.IdentifierContext ctx)
   {
     if (ctx.BOOLEAN() != null || ctx.NUMBER() != null) {
       return ctx.getText();
     }
-
     return IDENTIFIER_PATTERN.matcher(ctx.IDENTIFIER_STRING().getText()).replaceAll("$1");
   }
 
@@ -154,7 +186,7 @@ public class InfluxParser implements Parser<String, Object>
     return (measurementWhitelist == null) || measurementWhitelist.contains(m);
   }
 
-  private void parseTimestamp(String timestamp, Map<String, Object> dest)
+  private static void parseTimestamp(String timestamp, Map<String, Object> dest)
   {
     // Influx timestamps come in nanoseconds; treat anything less than 1 ms as 0
     if (timestamp.length() < 7) {
@@ -164,16 +196,5 @@ public class InfluxParser implements Parser<String, Object>
       final long timestampMillis = Long.valueOf(timestamp);
       dest.put(TIMESTAMP_KEY, timestampMillis);
     }
-  }
-
-  @Override
-  public List<String> getFieldNames()
-  {
-    return ImmutableList.of();
-  }
-
-  @Override
-  public void setFieldNames(Iterable<String> fieldNames)
-  {
   }
 }

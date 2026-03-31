@@ -40,28 +40,29 @@ which contains four parts:
   - measurements: one or more key-value pairs; values can be numeric, boolean, or string
   - timestamp: nanoseconds since Unix epoch (the parser truncates it to milliseconds)
 
-The parser extracts these fields into a map, giving the measurement the key `measurement` and the timestamp the key `_ts`. The tag and measurement keys are copied verbatim, so users should take care to avoid name collisions. It is up to the ingestion spec to decide which fields should be treated as dimensions and which should be treated as metrics (typically tags correspond to dimensions and measurements correspond to metrics).
+The input format extracts these fields into a map, giving the measurement the key `measurement` and the timestamp the key `__ts`. The tag and measurement keys are copied verbatim, so users should take care to avoid name collisions. It is up to the ingestion spec to decide which fields should be treated as dimensions and which should be treated as metrics (typically tags correspond to dimensions and measurements correspond to metrics).
 
-The parser is configured like so:
+The input format is configured like so:
 
 ```json
-"parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "influx",
-        "timestampSpec": {
-          "column": "__ts",
-          "format": "millis"
-        },
-        "dimensionsSpec": {
-          "dimensionExclusions": [
-            "__ts"
-          ]
-        },
-        "whitelistMeasurements": [
-          "cpu"
-        ]
-      }
+"inputFormat": {
+  "type": "influx",
+  "whitelistMeasurements": [
+    "cpu"
+  ]
+}
 ```
 
-The `whitelistMeasurements` field is an optional list of strings. If present, measurements that do not match one of the strings in the list will be ignored.
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Must be `influx`.|yes|
+|`whitelistMeasurements`|List of String|If present, measurements that do not match one of the strings in the list will be ignored.|no|
+
+When using the `influx` input format, the timestamp spec should be configured with column `__ts` and format `millis`:
+
+```json
+"timestampSpec": {
+  "column": "__ts",
+  "format": "millis"
+}
+```
