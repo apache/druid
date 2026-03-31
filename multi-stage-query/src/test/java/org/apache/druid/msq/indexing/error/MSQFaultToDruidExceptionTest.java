@@ -212,7 +212,13 @@ public class MSQFaultToDruidExceptionTest
   public void testNotEnoughMemoryFault()
   {
     final DruidException e = new NotEnoughMemoryFault(
-        1234, 1000, 1000, 900, 1, 2, 2
+        1234,
+        1000,
+        1000,
+        900,
+        1,
+        2,
+        2
     ).toDruidException();
     Assert.assertEquals("NotEnoughMemory", e.getErrorCode());
     Assert.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
