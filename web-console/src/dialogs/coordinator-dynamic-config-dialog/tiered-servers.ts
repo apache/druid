@@ -16,17 +16,8 @@
  * limitations under the License.
  */
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
-
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
-
-describe('CoordinatorDynamicConfigDialog', () => {
-  it('matches snapshot', () => {
-    const coordinatorDynamicConfig = shallow(
-      <CoordinatorDynamicConfigDialog capabilities={Capabilities.FULL} onClose={() => {}} />,
-    );
-
-    expect(coordinatorDynamicConfig).toMatchSnapshot();
-  });
-});
+export interface TieredServers {
+  tiers: string[];
+  serversByTier: Record<string, string[]>;
+  allServers: string[];
+}

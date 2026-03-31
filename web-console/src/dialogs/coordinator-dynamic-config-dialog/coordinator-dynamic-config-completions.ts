@@ -93,6 +93,11 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         value: 'turboLoadingNodes',
         documentation: 'List of Historical servers to place in turbo loading mode (experimental)',
       },
+      {
+        value: 'cloneServers',
+        documentation:
+          'Map from target Historical to source Historical. Target clones all segments from source.',
+      },
     ],
   },
   // Properties only available when smartSegmentLoading is false
