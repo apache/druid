@@ -59,6 +59,7 @@ import {
   formatDurationWithMsIfNeeded,
   formatInteger,
   getApiArray,
+  getApiArrayFromKey,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -167,13 +168,23 @@ interface ServiceResultRow {
   readonly total_memory: number;
 }
 
+interface CloneStatusInfo {
+  readonly sourceServer: string;
+  readonly state: string;
+  readonly segmentLoadsRemaining: number;
+  readonly segmentDropsRemaining: number;
+  readonly bytesToLoad: number;
+}
+
 interface ServicesWithAuxiliaryInfo {
   readonly services: ServiceResultRow[];
   readonly loadQueueInfo: Record<string, LoadQueueInfo>;
+  readonly cloneStatus: Record<string, CloneStatusInfo>;
   readonly workerInfo: Record<string, WorkerInfo>;
 }
 
 export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
+export const CloneStatusContext = createContext<Record<string, CloneStatusInfo>>({});
 
 interface LoadQueueInfo {
   readonly segmentsToDrop: NumberLike;
@@ -366,6 +377,28 @@ ORDER BY
           });
         }
 
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            try {
+              const cloneStatuses = await getApiArrayFromKey<
+                CloneStatusInfo & { targetServer: string }
+              >('/druid/coordinator/v1/config/cloneStatus', 'cloneStatus', signal);
+
+              const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
+                cloneStatuses,
+                s => s.targetServer,
+              );
+
+              return {
+                ...servicesWithAuxiliaryInfo,
+                cloneStatus: cloneStatusLookup,
+              };
+            } catch {
+              return servicesWithAuxiliaryInfo;
+            }
+          });
+        }
+
         if (capabilities.hasOverlordAccess()) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
@@ -400,7 +433,7 @@ ORDER BY
         }
 
         return new ResultWithAuxiliaryWork<ServicesWithAuxiliaryInfo>(
-          { services, loadQueueInfo: {}, workerInfo: {} },
+          { services, loadQueueInfo: {}, cloneStatus: {}, workerInfo: {} },
           auxiliaryQueries,
         );
       },
@@ -451,30 +484,33 @@ ORDER BY
     const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const { services, loadQueueInfo, workerInfo } = servicesState.data || {
+    const { services, loadQueueInfo, cloneStatus, workerInfo } = servicesState.data || {
       services: [],
       loadQueueInfo: {},
+      cloneStatus: {},
       workerInfo: {},
     };
 
     return (
       <LoadQueueInfoContext.Provider value={loadQueueInfo}>
-        <ReactTable
-          data={services}
-          loading={servicesState.loading}
-          noDataText={
-            servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
-          }
-          filterable
-          filtered={filters.toFilters()}
-          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
-          onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
-          pivotBy={groupServicesBy ? [groupServicesBy] : []}
-          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
-          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-          showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-          columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
-        />
+        <CloneStatusContext.Provider value={cloneStatus}>
+          <ReactTable
+            data={services}
+            loading={servicesState.loading}
+            noDataText={
+              servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+            }
+            filterable
+            filtered={filters.toFilters()}
+            className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
+            onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
+            pivotBy={groupServicesBy ? [groupServicesBy] : []}
+            defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+            pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+            showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
+            columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+          />
+        </CloneStatusContext.Provider>
       </LoadQueueInfoContext.Provider>
     );
   }
@@ -817,11 +853,12 @@ ORDER BY
           id: 'queue',
           width: 400,
           filterable: false,
-          className: 'padded',
+          className: 'padded wrapped',
           accessor: 'service',
           Cell: ({ original }) => {
             const { service_type, service, is_leader } = original;
             const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+            const cloneStatusContext = useContext(CloneStatusContext);
 
             switch (service_type) {
               case 'middle_manager':
@@ -849,9 +886,27 @@ ORDER BY
 
               case 'historical': {
                 const loadQueueInfo = loadQueueInfoContext[service];
-                if (!loadQueueInfo) return null;
+                const cloneInfo = cloneStatusContext[service];
 
-                return formatLoadQueueInfo(loadQueueInfo);
+                const parts: string[] = [];
+                if (loadQueueInfo) {
+                  parts.push(formatLoadQueueInfo(loadQueueInfo));
+                }
+                if (cloneInfo) {
+                  if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
+                    parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
+                  } else if (cloneInfo.segmentLoadsRemaining > 0) {
+                    parts.push(
+                      `Cloning from ${cloneInfo.sourceServer}: ${pluralIfNeeded(
+                        cloneInfo.segmentLoadsRemaining,
+                        'segment',
+                      )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
+                    );
+                  } else {
+                    parts.push(`Clone of ${cloneInfo.sourceServer} (synced)`);
+                  }
+                }
+                return parts.join('; ') || null;
               }
 
               default:
