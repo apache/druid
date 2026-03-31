@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -45,7 +44,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
@@ -62,7 +60,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -266,64 +263,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     if (compactionConfig == null) {
       return CompactionConfigValidationResult.failure("Cannot be null");
-    } else if (compactionConfig instanceof CascadingReindexingTemplate) {
-      return validateCascadingReindexingConfig((CascadingReindexingTemplate) compactionConfig);
     } else {
-      return ClientCompactionRunnerInfo.validateCompactionConfig(
-          compactionConfig,
-          getLatestClusterConfig().getEngine()
-      );
+      return compactionConfig.validate(getLatestClusterConfig());
     }
-  }
-
-  /**
-   * Validates a {@link CascadingReindexingTemplate} using a subset of the MSQ checks
-   * from {@link ClientCompactionRunnerInfo#validateCompactionConfig}. The generic path
-   * assumes the standard compaction model where {@code tuningConfig.partitionsSpec} is
-   * the source of truth, but cascading reindexing forbids that field and uses
-   * {@code defaultPartitionsSpec} instead.
-   *
-   * <p>Checks performed:
-   * <ul>
-   *   <li>partitionsSpec type and options — validated against {@code defaultPartitionsSpec}
-   *       (not {@code tuningConfig.partitionsSpec}). Range partition dimension type checking
-   *       passes {@code null} for dimensionSchemas since those are not known at template
-   *       level.</li>
-   *   <li>maxNumTasks >= 2 in taskContext — same as the generic path.</li>
-   * </ul>
-   *
-   * <p>Checks skipped (not applicable at template level):
-   * <ul>
-   *   <li>rollup vs metricsSpec consistency — {@code granularitySpec} is always null on the
-   *       template; rollup is configured per-rule at job generation time.</li>
-   *   <li>metricsSpec aggregator combining factory — there is no metricsSpec on the template;
-   *       metrics come from per-rule data schema rules resolved at job generation time.</li>
-   * </ul>
-   *
-   * <p>Per-rule overrides (partitionsSpec, metricsSpec, rollup) are validated at task
-   * runtime by {@code MSQCompactionRunner.validateCompactionTask()} once the full config
-   * is resolved against actual data schemas.
-   */
-  private static CompactionConfigValidationResult validateCascadingReindexingConfig(
-      CascadingReindexingTemplate config
-  )
-  {
-    List<CompactionConfigValidationResult> results = new ArrayList<>();
-
-    results.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
-        config.getDefaultPartitionsSpec(),
-        null,
-        config.getDefaultPartitioningVirtualColumns() != null
-            ? config.getDefaultPartitioningVirtualColumns()
-            : VirtualColumns.EMPTY
-    ));
-
-    results.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(config.getTaskContext()));
-
-    return results.stream()
-                  .filter(result -> !result.isValid())
-                  .findFirst()
-                  .orElse(CompactionConfigValidationResult.success());
   }
 
   @Override
