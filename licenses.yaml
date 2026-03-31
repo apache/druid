@@ -307,7 +307,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.19.2
+version: 2.20.1
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-annotations
@@ -350,7 +350,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.19.2
+version: 2.20.1
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -3010,7 +3010,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.19.2
+version: 2.20.1
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -4628,7 +4628,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.73.Final
+version: 2.0.74.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
