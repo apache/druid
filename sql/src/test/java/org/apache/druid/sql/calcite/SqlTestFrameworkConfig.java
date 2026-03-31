@@ -45,9 +45,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
-import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
-import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -515,12 +513,8 @@ public class SqlTestFrameworkConfig
         {
           Configuration cfg = new ConfigurationBuilder()
               .setScanners(Scanners.SubTypes)
-              .setUrls(ClasspathHelper.forJavaClassPath())
-              .filterInputsBy(
-                  new FilterBuilder()
-                      .includePackage(pkg)
-                      .and(s -> s.contains("ComponentSupplier"))
-              );
+              .forPackage(pkg.isEmpty() ? "org.apache.druid" : pkg)
+              .filterInputsBy(s -> s.contains("ComponentSupplier"));
           final Set<Class<? extends QueryComponentSupplier>> baseComponentClazzes =
               new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
           LinkedHashSet<Class<? extends QueryComponentSupplier>> retVal = new LinkedHashSet<>(baseComponentClazzes);
