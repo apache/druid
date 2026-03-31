@@ -1,0 +1,384 @@
+2026-03-31 14:37:42
+Full thread dump OpenJDK 64-Bit Server VM (25.0.2+10-LTS mixed mode, sharing):
+
+Threads class SMR info:
+_java_thread_list=0x00007f0bf8002210, length=18, elements={
+0x00007f0c68033460, 0x00007f0c68135e60, 0x00007f0c68136eb0, 0x00007f0c681383e0,
+0x00007f0c68139d10, 0x00007f0c6813b5a0, 0x00007f0c6813d430, 0x00007f0c6813ee30,
+0x00007f0c68192ec0, 0x00007f0c681a91d0, 0x00007f0bd8001060, 0x00007f0c681aebb0,
+0x00007f0c68bf2d10, 0x00007f0c68c5e600, 0x00007f0c694ae920, 0x00007f0c694f1540,
+0x00007f0c699ddf10, 0x00007f0bf8000f30
+}
+
+"main" #3 [4097412] prio=5 os_prio=0 cpu=1208.49ms elapsed=88.27s tid=0x00007f0c68033460 nid=4097412 waiting on condition  [0x00007f0c6ef8c000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@25.0.2/Native Method)
+	- parking to wait for  <0x0000000089adf098> (a java.util.concurrent.locks.ReentrantReadWriteLock$FairSync)
+	at java.util.concurrent.locks.LockSupport.park(java.base@25.0.2/LockSupport.java:223)
+	at java.util.concurrent.locks.AbstractQueuedLongSynchronizer.acquire(java.base@25.0.2/AbstractQueuedLongSynchronizer.java:410)
+	at java.util.concurrent.locks.AbstractQueuedLongSynchronizer.acquireShared(java.base@25.0.2/AbstractQueuedLongSynchronizer.java:739)
+	at java.util.concurrent.locks.ReentrantReadWriteLock$ReadLock.lock(java.base@25.0.2/ReentrantReadWriteLock.java:744)
+	at org.apache.druid.metadata.segment.cache.ReadWriteCache.withReadLock(ReadWriteCache.java:73)
+	at org.apache.druid.metadata.segment.cache.HeapMemoryDatasourceSegmentCache.isEmpty(HeapMemoryDatasourceSegmentCache.java:92)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$1.isEmpty(HeapMemorySegmentMetadataCacheTest.java:917)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.lambda$8(HeapMemorySegmentMetadataCache.java:622)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284c5a08.apply(Unknown Source)
+	at java.util.concurrent.ConcurrentHashMap.compute(java.base@25.0.2/ConcurrentHashMap.java:1956)
+	- locked <0x0000000089b170f0> (a java.util.concurrent.ConcurrentHashMap$Node)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.markCacheSynced(HeapMemorySegmentMetadataCache.java:619)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.syncWithMetadataStore(HeapMemorySegmentMetadataCache.java:594)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284b6c10.call(Unknown Source)
+	at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:131)
+	at com.google.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:76)
+	at com.google.common.util.concurrent.TrustedListenableFutureTask.run(TrustedListenableFutureTask.java:82)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService.lambda$1(BlockingExecutorService.java:140)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService$$Lambda/0x00000000284b8570.call(Unknown Source)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService$Task.executeNow(BlockingExecutorService.java:247)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService.finishNextPendingTasks(BlockingExecutorService.java:92)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.syncCache(HeapMemorySegmentMetadataCacheTest.java:171)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.testMarkCacheSynced_doesNotDeadlock_whenWriteTransactionReadsCache(HeapMemorySegmentMetadataCacheTest.java:947)
+	at java.lang.invoke.LambdaForm$DMH/0x0000000028040c00.invokeVirtual(java.base@25.0.2/LambdaForm$DMH)
+	at java.lang.invoke.LambdaForm$MH/0x000000002830c400.invoke(java.base@25.0.2/LambdaForm$MH)
+	at java.lang.invoke.Invokers$Holder.invokeExact_MT(java.base@25.0.2/Invokers$Holder)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(java.base@25.0.2/DirectMethodHandleAccessor.java:154)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(java.base@25.0.2/DirectMethodHandleAccessor.java:104)
+	at java.lang.reflect.Method.invoke(java.base@25.0.2/Method.java:565)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.junit.vintage.engine.execution.RunnerExecutor.execute(RunnerExecutor.java:42)
+	at org.junit.vintage.engine.execution.VintageExecutor.executeClassesAndMethodsSequentially(VintageExecutor.java:93)
+	at org.junit.vintage.engine.execution.VintageExecutor.executeAllChildren(VintageExecutor.java:73)
+	at org.junit.vintage.engine.VintageTestEngine.execute(VintageTestEngine.java:70)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator$$Lambda/0x0000000028119250.accept(Unknown Source)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:100)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:52)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$2(InterceptingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher$$Lambda/0x0000000028119018.proceed(Unknown Source)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:46)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:52)
+	at org.junit.platform.launcher.core.SessionPerRequestLauncher.execute(SessionPerRequestLauncher.java:73)
+	at org.eclipse.jdt.internal.junit5.runner.JUnit5TestReference.run(JUnit5TestReference.java:100)
+	at org.eclipse.jdt.internal.junit.runner.TestExecution.run(TestExecution.java:40)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:520)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:748)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run(RemoteTestRunner.java:443)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main(RemoteTestRunner.java:211)
+
+"Reference Handler" #15 [4097424] daemon prio=10 os_prio=0 cpu=0.51ms elapsed=88.26s tid=0x00007f0c68135e60 nid=4097424 waiting on condition  [0x00007f0c287fc000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.ref.Reference.waitForReferencePendingList(java.base@25.0.2/Native Method)
+	at java.lang.ref.Reference.processPendingReferences(java.base@25.0.2/Reference.java:246)
+	at java.lang.ref.Reference$ReferenceHandler.run(java.base@25.0.2/Reference.java:208)
+
+"Finalizer" #16 [4097425] daemon prio=8 os_prio=0 cpu=0.24ms elapsed=88.26s tid=0x00007f0c68136eb0 nid=4097425 in Object.wait()  [0x00007f0c288fd000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@25.0.2/Native Method)
+	- waiting on <0x0000000082000888> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:389)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:351)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@25.0.2/ReferenceQueue.java:137)
+	at java.lang.ref.ReferenceQueue.remove(java.base@25.0.2/ReferenceQueue.java:215)
+	- locked <0x0000000082000888> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.Finalizer$FinalizerThread.run(java.base@25.0.2/Finalizer.java:165)
+
+"Signal Dispatcher" #17 [4097426] daemon prio=9 os_prio=0 cpu=0.18ms elapsed=88.26s tid=0x00007f0c681383e0 nid=4097426 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #18 [4097427] daemon prio=9 os_prio=0 cpu=1.36ms elapsed=88.26s tid=0x00007f0c68139d10 nid=4097427 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #19 [4097428] daemon prio=9 os_prio=0 cpu=4.17ms elapsed=88.26s tid=0x00007f0c6813b5a0 nid=4097428 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #20 [4097429] daemon prio=9 os_prio=0 cpu=799.96ms elapsed=88.26s tid=0x00007f0c6813d430 nid=4097429 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #28 [4097430] daemon prio=9 os_prio=0 cpu=208.97ms elapsed=88.26s tid=0x00007f0c6813ee30 nid=4097430 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"JDWP Transport Listener: dt_socket" #32 [4097434] daemon prio=10 os_prio=0 cpu=44.39ms elapsed=88.24s tid=0x00007f0c68192ec0 nid=4097434 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"JDWP Event Helper Thread" #33 [4097436] daemon prio=10 os_prio=0 cpu=14.63ms elapsed=88.24s tid=0x00007f0c681a91d0 nid=4097436 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"JDWP Command Reader" #34 [4097438] daemon prio=10 os_prio=0 cpu=22.56ms elapsed=88.24s tid=0x00007f0bd8001060 nid=4097438 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Common-Cleaner" #35 [4097440] daemon prio=8 os_prio=0 cpu=0.16ms elapsed=88.16s tid=0x00007f0c681aebb0 nid=4097440 in Object.wait()  [0x00007f0bef9f8000]
+   java.lang.Thread.State: TIMED_WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@25.0.2/Native Method)
+	- waiting on <0x0000000082001ad0> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:389)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@25.0.2/ReferenceQueue.java:123)
+	at java.lang.ref.ReferenceQueue.remove(java.base@25.0.2/ReferenceQueue.java:201)
+	- locked <0x0000000082001ad0> (a java.lang.ref.ReferenceQueue$Lock)
+	at jdk.internal.ref.CleanerImpl.run(java.base@25.0.2/CleanerImpl.java:146)
+	at java.lang.Thread.runWith(java.base@25.0.2/Thread.java:1487)
+	at java.lang.Thread.run(java.base@25.0.2/Thread.java:1474)
+	at jdk.internal.misc.InnocuousThread.run(java.base@25.0.2/InnocuousThread.java:148)
+
+"Notification Thread" #36 [4097443] daemon prio=9 os_prio=0 cpu=0.07ms elapsed=88.08s tid=0x00007f0c68bf2d10 nid=4097443 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"ReaderThread" #38 [4097446] prio=5 os_prio=0 cpu=0.52ms elapsed=88.04s tid=0x00007f0c68c5e600 nid=4097446 runnable  [0x00007f0bef3f2000]
+   java.lang.Thread.State: RUNNABLE
+	at sun.nio.ch.SocketDispatcher.read0(java.base@25.0.2/Native Method)
+	at sun.nio.ch.SocketDispatcher.read(java.base@25.0.2/SocketDispatcher.java:48)
+	at sun.nio.ch.NioSocketImpl.tryRead(java.base@25.0.2/NioSocketImpl.java:255)
+	at sun.nio.ch.NioSocketImpl.implRead(java.base@25.0.2/NioSocketImpl.java:305)
+	at sun.nio.ch.NioSocketImpl.read(java.base@25.0.2/NioSocketImpl.java:354)
+	at sun.nio.ch.NioSocketImpl$1.read(java.base@25.0.2/NioSocketImpl.java:798)
+	at java.net.Socket$SocketInputStream.implRead(java.base@25.0.2/Socket.java:985)
+	at java.net.Socket$SocketInputStream.read(java.base@25.0.2/Socket.java:975)
+	at sun.nio.cs.StreamDecoder.readBytes(java.base@25.0.2/StreamDecoder.java:279)
+	at sun.nio.cs.StreamDecoder.implRead(java.base@25.0.2/StreamDecoder.java:322)
+	at sun.nio.cs.StreamDecoder.read(java.base@25.0.2/StreamDecoder.java:186)
+	- locked <0x00000000820020b8> (a java.io.InputStreamReader)
+	at java.io.InputStreamReader.read(java.base@25.0.2/InputStreamReader.java:183)
+	at java.io.BufferedReader.fill(java.base@25.0.2/BufferedReader.java:166)
+	at java.io.BufferedReader.readLine(java.base@25.0.2/BufferedReader.java:333)
+	- locked <0x00000000820020b8> (a java.io.InputStreamReader)
+	at java.io.BufferedReader.readLine(java.base@25.0.2/BufferedReader.java:400)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner$ReaderThread.run(RemoteTestRunner.java:153)
+
+"Timer-0" #56 [4097471] daemon prio=5 os_prio=0 cpu=0.12ms elapsed=87.62s tid=0x00007f0c694ae920 nid=4097471 in Object.wait()  [0x00007f0bee1e0000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@25.0.2/Native Method)
+	- waiting on <0x0000000082000ab8> (a java.util.TaskQueue)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:389)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:351)
+	at java.util.TimerThread.mainLoop(java.base@25.0.2/Timer.java:543)
+	- locked <0x0000000082000ab8> (a java.util.TaskQueue)
+	at java.util.TimerThread.run(java.base@25.0.2/Timer.java:522)
+
+"derby.rawStoreDaemon" #61 [4097477] daemon prio=5 os_prio=0 cpu=0.66ms elapsed=87.55s tid=0x00007f0c694f1540 nid=4097477 in Object.wait()  [0x00007f0bedbda000]
+   java.lang.Thread.State: TIMED_WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@25.0.2/Native Method)
+	- waiting on <0x00000000fd060200> (a org.apache.derby.impl.services.daemon.BasicDaemon)
+	at java.lang.Object.wait(java.base@25.0.2/Object.java:389)
+	at org.apache.derby.impl.services.daemon.BasicDaemon.rest(Unknown Source)
+	- locked <0x00000000fd060200> (a org.apache.derby.impl.services.daemon.BasicDaemon)
+	at org.apache.derby.impl.services.daemon.BasicDaemon.run(Unknown Source)
+	at java.lang.Thread.runWith(java.base@25.0.2/Thread.java:1487)
+	at java.lang.Thread.run(java.base@25.0.2/Thread.java:1474)
+
+"Thread-1" #62 [4097486] daemon prio=5 os_prio=0 cpu=2.08ms elapsed=86.81s tid=0x00007f0c699ddf10 nid=4097486 waiting for monitor entry  [0x00007f0bedad9000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at java.util.concurrent.ConcurrentHashMap.compute(java.base@25.0.2/ConcurrentHashMap.java:1948)
+	- waiting to lock <0x0000000089b170f0> (a java.util.concurrent.ConcurrentHashMap$Node)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.getCacheWithReference(HeapMemorySegmentMetadataCache.java:358)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.readCacheForDataSource(HeapMemorySegmentMetadataCache.java:317)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.lambda$41(HeapMemorySegmentMetadataCacheTest.java:937)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$$Lambda/0x00000000284c5340.perform(Unknown Source)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.lambda$3(HeapMemorySegmentMetadataCache.java:340)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284c57b8.get(Unknown Source)
+	at org.apache.druid.metadata.segment.cache.ReadWriteCache.withWriteLock(ReadWriteCache.java:64)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.writeCacheForDataSource(HeapMemorySegmentMetadataCache.java:337)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.lambda$40(HeapMemorySegmentMetadataCacheTest.java:935)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$$Lambda/0x00000000284c1800.run(Unknown Source)
+	at java.lang.Thread.runWith(java.base@25.0.2/Thread.java:1487)
+	at java.lang.Thread.run(java.base@25.0.2/Thread.java:1474)
+
+"Attach Listener" #63 [4097598] daemon prio=9 os_prio=0 cpu=0.40ms elapsed=0.10s tid=0x00007f0bf8000f30 nid=4097598 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"G1 Conc#4" os_prio=0 cpu=6.45ms elapsed=87.59s tid=0x00007f0c1c0034f0 nid=4097475 runnable  
+
+"G1 Conc#3" os_prio=0 cpu=3.22ms elapsed=87.59s tid=0x00007f0c1c002770 nid=4097474 runnable  
+
+"G1 Conc#2" os_prio=0 cpu=4.17ms elapsed=87.59s tid=0x00007f0c1c0019f0 nid=4097473 runnable  
+
+"G1 Conc#1" os_prio=0 cpu=4.96ms elapsed=87.59s tid=0x00007f0c1c000cd0 nid=4097472 runnable  
+
+"GC Thread#17" os_prio=0 cpu=12.45ms elapsed=87.84s tid=0x00007f0c1001a720 nid=4097470 runnable  
+
+"GC Thread#16" os_prio=0 cpu=15.94ms elapsed=87.84s tid=0x00007f0c100195a0 nid=4097469 runnable  
+
+"GC Thread#15" os_prio=0 cpu=14.51ms elapsed=87.84s tid=0x00007f0c10018420 nid=4097468 runnable  
+
+"GC Thread#14" os_prio=0 cpu=10.42ms elapsed=87.84s tid=0x00007f0c100172a0 nid=4097467 runnable  
+
+"GC Thread#13" os_prio=0 cpu=14.35ms elapsed=87.84s tid=0x00007f0c10016120 nid=4097466 runnable  
+
+"GC Thread#12" os_prio=0 cpu=12.18ms elapsed=87.84s tid=0x00007f0c10014fa0 nid=4097465 runnable  
+
+"GC Thread#11" os_prio=0 cpu=8.63ms elapsed=87.84s tid=0x00007f0c10013e20 nid=4097464 runnable  
+
+"GC Thread#10" os_prio=0 cpu=13.98ms elapsed=87.84s tid=0x00007f0c10012ca0 nid=4097463 runnable  
+
+"GC Thread#9" os_prio=0 cpu=13.78ms elapsed=87.84s tid=0x00007f0c10011b20 nid=4097462 runnable  
+
+"GC Thread#8" os_prio=0 cpu=13.46ms elapsed=87.84s tid=0x00007f0c10010da0 nid=4097461 runnable  
+
+"GC Thread#7" os_prio=0 cpu=17.75ms elapsed=87.84s tid=0x00007f0c10010020 nid=4097460 runnable  
+
+"GC Thread#6" os_prio=0 cpu=9.63ms elapsed=87.84s tid=0x00007f0c1000f2a0 nid=4097459 runnable  
+
+"GC Thread#5" os_prio=0 cpu=18.35ms elapsed=87.84s tid=0x00007f0c1000e560 nid=4097458 runnable  
+
+"GC Thread#4" os_prio=0 cpu=17.40ms elapsed=87.84s tid=0x00007f0c1000d820 nid=4097457 runnable  
+
+"GC Thread#3" os_prio=0 cpu=12.59ms elapsed=87.84s tid=0x00007f0c1000cae0 nid=4097456 runnable  
+
+"GC Thread#2" os_prio=0 cpu=13.40ms elapsed=87.84s tid=0x00007f0c1000bda0 nid=4097455 runnable  
+
+"GC Thread#1" os_prio=0 cpu=9.11ms elapsed=87.84s tid=0x00007f0c1000b150 nid=4097454 runnable  
+
+"VM Thread" os_prio=0 cpu=11.18ms elapsed=88.26s tid=0x00007f0c6812bef0 nid=4097423 runnable  
+
+"VM Periodic Task Thread" os_prio=0 cpu=0.76ms elapsed=88.26s tid=0x00007f0c6811b780 nid=4097422 waiting on condition  
+
+"G1 Service" os_prio=0 cpu=3.36ms elapsed=88.27s tid=0x00007f0c68104320 nid=4097417 runnable  
+
+"G1 Refine#0" os_prio=0 cpu=0.03ms elapsed=88.27s tid=0x00007f0c68103130 nid=4097416 runnable  
+
+"G1 Conc#0" os_prio=0 cpu=3.86ms elapsed=88.27s tid=0x00007f0c6807d630 nid=4097415 runnable  
+
+"G1 Main Marker" os_prio=0 cpu=0.45ms elapsed=88.27s tid=0x00007f0c6807c420 nid=4097414 runnable  
+
+"GC Thread#0" os_prio=0 cpu=13.41ms elapsed=88.27s tid=0x00007f0c68064390 nid=4097413 runnable  
+
+JNI global refs: 65, weak refs: 163
+
+
+Found one Java-level deadlock:
+=============================
+"main":
+  waiting for ownable synchronizer 0x0000000089adf098, (a java.util.concurrent.locks.ReentrantReadWriteLock$FairSync),
+  which is held by "Thread-1"
+
+"Thread-1":
+  waiting to lock monitor 0x00007f0b5000c990 (object 0x0000000089b170f0, a java.util.concurrent.ConcurrentHashMap$Node),
+  which is held by "main"
+
+Java stack information for the threads listed above:
+===================================================
+"main":
+	at jdk.internal.misc.Unsafe.park(java.base@25.0.2/Native Method)
+	- parking to wait for  <0x0000000089adf098> (a java.util.concurrent.locks.ReentrantReadWriteLock$FairSync)
+	at java.util.concurrent.locks.LockSupport.park(java.base@25.0.2/LockSupport.java:223)
+	at java.util.concurrent.locks.AbstractQueuedLongSynchronizer.acquire(java.base@25.0.2/AbstractQueuedLongSynchronizer.java:410)
+	at java.util.concurrent.locks.AbstractQueuedLongSynchronizer.acquireShared(java.base@25.0.2/AbstractQueuedLongSynchronizer.java:739)
+	at java.util.concurrent.locks.ReentrantReadWriteLock$ReadLock.lock(java.base@25.0.2/ReentrantReadWriteLock.java:744)
+	at org.apache.druid.metadata.segment.cache.ReadWriteCache.withReadLock(ReadWriteCache.java:73)
+	at org.apache.druid.metadata.segment.cache.HeapMemoryDatasourceSegmentCache.isEmpty(HeapMemoryDatasourceSegmentCache.java:92)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$1.isEmpty(HeapMemorySegmentMetadataCacheTest.java:917)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.lambda$8(HeapMemorySegmentMetadataCache.java:622)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284c5a08.apply(Unknown Source)
+	at java.util.concurrent.ConcurrentHashMap.compute(java.base@25.0.2/ConcurrentHashMap.java:1956)
+	- locked <0x0000000089b170f0> (a java.util.concurrent.ConcurrentHashMap$Node)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.markCacheSynced(HeapMemorySegmentMetadataCache.java:619)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.syncWithMetadataStore(HeapMemorySegmentMetadataCache.java:594)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284b6c10.call(Unknown Source)
+	at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:131)
+	at com.google.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:76)
+	at com.google.common.util.concurrent.TrustedListenableFutureTask.run(TrustedListenableFutureTask.java:82)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService.lambda$1(BlockingExecutorService.java:140)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService$$Lambda/0x00000000284b8570.call(Unknown Source)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService$Task.executeNow(BlockingExecutorService.java:247)
+	at org.apache.druid.server.coordinator.simulate.BlockingExecutorService.finishNextPendingTasks(BlockingExecutorService.java:92)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.syncCache(HeapMemorySegmentMetadataCacheTest.java:171)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.testMarkCacheSynced_doesNotDeadlock_whenWriteTransactionReadsCache(HeapMemorySegmentMetadataCacheTest.java:947)
+	at java.lang.invoke.LambdaForm$DMH/0x0000000028040c00.invokeVirtual(java.base@25.0.2/LambdaForm$DMH)
+	at java.lang.invoke.LambdaForm$MH/0x000000002830c400.invoke(java.base@25.0.2/LambdaForm$MH)
+	at java.lang.invoke.Invokers$Holder.invokeExact_MT(java.base@25.0.2/Invokers$Holder)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(java.base@25.0.2/DirectMethodHandleAccessor.java:154)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(java.base@25.0.2/DirectMethodHandleAccessor.java:104)
+	at java.lang.reflect.Method.invoke(java.base@25.0.2/Method.java:565)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.junit.vintage.engine.execution.RunnerExecutor.execute(RunnerExecutor.java:42)
+	at org.junit.vintage.engine.execution.VintageExecutor.executeClassesAndMethodsSequentially(VintageExecutor.java:93)
+	at org.junit.vintage.engine.execution.VintageExecutor.executeAllChildren(VintageExecutor.java:73)
+	at org.junit.vintage.engine.VintageTestEngine.execute(VintageTestEngine.java:70)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator$$Lambda/0x0000000028119250.accept(Unknown Source)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:100)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:52)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$2(InterceptingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher$$Lambda/0x0000000028119018.proceed(Unknown Source)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:46)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:52)
+	at org.junit.platform.launcher.core.SessionPerRequestLauncher.execute(SessionPerRequestLauncher.java:73)
+	at org.eclipse.jdt.internal.junit5.runner.JUnit5TestReference.run(JUnit5TestReference.java:100)
+	at org.eclipse.jdt.internal.junit.runner.TestExecution.run(TestExecution.java:40)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:520)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:748)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run(RemoteTestRunner.java:443)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main(RemoteTestRunner.java:211)
+"Thread-1":
+	at java.util.concurrent.ConcurrentHashMap.compute(java.base@25.0.2/ConcurrentHashMap.java:1948)
+	- waiting to lock <0x0000000089b170f0> (a java.util.concurrent.ConcurrentHashMap$Node)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.getCacheWithReference(HeapMemorySegmentMetadataCache.java:358)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.readCacheForDataSource(HeapMemorySegmentMetadataCache.java:317)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.lambda$41(HeapMemorySegmentMetadataCacheTest.java:937)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$$Lambda/0x00000000284c5340.perform(Unknown Source)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.lambda$3(HeapMemorySegmentMetadataCache.java:340)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache$$Lambda/0x00000000284c57b8.get(Unknown Source)
+	at org.apache.druid.metadata.segment.cache.ReadWriteCache.withWriteLock(ReadWriteCache.java:64)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache.writeCacheForDataSource(HeapMemorySegmentMetadataCache.java:337)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest.lambda$40(HeapMemorySegmentMetadataCacheTest.java:935)
+	at org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCacheTest$$Lambda/0x00000000284c1800.run(Unknown Source)
+	at java.lang.Thread.runWith(java.base@25.0.2/Thread.java:1487)
+	at java.lang.Thread.run(java.base@25.0.2/Thread.java:1474)
+
+Found 1 deadlock.
+
