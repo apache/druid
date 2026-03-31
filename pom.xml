@@ -104,7 +104,7 @@
         <hamcrest.version>2.2</hamcrest.version>
         <jetty.version>12.0.30</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.19.2</jackson.version>
+        <jackson.version>2.20.1</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.25.3</log4j.version>
         <mysql.version>8.2.0</mysql.version>
@@ -455,7 +455,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.82</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
@@ -1866,11 +1866,6 @@
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
-                                       <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
-                                       <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
                                        <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
                                        <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
                                        <exclude>com.google.inject:guice</exclude>
