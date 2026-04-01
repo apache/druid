@@ -264,9 +264,7 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
 
       const details: string[] = [];
       if (workerInfo.lastCompletedTaskTime) {
-        details.push(
-          `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
-        );
+        details.push(`Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`);
       }
       if (workerInfo.blacklistedUntil) {
         details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
@@ -295,10 +293,7 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
       if (cloneInfo) {
         if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
           parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
-        } else if (
-          cloneInfo.segmentLoadsRemaining > 0 ||
-          cloneInfo.segmentDropsRemaining > 0
-        ) {
+        } else if (cloneInfo.segmentLoadsRemaining > 0 || cloneInfo.segmentDropsRemaining > 0) {
           const details: string[] = [];
           if (cloneInfo.segmentLoadsRemaining > 0) {
             details.push(
@@ -309,9 +304,7 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
             );
           }
           if (cloneInfo.segmentDropsRemaining > 0) {
-            details.push(
-              `${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`,
-            );
+            details.push(`${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`);
           }
           parts.push(`Cloning from ${cloneInfo.sourceServer}: ${details.join(', ')}`);
         } else {
@@ -333,20 +326,15 @@ interface AggregatedDetailCellProps {
 function AggregatedDetailCell({ subRows }: AggregatedDetailCellProps) {
   const loadQueueInfoContext = useContext(LoadQueueInfoContext);
   const originalRows = subRows.map(r => r._original);
-  if (!originalRows.some(r => r.service_type === 'historical')) return <>{''}</>;
+  if (!originalRows.some(r => r.service_type === 'historical')) return null;
 
   const loadQueueInfos: LoadQueueInfo[] = filterMap(
     originalRows,
     r => loadQueueInfoContext[r.service],
   );
 
-  return (
-    <>
-      {loadQueueInfos.length
-        ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
-        : ''}
-    </>
-  );
+  if (!loadQueueInfos.length) return null;
+  return <>{formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))}</>;
 }
 
 function defaultDisplayFn(value: any): string {

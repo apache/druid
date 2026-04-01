@@ -73,6 +73,7 @@ exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = 
                 disabledServers={
                   Set {
                     "host2:8083",
+                    "host1:8083",
                   }
                 }
                 onChange={[Function]}
@@ -115,9 +116,11 @@ exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = 
             </td>
             <td>
               <ServerSelect
+                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host2:8083",
+                    "host1:8083",
                   }
                 }
                 onChange={[Function]}
@@ -182,6 +185,7 @@ exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = 
           text="Cancel"
         />
         <Blueprint5.Button
+          disabled={false}
           intent="primary"
           onClick={[Function]}
           text="Save"
@@ -243,6 +247,7 @@ exports[`CloneServerMappingDialog matches snapshot with no existing mappings 1`]
           text="Cancel"
         />
         <Blueprint5.Button
+          disabled={false}
           intent="primary"
           onClick={[Function]}
           text="Save"
@@ -352,9 +357,11 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
             </td>
             <td>
               <ServerSelect
+                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host1:8083",
+                    "host2:8083",
                   }
                 }
                 onChange={[Function]}
@@ -444,8 +451,10 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
             </td>
             <td>
               <ServerSelect
+                currentValue="host1:8083"
                 disabledServers={
                   Set {
+                    "host1:8083",
                     "host2:8083",
                   }
                 }
@@ -511,6 +520,7 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
           text="Cancel"
         />
         <Blueprint5.Button
+          disabled={true}
           intent="primary"
           onClick={[Function]}
           text="Save"

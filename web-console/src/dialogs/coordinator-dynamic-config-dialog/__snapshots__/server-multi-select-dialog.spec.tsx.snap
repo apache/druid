@@ -54,9 +54,11 @@ exports[`ServerMultiSelectDialog matches snapshot with existing selection 1`] = 
             checked={false}
             indeterminate={true}
             labelElement={
-              <strong>
-                hot
-              </strong>
+              <React.Fragment>
+                <strong>
+                  hot
+                </strong>
+              </React.Fragment>
             }
             onChange={[Function]}
           />
@@ -90,9 +92,11 @@ exports[`ServerMultiSelectDialog matches snapshot with existing selection 1`] = 
             checked={false}
             indeterminate={false}
             labelElement={
-              <strong>
-                cold
-              </strong>
+              <React.Fragment>
+                <strong>
+                  cold
+                </strong>
+              </React.Fragment>
             }
             onChange={[Function]}
           />
@@ -188,9 +192,11 @@ exports[`ServerMultiSelectDialog matches snapshot with no selection 1`] = `
             checked={false}
             indeterminate={false}
             labelElement={
-              <strong>
-                hot
-              </strong>
+              <React.Fragment>
+                <strong>
+                  hot
+                </strong>
+              </React.Fragment>
             }
             onChange={[Function]}
           />
@@ -224,9 +230,11 @@ exports[`ServerMultiSelectDialog matches snapshot with no selection 1`] = `
             checked={false}
             indeterminate={false}
             labelElement={
-              <strong>
-                cold
-              </strong>
+              <React.Fragment>
+                <strong>
+                  cold
+                </strong>
+              </React.Fragment>
             }
             onChange={[Function]}
           />

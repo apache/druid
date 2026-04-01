@@ -26,9 +26,12 @@ import { Loader } from '../../components';
 import type { TieredServers } from './tiered-servers';
 
 interface CloneMapping {
+  id: number;
   target: string;
   source: string;
 }
+
+let nextMappingId = 0;
 
 export interface CloneServerMappingDialogProps {
   servers: TieredServers | undefined;
@@ -42,7 +45,11 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
 ) {
   const { servers, cloneServers: initialMapping, onSave, onClose } = props;
   const [mappings, setMappings] = useState<CloneMapping[]>(() =>
-    Object.entries(initialMapping || {}).map(([target, source]) => ({ target, source })),
+    Object.entries(initialMapping || {}).map(([target, source]) => ({
+      id: nextMappingId++,
+      target,
+      source,
+    })),
   );
 
   function updateMapping(index: number, field: 'target' | 'source', value: string) {
@@ -54,7 +61,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   }
 
   function addMapping() {
-    setMappings(prev => [...prev, { target: '', source: '' }]);
+    setMappings(prev => [...prev, { id: nextMappingId++, target: '', source: '' }]);
   }
 
   function handleSave() {
@@ -67,7 +74,17 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   }
 
   const usedTargets = new Set(mappings.map(m => m.target).filter(Boolean));
-  const hasInvalidMapping = mappings.some(m => !m.target || !m.source || m.target === m.source);
+  const usedSources = new Set(mappings.map(m => m.source).filter(Boolean));
+  const disabledTargets = new Set([...usedTargets, ...usedSources]);
+  const disabledSources = new Set([...usedTargets, ...usedSources]);
+  const hasInvalidMapping = mappings.some(
+    m =>
+      !m.target ||
+      !m.source ||
+      m.target === m.source ||
+      usedSources.has(m.target) ||
+      usedTargets.has(m.source),
+  );
 
   return (
     <Dialog
@@ -100,12 +117,12 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
                 </thead>
                 <tbody>
                   {mappings.map((mapping, i) => (
-                    <tr key={i}>
+                    <tr key={mapping.id}>
                       <td>
                         <ServerSelect
                           servers={servers}
                           value={mapping.target}
-                          disabledServers={usedTargets}
+                          disabledServers={disabledTargets}
                           currentValue={mapping.target}
                           onChange={v => updateMapping(i, 'target', v)}
                         />
@@ -115,7 +132,8 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
                         <ServerSelect
                           servers={servers}
                           value={mapping.source}
-                          disabledServers={mapping.target ? new Set([mapping.target]) : undefined}
+                          disabledServers={disabledSources}
+                          currentValue={mapping.source}
                           onChange={v => updateMapping(i, 'source', v)}
                         />
                       </td>

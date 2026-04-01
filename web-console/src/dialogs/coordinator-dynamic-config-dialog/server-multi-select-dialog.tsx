@@ -114,6 +114,7 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
 
                 if (filteredServers.length === 0) return null;
 
+                const hiddenCount = tierServers.length - filteredServers.length;
                 const allSelected = filteredServers.every(s => selected.has(s));
                 const someSelected = !allSelected && filteredServers.some(s => selected.has(s));
 
@@ -122,7 +123,17 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
                     <Checkbox
                       checked={allSelected}
                       indeterminate={someSelected}
-                      labelElement={<strong>{tier}</strong>}
+                      labelElement={
+                        <>
+                          <strong>{tier}</strong>
+                          {hiddenCount > 0 && (
+                            <span style={{ fontWeight: 'normal', opacity: 0.6 }}>
+                              {' '}
+                              ({hiddenCount} hidden by filter)
+                            </span>
+                          )}
+                        </>
+                      }
                       onChange={() => toggleTier(tier, filteredServers)}
                     />
                     <div style={{ paddingLeft: 20 }}>
