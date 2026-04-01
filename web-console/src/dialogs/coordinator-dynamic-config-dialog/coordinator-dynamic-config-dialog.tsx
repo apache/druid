@@ -16,18 +16,14 @@
  * limitations under the License.
  */
 
-import { Code, Intent } from '@blueprintjs/core';
+import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useMemo, useState } from 'react';
 
 import type { Field, FormJsonTabs } from '../../components';
 import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
 import type { CoordinatorDynamicConfig } from '../../druid-models';
-import {
-  cloneCountSummary,
-  COORDINATOR_DYNAMIC_CONFIG_FIELDS,
-  serverCountSummary,
-} from '../../druid-models';
+import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
@@ -65,92 +61,54 @@ function buildTieredServers(rows: { server: string; tier: string }[]): TieredSer
   return { tiers, serversByTier, serverToTier, allServers };
 }
 
-function buildServerPickerFields(
+function attachServerPickerDialogs(
+  fields: Field<CoordinatorDynamicConfig>[],
   servers: TieredServers | undefined,
 ): Field<CoordinatorDynamicConfig>[] {
-  return [
-    {
-      name: 'decommissioningNodes',
-      type: 'custom',
-      emptyValue: [],
-      info: (
-        <>
-          List of historical services to &apos;decommission&apos;. Coordinator will not assign new
-          segments to &apos;decommissioning&apos; services, and segments will be moved away from
-          them to be placed on non-decommissioning services at the maximum rate specified by{' '}
-          <Code>maxSegmentsToMove</Code>.
-        </>
-      ),
-      customSummary: serverCountSummary,
-      customDialog: ({ value, onValueChange, onClose }) => (
-        <ServerMultiSelectDialog
-          title="Decommissioning nodes"
-          servers={servers}
-          selectedServers={value || []}
-          onSave={v => onValueChange(v)}
-          onClose={onClose}
-        />
-      ),
-    },
-    {
-      name: 'turboLoadingNodes',
-      type: 'custom',
-      experimental: true,
-      info: (
-        <>
-          <p>
-            List of Historical servers to place in turbo loading mode. These servers use a larger
-            thread-pool to load segments faster but at the cost of query performance. For servers
-            specified in <Code>turboLoadingNodes</Code>,{' '}
-            <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the
-            coordinator uses the value of the respective <Code>numLoadingThreads</Code> instead.
-          </p>
-          <p>
-            Please use this config with caution. All servers should eventually be removed from this
-            list once the segment loading on the respective historicals is finished.
-          </p>
-        </>
-      ),
-      customSummary: serverCountSummary,
-      customDialog: ({ value, onValueChange, onClose }) => (
-        <ServerMultiSelectDialog
-          title="Turbo loading nodes"
-          servers={servers}
-          selectedServers={value || []}
-          onSave={v => onValueChange(v)}
-          onClose={onClose}
-        />
-      ),
-    },
-    {
-      name: 'cloneServers',
-      type: 'custom',
-      experimental: true,
-      info: (
-        <>
-          <p>
-            Map from target Historical server to source Historical server. The target clones all
-            segments from the source, becoming an exact copy. The target does not participate in
-            regular segment assignment or balancing, and its segments do not count towards replica
-            counts.
-          </p>
-          <p>
-            If the source server disappears, the target remains in the last known state of the
-            source until removed from this mapping.
-          </p>
-        </>
-      ),
-      customSummary: cloneCountSummary,
-      customDialog: ({ value, onValueChange, onClose }) => (
-        <CloneServerMappingDialog
-          servers={servers}
-          cloneServers={value || {}}
-          onSave={v => onValueChange(v)}
-          onClose={onClose}
-        />
-      ),
-    },
-  ];
+  return fields.map(field => {
+    switch (field.name) {
+      case 'decommissioningNodes':
+        return {
+          ...field,
+          customDialog: ({ value, onValueChange, onClose }) => (
+            <ServerMultiSelectDialog
+              title="Decommissioning nodes"
+              servers={servers}
+              selectedServers={value || []}
+              onSave={v => onValueChange(v)}
+              onClose={onClose}
+            />
+          ),
+        };
+      case 'turboLoadingNodes':
+        return {
+          ...field,
+          customDialog: ({ value, onValueChange, onClose }) => (
+            <ServerMultiSelectDialog
+              title="Turbo loading nodes"
+              servers={servers}
+              selectedServers={value || []}
+              onSave={v => onValueChange(v)}
+              onClose={onClose}
+            />
+          ),
+        };
+      case 'cloneServers':
+        return {
+          ...field,
+          customDialog: ({ value, onValueChange, onClose }) => (
+            <CloneServerMappingDialog
+              servers={servers}
+              cloneServers={value || {}}
+              onSave={v => onValueChange(v)}
+              onClose={onClose}
+            />
+          ),
+        };
+      default:
+        return field;
+    }
+  });
 }
 
 export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDynamicConfigDialog(
@@ -213,16 +171,10 @@ ORDER BY "tier", "server"`,
     },
   });
 
-  const fields = useMemo(() => {
-    const insertIndex = COORDINATOR_DYNAMIC_CONFIG_FIELDS.findIndex(
-      f => f.name === 'killDataSourceWhitelist',
-    );
-    return [
-      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(0, insertIndex),
-      ...buildServerPickerFields(serversState.data),
-      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(insertIndex),
-    ];
-  }, [serversState.data]);
+  const fields = useMemo(
+    () => attachServerPickerDialogs(COORDINATOR_DYNAMIC_CONFIG_FIELDS, serversState.data),
+    [serversState.data],
+  );
 
   async function saveConfig(comment: string) {
     try {

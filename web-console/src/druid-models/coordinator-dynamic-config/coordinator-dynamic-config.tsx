@@ -157,9 +157,61 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
 
   // End "smart" segment loading section
 
-  // decommissioningNodes, turboLoadingNodes, and cloneServers are added dynamically
-  // in the dialog component with server picker integration
-
+  {
+    name: 'decommissioningNodes',
+    type: 'custom',
+    emptyValue: [],
+    info: (
+      <>
+        List of historical services to &apos;decommission&apos;. Coordinator will not assign new
+        segments to &apos;decommissioning&apos; services, and segments will be moved away from them
+        to be placed on non-decommissioning services at the maximum rate specified by{' '}
+        <Code>maxSegmentsToMove</Code>.
+      </>
+    ),
+    customSummary: serverCountSummary,
+  },
+  {
+    name: 'turboLoadingNodes',
+    type: 'custom',
+    experimental: true,
+    info: (
+      <>
+        <p>
+          List of Historical servers to place in turbo loading mode. These servers use a larger
+          thread-pool to load segments faster but at the cost of query performance. For servers
+          specified in <Code>turboLoadingNodes</Code>,{' '}
+          <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the coordinator
+          uses the value of the respective <Code>numLoadingThreads</Code> instead.
+        </p>
+        <p>
+          Please use this config with caution. All servers should eventually be removed from this
+          list once the segment loading on the respective historicals is finished.
+        </p>
+      </>
+    ),
+    customSummary: serverCountSummary,
+  },
+  {
+    name: 'cloneServers',
+    type: 'custom',
+    experimental: true,
+    info: (
+      <>
+        <p>
+          Map from target Historical server to source Historical server. The target clones all
+          segments from the source, becoming an exact copy. The target does not participate in
+          regular segment assignment or balancing, and its segments do not count towards replica
+          counts.
+        </p>
+        <p>
+          If the source server disappears, the target remains in the last known state of the source
+          until removed from this mapping.
+        </p>
+      </>
+    ),
+    customSummary: cloneCountSummary,
+  },
   {
     name: 'killDataSourceWhitelist',
     label: 'Kill datasource whitelist',
