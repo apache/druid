@@ -46,6 +46,11 @@ import java.util.Set;
  */
 public class AuthorizationUtils
 {
+  /**
+   * Key used in the authorization context map to indicate the caller path that triggered the authorization check.
+   */
+  public static final String AUTHORIZATION_CONTEXT_CALLER_PATH_CONTEXT_KEY = "callerPath";
+
   public static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
       ResourceType.DATASOURCE
   );
@@ -71,6 +76,35 @@ public class AuthorizationUtils
         request,
         Collections.singletonList(resourceAction),
         authorizerMapper
+    );
+  }
+
+  /**
+   * Performs authorization check on a single resource-action based on the authentication fields from the request,
+   * with additional context about the authorization request.
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
+   *
+   * @param request          HTTP request to be authorized
+   * @param resourceAction   A resource identifier and the action to be taken the resource.
+   * @param authorizerMapper The singleton AuthorizerMapper instance
+   * @param context          Additional context about the authorization request, such as information about the
+   *                         caller path to be authorized.
+   * @return AuthorizationResult containing allow/deny access to the resource action, along with policy restrictions.
+   */
+  public static AuthorizationResult authorizeResourceAction(
+      final HttpServletRequest request,
+      final ResourceAction resourceAction,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
+    return authorizeAllResourceActions(
+        request,
+        Collections.singletonList(resourceAction),
+        authorizerMapper,
+        context
     );
   }
 
@@ -182,6 +216,29 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    return authorizeAllResourceActions(authenticationResult, resourceActions, authorizerMapper, Map.of());
+  }
+
+  /**
+   * Performs authorization check on a list of resource-actions based on the authenticationResult, with additional
+   * context about the authorization request.
+   * <p>
+   * If one of the resource-actions denys access, returns deny access immediately.
+   *
+   * @param authenticationResult Authentication result representing identity of requester
+   * @param resourceActions      An Iterable of resource-actions to authorize
+   * @param authorizerMapper     The singleton AuthorizerMapper instance
+   * @param context              Additional context about the authorization request, such as information about the
+   *                             caller path to be authorized.
+   * @return AuthorizationResult containing allow/deny access to the resource actions, along with policy restrictions.
+   */
+  public static AuthorizationResult authorizeAllResourceActions(
+      final AuthenticationResult authenticationResult,
+      final Iterable<ResourceAction> resourceActions,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
       throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
@@ -198,7 +255,8 @@ public class AuthorizationUtils
       final Access access = authorizer.authorize(
           authenticationResult,
           resourceAction.getResource(),
-          resourceAction.getAction()
+          resourceAction.getAction(),
+          context
       );
       if (!access.isAllowed()) {
         return AuthorizationResult.deny(access.getMessage());
@@ -261,6 +319,32 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    return authorizeAllResourceActions(request, resourceActions, authorizerMapper, Map.of());
+  }
+
+  /**
+   * Performs authorization check on a list of resource-actions based on the authentication fields from the request,
+   * with additional context about the authorization request.
+   * <p>
+   * If one of the resource-actions denys access, returns deny access immediately.
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
+   *
+   * @param request          HTTP request to be authorized
+   * @param resourceActions  An Iterable of resource-actions to authorize
+   * @param authorizerMapper The singleton AuthorizerMapper instance
+   * @param context          Additional context about the authorization request, such as information about the
+   *                         caller path to be authorized.
+   * @return AuthorizationResult containing allow/deny access to the resource actions, along with policy restrictions.
+   */
+  public static AuthorizationResult authorizeAllResourceActions(
+      final HttpServletRequest request,
+      final Iterable<ResourceAction> resourceActions,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
       return AuthorizationResult.ALLOW_NO_RESTRICTION;
     }
@@ -272,7 +356,8 @@ public class AuthorizationUtils
     AuthorizationResult authResult = authorizeAllResourceActions(
         authenticationResultFromRequest(request),
         resourceActions,
-        authorizerMapper
+        authorizerMapper,
+        context
     );
 
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authResult.allowBasicAccess());
@@ -322,6 +407,38 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    return filterAuthorizedResources(request, resources, resourceActionGenerator, authorizerMapper, Map.of());
+  }
+
+  /**
+   * Return an iterable of authorized resources, by filtering the input resources with authorization checks based on the
+   * authentication fields from the request, with additional context about the authorization request. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
+   * </li>
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
+   *
+   * @param request                 HTTP request to be authorized
+   * @param resources               resources to be processed into resource-actions
+   * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
+   * @param authorizerMapper        authorizer mapper
+   * @param context                 Additional context about the authorization request, such as information about the
+   *                                caller path to be authorized.
+   * @return Iterable containing resources that were authorized
+   */
+  public static <ResType> Iterable<ResType> filterAuthorizedResources(
+      final HttpServletRequest request,
+      final Iterable<ResType> resources,
+      final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
       return resources;
     }
@@ -336,7 +453,8 @@ public class AuthorizationUtils
         authenticationResult,
         resources,
         resourceActionGenerator,
-        authorizerMapper
+        authorizerMapper,
+        context
     );
 
     // We're filtering, so having access to none of the objects isn't an authorization failure (in terms of whether
@@ -368,6 +486,34 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    return filterAuthorizedResources(authenticationResult, resources, resourceActionGenerator, authorizerMapper, Map.of());
+  }
+
+  /**
+   * Return an iterable of authorized resources, by filtering the input resources with authorization checks based on
+   * authenticationResult, with additional context about the authorization request. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
+   *
+   * @param authenticationResult    Authentication result representing identity of requester
+   * @param resources               resources to be processed into resource-actions
+   * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
+   * @param authorizerMapper        authorizer mapper
+   * @param context                 Additional context about the authorization request, such as information about the
+   *                                caller path to be authorized.
+   * @return Iterable containing resources that were authorized
+   */
+  public static <ResType> Iterable<ResType> filterAuthorizedResources(
+      final AuthenticationResult authenticationResult,
+      final Iterable<ResType> resources,
+      final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
       throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
@@ -390,7 +536,8 @@ public class AuthorizationUtils
                 ra -> authorizer.authorize(
                     authenticationResult,
                     ra.getResource(),
-                    ra.getAction()
+                    ra.getAction(),
+                    context
                 )
             );
             if (!access.isAllowed()) {
@@ -428,6 +575,38 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    return filterAuthorizedResources(request, unfilteredResources, resourceActionGenerator, authorizerMapper, Map.of());
+  }
+
+  /**
+   * Return a map of authorized resources, by filtering the input resources with authorization checks based on the
+   * authentication fields from the request, with additional context about the authorization request. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
+   * </li>
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
+   *
+   * @param request                 HTTP request to be authorized
+   * @param unfilteredResources     Map of resource lists to be filtered
+   * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
+   * @param authorizerMapper        authorizer mapper
+   * @param context                 Additional context about the authorization request, such as information about the
+   *                                caller path to be authorized.
+   * @return Map containing lists of resources that were authorized
+   */
+  public static <KeyType, ResType> Map<KeyType, List<ResType>> filterAuthorizedResources(
+      final HttpServletRequest request,
+      final Map<KeyType, List<ResType>> unfilteredResources,
+      final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
+      final AuthorizerMapper authorizerMapper,
+      final Map<String, Object> context
+  )
+  {
 
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
       return unfilteredResources;
@@ -450,7 +629,8 @@ public class AuthorizationUtils
               authenticationResult,
               entry.getValue(),
               resourceActionGenerator,
-              authorizerMapper
+              authorizerMapper,
+              context
           )
       );
 

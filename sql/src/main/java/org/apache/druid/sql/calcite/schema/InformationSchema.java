@@ -79,6 +79,14 @@ public class InformationSchema extends AbstractSchema
   private static final String COLUMNS_TABLE = "COLUMNS";
   private static final String ROUTINES_TABLE = "ROUTINES";
 
+  /**
+   * Context map passed to {@link AuthorizationUtils} methods to indicate that authorization
+   * is being performed from the InformationSchema.
+   */
+  static final String AUTHORIZATION_CONTEXT_CALLER_PATH_VALUE = InformationSchema.class.getSimpleName();
+  private static final Map<String, Object> INFORMATION_SCHEMA_AUTHORIZATION_CONTEXT =
+      ImmutableMap.of(AuthorizationUtils.AUTHORIZATION_CONTEXT_CALLER_PATH_CONTEXT_KEY, AUTHORIZATION_CONTEXT_CALLER_PATH_VALUE);
+
   private static class RowTypeBuilder
   {
     final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
@@ -615,7 +623,8 @@ public class InformationSchema extends AbstractSchema
                   new ResourceAction(new Resource(name, resourseType), Action.READ)
               );
             },
-            authorizerMapper
+            authorizerMapper,
+            INFORMATION_SCHEMA_AUTHORIZATION_CONTEXT
         )
     );
   }
