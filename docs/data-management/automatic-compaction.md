@@ -30,8 +30,8 @@ In Apache Druid, compaction is a special type of ingestion task that reads data 
 
 There are two ways to run automatic compaction in Druid:
 
-* **Compaction supervisors on the Overlord** (recommended): Provides better reactivity, support for the MSQ task engine, and easier management through the supervisor framework. See [Auto-compaction using compaction supervisors (recommended)](#auto-compaction-using-compaction-supervisors-recommended).
-* **Coordinator duties**: An alternative approach that runs compaction as a Coordinator duty. See [Auto-compaction using Coordinator duties (alternative)](#auto-compaction-using-coordinator-duties-alternative).
+* **Compaction supervisors on the Overlord** (recommended): Provides better reactivity, support for the MSQ task engine, and easier management through the supervisor framework. See [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
+* **Coordinator duties**: An alternative approach that runs compaction as a Coordinator duty. See [Auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
 
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
@@ -80,7 +80,7 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
 
-## Auto-compaction using compaction supervisors (recommended)
+## Auto-compaction using compaction supervisors
 
 The recommended way to run automatic compaction is using compaction supervisors on the Overlord. Compaction supervisors provide the following benefits:
 
@@ -162,7 +162,7 @@ To stop the automatic compaction task, suspend or terminate the supervisor throu
 The MSQ task engine is available as a compaction engine if you configure auto-compaction to use compaction supervisors. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
 
 * Enable [incremental segment metadata caching](../configuration/index.md#metadata-retrieval) on the Overlord.
-* Enable [Auto-compaction using compaction supervisors (recommended)](#auto-compaction-using-compaction-supervisors-recommended).
+* Enable [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
 * Update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set `engine` to `msq` to use the MSQ task engine as the default compaction engine for all compaction supervisors.
   * Alternatively, you may override the default engine by setting `spec.engine` to `msq` in the compaction supervisor for the relevant datasource.
 * Have at least two compaction task slots available or set `spec.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
@@ -213,7 +213,7 @@ The following are some examples of aggregators that aren't supported since at le
     ```
 
 
-## Auto-compaction using Coordinator duties (alternative)
+## Auto-compaction using Coordinator duties
 
 As an alternative to compaction supervisors, you can run automatic compaction using Coordinator duties. The Coordinator [indexing period](../configuration/index.md#data-management), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
