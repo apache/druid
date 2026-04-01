@@ -94,7 +94,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private static final Logger LOG = new Logger(CompactSegments.class);
 
-  private static final String TASK_ID_PREFIX = "coordinator-issued";
+  private static final String TASK_ID_PREFIX = "auto";
 
   private final CompactionStatusTracker statusTracker;
   private final OverlordClient overlordClient;
