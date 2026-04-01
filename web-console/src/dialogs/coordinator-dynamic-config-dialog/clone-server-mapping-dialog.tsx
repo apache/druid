@@ -16,10 +16,19 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Intent, MenuDivider, MenuItem } from '@blueprintjs/core';
+import {
+  Button,
+  Callout,
+  Classes,
+  Dialog,
+  Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Select } from '@blueprintjs/select';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { Loader } from '../../components';
 
@@ -30,8 +39,6 @@ interface CloneMapping {
   target: string;
   source: string;
 }
-
-let nextMappingId = 0;
 
 export interface CloneServerMappingDialogProps {
   servers: TieredServers | undefined;
@@ -44,9 +51,10 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   props: CloneServerMappingDialogProps,
 ) {
   const { servers, cloneServers: initialMapping, onSave, onClose } = props;
+  const nextMappingId = useRef(0);
   const [mappings, setMappings] = useState<CloneMapping[]>(() =>
     Object.entries(initialMapping || {}).map(([target, source]) => ({
-      id: nextMappingId++,
+      id: nextMappingId.current++,
       target,
       source,
     })),
@@ -61,13 +69,15 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   }
 
   function addMapping() {
-    setMappings(prev => [...prev, { id: nextMappingId++, target: '', source: '' }]);
+    setMappings(prev => [...prev, { id: nextMappingId.current++, target: '', source: '' }]);
   }
 
   function handleSave() {
     const result: Record<string, string> = {};
     for (const m of mappings) {
-      result[m.target] = m.source;
+      if (m.target && m.source && m.target !== m.source) {
+        result[m.target] = m.source;
+      }
     }
     onSave(result);
     onClose();
@@ -209,7 +219,7 @@ function ServerSelect(props: ServerSelectProps) {
           }
           elements.push(renderItem(item, i));
         }
-        return <>{elements}</>;
+        return <Menu>{elements}</Menu>;
       }}
       itemRenderer={(item, { handleClick, handleFocus, modifiers }) => {
         if (!modifiers.matchesPredicate) return null;

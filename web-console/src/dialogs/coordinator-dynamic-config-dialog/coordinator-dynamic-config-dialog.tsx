@@ -109,7 +109,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     },
   });
 
-  useQueryManager<null, Record<string, any>>({
+  useQueryManager<null, CoordinatorDynamicConfig>({
     initQuery: null,
     processQuery: async (_, signal) => {
       try {

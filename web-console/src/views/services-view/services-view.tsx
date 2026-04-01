@@ -518,6 +518,11 @@ ORDER BY
                   : {}),
               };
             } catch {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'There was an error getting clone status and server mode info',
+              });
               return servicesWithAuxiliaryInfo;
             }
           });
