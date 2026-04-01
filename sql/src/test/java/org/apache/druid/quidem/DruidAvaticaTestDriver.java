@@ -43,6 +43,8 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -150,7 +152,12 @@ public class DruidAvaticaTestDriver implements Driver
     AvaticaJettyServer(final DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(new InetSocketAddress("localhost", 0));
+      QueuedThreadPool threadPool = new QueuedThreadPool(10, 2, 1000);
+      server = new Server(threadPool);
+      ServerConnector connector = new ServerConnector(server);
+      connector.setHost("localhost");
+      connector.setPort(0);
+      server.addConnector(connector);
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(
