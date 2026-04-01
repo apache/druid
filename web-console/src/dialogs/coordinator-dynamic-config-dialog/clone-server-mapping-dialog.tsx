@@ -60,7 +60,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   function handleSave() {
     const result: Record<string, string> = {};
     for (const m of mappings) {
-      if (m.target && m.source) {
+      if (m.target && m.source && m.target !== m.source) {
         result[m.target] = m.source;
       }
     }
@@ -116,6 +116,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
                         <ServerSelect
                           servers={servers}
                           value={mapping.source}
+                          disabledServers={mapping.target ? new Set([mapping.target]) : undefined}
                           onChange={v => updateMapping(i, 'source', v)}
                         />
                       </td>
@@ -177,14 +178,14 @@ function ServerSelect(props: ServerSelectProps) {
       itemListRenderer={({ filteredItems, renderItem }) => {
         const elements: React.ReactNode[] = [];
         let lastTier: string | undefined;
-        for (const item of filteredItems) {
-          // Find which tier this server belongs to
-          const tier = servers.tiers.find(t => (servers.serversByTier[t] || []).includes(item));
+        for (let i = 0; i < filteredItems.length; i++) {
+          const item = filteredItems[i];
+          const tier = servers.serverToTier[item];
           if (tier && tier !== lastTier) {
             elements.push(<MenuDivider key={`tier-${tier}`} title={tier} />);
             lastTier = tier;
           }
-          elements.push(renderItem(item, filteredItems.indexOf(item)));
+          elements.push(renderItem(item, i));
         }
         return <>{elements}</>;
       }}

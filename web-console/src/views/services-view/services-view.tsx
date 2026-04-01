@@ -392,36 +392,36 @@ ORDER BY
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
-              const cloneStatuses = await getApiArrayFromKey<
-                CloneStatusInfo & { targetServer: string }
-              >('/druid/coordinator/v1/config/cloneStatus', 'cloneStatus', signal);
+              const [cloneStatusResp, configResp] = await Promise.all([
+                getApiArrayFromKey<CloneStatusInfo & { targetServer: string }>(
+                  '/druid/coordinator/v1/config/cloneStatus',
+                  'cloneStatus',
+                  signal,
+                ).catch(() => [] as (CloneStatusInfo & { targetServer: string })[]),
+                Api.instance
+                  .get('/druid/coordinator/v1/config', { signal })
+                  .then(r => r.data)
+                  .catch(() => null),
+              ]);
 
               const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
-                cloneStatuses,
+                cloneStatusResp,
                 s => s.targetServer,
               );
 
               return {
                 ...servicesWithAuxiliaryInfo,
                 cloneStatus: cloneStatusLookup,
-              };
-            } catch {
-              return servicesWithAuxiliaryInfo;
-            }
-          });
-        }
-
-        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            try {
-              const config = (await Api.instance.get('/druid/coordinator/v1/config', { signal }))
-                .data;
-              return {
-                ...servicesWithAuxiliaryInfo,
-                serverMode: {
-                  turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
-                  decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
-                },
+                ...(configResp
+                  ? {
+                      serverMode: {
+                        turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
+                        decommissioningNodes: new Set<string>(
+                          configResp.decommissioningNodes || [],
+                        ),
+                      },
+                    }
+                  : {}),
               };
             } catch {
               return servicesWithAuxiliaryInfo;
@@ -941,13 +941,25 @@ ORDER BY
                 if (cloneInfo) {
                   if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
                     parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
-                  } else if (cloneInfo.segmentLoadsRemaining > 0) {
-                    parts.push(
-                      `Cloning from ${cloneInfo.sourceServer}: ${pluralIfNeeded(
-                        cloneInfo.segmentLoadsRemaining,
-                        'segment',
-                      )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
-                    );
+                  } else if (
+                    cloneInfo.segmentLoadsRemaining > 0 ||
+                    cloneInfo.segmentDropsRemaining > 0
+                  ) {
+                    const details: string[] = [];
+                    if (cloneInfo.segmentLoadsRemaining > 0) {
+                      details.push(
+                        `${pluralIfNeeded(
+                          cloneInfo.segmentLoadsRemaining,
+                          'segment',
+                        )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
+                      );
+                    }
+                    if (cloneInfo.segmentDropsRemaining > 0) {
+                      details.push(
+                        `${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`,
+                      );
+                    }
+                    parts.push(`Cloning from ${cloneInfo.sourceServer}: ${details.join(', ')}`);
                   } else {
                     parts.push(`Clone of ${cloneInfo.sourceServer} (synced)`);
                   }

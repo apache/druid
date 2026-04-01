@@ -49,18 +49,20 @@ export interface CoordinatorDynamicConfigDialogProps {
 
 function buildTieredServers(rows: { server: string; tier: string }[]): TieredServers {
   const serversByTier: Record<string, string[]> = {};
+  const serverToTier: Record<string, string> = {};
   for (const row of rows) {
     if (!serversByTier[row.tier]) {
       serversByTier[row.tier] = [];
     }
     serversByTier[row.tier].push(row.server);
+    serverToTier[row.server] = row.tier;
   }
   const tiers = Object.keys(serversByTier).sort();
   for (const tier of tiers) {
     serversByTier[tier].sort();
   }
   const allServers = tiers.flatMap(t => serversByTier[t]);
-  return { tiers, serversByTier, allServers };
+  return { tiers, serversByTier, serverToTier, allServers };
 }
 
 function buildServerPickerFields(
@@ -211,15 +213,16 @@ ORDER BY "tier", "server"`,
     },
   });
 
-  const fields = useMemo(
-    () => [
-      // Insert server picker fields after the "smart segment loading" section
-      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(0, 7), // pauseCoordination through replicantLifetime
+  const fields = useMemo(() => {
+    const insertIndex = COORDINATOR_DYNAMIC_CONFIG_FIELDS.findIndex(
+      f => f.name === 'killDataSourceWhitelist',
+    );
+    return [
+      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(0, insertIndex),
       ...buildServerPickerFields(serversState.data),
-      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(7), // killDataSourceWhitelist onward
-    ],
-    [serversState.data],
-  );
+      ...COORDINATOR_DYNAMIC_CONFIG_FIELDS.slice(insertIndex),
+    ];
+  }, [serversState.data]);
 
   async function saveConfig(comment: string) {
     try {

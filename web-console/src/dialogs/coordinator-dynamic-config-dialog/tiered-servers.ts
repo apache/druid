@@ -19,5 +19,6 @@
 export interface TieredServers {
   tiers: string[];
   serversByTier: Record<string, string[]>;
+  serverToTier: Record<string, string>;
   allServers: string[];
 }
