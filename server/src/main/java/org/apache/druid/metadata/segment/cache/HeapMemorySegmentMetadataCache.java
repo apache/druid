@@ -619,8 +619,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.compute(
             dataSource,
             (ds, existingCache) -> {
-              if (existingCache != null && existingCache.isEmpty()
-                  && !existingCache.isBeingUsedByTransaction()) {
+              if (existingCache != null && !existingCache.isBeingUsedByTransaction() && existingCache.isEmpty()) {
                 emitMetric(dataSource, Metric.DELETED_DATASOURCES, 1L);
                 return null;
               } else {
