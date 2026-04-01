@@ -189,13 +189,13 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
 
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(columnName, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         List.of("3", "5")
     );
 
     String jsFn2 = "function(x) { return(x === 3.0 || x === 5.0) }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(columnName, jsFn2, null, JavaScriptConfig.getEnabledInstance()),
         List.of("3", "5")
     );
@@ -316,7 +316,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(columnName, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         List.of("3", "4")
     );
