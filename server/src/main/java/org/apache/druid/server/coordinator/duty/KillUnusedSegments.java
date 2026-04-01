@@ -32,8 +32,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
@@ -59,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * negative meaning the interval end target will be in the future. Also, {@link #durationToRetain} can be ignored if
  * {@link #ignoreDurationToRetain} is enabled, meaning that there is no upper bound to the end interval of segments that
  * will be killed. The umbrella interval of the unused segments per datasource to be killed is determined by
- * {@link #findIntervalForKill(String, DateTime, CoordinatorRunStats)}, which takes into account the configured {@link #bufferPeriod}.
+ * {@link #findIntervalForKill(String, DateTime, DruidRunStats)}, which takes into account the configured {@link #bufferPeriod}.
  * However, the kill task needs to check again for max {@link #bufferPeriod} for the unused segments in the widened interval
  * as there can be multiple unused segments with different {@code used_status_last_updated} time.
  * </p>
@@ -156,7 +156,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private DruidCoordinatorRuntimeParams runInternal(final DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
 
     final int availableKillTaskSlots = getAvailableKillTaskSlots(dynamicConfig, stats);
     if (availableKillTaskSlots <= 0) {
@@ -192,7 +192,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private void killUnusedSegments(
       final Set<String> dataSourcesToKill,
       final int availableKillTaskSlots,
-      final CoordinatorRunStats stats
+      final DruidRunStats stats
   )
   {
     if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
@@ -269,7 +269,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private Interval findIntervalForKill(
       final String dataSource,
       final DateTime maxUsedStatusLastUpdatedTime,
-      final CoordinatorRunStats stats
+      final DruidRunStats stats
   )
   {
     final DateTime minStartTime = datasourceToLastKillIntervalEnd.get(dataSource);
@@ -320,7 +320,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
-  private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
+  private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final DruidRunStats stats)
   {
     final int killTaskCapacity = Math.min(
         (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient)

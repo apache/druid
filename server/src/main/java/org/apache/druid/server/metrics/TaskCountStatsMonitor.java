@@ -25,9 +25,9 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
@@ -54,7 +54,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     emit(emitter, "task/pending/count", statsProvider.getPendingTaskCount());
     emit(emitter, "task/waiting/count", statsProvider.getWaitingTaskCount());
 
-    CoordinatorRunStats stats = statsProvider.getStats();
+    DruidRunStats stats = statsProvider.getStats();
     if (stats != null) {
       stats.forEachStat(
           (stat, dimensions, statValue)

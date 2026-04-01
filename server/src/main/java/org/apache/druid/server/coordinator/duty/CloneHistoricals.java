@@ -133,13 +133,13 @@ public class CloneHistoricals implements CoordinatorDuty
 
     final DataSegment loadableSegment = getLoadableSegment(segment, params);
     if (loadableSegment == null) {
-      params.getCoordinatorStats().add(
+      params.getDruidRunStats().add(
           Stats.Segments.ASSIGN_SKIPPED,
           rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
           1L
       );
     } else if (loadQueueManager.loadSegment(loadableSegment, targetServer, SegmentAction.LOAD)) {
-      params.getCoordinatorStats().add(
+      params.getDruidRunStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
           rowKey.build(),
           1L
@@ -156,7 +156,7 @@ public class CloneHistoricals implements CoordinatorDuty
     if (targetServer.isLoadingSegment(segment)) {
       targetServer.cancelOperation(SegmentAction.LOAD, segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
-      params.getCoordinatorStats().add(
+      params.getDruidRunStats().add(
           Stats.Segments.DROPPED_FROM_CLONE,
           RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
           1L

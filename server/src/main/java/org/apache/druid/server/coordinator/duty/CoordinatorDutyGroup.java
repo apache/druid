@@ -25,9 +25,9 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
@@ -108,7 +108,7 @@ public class CoordinatorDutyGroup
     }
 
     markRunStarted();
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
     for (CoordinatorDuty duty : duties) {
       if (coordinator.isLeader()) {
         final Stopwatch dutyRunTime = Stopwatch.createStarted();

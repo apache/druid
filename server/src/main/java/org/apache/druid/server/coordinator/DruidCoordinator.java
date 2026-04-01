@@ -89,9 +89,9 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -811,7 +811,7 @@ public class DruidCoordinator
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
       // Collect stats for unavailable and under-replicated segments
-      final CoordinatorRunStats stats = params.getCoordinatorStats();
+      final DruidRunStats stats = params.getDruidRunStats();
       getDatasourceToUnavailableSegmentCount().forEach(
           (dataSource, numUnavailable) -> stats.add(
               Stats.Segments.UNAVAILABLE,
@@ -845,7 +845,7 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
-      final CoordinatorRunStats stats = params.getCoordinatorStats();
+      final DruidRunStats stats = params.getDruidRunStats();
       taskMaster.getAllPeons().forEach((serverName, queuePeon) -> {
         final RowKey rowKey = RowKey.of(Dimension.SERVER, serverName);
         stats.add(Stats.SegmentQueue.BYTES_TO_LOAD, rowKey, queuePeon.getSizeOfSegmentsToLoad());

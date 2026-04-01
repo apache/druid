@@ -20,9 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.After;
 import org.junit.Assert;
@@ -32,14 +32,14 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CoordinatorRunStatsTest
+public class DruidRunStatsTest
 {
-  private CoordinatorRunStats stats;
+  private DruidRunStats stats;
 
   @Before
   public void setUp()
   {
-    stats = new CoordinatorRunStats();
+    stats = new DruidRunStats();
   }
 
   @After
@@ -152,7 +152,7 @@ public class CoordinatorRunStatsTest
   @Test
   public void testBuildStatsTableWithDebugDimensions()
   {
-    final CoordinatorRunStats debugStats = new CoordinatorRunStats(Key.DUTY_1.getValues());
+    final DruidRunStats debugStats = new DruidRunStats(Key.DUTY_1.getValues());
     debugStats.add(Stat.ERROR_1, Key.DUTY_1, 10);
     debugStats.add(Stat.INFO_1, Key.DUTY_1, 20);
     debugStats.add(Stat.DEBUG_1, Key.DUTY_1, 30);
@@ -168,7 +168,7 @@ public class CoordinatorRunStatsTest
   @Test
   public void testAddToEmptyThrowsException()
   {
-    CoordinatorRunStats runStats = CoordinatorRunStats.empty();
+    DruidRunStats runStats = DruidRunStats.empty();
     Assert.assertThrows(
         UnsupportedOperationException.class,
         () -> runStats.add(Stat.ERROR_1, 10)

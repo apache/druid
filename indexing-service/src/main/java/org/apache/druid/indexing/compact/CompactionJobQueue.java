@@ -50,8 +50,8 @@ import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
@@ -95,7 +95,7 @@ public class CompactionJobQueue
 
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final PriorityQueue<CompactionJob> queue;
-  private final CoordinatorRunStats runStats;
+  private final DruidRunStats runStats;
 
   private final Set<String> activeSupervisors;
   private final Map<String, CompactionJob> submittedTaskIdToJob;
@@ -116,7 +116,7 @@ public class CompactionJobQueue
       IndexingStateCache indexingStateCache
   )
   {
-    this.runStats = new CoordinatorRunStats();
+    this.runStats = new DruidRunStats();
     this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.searchPolicy = clusterCompactionConfig.getCompactionPolicy();
@@ -251,7 +251,7 @@ public class CompactionJobQueue
     }
   }
 
-  public CoordinatorRunStats getRunStats()
+  public DruidRunStats getRunStats()
   {
     return runStats;
   }

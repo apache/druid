@@ -35,7 +35,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -69,14 +69,14 @@ public class KillCompactionConfigTest
 
   private CoordinatorConfigManager coordinatorConfigManager;
   private KillCompactionConfig killCompactionConfig;
-  private CoordinatorRunStats runStats;
+  private DruidRunStats runStats;
 
   @Before
   public void setup()
   {
-    runStats = new CoordinatorRunStats();
+    runStats = new DruidRunStats();
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getDruidRunStats()).thenReturn(runStats);
     coordinatorConfigManager = new CoordinatorConfigManager(
         mockJacksonConfigManager,
         mockConnector,

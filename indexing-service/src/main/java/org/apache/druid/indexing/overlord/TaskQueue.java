@@ -66,8 +66,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
@@ -987,7 +987,7 @@ public class TaskQueue
     }
   }
 
-  public CoordinatorRunStats getQueueStats()
+  public DruidRunStats getQueueStats()
   {
     final int queuedUpdates = statusUpdatesInQueue.get();
     final int handledUpdates = handledStatusUpdates.getAndSet(0);
@@ -995,7 +995,7 @@ public class TaskQueue
       log.info("There are [%d] task status updates in queue, handled [%d]", queuedUpdates, handledUpdates);
     }
 
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    final DruidRunStats stats = new DruidRunStats();
     stats.add(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE, queuedUpdates);
     stats.add(Stats.TaskQueue.HANDLED_STATUS_UPDATES, handledUpdates);
     return stats;

@@ -50,8 +50,8 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -159,7 +159,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -223,7 +223,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -295,7 +295,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -378,7 +378,7 @@ public class RunRulesTest
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
@@ -431,7 +431,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -557,7 +557,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
   }
 
@@ -608,7 +608,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
@@ -655,7 +655,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
@@ -698,7 +698,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
@@ -756,7 +756,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
 
     EasyMock.verify(mockPeon);
@@ -810,7 +810,7 @@ public class RunRulesTest
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -889,7 +889,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
@@ -953,7 +953,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
 
     // There is no throttling on drop
     Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
@@ -1008,7 +1008,7 @@ public class RunRulesTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -1070,7 +1070,7 @@ public class RunRulesTest
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -1124,7 +1124,7 @@ public class RunRulesTest
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -1179,7 +1179,7 @@ public class RunRulesTest
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
@@ -1241,7 +1241,7 @@ public class RunRulesTest
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
-    CoordinatorRunStats stats = runDutyAndGetStats(params);
+    DruidRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
@@ -1286,10 +1286,10 @@ public class RunRulesTest
     Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
   }
 
-  private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)
+  private DruidRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)
   {
     params = ruleRunner.run(params);
-    return params.getCoordinatorStats();
+    return params.getDruidRunStats();
   }
 
   private void mockEmptyPeon()

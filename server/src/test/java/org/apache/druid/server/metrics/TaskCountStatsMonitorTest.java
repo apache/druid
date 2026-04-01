@@ -21,9 +21,9 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.Assert;
 import org.junit.Before;
@@ -77,9 +77,9 @@ public class TaskCountStatsMonitorTest
       }
 
       @Override
-      public CoordinatorRunStats getStats()
+      public DruidRunStats getStats()
       {
-        final CoordinatorRunStats stats = new CoordinatorRunStats();
+        final DruidRunStats stats = new DruidRunStats();
         stats.add(Stat.INFO_1, 10);
         stats.addToSegmentStat(Stat.DEBUG_1, "hot", "wiki", 20);
         return stats;

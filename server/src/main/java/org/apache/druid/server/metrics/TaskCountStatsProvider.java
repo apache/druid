@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
@@ -63,5 +63,5 @@ public interface TaskCountStatsProvider
    *
    * @return All task stats collected since the previous invocation of this method.
    */
-  CoordinatorRunStats getStats();
+  DruidRunStats getStats();
 }

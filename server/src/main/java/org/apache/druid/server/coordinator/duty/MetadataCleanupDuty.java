@@ -86,7 +86,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
           log.info("Removed [%,d] [%s] created before [%s].", deletedEntries, entryType, minCreatedTime);
         }
 
-        params.getCoordinatorStats().add(cleanupCountStat, deletedEntries);
+        params.getDruidRunStats().add(cleanupCountStat, deletedEntries);
       }
       catch (Exception e) {
         log.error(e, "Failed to perform cleanup of [%s]", entryType);

@@ -32,8 +32,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -68,7 +68,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       = Comparator.<Pair<Double, ServerHolder>, Double>comparing(pair -> pair.lhs)
       .thenComparing(pair -> pair.rhs);
 
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final DruidRunStats stats = new DruidRunStats();
   private final AtomicLong computeTimeNanos = new AtomicLong(0);
 
   public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
@@ -265,7 +265,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public CoordinatorRunStats getStats()
+  public DruidRunStats getStats()
   {
     stats.add(
         Stats.Balancer.COMPUTATION_TIME,

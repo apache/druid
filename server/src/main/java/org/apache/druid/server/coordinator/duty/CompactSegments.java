@@ -59,8 +59,8 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -133,7 +133,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           params.getCompactionConfig(),
           params.getDataSourcesSnapshot(),
           CompactionEngine.NATIVE,
-          params.getCoordinatorStats()
+          params.getDruidRunStats()
       );
     }
     return params;
@@ -143,7 +143,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       DruidCompactionConfig dynamicConfig,
       DataSourcesSnapshot dataSources,
       CompactionEngine defaultEngine,
-      CoordinatorRunStats stats
+      DruidRunStats stats
   )
   {
     final int maxCompactionTaskSlots = dynamicConfig.getMaxCompactionTaskSlots();

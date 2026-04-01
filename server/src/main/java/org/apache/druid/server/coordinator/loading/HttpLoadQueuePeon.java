@@ -42,9 +42,9 @@ import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
@@ -89,7 +89,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private static final long DEFAULT_TIMEOUT = 10000L;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
+  private final AtomicReference<DruidRunStats> stats = new AtomicReference<>(new DruidRunStats());
 
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
@@ -574,9 +574,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public DruidRunStats getAndResetStats()
   {
-    return stats.getAndSet(new CoordinatorRunStats());
+    return stats.getAndSet(new DruidRunStats());
   }
 
   @Override

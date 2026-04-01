@@ -97,7 +97,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -382,7 +382,7 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+    final DruidRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -505,7 +505,7 @@ public class CompactSegmentsTest
     // 3 intervals, 120 byte, 12 segments already compacted before the run
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+      final DruidRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -531,7 +531,7 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+    final DruidRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -568,7 +568,7 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+    final DruidRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -659,7 +659,7 @@ public class CompactSegmentsTest
     // 3 intervals, 1200 byte (each segment is 100 bytes), 12 segments will be skipped by auto compaction
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+      final DruidRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -683,7 +683,7 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+    final DruidRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -711,7 +711,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
-    final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
+    final DruidRunStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
@@ -730,7 +730,7 @@ public class CompactSegmentsTest
     Assert.assertTrue(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
-    final CoordinatorRunStats stats =
+    final DruidRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
@@ -750,7 +750,7 @@ public class CompactSegmentsTest
     Assert.assertFalse(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
-    final CoordinatorRunStats stats =
+    final DruidRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
@@ -1193,7 +1193,7 @@ public class CompactSegmentsTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CoordinatorRunStats stats = doCompactSegments(
+    DruidRunStats stats = doCompactSegments(
         compactSegments,
         ImmutableList.of(compactionConfig)
     );
@@ -1230,7 +1230,7 @@ public class CompactSegmentsTest
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
-    final CoordinatorRunStats stats;
+    final DruidRunStats stats;
     // Native uses maxNumConcurrentSubTasks for task slots whereas MSQ uses maxNumTasks.
     if (engine == CompactionEngine.NATIVE) {
       stats = doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
@@ -1267,7 +1267,7 @@ public class CompactSegmentsTest
     // Verify that locked intervals are skipped and only one compaction task
     // is submitted for dataSource_0
     CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
-    final CoordinatorRunStats stats =
+    final DruidRunStats stats =
         doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
     Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(1, overlordClient.submittedCompactionTasks.size());
@@ -1575,7 +1575,7 @@ public class CompactSegmentsTest
   {
     for (int dataSourceIndex = 0; dataSourceIndex < 3; dataSourceIndex++) {
       // One compaction task triggered
-      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+      final DruidRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -1640,17 +1640,17 @@ public class CompactSegmentsTest
     }
   }
 
-  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments)
+  private DruidRunStats doCompactSegments(CompactSegments compactSegments)
   {
     return doCompactSegments(compactSegments, (Integer) null);
   }
 
-  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
+  private DruidRunStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
   {
     return doCompactSegments(compactSegments, createCompactionConfigs(), numCompactionTaskSlots);
   }
 
-  private CoordinatorRunStats doCompactSegments(
+  private DruidRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs
   )
@@ -1658,7 +1658,7 @@ public class CompactSegmentsTest
     return doCompactSegments(compactSegments, compactionConfigs, null);
   }
 
-  private CoordinatorRunStats doCompactSegments(
+  private DruidRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs,
       @Nullable Integer numCompactionTaskSlots
@@ -1679,7 +1679,7 @@ public class CompactSegmentsTest
             )
         )
         .build();
-    return compactSegments.run(params).getCoordinatorStats();
+    return compactSegments.run(params).getDruidRunStats();
   }
 
   private void assertCompactSegments(
@@ -1708,7 +1708,7 @@ public class CompactSegmentsTest
     }
 
     for (int i = 0; i < 3; i++) {
-      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+      final DruidRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           expectedCompactTaskCount,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
@@ -1775,7 +1775,7 @@ public class CompactSegmentsTest
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     addMoreData(dataSource, 9);
 
-    CoordinatorRunStats stats = doCompactSegments(compactSegments);
+    DruidRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)

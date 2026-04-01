@@ -32,8 +32,8 @@ import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -69,7 +69,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is assigned to servers of all tiers
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
@@ -89,7 +89,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that serverT11 is already serving and serverT12 is loading segment
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
@@ -109,7 +109,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
     Assert.assertTrue(activeServer.isLoadingSegment(wikiSegment));
@@ -129,7 +129,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is dropped only from the decommissioning server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER_1, TestDataSource.WIKI));
@@ -156,7 +156,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    final DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is assigned to historical, broker as well as indexer
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
@@ -201,7 +201,7 @@ public class BroadcastDistributionRuleTest
     DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
 
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    final DruidRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that the segment is broadcast only to the eligible server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
@@ -218,7 +218,7 @@ public class BroadcastDistributionRuleTest
     Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
   }
 
-  private CoordinatorRunStats runRuleOnSegment(
+  private DruidRunStats runRuleOnSegment(
       Rule rule,
       DataSegment segment,
       DruidCoordinatorRuntimeParams params
@@ -226,7 +226,7 @@ public class BroadcastDistributionRuleTest
   {
     StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     rule.run(segment, segmentAssigner);
-    return params.getCoordinatorStats();
+    return params.getDruidRunStats();
   }
 
   private DruidCoordinatorRuntimeParams makeParamsWithUsedSegments(
