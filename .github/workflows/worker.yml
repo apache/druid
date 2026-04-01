@@ -119,4 +119,3 @@ jobs:
             **/TEST-*.xml
             **/target/jacoco*.exec
             **/target/jstack*
-            task-logs/
