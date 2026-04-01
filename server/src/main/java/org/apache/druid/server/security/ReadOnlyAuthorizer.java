@@ -17,17 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authorization;
+package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Authorizer;
-import org.apache.druid.server.security.Resource;
 
 @JsonTypeName("readonly")
 public class ReadOnlyAuthorizer implements Authorizer

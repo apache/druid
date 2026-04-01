@@ -17,14 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.security.authorization;
+package org.apache.druid.server.security;
 
-import org.apache.druid.security.basic.authorization.ReadOnlyAuthorizer;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceType;
 import org.junit.Assert;
 import org.junit.Test;
 

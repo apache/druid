@@ -35,7 +35,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthorizer.class)
+    @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthorizer.class),
+    @JsonSubTypes.Type(name = AuthConfig.READ_ONLY_NAME, value = ReadOnlyAuthorizer.class)
 })
 public interface Authorizer
 {
