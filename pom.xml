@@ -2363,6 +2363,7 @@
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
                                 <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
+                                <exclude>**/dist_jars.txt</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
