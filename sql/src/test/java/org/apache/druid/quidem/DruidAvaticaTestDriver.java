@@ -48,7 +48,6 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
