@@ -402,6 +402,40 @@ Array of LDAP group filters used to filter out the allowed set of groups returne
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
+#### ReadOnly Authorizer
+
+The ReadOnly authorizer allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+
+Example configuration:
+
+```
+# Authenticator chain - Basic first for internal, then anonymous for external
+druid.auth.authenticatorChain=["basic", "anonymous"]
+
+# Basic authenticator for internal user
+druid.auth.authenticator.basic.type=basic
+druid.auth.authenticator.basic.initialAdminPassword=<password>
+druid.auth.authenticator.basic.authorizerName=allowAll
+
+# Anonymous authenticator for external users
+druid.auth.authenticator.anonymous.type=anonymous
+druid.auth.authenticator.anonymous.identity=externalUser
+druid.auth.authenticator.anonymous.authorizerName=readonly
+
+# Both authorizers
+druid.auth.authorizers=["allowAll", "readonly"]
+
+# Escalator with Basic auth for internal communications
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=druid_system
+druid.escalator.internalClientPassword=<password>
+druid.escalator.authorizerName=allowAll
+```
+
+With this configuration:
+- Internal Druid communications use Basic authentication → AllowAll authorizer → full access
+- External users with no authentication → Anonymous authenticator → ReadOnly authorizer → read-only access
+
 #### Properties for LDAPS
 
 Use the following properties to configure Druid authentication with LDAP over TLS (LDAPS). See [Configure LDAP authentication](../../operations/auth-ldap.md) for more information.
