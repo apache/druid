@@ -22,3 +22,21 @@ export interface TieredServers {
   serverToTier: Record<string, string>;
   allServers: string[];
 }
+
+export function buildTieredServers(rows: { server: string; tier: string }[]): TieredServers {
+  const serversByTier: Record<string, string[]> = {};
+  const serverToTier: Record<string, string> = {};
+  for (const row of rows) {
+    if (!serversByTier[row.tier]) {
+      serversByTier[row.tier] = [];
+    }
+    serversByTier[row.tier].push(row.server);
+    serverToTier[row.server] = row.tier;
+  }
+  const tiers = Object.keys(serversByTier).sort();
+  for (const tier of tiers) {
+    serversByTier[tier].sort();
+  }
+  const allServers = tiers.flatMap(t => serversByTier[t]);
+  return { tiers, serversByTier, serverToTier, allServers };
+}

@@ -35,30 +35,13 @@ import { CloneServerMappingDialog } from './clone-server-mapping-dialog';
 import { COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS } from './coordinator-dynamic-config-completions';
 import { ServerMultiSelectDialog } from './server-multi-select-dialog';
 import type { TieredServers } from './tiered-servers';
+import { buildTieredServers } from './tiered-servers';
 
 import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps {
   capabilities: Capabilities;
   onClose(): void;
-}
-
-function buildTieredServers(rows: { server: string; tier: string }[]): TieredServers {
-  const serversByTier: Record<string, string[]> = {};
-  const serverToTier: Record<string, string> = {};
-  for (const row of rows) {
-    if (!serversByTier[row.tier]) {
-      serversByTier[row.tier] = [];
-    }
-    serversByTier[row.tier].push(row.server);
-    serverToTier[row.server] = row.tier;
-  }
-  const tiers = Object.keys(serversByTier).sort();
-  for (const tier of tiers) {
-    serversByTier[tier].sort();
-  }
-  const allServers = tiers.flatMap(t => serversByTier[t]);
-  return { tiers, serversByTier, serverToTier, allServers };
 }
 
 function attachServerPickerDialogs(
