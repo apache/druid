@@ -85,7 +85,7 @@ function buildServerPickerFields(
           title="Decommissioning nodes"
           servers={servers}
           selectedServers={value || []}
-          onSave={v => onValueChange(v.length > 0 ? v : undefined)}
+          onSave={v => onValueChange(v)}
           onClose={onClose}
         />
       ),
@@ -115,7 +115,7 @@ function buildServerPickerFields(
           title="Turbo loading nodes"
           servers={servers}
           selectedServers={value || []}
-          onSave={v => onValueChange(v.length > 0 ? v : undefined)}
+          onSave={v => onValueChange(v)}
           onClose={onClose}
         />
       ),
@@ -123,6 +123,7 @@ function buildServerPickerFields(
     {
       name: 'cloneServers',
       type: 'custom',
+      experimental: true,
       info: (
         <>
           <p>

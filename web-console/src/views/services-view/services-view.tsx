@@ -176,15 +176,27 @@ interface CloneStatusInfo {
   readonly bytesToLoad: number;
 }
 
+interface ServerModeInfo {
+  readonly turboLoadingNodes: Set<string>;
+  readonly decommissioningNodes: Set<string>;
+}
+
 interface ServicesWithAuxiliaryInfo {
   readonly services: ServiceResultRow[];
   readonly loadQueueInfo: Record<string, LoadQueueInfo>;
   readonly cloneStatus: Record<string, CloneStatusInfo>;
+  readonly serverMode: ServerModeInfo;
   readonly workerInfo: Record<string, WorkerInfo>;
 }
 
 export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
 export const CloneStatusContext = createContext<Record<string, CloneStatusInfo>>({});
+
+const DEFAULT_SERVER_MODE: ServerModeInfo = {
+  turboLoadingNodes: new Set(),
+  decommissioningNodes: new Set(),
+};
+export const ServerModeContext = createContext<ServerModeInfo>(DEFAULT_SERVER_MODE);
 
 interface LoadQueueInfo {
   readonly segmentsToDrop: NumberLike;
@@ -399,6 +411,24 @@ ORDER BY
           });
         }
 
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            try {
+              const config = (await Api.instance.get('/druid/coordinator/v1/config', { signal }))
+                .data;
+              return {
+                ...servicesWithAuxiliaryInfo,
+                serverMode: {
+                  turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
+                  decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
+                },
+              };
+            } catch {
+              return servicesWithAuxiliaryInfo;
+            }
+          });
+        }
+
         if (capabilities.hasOverlordAccess()) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
@@ -433,7 +463,13 @@ ORDER BY
         }
 
         return new ResultWithAuxiliaryWork<ServicesWithAuxiliaryInfo>(
-          { services, loadQueueInfo: {}, cloneStatus: {}, workerInfo: {} },
+          {
+            services,
+            loadQueueInfo: {},
+            cloneStatus: {},
+            serverMode: DEFAULT_SERVER_MODE,
+            workerInfo: {},
+          },
           auxiliaryQueries,
         );
       },
@@ -484,32 +520,35 @@ ORDER BY
     const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const { services, loadQueueInfo, cloneStatus, workerInfo } = servicesState.data || {
+    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo } = servicesState.data || {
       services: [],
       loadQueueInfo: {},
       cloneStatus: {},
+      serverMode: DEFAULT_SERVER_MODE,
       workerInfo: {},
     };
 
     return (
       <LoadQueueInfoContext.Provider value={loadQueueInfo}>
         <CloneStatusContext.Provider value={cloneStatus}>
-          <ReactTable
-            data={services}
-            loading={servicesState.loading}
-            noDataText={
-              servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
-            }
-            filterable
-            filtered={filters.toFilters()}
-            className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
-            onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
-            pivotBy={groupServicesBy ? [groupServicesBy] : []}
-            defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
-            pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-            showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-            columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
-          />
+          <ServerModeContext.Provider value={serverMode}>
+            <ReactTable
+              data={services}
+              loading={servicesState.loading}
+              noDataText={
+                servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+              }
+              filterable
+              filtered={filters.toFilters()}
+              className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
+              onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
+              pivotBy={groupServicesBy ? [groupServicesBy] : []}
+              defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+              pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+              showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
+              columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+            />
+          </ServerModeContext.Provider>
         </CloneStatusContext.Provider>
       </LoadQueueInfoContext.Provider>
     );
@@ -859,6 +898,7 @@ ORDER BY
             const { service_type, service, is_leader } = original;
             const loadQueueInfoContext = useContext(LoadQueueInfoContext);
             const cloneStatusContext = useContext(CloneStatusContext);
+            const serverModeInfo = useContext(ServerModeContext);
 
             switch (service_type) {
               case 'middle_manager':
@@ -889,6 +929,12 @@ ORDER BY
                 const cloneInfo = cloneStatusContext[service];
 
                 const parts: string[] = [];
+                if (serverModeInfo.decommissioningNodes.has(service)) {
+                  parts.push('DECOMMISSIONING');
+                }
+                if (serverModeInfo.turboLoadingNodes.has(service)) {
+                  parts.push('TURBO SEGMENT LOADING');
+                }
                 if (loadQueueInfo) {
                   parts.push(formatLoadQueueInfo(loadQueueInfo));
                 }

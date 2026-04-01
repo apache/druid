@@ -64,7 +64,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
         result[m.target] = m.source;
       }
     }
-    onSave(Object.keys(result).length > 0 ? result : (undefined as any));
+    onSave(result);
     onClose();
   }
 
