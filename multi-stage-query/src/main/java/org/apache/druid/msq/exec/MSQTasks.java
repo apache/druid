@@ -21,17 +21,18 @@ package org.apache.druid.msq.exec;
 
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.DruidExceptionFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
-import org.apache.druid.msq.indexing.error.QueryRuntimeFault;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -221,8 +222,7 @@ public class MSQTasks
     logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
-      if (errorReport.getFault() instanceof UnknownFault || errorReport.getFault() instanceof QueryRuntimeFault) {
-        // Log full stack trace for UnknownFault and QueryRuntimeFault
+      if (logFullStackTrace(errorReport.getFault())) {
         logMessage.append('\n').append(errorReport.getExceptionStackTrace());
       } else {
         // Log first line only (error class, message) for known faults, to avoid polluting logs.
@@ -236,5 +236,19 @@ public class MSQTasks
     }
 
     return logMessage.toString();
+  }
+
+  /**
+   * Log full stack trace for UnknownFault and non-USER DruidExceptions.
+   */
+  static boolean logFullStackTrace(final MSQFault fault)
+  {
+    if (fault instanceof UnknownFault) {
+      return true;
+    } else if (fault instanceof DruidExceptionFault) {
+      return !DruidException.Persona.USER.name().equals(((DruidExceptionFault) fault).getPersona());
+    } else {
+      return false;
+    }
   }
 }

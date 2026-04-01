@@ -36,7 +36,7 @@ public class CanceledFault extends BaseMSQFault
   @JsonCreator
   public CanceledFault(@JsonProperty("reason") @Nullable CancellationReason reason)
   {
-    super(CODE, "Query canceled due to [%s].", reason == null ? CancellationReason.UNKNOWN : reason);
+    super(CODE, (reason == null ? CancellationReason.UNKNOWN : reason).getMessage());
     this.reason = reason == null ? CancellationReason.UNKNOWN : reason;
   }
 
@@ -70,7 +70,7 @@ public class CanceledFault extends BaseMSQFault
   public DruidException toDruidException()
   {
     return DruidException.forPersona(DruidException.Persona.USER)
-                         .ofCategory(DruidException.Category.CANCELED)
+                         .ofCategory(reason.getCategory())
                          .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }

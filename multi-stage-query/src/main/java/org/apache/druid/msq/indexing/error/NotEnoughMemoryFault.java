@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Objects;
@@ -128,6 +129,15 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   public int getMaxConcurrentStages()
   {
     return maxConcurrentStages;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
+                         .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

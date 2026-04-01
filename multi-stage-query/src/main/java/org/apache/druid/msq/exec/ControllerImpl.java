@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -698,7 +699,7 @@ public class ControllerImpl implements Controller
         }
       }
       catch (IOException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
             .build(e, "Exception occurred while connecting to export destination.");
       }
@@ -2253,6 +2254,7 @@ public class ControllerImpl implements Controller
       exec.cancel(RESULT_READER_CANCELLATION_ID);
     }
     catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
     finally {

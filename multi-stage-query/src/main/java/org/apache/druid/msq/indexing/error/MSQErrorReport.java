@@ -31,7 +31,6 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -227,6 +226,11 @@ public class MSQErrorReport
 
     Throwable cause = e;
 
+    // Remember the first DruidException we encounter, but keep walking the cause chain in case a more specific
+    // exception type is nested inside (e.g. when Either.valueOrThrow() wraps an InvalidNullByteException in a
+    // DruidException).
+    DruidException firstDruidException = null;
+
     // This method will grow as we try to add more faults and exceptions
     // One way of handling this would be to extend the faults to have a method like
     // public MSQFault fromException(@Nullable Throwable e) which returns the specific fault if it can be reconstructed
@@ -292,22 +296,31 @@ public class MSQErrorReport
         );
 
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
-        return new QueryRuntimeFault(
-            StringUtils.format(
-                "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
-                ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
-            ), cause.getMessage()
+        return DruidExceptionFault.fromDruidException(
+            DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                .build(
+                    cause,
+                    "Column [%s] is a multi-value string. "
+                    + "Please wrap the column using MV_TO_ARRAY() to proceed further.",
+                    ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
+                )
         );
       } else if (cause instanceof InterruptedException) {
         return CanceledFault.unknown();
-      } else if (cause.getClass().getPackage().getName().startsWith("org.apache.druid.query")) {
-        // catch all for all query runtime exception faults.
-        return new QueryRuntimeFault(e.getMessage(), null);
-      } else {
-        cause = cause.getCause();
+      } else if (cause instanceof DruidException && firstDruidException == null) {
+        firstDruidException = (DruidException) cause;
       }
+
+      cause = cause.getCause();
     }
 
-    return UnknownFault.forException(e);
+    if (firstDruidException != null) {
+      // Didn't find any more specific exception wrapped underneath the first DruidException, so go with that one.
+      return DruidExceptionFault.fromDruidException(firstDruidException);
+    } else {
+      return UnknownFault.forException(e);
+    }
   }
 }

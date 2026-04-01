@@ -130,7 +130,7 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
 
           if (!missingSegments.isEmpty()) {
             throw DruidException
-                .forPersona(DruidException.Persona.USER)
+                .forPersona(DruidException.Persona.OPERATOR)
                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                 .build(
                     "Segment[%s]%s not found on server[%s]. Please retry your query.",

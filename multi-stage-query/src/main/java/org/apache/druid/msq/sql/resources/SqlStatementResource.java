@@ -988,7 +988,7 @@ public class SqlStatementResource
   private void checkForDurableStorageConnectorImpl()
   {
     if (storageConnector instanceof NilStorageConnector) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
