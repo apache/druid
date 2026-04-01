@@ -436,7 +436,7 @@ druid.auth.authorizers=["BasicAuthorizer","ReadOnlyAuthorizer"]
 druid.auth.authorizer.BasicAuthorizer.type=basic
 
 # ReadOnlyAuthorizer configuration
-druid.auth.authorizer.ReadOnlyAuthorizer.type=readonly
+druid.auth.authorizer.ReadOnlyAuthorizer.type=readOnly
 ```
 
 With this configuration:
