@@ -85,8 +85,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
 
   const usedTargets = new Set(mappings.map(m => m.target).filter(Boolean));
   const usedSources = new Set(mappings.map(m => m.source).filter(Boolean));
-  const disabledTargets = new Set([...usedTargets, ...usedSources]);
-  const disabledSources = new Set([...usedTargets, ...usedSources]);
+  const disabledServers = new Set([...usedTargets, ...usedSources]);
   const hasInvalidMapping = mappings.some(
     m =>
       !m.target ||
@@ -132,8 +131,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
                         <ServerSelect
                           servers={servers}
                           value={mapping.target}
-                          disabledServers={disabledTargets}
-                          currentValue={mapping.target}
+                          disabledServers={disabledServers}
                           onChange={v => updateMapping(i, 'target', v)}
                         />
                       </td>
@@ -142,8 +140,7 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
                         <ServerSelect
                           servers={servers}
                           value={mapping.source}
-                          disabledServers={disabledSources}
-                          currentValue={mapping.source}
+                          disabledServers={disabledServers}
                           onChange={v => updateMapping(i, 'source', v)}
                         />
                       </td>
@@ -193,12 +190,11 @@ interface ServerSelectProps {
   servers: TieredServers;
   value: string;
   disabledServers?: Set<string>;
-  currentValue?: string;
   onChange(value: string): void;
 }
 
 function ServerSelect(props: ServerSelectProps) {
-  const { servers, value, disabledServers, currentValue, onChange } = props;
+  const { servers, value, disabledServers, onChange } = props;
 
   // Build a flat list of items with tier headers handled in the renderer
   const allItems = servers.allServers;
@@ -212,7 +208,7 @@ function ServerSelect(props: ServerSelectProps) {
         let lastTier: string | undefined;
         for (let i = 0; i < filteredItems.length; i++) {
           const item = filteredItems[i];
-          const tier = servers.serverToTier[item];
+          const tier = servers.serverToTier[item] || '';
           if (tier && tier !== lastTier) {
             elements.push(<MenuDivider key={`tier-${tier}`} title={tier} />);
             lastTier = tier;
@@ -223,9 +219,7 @@ function ServerSelect(props: ServerSelectProps) {
       }}
       itemRenderer={(item, { handleClick, handleFocus, modifiers }) => {
         if (!modifiers.matchesPredicate) return null;
-        const disabled = disabledServers
-          ? disabledServers.has(item) && item !== currentValue
-          : false;
+        const disabled = disabledServers ? disabledServers.has(item) && item !== value : false;
         return (
           <MenuItem
             key={item}

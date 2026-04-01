@@ -82,7 +82,18 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
     });
   }
 
-  const lowerSearch = searchText.toLowerCase();
+  const filteredTiers = useMemo(() => {
+    const lowerSearch = searchText.toLowerCase();
+    return servers
+      ? servers.tiers.map(tier => {
+          const tierServers = servers.serversByTier[tier] || [];
+          const filtered = lowerSearch
+            ? tierServers.filter(s => s.toLowerCase().includes(lowerSearch))
+            : tierServers;
+          return { tier, tierServers, filtered };
+        })
+      : [];
+  }, [servers, searchText]);
 
   return (
     <Dialog className="server-multi-select-dialog" title={title} isOpen onClose={onClose}>
@@ -92,7 +103,8 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
             {staleServers.length > 0 && (
               <Callout intent={Intent.WARNING} style={{ marginBottom: 10 }}>
                 {staleServers.length} selected server{staleServers.length > 1 ? 's are' : ' is'} no
-                longer in the cluster: {staleServers.join(', ')}.{' '}
+                longer in the cluster
+                {staleServers.length <= 5 ? `: ${staleServers.join(', ')}` : ''}.{' '}
                 <Button minimal small intent={Intent.WARNING} onClick={removeStaleServers}>
                   Remove
                 </Button>
@@ -106,12 +118,7 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
               style={{ marginBottom: 10 }}
             />
             <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-              {servers.tiers.map(tier => {
-                const tierServers = servers.serversByTier[tier] || [];
-                const filteredServers = lowerSearch
-                  ? tierServers.filter(s => s.toLowerCase().includes(lowerSearch))
-                  : tierServers;
-
+              {filteredTiers.map(({ tier, tierServers, filtered: filteredServers }) => {
                 if (filteredServers.length === 0) return null;
 
                 const hiddenCount = tierServers.length - filteredServers.length;

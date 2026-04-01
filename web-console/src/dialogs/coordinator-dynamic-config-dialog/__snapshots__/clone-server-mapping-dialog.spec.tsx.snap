@@ -69,7 +69,6 @@ exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = 
           <tr>
             <td>
               <ServerSelect
-                currentValue="host2:8083"
                 disabledServers={
                   Set {
                     "host2:8083",
@@ -116,7 +115,6 @@ exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = 
             </td>
             <td>
               <ServerSelect
-                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host2:8083",
@@ -310,7 +308,6 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
           <tr>
             <td>
               <ServerSelect
-                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host1:8083",
@@ -357,7 +354,6 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
             </td>
             <td>
               <ServerSelect
-                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host1:8083",
@@ -404,7 +400,6 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
           <tr>
             <td>
               <ServerSelect
-                currentValue="host2:8083"
                 disabledServers={
                   Set {
                     "host1:8083",
@@ -451,7 +446,6 @@ exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save b
             </td>
             <td>
               <ServerSelect
-                currentValue="host1:8083"
                 disabledServers={
                   Set {
                     "host1:8083",
