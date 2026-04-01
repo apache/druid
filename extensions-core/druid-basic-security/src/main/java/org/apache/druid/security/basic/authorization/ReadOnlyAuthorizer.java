@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.security.basic.authorization;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,9 +25,18 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.Authorizer;
+import org.apache.druid.server.security.Resource;
 
 import javax.annotation.Nullable;
 
+/**
+ * An authorizer that allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+ */
 @JsonTypeName("readonly")
 public class ReadOnlyAuthorizer implements Authorizer
 {

@@ -135,15 +135,11 @@ druid.auth.authorizers=["basic"]
 
 Only a single Authorizer will authorize any given request.
 
-Druid includes two built-in authorizers:
+Druid includes one built-in authorizer:
 
 ### AllowAll authorizer
 
 The Authorizer with type name "allowAll" accepts all requests.
-
-### ReadOnly authorizer
-
-The Authorizer with type name "readonly" allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
 
 ## Default Unsecured Configuration
 

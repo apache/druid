@@ -46,8 +46,6 @@ public class AuthConfig
 
   public static final String ALLOW_ALL_NAME = "allowAll";
 
-  public static final String READ_ONLY_NAME = "readonly";
-
   public static final String ANONYMOUS_NAME = "anonymous";
 
   public static final String TRUSTED_DOMAIN_NAME = "trustedDomain";
