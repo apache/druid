@@ -509,9 +509,7 @@ ORDER BY
                 ? {
                     serverMode: {
                       turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
-                      decommissioningNodes: new Set<string>(
-                        configResp.decommissioningNodes || [],
-                      ),
+                      decommissioningNodes: new Set<string>(configResp.decommissioningNodes || []),
                     },
                   }
                 : {}),
