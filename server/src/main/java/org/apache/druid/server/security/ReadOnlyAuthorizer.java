@@ -20,19 +20,28 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.policy.Policy;
+
+import javax.annotation.Nullable;
 
 @JsonTypeName("readonly")
 public class ReadOnlyAuthorizer implements Authorizer
 {
   private static final Logger LOG = new Logger(ReadOnlyAuthorizer.class);
 
-  @JsonCreator
-  public ReadOnlyAuthorizer()
-  {
+  @Nullable
+  private final Policy policy;
 
+  @JsonCreator
+  public ReadOnlyAuthorizer(
+      @JsonProperty("policy") @Nullable Policy policy
+  )
+  {
+    this.policy = policy;
   }
 
   @Override
@@ -42,10 +51,17 @@ public class ReadOnlyAuthorizer implements Authorizer
       throw new IAE("authenticationResult is null where it should never be.");
     }
     if (action == Action.READ) {
+      if (shouldApplyPolicy(resource, action)) {
+        return Access.allowWithRestriction(policy);
+      }
       return Access.OK;
     }
     LOG.info("Authorization failed for user=%s on action=%s, %s", authenticationResult.getIdentity(), action, resource);
     return Access.deny(null);
   }
 
+  private boolean shouldApplyPolicy(Resource resource, Action action)
+  {
+    return policy != null && AuthorizationUtils.shouldApplyPolicy(resource, action);
+  }
 }
