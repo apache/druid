@@ -409,27 +409,34 @@ The ReadOnly authorizer allows all READ operations and denies all other operatio
 Example configuration:
 
 ```
-# Authenticator chain - Basic first for internal, then anonymous for external
-druid.auth.authenticatorChain=["basic", "anonymous"]
+druid.auth.authenticatorChain=["basic","anonymous"]
 
 # Basic authenticator for internal user
 druid.auth.authenticator.basic.type=basic
-druid.auth.authenticator.basic.initialAdminPassword=<password>
-druid.auth.authenticator.basic.authorizerName=allowAll
+druid.auth.authenticator.basic.initialAdminPassword=password
+druid.auth.authenticator.basic.initialInternalClientPassword=password
+druid.auth.authenticator.basic.credentialsValidator.type=metadata
+druid.auth.authenticator.basic.authorizerName=BasicAuthorizer
 
 # Anonymous authenticator for external users
 druid.auth.authenticator.anonymous.type=anonymous
-druid.auth.authenticator.anonymous.identity=externalUser
-druid.auth.authenticator.anonymous.authorizerName=readonly
-
-# Both authorizers
-druid.auth.authorizers=["allowAll", "readonly"]
+druid.auth.authenticator.anonymous.identity=defaultUser
+druid.auth.authenticator.anonymous.authorizerName=ReadOnlyAuthorizer
 
 # Escalator with Basic auth for internal communications
 druid.escalator.type=basic
 druid.escalator.internalClientUsername=druid_system
-druid.escalator.internalClientPassword=<password>
-druid.escalator.authorizerName=allowAll
+druid.escalator.internalClientPassword=password
+druid.escalator.authorizerName=BasicAuthorizer
+
+# Both authorizers
+druid.auth.authorizers=["BasicAuthorizer","ReadOnlyAuthorizer"]
+
+# BasicAuthorizer configuration
+druid.auth.authorizer.BasicAuthorizer.type=basic
+
+# ReadOnlyAuthorizer configuration
+druid.auth.authorizer.ReadOnlyAuthorizer.type=readonly
 ```
 
 With this configuration:
