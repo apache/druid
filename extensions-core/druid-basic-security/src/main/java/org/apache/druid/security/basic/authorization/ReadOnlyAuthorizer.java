@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 /**
  * An authorizer that allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
  */
-@JsonTypeName("readonly")
+@JsonTypeName("readOnly")
 public class ReadOnlyAuthorizer implements Authorizer
 {
   private static final Logger LOG = new Logger(ReadOnlyAuthorizer.class);
