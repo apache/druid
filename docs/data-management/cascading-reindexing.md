@@ -23,7 +23,7 @@ title: "Cascading reindexing"
   -->
 
 :::info
-Cascading reindexing is an experimental feature introduced in Druid 37. Its API may change in future releases. This feature is only for automatic compaction using [compaction supervisors](automatic-compaction.md#auto-compaction-using-compaction-supervisors) with the [MSQ compaction engine](automatic-compaction.md#use-msq-for-auto-compaction).
+Cascading reindexing is an experimental feature introduced in Druid 37. Its API may change in future releases. This feature is only for automatic compaction using [compaction supervisors](automatic-compaction.md#auto-compaction-using-compaction-supervisors) with the [MSQ task engine](automatic-compaction.md#use-msq-for-auto-compaction).
 :::
 
 Cascading reindexing is a compaction supervisor template that lets you define age-based rules to automatically apply different compaction configurations as data ages. Instead of a single flat compaction configuration for an entire datasource, you define rules that say "for data older than X, apply configuration Y." Reindexing is a more general term than compaction. Reindexing not only can merge segments with the same schema and partitioning, but also can change the segment schema, partitioning, and encoding. Cascading reindexing gives you fine-grained control over how your data evolves over time.
@@ -336,7 +336,11 @@ Example:
 
 ## Example
 
-The following example uses the `wikipedia` datasource and demonstrates a cascading reindexing supervisor with a partitioning rule and a deletion rule. Data older than 30 days is compacted into daily range-partitioned segments, and robot edits are deleted from data older than 90 days. The `skipOffsetFromLatest` setting skips the most recent day of data.
+The following example uses the `wikipedia` datasource and demonstrates a cascading reindexing supervisor with a partitioning rule and a deletion rule that does the following:
+
+- Data older than 30 days is compacted into daily range-partitioned segments.
+- Rows that have a `isRobot` column with a `true` value are deleted from data older than 90 days. 
+- The `skipOffsetFromLatest` setting skips the most recent day of data.
 
 ```bash
 curl --location --request POST 'http://localhost:8081/druid/indexer/v1/supervisor' \
@@ -395,11 +399,11 @@ This creates three timeline intervals:
 
 ## Limitations
 
-- **MSQ engine only.** Cascading reindexing requires the MSQ compaction engine. The native engine is not supported.
-- **Compaction supervisors only.** This feature is not available through Coordinator-duty-based auto-compaction.
+- **MSQ task engine only.** Cascading reindexing requires the MSQ task engine. The native engine is not supported.
+- **Compaction supervisors only.** This feature is not available for auto-compaction using Coordinator duties.
 - **No `partitionsSpec` in `tuningConfig`.** Partitioning is controlled exclusively by rules and defaults. Setting `partitionsSpec` inside `tuningConfig` causes a validation error.
 - **Granularity must not coarsen toward the present.** Segment granularity must stay the same or become finer as you move from older to newer data. For example, DAY to HOUR is valid; HOUR to DAY is not.
-- **`skipOffsetFromLatest` and `skipOffsetFromNow` are mutually exclusive.** You can set one or the other, but not both.
+- **`skipOffsetFromLatest` and `skipOffsetFromNow` are mutually exclusive.** You can set one or the other, not both.
 - **`ALL` segment granularity is not supported.** This is the same limitation as standard auto-compaction.
 
 ## Learn more
