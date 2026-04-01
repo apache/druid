@@ -574,7 +574,7 @@ Each entry in the `perSegmentTimeoutConfig` map is keyed by datasource name and 
 3. Cluster-wide default from `druid.query.default.context.perSegmentTimeout`
 
 > **Note:** For queries involving multiple datasources (e.g. joins or unions), the timeout from the
-> first matching datasource is applied. Since getTableNames() returns a Set, the match order is non-deterministic.
+> first matching datasource is applied. The match order is non-deterministic.
 > To avoid this, configure the same timeout for all datasources involved in such queries, or set `perSegmentTimeout` explicitly in the query context.
 
 **Example configuration:**
