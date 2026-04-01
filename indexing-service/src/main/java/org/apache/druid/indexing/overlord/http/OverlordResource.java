@@ -215,6 +215,13 @@ public class OverlordResource
         );
         if (taskAuthContext != null) {
           task.setTaskAuthContext(taskAuthContext);
+          if (task.getTaskAuthContext() == null) {
+            log.warn(
+                "Auth context was provided but task type [%s] does not support it (dropped for task [%s])",
+                task.getType(),
+                task.getId()
+            );
+          }
         }
       }
     }

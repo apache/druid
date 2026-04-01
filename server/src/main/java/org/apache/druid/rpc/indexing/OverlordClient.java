@@ -82,6 +82,9 @@ public interface OverlordClient
    * Run a task with the provided ID, payload, and additional HTTP headers to include on the request.
    * Used for forwarding caller identity context (e.g., auth tokens) from Broker to Overlord during
    * MSQ task submission.
+   *
+   * <p><b>Internal use only.</b> The {@code extraHeaders} map is applied directly to the HTTP request
+   * without validation. Callers must not pass user-controlled input as header names or values.
    */
   default ListenableFuture<Void> runTask(String taskId, Object taskObject, Map<String, String> extraHeaders)
   {

@@ -28,6 +28,7 @@ import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.iceberg.guice.HiveConf;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
@@ -50,6 +51,8 @@ import java.util.UUID;
  */
 public class RestIcebergCatalog extends IcebergCatalog
 {
+  private static final Logger log = new Logger(RestIcebergCatalog.class);
+
   public static final String TYPE_KEY = "rest";
 
   @JsonProperty
@@ -172,6 +175,7 @@ public class RestIcebergCatalog extends IcebergCatalog
       return VendedCredentials.extractFrom(table.io().properties());
     }
     catch (Exception e) {
+      log.warn(e, "Failed to extract vended credentials from FileIO properties");
       return null;
     }
   }

@@ -38,6 +38,11 @@ import java.util.Map;
  * and is available during task execution. It is NOT persisted to metadata storage - only the
  * non-sensitive fields (identity, metadata) are serialized.
  *
+ * <p><b>Credential lifetime:</b> Vended credentials (OAuth tokens, STS session tokens) have
+ * limited lifetimes, typically 1-12 hours. There is currently no credential refresh mechanism,
+ * so long-running tasks may fail when credentials expire. Task restarts are also not supported
+ * since the original credentials are not preserved.
+ *
  * @see TaskAuthContextRedactionMixIn
  */
 @ExtensionPoint
