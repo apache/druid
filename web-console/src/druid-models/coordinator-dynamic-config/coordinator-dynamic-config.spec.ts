@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { cloneCountSummary, serverCountSummary } from './coordinator-dynamic-config';
+import { serverCountSummary } from './coordinator-dynamic-config';
 
 describe('serverCountSummary', () => {
   it('returns None for undefined', () => {
@@ -37,27 +37,5 @@ describe('serverCountSummary', () => {
 
   it('returns plural for multiple servers', () => {
     expect(serverCountSummary(['server1', 'server2', 'server3'])).toBe('3 servers');
-  });
-});
-
-describe('cloneCountSummary', () => {
-  it('returns None for undefined', () => {
-    expect(cloneCountSummary(undefined)).toBe('None');
-  });
-
-  it('returns None for non-object', () => {
-    expect(cloneCountSummary('not an object')).toBe('None');
-  });
-
-  it('returns None for empty object', () => {
-    expect(cloneCountSummary({})).toBe('None');
-  });
-
-  it('returns singular for one mapping', () => {
-    expect(cloneCountSummary({ target1: 'source1' })).toBe('1 mapping');
-  });
-
-  it('returns plural for multiple mappings', () => {
-    expect(cloneCountSummary({ target1: 'source1', target2: 'source2' })).toBe('2 mappings');
   });
 });
