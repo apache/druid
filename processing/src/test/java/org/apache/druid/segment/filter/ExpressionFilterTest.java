@@ -142,8 +142,8 @@ public class ExpressionFilterTest extends BaseFilterTest
     // Empty String and "a" will not match
     assertFilterMatches(edf("dim3 < 2"), ImmutableList.of("3", "4", "6", "9"));
     assertFilterMatches(edf("dim3 < 2.0"), ImmutableList.of("3", "4", "6", "9"));
-    assertFilterMatchesSkipVectorize(edf("like(dim3, '1%')"), ImmutableList.of("1", "3", "4", "6", "9"));
-    assertFilterMatchesSkipVectorize(edf("array_contains(dim3, '1')"), ImmutableList.of("3", "4", "6"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("like(dim3, '1%')"), ImmutableList.of("1", "3", "4", "6", "9"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("array_contains(dim3, '1')"), ImmutableList.of("3", "4", "6"));
   }
 
   @Test
@@ -169,6 +169,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     if (isAutoSchema()) {
       return;
     }
+
     assertFilterMatchesSkipVectorize(edf("dim4 == ''"), ImmutableList.of("2"));
     // AS per SQL standard null == null returns false.
     assertFilterMatchesSkipVectorize(edf("dim4 == null"), ImmutableList.of());
@@ -194,25 +195,26 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(edf("dim4 == '4'"), ImmutableList.of("4", "5"));
     assertFilterMatchesSkipVectorize(edf("concat(dim4, dim4) == '33'"), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(edf("like(dim4, '4%')"), ImmutableList.of("4", "5"));
-    assertFilterMatchesSkipVectorize(edf("array_contains(dim4, '5')"), ImmutableList.of("4", "5"));
-    assertFilterMatchesSkipVectorize(edf("array_to_string(dim4, ':') == '4:5'"), ImmutableList.of("4", "5"));
+    // array functions on mvds can vectorize with fallback
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("array_contains(dim4, '5')"), ImmutableList.of("4", "5"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("array_to_string(dim4, ':') == '4:5'"), ImmutableList.of("4", "5"));
   }
 
   @Test
   public void testSingleAndMultiValuedStringColumn()
   {
-    assertFilterMatchesSkipVectorize(edf("array_contains(dim4, dim3)"), ImmutableList.of("5", "9"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("array_contains(dim4, dim3)"), ImmutableList.of("5", "9"));
   }
 
   @Test
   public void testMvOverlap()
   {
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '1')"), List.of("0"));
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '4')"), List.of("4", "5"));
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, array(1, 2, 3, 4))"), List.of("0", "3", "4", "5"));
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, dim3)"), List.of("5", "9"));
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, null)"), List.of("1", "6", "7", "8"));
-    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, [])"), List.of());
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, '1')"), List.of("0"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, '4')"), List.of("4", "5"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, array(1, 2, 3, 4))"), List.of("0", "3", "4", "5"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, dim3)"), List.of("5", "9"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, null)"), List.of("1", "6", "7", "8"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("mv_overlap(dim4, [])"), List.of());
   }
 
   @Test
@@ -225,7 +227,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatches(edf("dim1 < '2'"), ImmutableList.of("0", "1"));
     assertFilterMatches(edf("dim1 < 2"), ImmutableList.of("0", "1"));
     assertFilterMatches(edf("dim1 < 2.0"), ImmutableList.of("0", "1"));
-    assertFilterMatchesSkipVectorize(edf("like(dim1, '1%')"), ImmutableList.of("1"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("like(dim1, '1%')"), ImmutableList.of("1"));
   }
 
   @Test
@@ -238,7 +240,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatches(edf("dim2 < '2'"), ImmutableList.of("0", "1"));
     assertFilterMatches(edf("dim2 < 2"), ImmutableList.of("0", "1"));
     assertFilterMatches(edf("dim2 < 2.0"), ImmutableList.of("0", "1"));
-    assertFilterMatchesSkipVectorize(edf("like(dim2, '1%')"), ImmutableList.of("1"));
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("like(dim2, '1%')"), ImmutableList.of("1"));
   }
 
   @Test
@@ -274,27 +276,27 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testNullNotUnknown()
   {
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         edf("isfalse(dim5)"),
         ImmutableList.of("0", "1", "3", "4", "5", "6", "7", "8")
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         edf("!isfalse(dim5)"),
         ImmutableList.of("2", "9")
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         NotDimFilter.of(edf("isfalse(dim5)")),
         ImmutableList.of("2", "9")
     );
 
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         edf("isfalse(notexist)"),
         ImmutableList.of()
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         edf("!isfalse(notexist)"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatchesSkipVectorizeUnlessFallback(
         NotDimFilter.of(edf("isfalse(notexist)")), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
     );
   }
@@ -325,7 +327,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatches(edf("missing > '2'"), ImmutableList.of());
     assertFilterMatches(edf("missing > 2"), ImmutableList.of());
     assertFilterMatches(edf("missing > 2.0"), ImmutableList.of());
-    assertFilterMatchesSkipVectorize(edf("like(missing, '1%')"), ImmutableList.of());
+    assertFilterMatchesSkipVectorizeUnlessFallback(edf("like(missing, '1%')"), ImmutableList.of());
   }
 
   @Test
