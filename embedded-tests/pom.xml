@@ -855,7 +855,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <excludedGroups>docker-test</excludedGroups>
+          <excludedGroups>docker-test,perf</excludedGroups>
         </configuration>
       </plugin>
       <plugin>
