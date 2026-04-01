@@ -42,7 +42,7 @@ public class ReadOnlyAuthorizer implements Authorizer
       throw new IAE("authenticationResult is null where it should never be.");
     }
     if (action == Action.READ) {
-      return Access.allow();
+      return Access.OK;
     }
     LOG.info("Authorization failed for user=%s on action=%s, %s", authenticationResult.getIdentity(), action, resource);
     return Access.deny(null);
