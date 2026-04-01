@@ -235,6 +235,9 @@ public class QueryLifecycle
    * If a per-datasource per-segment timeout is configured, injects it into the context defaults.
    * User context (applied later via {@link QueryContexts#override}) will override this if set explicitly.
    * In monitorOnly mode, logs the configured timeout but does not inject it.
+   *
+   * For queries involving multiple datasources (e.g., joins or unions), the timeout from the first matching datasource is applied
+   * since getTableNames() returns a Set, the match order is non-deterministic.
    */
   private void applyPerDatasourcePerSegmentTimeout(
       final Query<?> query,
