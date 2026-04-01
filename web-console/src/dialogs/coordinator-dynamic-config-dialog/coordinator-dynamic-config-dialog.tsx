@@ -173,6 +173,7 @@ ORDER BY "tier", "server"`,
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`,
       });
+      return;
     }
 
     AppToaster.show({

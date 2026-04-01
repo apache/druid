@@ -243,6 +243,112 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
   };
 }
 
+interface DetailCellProps {
+  original: ServiceResultRow;
+  workerInfoLookup: Record<string, WorkerInfo>;
+}
+
+function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
+  const { service_type, service, is_leader } = original;
+  const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+  const cloneStatusContext = useContext(CloneStatusContext);
+  const serverModeInfo = useContext(ServerModeContext);
+
+  switch (service_type) {
+    case 'middle_manager':
+    case 'indexer': {
+      const workerInfo = workerInfoLookup[service];
+      if (!workerInfo) return null;
+
+      if (workerInfo.worker.version === '') return <>Disabled</>;
+
+      const details: string[] = [];
+      if (workerInfo.lastCompletedTaskTime) {
+        details.push(
+          `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
+        );
+      }
+      if (workerInfo.blacklistedUntil) {
+        details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
+      }
+      return <>{details.join(' ') || null}</>;
+    }
+
+    case 'coordinator':
+    case 'overlord':
+      return <>{is_leader === 1 ? 'Leader' : ''}</>;
+
+    case 'historical': {
+      const loadQueueInfo = loadQueueInfoContext[service];
+      const cloneInfo = cloneStatusContext[service];
+
+      const parts: string[] = [];
+      if (serverModeInfo.decommissioningNodes.has(service)) {
+        parts.push('DECOMMISSIONING');
+      }
+      if (serverModeInfo.turboLoadingNodes.has(service)) {
+        parts.push('TURBO SEGMENT LOADING');
+      }
+      if (loadQueueInfo) {
+        parts.push(formatLoadQueueInfo(loadQueueInfo));
+      }
+      if (cloneInfo) {
+        if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
+          parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
+        } else if (
+          cloneInfo.segmentLoadsRemaining > 0 ||
+          cloneInfo.segmentDropsRemaining > 0
+        ) {
+          const details: string[] = [];
+          if (cloneInfo.segmentLoadsRemaining > 0) {
+            details.push(
+              `${pluralIfNeeded(
+                cloneInfo.segmentLoadsRemaining,
+                'segment',
+              )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
+            );
+          }
+          if (cloneInfo.segmentDropsRemaining > 0) {
+            details.push(
+              `${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`,
+            );
+          }
+          parts.push(`Cloning from ${cloneInfo.sourceServer}: ${details.join(', ')}`);
+        } else {
+          parts.push(`Clone of ${cloneInfo.sourceServer} (synced)`);
+        }
+      }
+      return <>{parts.join('; ') || null}</>;
+    }
+
+    default:
+      return null;
+  }
+}
+
+interface AggregatedDetailCellProps {
+  subRows: { _original: ServiceResultRow }[];
+}
+
+function AggregatedDetailCell({ subRows }: AggregatedDetailCellProps) {
+  const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+  const originalRows = subRows.map(r => r._original);
+  if (!originalRows.some(r => r.service_type === 'historical')) return <>{''}</>;
+
+  const loadQueueInfos: LoadQueueInfo[] = filterMap(
+    originalRows,
+    r => loadQueueInfoContext[r.service],
+  );
+
+  return (
+    <>
+      {loadQueueInfos.length
+        ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
+        : ''}
+    </>
+  );
+}
+
 function defaultDisplayFn(value: any): string {
   if (value === undefined || value === null) return '';
   return String(value);
@@ -894,97 +1000,10 @@ ORDER BY
           filterable: false,
           className: 'padded wrapped',
           accessor: 'service',
-          Cell: ({ original }) => {
-            const { service_type, service, is_leader } = original;
-            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
-            const cloneStatusContext = useContext(CloneStatusContext);
-            const serverModeInfo = useContext(ServerModeContext);
-
-            switch (service_type) {
-              case 'middle_manager':
-              case 'indexer': {
-                const workerInfo = workerInfoLookup[service];
-                if (!workerInfo) return null;
-
-                if (workerInfo.worker.version === '') return 'Disabled';
-
-                const details: string[] = [];
-                if (workerInfo.lastCompletedTaskTime) {
-                  details.push(
-                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
-                  );
-                }
-                if (workerInfo.blacklistedUntil) {
-                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
-                }
-                return details.join(' ') || null;
-              }
-
-              case 'coordinator':
-              case 'overlord':
-                return is_leader === 1 ? 'Leader' : '';
-
-              case 'historical': {
-                const loadQueueInfo = loadQueueInfoContext[service];
-                const cloneInfo = cloneStatusContext[service];
-
-                const parts: string[] = [];
-                if (serverModeInfo.decommissioningNodes.has(service)) {
-                  parts.push('DECOMMISSIONING');
-                }
-                if (serverModeInfo.turboLoadingNodes.has(service)) {
-                  parts.push('TURBO SEGMENT LOADING');
-                }
-                if (loadQueueInfo) {
-                  parts.push(formatLoadQueueInfo(loadQueueInfo));
-                }
-                if (cloneInfo) {
-                  if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
-                    parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
-                  } else if (
-                    cloneInfo.segmentLoadsRemaining > 0 ||
-                    cloneInfo.segmentDropsRemaining > 0
-                  ) {
-                    const details: string[] = [];
-                    if (cloneInfo.segmentLoadsRemaining > 0) {
-                      details.push(
-                        `${pluralIfNeeded(
-                          cloneInfo.segmentLoadsRemaining,
-                          'segment',
-                        )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
-                      );
-                    }
-                    if (cloneInfo.segmentDropsRemaining > 0) {
-                      details.push(
-                        `${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`,
-                      );
-                    }
-                    parts.push(`Cloning from ${cloneInfo.sourceServer}: ${details.join(', ')}`);
-                  } else {
-                    parts.push(`Clone of ${cloneInfo.sourceServer} (synced)`);
-                  }
-                }
-                return parts.join('; ') || null;
-              }
-
-              default:
-                return null;
-            }
-          },
-          Aggregated: ({ subRows }) => {
-            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
-            const originalRows = subRows.map(r => r._original);
-            if (!originalRows.some(r => r.service_type === 'historical')) return '';
-
-            const loadQueueInfos: LoadQueueInfo[] = filterMap(
-              originalRows,
-              r => loadQueueInfoContext[r.service],
-            );
-
-            return loadQueueInfos.length
-              ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
-              : '';
-          },
+          Cell: ({ original }) => (
+            <DetailCell original={original} workerInfoLookup={workerInfoLookup} />
+          ),
+          Aggregated: ({ subRows }) => <AggregatedDetailCell subRows={subRows} />,
         },
         {
           Header: ACTION_COLUMN_LABEL,

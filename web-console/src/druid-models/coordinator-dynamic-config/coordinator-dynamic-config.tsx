@@ -174,6 +174,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'turboLoadingNodes',
     type: 'custom',
+    emptyValue: [],
     experimental: true,
     info: (
       <>
@@ -195,6 +196,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'cloneServers',
     type: 'custom',
+    emptyValue: {},
     experimental: true,
     info: (
       <>

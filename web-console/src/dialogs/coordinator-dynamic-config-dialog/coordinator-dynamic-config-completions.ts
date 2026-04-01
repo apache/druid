@@ -100,34 +100,6 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
       },
     ],
   },
-  // Properties only available when smartSegmentLoading is false
-  {
-    path: '$',
-    isObject: true,
-    condition: obj => obj.smartSegmentLoading === false,
-    completions: [
-      {
-        value: 'maxSegmentsToMove',
-        documentation: 'Maximum segments that can be moved in a Historical tier per run',
-      },
-      {
-        value: 'maxSegmentsInNodeLoadingQueue',
-        documentation: 'Maximum segments allowed in any server load queue',
-      },
-      {
-        value: 'useRoundRobinSegmentAssignment',
-        documentation: 'Use round robin for segment assignment',
-      },
-      {
-        value: 'replicationThrottleLimit',
-        documentation: 'Maximum segment replicas assigned to a tier per run',
-      },
-      {
-        value: 'replicantLifetime',
-        documentation: 'Maximum Coordinator runs a segment can wait in load queue before alert',
-      },
-    ],
-  },
   // Boolean values
   {
     path: '$.smartSegmentLoading',

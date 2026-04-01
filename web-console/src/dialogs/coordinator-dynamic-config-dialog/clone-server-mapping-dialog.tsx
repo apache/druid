@@ -60,15 +60,14 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
   function handleSave() {
     const result: Record<string, string> = {};
     for (const m of mappings) {
-      if (m.target && m.source && m.target !== m.source) {
-        result[m.target] = m.source;
-      }
+      result[m.target] = m.source;
     }
     onSave(result);
     onClose();
   }
 
   const usedTargets = new Set(mappings.map(m => m.target).filter(Boolean));
+  const hasInvalidMapping = mappings.some(m => !m.target || !m.source || m.target === m.source);
 
   return (
     <Dialog
@@ -144,7 +143,12 @@ export const CloneServerMappingDialog = React.memo(function CloneServerMappingDi
           <div className={Classes.DIALOG_FOOTER}>
             <div className={Classes.DIALOG_FOOTER_ACTIONS}>
               <Button text="Cancel" onClick={onClose} />
-              <Button text="Save" intent={Intent.PRIMARY} onClick={handleSave} />
+              <Button
+                text="Save"
+                intent={Intent.PRIMARY}
+                disabled={hasInvalidMapping}
+                onClick={handleSave}
+              />
             </div>
           </div>
         </>
