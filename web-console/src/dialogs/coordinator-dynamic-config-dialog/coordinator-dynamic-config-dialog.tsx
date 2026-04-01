@@ -20,7 +20,7 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useMemo, useState } from 'react';
 
-import type { field, FormJsonTabs } from '../../components';
+import type { Field, FormJsonTabs } from '../../components';
 import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
 import type { CoordinatorDynamicConfig } from '../../druid-models';
 import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
@@ -114,7 +114,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     },
   });
 
-const [serversState] = useQueryManager<Capabilities, TieredServers>({
+  const [serversState] = useQueryManager<Capabilities, TieredServers>({
     initQuery: capabilities,
     processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
