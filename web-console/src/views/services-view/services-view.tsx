@@ -485,46 +485,37 @@ ORDER BY
 
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            try {
-              const [cloneStatusResp, configResp] = await Promise.all([
-                getApiArrayFromKey<CloneStatusInfo & { targetServer: string }>(
-                  '/druid/coordinator/v1/config/cloneStatus',
-                  'cloneStatus',
-                  signal,
-                ).catch(() => [] as (CloneStatusInfo & { targetServer: string })[]),
-                Api.instance
-                  .get('/druid/coordinator/v1/config', { signal })
-                  .then(r => r.data)
-                  .catch(() => null),
-              ]);
+            const [cloneStatusResp, configResp] = await Promise.all([
+              getApiArrayFromKey<CloneStatusInfo & { targetServer: string }>(
+                '/druid/coordinator/v1/config/cloneStatus',
+                'cloneStatus',
+                signal,
+              ).catch(() => [] as (CloneStatusInfo & { targetServer: string })[]),
+              Api.instance
+                .get('/druid/coordinator/v1/config', { signal })
+                .then(r => r.data)
+                .catch(() => null),
+            ]);
 
-              const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
-                cloneStatusResp,
-                s => s.targetServer,
-              );
+            const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
+              cloneStatusResp,
+              s => s.targetServer,
+            );
 
-              return {
-                ...servicesWithAuxiliaryInfo,
-                cloneStatus: cloneStatusLookup,
-                ...(configResp
-                  ? {
-                      serverMode: {
-                        turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
-                        decommissioningNodes: new Set<string>(
-                          configResp.decommissioningNodes || [],
-                        ),
-                      },
-                    }
-                  : {}),
-              };
-            } catch {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'There was an error getting clone status and server mode info',
-              });
-              return servicesWithAuxiliaryInfo;
-            }
+            return {
+              ...servicesWithAuxiliaryInfo,
+              cloneStatus: cloneStatusLookup,
+              ...(configResp
+                ? {
+                    serverMode: {
+                      turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
+                      decommissioningNodes: new Set<string>(
+                        configResp.decommissioningNodes || [],
+                      ),
+                    },
+                  }
+                : {}),
+            };
           });
         }
 
