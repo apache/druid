@@ -288,7 +288,7 @@ The following screenshot shows the [Supervisors](../operations/web-console.md#su
 
 ![Supervisors view](../assets/supervisor-view.png)
 
-Once started, the supervisor persists in the configured metadata database. There can only be one supervisor per datasource. Submitting a second supervisor spec for the same datasource overwrites the previous one.
+Once started, the supervisor persists in the configured metadata database. Multiple supervisors can ingest into the same datasource. For details, see [Multi-Supervisor Support](#multi-supervisor-support). Submitting a supervisor spec with an existing supervisor ID overwrites the previous one.
 
 When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it spawns a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running indexing tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not compatible, the tasks are terminated and the supervisor creates a new set of tasks. This way, the supervisor ingestion tasks persist across Overlord restarts and failovers.
 
