@@ -51,7 +51,7 @@ public class SegmentsMetadataManagerConfig
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
+    this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.IF_SYNCED);
     this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null));
     if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
       throw DruidException

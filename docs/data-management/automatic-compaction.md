@@ -95,17 +95,6 @@ The recommended way to run automatic compaction is using compaction supervisors 
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
 * Uses new Indexing State Fingerprinting mechanisms to store less data per segment in metadata storage
 
-
-To use compaction supervisors, the following configuration requirements must be met:
-
-* You must be using incremental segment metadata caching:
-  * `druid.manager.segments.useIncrementalCache` set to `always` or `ifSynced` in your Overlord and Coordinator runtime properties.
-    * See [Segment metadata caching](../configuration/index.md#metadata-retrieval) for full configuration documentation.
-
-* update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
-  *  `useSupervisors` to `true` so that compaction tasks can be run as supervisor tasks
-  *  `engine` to `msq` to use the MSQ task engine as the compaction engine or to `native` (default value) to use the native engine.
-
 To use a compaction supervisor, submit the auto-compaction configuration as a supervisor spec. Set `type` to `autocompact` and include the auto-compaction config in the `spec`.
 
 To submit an automatic compaction task, you can submit a supervisor spec through the [web console](#manage-compaction-supervisors-with-the-web-console) or the [supervisor API](#manage-compaction-supervisors-with-supervisor-apis).
@@ -230,6 +219,12 @@ If a compaction task takes longer than the indexing period, the Coordinator wait
 
 You can configure Coordinator-based auto-compaction for a datasource through the web console or programmatically via an API.
 This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
+
+To use Coordinator-based auto-compaction, the following configuration requirements must be met:
+
+* update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
+  *  `useSupervisors` to `false`
+  *  `engine` to `native` to use the native engine, since MSQ task engine is not supported as the compaction engine in Coordinator.
 
 ### Manage auto-compaction using the web console
 
