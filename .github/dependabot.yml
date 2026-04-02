@@ -3,6 +3,6 @@ updates:
   # Don't run dependabot on website
   - package-ecosystem: "npm"
     directory: "/website/"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+    schedule:
+      interval: "monthly"        # minimal frequency
+    open-pull-requests-limit: 0  # do not open PRs
