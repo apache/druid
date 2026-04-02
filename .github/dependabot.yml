@@ -1,35 +1,8 @@
 version: 2
 updates:
-  - package-ecosystem: "maven"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 20
-    cooldown:
-      # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
-      # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
-      default-days: 14
-    ignore:
-      # pin ZooKeeper dependencies to 3.5.x
-      - dependency-name: "org.apache.zookeeper"
-        versions: "[3.6,)"
-      # pin Jetty dependencies to 9.4.x
-      - dependency-name: "org.eclipse.jetty"
-        versions: "[9.5,)"
-      # pin Testng dependencies to 7.3.0
-      - dependency-name: "org.testng"
-        versions: "[7.4.0,)"
-
   # Don't run dependabot on website
   - package-ecosystem: "npm"
     directory: "/website/"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
-
-  # Don't run dependabot on web-console
-  - package-ecosystem: "npm"
-    directory: "/web-console/"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
