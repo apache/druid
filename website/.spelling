@@ -2484,3 +2484,6 @@ TableSpec
 
 - ../docs/development/extensions-contrib/prometheus.md
 TTL
+
+- ../docs/development/extensions-core/s3.md
+NIO
