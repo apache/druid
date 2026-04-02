@@ -1,0 +1,95 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import '../../variables';
+
+.rule-provider-editor {
+  &.#{$bp-ns}-dialog {
+    height: 80vh;
+    width: 700px;
+  }
+
+  .form-json-selector {
+    margin: 15px;
+  }
+
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 0 5px 0 15px;
+    flex: 1;
+    overflow: auto;
+  }
+
+  .rule-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rule-section {
+    .rule-section-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      .rule-section-title {
+        margin: 0;
+      }
+
+      .rule-section-count {
+        opacity: 0.6;
+      }
+    }
+
+    .rule-section-description {
+      margin: 0 0 10px 30px;
+      opacity: 0.7;
+      font-size: 12px;
+    }
+  }
+
+  .rule-card {
+    margin: 0 0 8px 0;
+    padding: 0;
+
+    .rule-card-header {
+      display: flex;
+      align-items: center;
+      padding: 5px;
+      gap: 5px;
+
+      .rule-card-summary {
+        font-weight: 500;
+      }
+
+      .rule-card-age {
+        opacity: 0.6;
+        font-size: 12px;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+    }
+
+    .rule-card-form {
+      padding: 10px 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+}
