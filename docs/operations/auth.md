@@ -135,7 +135,7 @@ druid.auth.authorizers=["basic"]
 
 Only a single Authorizer will authorize any given request.
 
-Druid includes one built in authorizer:
+Druid includes one built-in authorizer:
 
 ### AllowAll authorizer
 
