@@ -26,6 +26,8 @@ import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,7 +61,7 @@ public class StringDimensionSchemaTest
                         + "  \"maxStringLength\" : 200\n"
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
+    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, 200), schema);
     Assert.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
   }
 
@@ -71,5 +73,74 @@ public class StringDimensionSchemaTest
         () -> new StringDimensionSchema("dim", null, true, -1)
     );
     Assert.assertTrue(exception.getMessage().contains("maxStringLength for column [dim] must be >= 0"));
+  }
+
+  @Test
+  public void testGetEffectiveSchemaResolvesMaxStringLengthFromIndexSpec()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim");
+    final IndexSpec indexSpec = IndexSpec.builder()
+        .withStringColumnFormatSpec(
+            StringColumnFormatSpec.builder().setMaxStringLength(50).build()
+        )
+        .build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
+    Assert.assertEquals("dim", effective.getName());
+  }
+
+  @Test
+  public void testGetEffectiveSchemaPreservesPerColumnMaxStringLength()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", null, true, 20);
+    final IndexSpec indexSpec = IndexSpec.builder()
+        .withStringColumnFormatSpec(
+            StringColumnFormatSpec.builder().setMaxStringLength(50).build()
+        )
+        .build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    // Per-column maxStringLength=20 should not be overridden by job level 50
+    Assert.assertEquals(Integer.valueOf(20), effective.getMaxStringLength());
+  }
+
+  @Test
+  public void testGetEffectiveSchemaPreservesCreateBitmapIndex()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", null, false);
+    final IndexSpec indexSpec = IndexSpec.builder().build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    Assert.assertFalse(effective.hasBitmapIndex());
+  }
+
+  @Test
+  public void testGetEffectiveSchemaPreservesMultiValueHandling()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", MultiValueHandling.ARRAY, true);
+    final IndexSpec indexSpec = IndexSpec.builder().build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    // multiValueHandling=ARRAY must not be overridden by the DEFAULT (SORTED_ARRAY)
+    Assert.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
+  }
+
+  @Test
+  public void testGetEffectiveSchemaNoChangeWithoutStringColumnFormatSpec()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim");
+    final IndexSpec indexSpec = IndexSpec.builder().build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    // With no stringColumnFormatSpec, maxStringLength should remain unchanged
+    Assert.assertEquals(schema.getMaxStringLength(), effective.getMaxStringLength());
+    Assert.assertEquals(schema.hasBitmapIndex(), effective.hasBitmapIndex());
+    Assert.assertEquals(schema.getMultiValueHandling(), effective.getMultiValueHandling());
   }
 }

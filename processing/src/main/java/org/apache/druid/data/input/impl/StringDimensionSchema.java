@@ -26,10 +26,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.StringDimensionHandler;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class StringDimensionSchema extends DimensionSchema
 {
@@ -55,6 +58,9 @@ public class StringDimensionSchema extends DimensionSchema
   @Nullable
   private final Integer maxStringLength;
 
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
+
   @JsonCreator
   public static StringDimensionSchema create(String name)
   {
@@ -66,11 +72,23 @@ public class StringDimensionSchema extends DimensionSchema
       @JsonProperty("name") String name,
       @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling,
       @JsonProperty("createBitmapIndex") Boolean createBitmapIndex,
-      @JsonProperty("maxStringLength") @Nullable Integer maxStringLength
+      @JsonProperty("maxStringLength") @Nullable Integer maxStringLength,
+      @JsonProperty("columnFormatSpec") @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
     this.maxStringLength = validateMaxStringLength(name, maxStringLength);
+    this.columnFormatSpec = columnFormatSpec;
+  }
+
+  public StringDimensionSchema(
+      String name,
+      MultiValueHandling multiValueHandling,
+      Boolean createBitmapIndex,
+      @Nullable Integer maxStringLength
+  )
+  {
+    this(name, multiValueHandling, createBitmapIndex, maxStringLength, null);
   }
 
   public StringDimensionSchema(
@@ -79,12 +97,12 @@ public class StringDimensionSchema extends DimensionSchema
       Boolean createBitmapIndex
   )
   {
-    this(name, multiValueHandling, createBitmapIndex, null);
+    this(name, multiValueHandling, createBitmapIndex, null, null);
   }
 
   public StringDimensionSchema(String name)
   {
-    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null);
+    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null, null);
   }
 
   @JsonProperty
@@ -93,6 +111,28 @@ public class StringDimensionSchema extends DimensionSchema
   public Integer getMaxStringLength()
   {
     return maxStringLength;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public StringColumnFormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
+  }
+
+  @Override
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    StringColumnFormatSpec effective =
+        StringColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec);
+    return new StringDimensionSchema(
+        getName(),
+        getMultiValueHandling(),
+        hasBitmapIndex(),
+        maxStringLength != null ? maxStringLength : effective.getMaxStringLength(),
+        effective
+    );
   }
 
   @Override
@@ -118,5 +158,28 @@ public class StringDimensionSchema extends DimensionSchema
   public DimensionHandler getDimensionHandler()
   {
     return new StringDimensionHandler(getName(), getMultiValueHandling(), hasBitmapIndex(), false, maxStringLength);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    StringDimensionSchema that = (StringDimensionSchema) o;
+    return Objects.equals(maxStringLength, that.maxStringLength)
+           && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), maxStringLength, columnFormatSpec);
   }
 }

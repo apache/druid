@@ -70,6 +70,19 @@ public class IndexSpecTest
   }
 
   @Test
+  public void testSerdeWithStringColumnFormatSpec() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"stringColumnFormatSpec\" : { \"maxStringLength\" : 50 } }";
+
+    final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
+    Assert.assertNotNull(spec.getStringColumnFormatSpec());
+    Assert.assertEquals(Integer.valueOf(50), spec.getStringColumnFormatSpec().getMaxStringLength());
+
+    Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(IndexSpec.class)
