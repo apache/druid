@@ -32,7 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 public interface DartSqlClient
 {
   /**
-   * Get information about all currently-running queries on this server.
+   * Get information about all currently-running, and possibly also recently-completed, queries on this server.
    *
    * @param selfOnly        true if only queries from this server should be returned; false if queries from all servers
    *                        should be returned
@@ -40,7 +40,7 @@ public interface DartSqlClient
    *
    * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
    */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly, boolean includeComplete);
+  ListenableFuture<GetQueriesResponse> getQueries(boolean selfOnly, boolean includeComplete);
 
   /**
    * Get query report for a particular SQL query ID on this server.

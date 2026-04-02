@@ -87,7 +87,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, false);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(false, false);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
@@ -117,7 +117,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(true, false);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(true, false);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
@@ -147,7 +147,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, true);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(false, true);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 }

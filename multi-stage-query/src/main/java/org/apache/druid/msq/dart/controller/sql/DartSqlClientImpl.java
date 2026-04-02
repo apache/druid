@@ -49,7 +49,7 @@ public class DartSqlClientImpl implements DartSqlClient
   }
 
   @Override
-  public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly, final boolean includeComplete)
+  public ListenableFuture<GetQueriesResponse> getQueries(final boolean selfOnly, final boolean includeComplete)
   {
     try {
       URIBuilder builder = new URIBuilder("/queries");

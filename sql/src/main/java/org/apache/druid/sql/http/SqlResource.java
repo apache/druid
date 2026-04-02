@@ -168,7 +168,7 @@ public class SqlResource
     // Get running queries from all engines that support it.
     for (SqlEngine sqlEngine : engines) {
       queries.addAll(
-          sqlEngine.getRunningQueries(
+          sqlEngine.getQueries(
               selfOnly != null,
               includeComplete != null,
               authenticationResult,

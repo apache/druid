@@ -1665,7 +1665,7 @@ public class SystemSchemaTest extends CalciteTestBase
     // Create mock SqlEngine that returns test queries
     final SqlEngine mockEngine = EasyMock.createMock(SqlEngine.class);
     EasyMock.expect(mockEngine.name()).andReturn("native").anyTimes();
-    EasyMock.expect(mockEngine.getRunningQueries(
+    EasyMock.expect(mockEngine.getQueries(
         EasyMock.eq(false),
         EasyMock.eq(true),
         EasyMock.anyObject(),
