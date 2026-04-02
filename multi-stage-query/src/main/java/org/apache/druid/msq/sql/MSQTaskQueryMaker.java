@@ -81,6 +81,7 @@ import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -171,7 +172,13 @@ public class MSQTaskQueryMaker implements QueryMaker
         taskContext
     );
 
-    FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);
+    // Propagate auth context headers to Overlord for consumption
+    if (plannerContext.getAuthenticationResult() != null && plannerContext.getAuthenticationResult().getContext() != null) {
+      final Map<String, String> extraHeaders = CollectionUtils.mapValues(plannerContext.getAuthenticationResult().getContext(), String::valueOf);
+      FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask, extraHeaders), true);
+    } else {
+      FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);
+    }
     return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
