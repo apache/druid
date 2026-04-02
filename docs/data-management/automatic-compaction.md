@@ -82,6 +82,10 @@ For more details on each of the specs in an auto-compaction configuration, see [
 
 ## Auto-compaction using compaction supervisors
 
+:::info
+For advanced time-based data lifecycle management — such as coarsening segment granularity, deleting old rows, or changing compression as data ages — see [Cascading reindexing](cascading-reindexing.md).
+:::
+
 The recommended way to run automatic compaction is using compaction supervisors on the Overlord. Compaction supervisors provide the following benefits:
 
 * Can use the supervisor framework to get information about the auto-compaction, such as status or state
