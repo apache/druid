@@ -53,7 +53,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CloseableUtils;
-import org.apache.druid.utils.Throwables;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -220,7 +219,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    public void test_registerCancelableFuture() throws InterruptedException
+    public void test_registerCancelableFuture()
     {
       final SettableFuture<Object> future = SettableFuture.create();
       final String cancellationId = "xyzzy";
@@ -250,8 +249,7 @@ public class FrameProcessorExecutorTest
       // Don't wait for the future to resolve, because exec.cancel should have done that.
       // If we see an unresolved future here, it's a bug in exec.cancel.
       Assert.assertTrue(future.isDone());
-      assertIsCanceledOrInterrupted(future);
-
+      Assert.assertTrue(future.isCancelled());
       Assert.assertTrue(processor.didGetInterrupt());
       Assert.assertTrue(processor.didCleanup());
     }
@@ -380,7 +378,7 @@ public class FrameProcessorExecutorTest
             // Don't wait for the future to resolve, because exec.cancel should have done that.
             // If we see an unresolved future here, it's a bug in exec.cancel.
             Assert.assertTrue(future.isDone());
-            assertIsCanceledOrInterrupted(future);
+            Assert.assertTrue(future.isCancelled());
           }
         }
 
@@ -580,31 +578,5 @@ public class FrameProcessorExecutorTest
     }
   }
 
-  private static <T> void assertIsCanceledOrInterrupted(final ListenableFuture<T> future)
-  {
-    if (!future.isDone()) {
-      Assert.fail("expected canceled or interrupted future, got unfinished future");
-    }
 
-    if (future.isCancelled()) {
-      return;
-    }
-
-    Throwable t = null;
-    try {
-      future.get();
-      Assert.fail("expected canceled or interrupted future, got successful future");
-    }
-    catch (ExecutionException e) {
-      t = e.getCause();
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-
-    if (Throwables.getCauseOfType(t, InterruptedException.class) == null) {
-      Assert.fail("expected canceled or interrupted future, got failed future with exception: " + t);
-    }
-  }
 }

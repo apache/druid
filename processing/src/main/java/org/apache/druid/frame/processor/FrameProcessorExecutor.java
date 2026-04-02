@@ -132,6 +132,7 @@ public class FrameProcessorExecutor
 
           // Set nonnull if the processor should run again.
           Runnable nextRun = null;
+          Throwable error = null;
 
           try {
             final List<ListenableFuture<?>> writabilityFutures = gatherWritabilityFutures();
@@ -187,10 +188,18 @@ public class FrameProcessorExecutor
               }
             }
           }
+          catch (Throwable e) {
+            error = e;
+          }
           finally {
-            deregisterRunningProcessor();
+            final boolean canceled = deregisterRunningProcessor();
 
-            if (nextRun != null) {
+            if (canceled) {
+              // Processor was canceled while running. Suppress the error and don't schedule the next run;
+              // the cancel thread handles cleanup.
+            } else if (error != null) {
+              fail(error);
+            } else if (nextRun != null) {
               nextRun.run();
             }
           }
@@ -394,8 +403,10 @@ public class FrameProcessorExecutor
 
       /**
        * Deregisters the current thread from running the processor, clearing any pending interrupt.
+       *
+       * @return true if the processor was canceled while it was running
        */
-      private void deregisterRunningProcessor()
+      private boolean deregisterRunningProcessor()
       {
         if (cancellationId != null) {
           // After this synchronized block, our thread will no longer be interrupted by cancellations,
@@ -407,8 +418,12 @@ public class FrameProcessorExecutor
 
             runningProcessors.remove(processor);
             lock.notifyAll();
+
+            return !cancelableProcessors.containsEntry(cancellationId, processor);
           }
         }
+
+        return false;
       }
     }
 
