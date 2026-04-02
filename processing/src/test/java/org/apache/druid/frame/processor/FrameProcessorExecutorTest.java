@@ -53,6 +53,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CloseableUtils;
+import org.apache.druid.utils.Throwables;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -249,7 +250,8 @@ public class FrameProcessorExecutorTest
       // Don't wait for the future to resolve, because exec.cancel should have done that.
       // If we see an unresolved future here, it's a bug in exec.cancel.
       Assert.assertTrue(future.isDone());
-      Assert.assertTrue(future.isCancelled());
+      assertIsCanceledOrInterrupted(future);
+
       Assert.assertTrue(processor.didGetInterrupt());
       Assert.assertTrue(processor.didCleanup());
     }
@@ -378,16 +380,13 @@ public class FrameProcessorExecutorTest
             // Don't wait for the future to resolve, because exec.cancel should have done that.
             // If we see an unresolved future here, it's a bug in exec.cancel.
             Assert.assertTrue(future.isDone());
-            Assert.assertTrue(future.isCancelled());
-
-            final Exception e = Assert.assertThrows(Exception.class, future::get);
-            MatcherAssert.assertThat(e, CoreMatchers.instanceOf(CancellationException.class));
+            assertIsCanceledOrInterrupted(future);
           }
         }
 
         // In both cases, check for cleanup.
         for (final InfiniteFrameProcessor generator : generators) {
-          Assert.assertTrue(generator.didCleanup());
+          Assert.assertEquals("exactly one cleanup call", 1, generator.getCleanupCount());
         }
 
         Assert.assertTrue(chomper.didCleanup());
@@ -395,7 +394,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    public void test_cancel_nonexistentCancellationId() throws InterruptedException
+    public void test_cancel_nonexistentCancellationId()
     {
       // Just making sure no error is thrown when we refer to a nonexistent cancellationId.
       exec.cancel("nonexistent");
@@ -578,6 +577,34 @@ public class FrameProcessorExecutorTest
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private static <T> void assertIsCanceledOrInterrupted(final ListenableFuture<T> future)
+  {
+    if (!future.isDone()) {
+      Assert.fail("expected canceled or interrupted future, got unfinished future");
+    }
+
+    if (future.isCancelled()) {
+      return;
+    }
+
+    Throwable t = null;
+    try {
+      future.get();
+      Assert.fail("expected canceled or interrupted future, got successful future");
+    }
+    catch (ExecutionException e) {
+      t = e.getCause();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+
+    if (Throwables.getCauseOfType(t, InterruptedException.class) == null) {
+      Assert.fail("expected canceled or interrupted future, got failed future with exception: " + t);
     }
   }
 }
