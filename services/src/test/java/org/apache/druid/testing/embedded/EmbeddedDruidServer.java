@@ -73,8 +73,12 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
     );
     beforeStartHooks.add(
         (cluster, self) -> {
-          // Add properties for temporary directories used by the servers
-          final String logsDirectory = cluster.getTestFolder().getOrCreateFolder("indexer-logs").getAbsolutePath();
+          // Add properties for temporary directories used by the servers.
+          // If task.logs.dir is set, write indexer logs there so they survive TestFolder cleanup.
+          final String taskLogsDir = System.getProperty("task.logs.dir");
+          final String logsDirectory = taskLogsDir != null
+              ? taskLogsDir
+              : cluster.getTestFolder().getOrCreateFolder("indexer-logs").getAbsolutePath();
           final String taskDirectory = cluster.getTestFolder().newFolder().getAbsolutePath();
           final String storageDirectory = cluster.getTestFolder().getOrCreateFolder("deep-store").getAbsolutePath();
           log.info(
@@ -90,6 +94,11 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
           self.addProperty("druid.indexer.task.baseDir", taskDirectory);
           self.addProperty("druid.indexer.logs.directory", logsDirectory);
           self.addProperty("druid.storage.storageDirectory", storageDirectory);
+
+          // When task.logs.dir is set, force file-based task logging
+          if (taskLogsDir != null) {
+            self.addProperty("druid.indexer.logs.type", "file");
+          }
 
           // Add properties for RuntimeInfoModule
           self.addProperty(RuntimeInfoModule.SERVER_MEMORY_PROPERTY, String.valueOf(serverMemory));

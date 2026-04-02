@@ -36,10 +36,13 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -191,15 +194,12 @@ public class S3StorageDruidModule implements DruidModule
     };
 
     // Create async client supplier for S3TransferManager
+    final AsyncHttpClientType asyncHttpClientType =
+        AsyncHttpClientType.fromString(storageConfig.getS3TransferConfig().getAsyncHttpClientType());
     final Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
-      NettyNioAsyncHttpClient.Builder asyncHttpClientBuilder = NettyNioAsyncHttpClient.builder()
-          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
-          .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
-          .maxConcurrency(clientConfig.getMaxConnections());
-
       S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder()
           .credentialsProvider(provider)
-          .httpClientBuilder(asyncHttpClientBuilder)
+          .httpClientBuilder(asyncHttpClientType.buildBuilder(clientConfig))
           .forcePathStyle(clientConfig.isEnablePathStyleAccess())
           .crossRegionAccessEnabled(clientConfig.isCrossRegionAccessEnabled())
           .multipartEnabled(true);
@@ -219,6 +219,42 @@ public class S3StorageDruidModule implements DruidModule
                                        .setS3ClientSupplier(s3ClientSupplier)
                                        .setS3AsyncClientSupplier(s3AsyncClientSupplier)
                                        .setS3StorageConfig(storageConfig);
+  }
+
+  public enum AsyncHttpClientType
+  {
+    CRT {
+      @Override
+      public SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig)
+      {
+        // AwsCrtAsyncHttpClient.Builder does not expose readTimeout in SDK 2.40.0.
+        return AwsCrtAsyncHttpClient.builder()
+                                    .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+                                    .maxConcurrency(clientConfig.getMaxConnections());
+      }
+    },
+    NETTY {
+      @Override
+      public SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig)
+      {
+        return NettyNioAsyncHttpClient.builder()
+                                      .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+                                      .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
+                                      .maxConcurrency(clientConfig.getMaxConnections());
+      }
+    };
+
+    public abstract SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig);
+
+    public static AsyncHttpClientType fromString(String value)
+    {
+      for (AsyncHttpClientType type : values()) {
+        if (type.name().equals(StringUtils.upperCase(value))) {
+          return type;
+        }
+      }
+      throw new ISE("Invalid druid.storage.transfer.asyncHttpClientType[%s]. Must be 'crt' or 'netty'.", value);
+    }
   }
 
   @Nullable
