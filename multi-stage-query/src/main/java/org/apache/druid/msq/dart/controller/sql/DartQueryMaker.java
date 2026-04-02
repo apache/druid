@@ -52,7 +52,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
@@ -63,7 +62,6 @@ import org.apache.druid.sql.calcite.run.SqlResults;
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -96,7 +94,6 @@ public class DartQueryMaker implements QueryMaker
    * Executor for running controllers.
    */
   private final ControllerThreadPool controllerThreadPool;
-  private final ServerConfig serverConfig;
 
   final QueryKitSpecFactory queryKitSpecFactory;
   final MultiQueryKit queryKit;
@@ -109,8 +106,7 @@ public class DartQueryMaker implements QueryMaker
       DartControllerConfig controllerConfig,
       ControllerThreadPool controllerThreadPool,
       QueryKitSpecFactory queryKitSpecFactory,
-      MultiQueryKit queryKit,
-      ServerConfig serverConfig
+      MultiQueryKit queryKit
   )
   {
     this.fieldMapping = fieldMapping;
@@ -121,17 +117,15 @@ public class DartQueryMaker implements QueryMaker
     this.controllerThreadPool = controllerThreadPool;
     this.queryKitSpecFactory = queryKitSpecFactory;
     this.queryKit = queryKit;
-    this.serverConfig = serverConfig;
   }
 
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
     ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
-    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.buildLegacyMSQSpec(
         null,
         druidQuery,
-        finalizeTimeout(druidQuery.getQuery().context()),
         columnMappings,
         plannerContext,
         null
@@ -205,18 +199,6 @@ public class DartQueryMaker implements QueryMaker
         controllerContext,
         queryKitSpecFactory
     );
-  }
-
-  /**
-   * Adds the timeout parameter to the query context, considering the default and maximum values from
-   * {@link ServerConfig}.
-   */
-  private QueryContext finalizeTimeout(QueryContext queryContext)
-  {
-    final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
-    QueryContext timeoutContext = queryContext.override(Map.of(QueryContexts.TIMEOUT_KEY, timeout));
-    timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
-    return timeoutContext;
   }
 
   /**

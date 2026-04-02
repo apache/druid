@@ -446,12 +446,12 @@ public class ArrayContainsElementFilterTests
     {
       // only auto schema supports array columns... skip other segment types
       Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatches(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L, 3L}, null),
           ImmutableList.of("0", "2")
       );
 
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatches(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L}, null),
           ImmutableList.of()
       );

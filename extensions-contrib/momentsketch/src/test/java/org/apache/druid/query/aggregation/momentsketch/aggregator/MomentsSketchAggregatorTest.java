@@ -20,6 +20,13 @@
 package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -73,21 +80,16 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [ \"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDefaultSchemaDimensions(List.of("product"))
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
         "["
         + "{\"type\": \"momentSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 10, \"compress\": true},"
@@ -169,21 +171,21 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [ \"product\", {\"name\":\"valueWithNulls\", \"type\":\"double\"}],",
-            "      \"dimensionExclusions\": [\"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDimensions(
+                              List.of(
+                                  new StringDimensionSchema("product"),
+                                  new DoubleDimensionSchema("valueWithNulls")
+                              )
+                          )
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp

@@ -403,11 +403,11 @@ public class EqualityFilterTests
       }
 
       // array_offset behaves same on both mvds and arrays
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null),
           ImmutableList.of("0")
       );
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           NotDimFilter.of(new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null)),
           ImmutableList.of()
       );

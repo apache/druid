@@ -81,9 +81,10 @@
         <apache.ranger.version>2.7.0</apache.ranger.version>
         <antlr4.version>4.5.3</antlr4.version>
         <gson.version>2.13.2</gson.version>
-        <scala.library.version>2.13.14</scala.library.version>
+        <scala.library.version>2.13.16</scala.library.version>
         <avatica.version>1.27.0</avatica.version>
-        <avro.version>1.11.5</avro.version>
+        <avro.version>1.12.0</avro.version>
+        <parquet.version>1.16.0</parquet.version>
         <bytebuddy.version>1.18.5</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -123,7 +124,7 @@
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.40.0</aws.sdk.v2.version>
-        <caffeine.version>2.8.0</caffeine.version>
+        <caffeine.version>2.9.3</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
@@ -238,6 +239,7 @@
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
+        <module>extensions-contrib/consul-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/druid-exact-count-bitmap</module>
@@ -321,7 +323,7 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.17.0</version>
+                <version>2.21.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
@@ -455,6 +457,11 @@
             </dependency>
             <!-- Transitive dependency of kubernetes-client java and docker-java-core
             in kubernetes-extensions and it-integration tests -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.81</version>
+            </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
@@ -666,7 +673,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.27.0</version>
+                <version>1.28.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -676,7 +683,7 @@
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.5.2-3</version>
+                <version>1.5.7-7</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -1116,7 +1123,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
-                <version>4.2</version>
+                <version>4.5.0</version>
             </dependency>
             <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
@@ -1829,8 +1836,6 @@
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>
-                                       <exclude>org.apache.commons:commons-collections4</exclude>
-                                       <exclude>com.github.ben-manes.caffeine:caffeine</exclude>
                                        <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
                                        <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
                                        <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
@@ -1847,7 +1852,6 @@
                                        <exclude>com.squareup.okio:okio</exclude>
                                        <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
                                        <exclude>com.sun.activation:jakarta.activation</exclude>
-                                       <exclude>org.apache.commons:commons-compress</exclude>
                                        <exclude>org.yaml:snakeyaml</exclude>
                                        <exclude>io.netty:netty-transport-native-kqueue</exclude>
                                        <exclude>io.netty:netty-transport-native-epoll</exclude>
@@ -1856,11 +1860,7 @@
                                        <exclude>com.google.http-client:google-http-client-jackson2</exclude>
                                        <exclude>com.google.http-client:google-http-client</exclude>
                                        <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
-                                       <exclude>commons-io:commons-io</exclude>
-                                       <exclude>com.github.luben:zstd-jni</exclude>
-                                       <exclude>org.scala-lang:scala-library</exclude>
                                        <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
-                                       <exclude>org.jetbrains.kotlin:kotlin-stdlib-jdk8</exclude>
                                        <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>

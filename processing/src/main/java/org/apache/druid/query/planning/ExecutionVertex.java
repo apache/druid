@@ -220,8 +220,11 @@ public class ExecutionVertex
     if (!topQuery.context().isSecondaryPartitionPruningEnabled()) {
       return null;
     }
+
+    final SegmentPruner forDataSource = topQuery.getDataSource().createSegmentPruner();
+
     if (topQuery.getFilter() == null) {
-      return null;
+      return forDataSource;
     }
     final Set<String> baseFields = new HashSet<>();
     for (final String field : topQuery.getFilter().getRequiredColumns()) {
@@ -229,12 +232,17 @@ public class ExecutionVertex
         baseFields.add(field);
       }
     }
-
-    return new FilterSegmentPruner(
+    final FilterSegmentPruner forFilters = new FilterSegmentPruner(
         topQuery.getFilter(),
         baseFields,
         topQuery.getVirtualColumns()
     );
+
+    if (forDataSource == null) {
+      return forFilters;
+    }
+
+    return forDataSource.combine(forFilters);
   }
 
   /**

@@ -19,13 +19,11 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -89,7 +87,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
   public HashPartitionTaskKillTest()
   {
-    super(LockGranularity.TIME_CHUNK, true, 0, 0);
+    super(LockGranularity.TIME_CHUNK, 0, 0);
   }
 
   @Before
@@ -125,12 +123,12 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   public void failsInFirstPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
-        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, INTERVAL_TO_INDEX, inputDir,
                 "test_*",
                 new HashedPartitionsSpec(null, null, // num shards is null to force it to go to first phase
                                          ImmutableList.of("dim1", "dim2")
                 ),
-                2, false, true, 0
+                2, false, 0
         );
 
     final TaskActionClient actionClient = createActionClient(task);
@@ -153,12 +151,12 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   public void failsInSecondPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
-        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, INTERVAL_TO_INDEX, inputDir,
                 "test_*",
                 new HashedPartitionsSpec(null, 3,
                                          ImmutableList.of("dim1", "dim2")
                 ),
-                2, false, true, 0
+                2, false, 0
         );
 
     final TaskActionClient actionClient = createActionClient(task);
@@ -182,7 +180,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   {
     final ParallelIndexSupervisorTask task =
         createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT,
-                null,
                 INTERVAL_TO_INDEX,
                 inputDir,
                 "test_*",
@@ -191,7 +188,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
                 ),
                 2,
                 false,
-                true,
                 1
         );
 
@@ -216,14 +212,12 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDir,
       String filter,
       PartitionsSpec partitionsSpec,
       int maxNumConcurrentSubTasks,
       boolean appendToExisting,
-      boolean useInputFormatApi,
       int succeedsBeforeFailing
   )
   {
@@ -239,48 +233,23 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         !appendToExisting
     );
 
-    final ParallelIndexIngestionSpec ingestionSpec;
-
-    if (useInputFormatApi) {
-      Preconditions.checkArgument(parseSpec == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalInputSource(inputDir, filter),
-          inputFormat,
-          appendToExisting,
-          null
-      );
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource(DATASOURCE)
-                    .withTimestamp(timestampSpec)
-                    .withDimensions(dimensionsSpec)
-                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
-                    .withGranularity(granularitySpec)
-                    .build(),
-          ioConfig,
-          tuningConfig
-      );
-    } else {
-      Preconditions.checkArgument(inputFormat == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalInputSource(inputDir, filter),
-          createInputFormatFromParseSpec(parseSpec),
-          appendToExisting,
-          null
-      );
-      //noinspection unchecked
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource("dataSource")
-                    .withTimestamp(parseSpec.getTimestampSpec())
-                    .withDimensions(parseSpec.getDimensionsSpec())
-                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
-                    .withGranularity(granularitySpec)
-                    .build(),
-          ioConfig,
-          tuningConfig
-      );
-    }
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        new LocalInputSource(inputDir, filter),
+        inputFormat,
+        appendToExisting,
+        null
+    );
+    ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
+        DataSchema.builder()
+                  .withDataSource(DATASOURCE)
+                  .withTimestamp(timestampSpec)
+                  .withDimensions(dimensionsSpec)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(granularitySpec)
+                  .build(),
+        ioConfig,
+        tuningConfig
+    );
 
     return new ParallelIndexSupervisorTaskTest(
         null,

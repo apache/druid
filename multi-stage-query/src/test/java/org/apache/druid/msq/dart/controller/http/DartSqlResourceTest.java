@@ -581,7 +581,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
@@ -589,7 +589,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
-    Assertions.assertEquals("RUNTIME_FAILURE", e.get("category"));
+    Assertions.assertEquals("INVALID_INPUT", e.get("category"));
     assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
   }
 

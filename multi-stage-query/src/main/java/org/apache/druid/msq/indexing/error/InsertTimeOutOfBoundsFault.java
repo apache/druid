@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -61,6 +62,15 @@ public class InsertTimeOutOfBoundsFault extends BaseMSQFault
   public List<Interval> getIntervalBounds()
   {
     return intervalBounds;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

@@ -21,10 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -71,14 +69,6 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))
   );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim1", "dim2", "val"),
-      false,
-      0
-  );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
       null,
@@ -91,20 +81,19 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private static final String INPUT_FILTER = "test_*";
 
   @Parameterized.Parameters(
-      name = "lockGranularity={0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, intervalToIndex={3}, numShards={4}"
+      name = "lockGranularity={0}, maxNumConcurrentSubTasks={1}, intervalToIndex={2}, numShards={3}"
   )
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false, 10, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 10, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 10, null, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 1, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.SEGMENT, true, 10, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 10, INTERVAL_TO_INDEX, null},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 10, null, null},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 1, INTERVAL_TO_INDEX, null},
-        new Object[]{LockGranularity.SEGMENT, true, 10, INTERVAL_TO_INDEX, null}
+        new Object[]{LockGranularity.TIME_CHUNK, 10, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, 10, null, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, 1, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.SEGMENT, 10, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, 10, INTERVAL_TO_INDEX, null},
+        new Object[]{LockGranularity.TIME_CHUNK, 10, null, null},
+        new Object[]{LockGranularity.TIME_CHUNK, 1, INTERVAL_TO_INDEX, null},
+        new Object[]{LockGranularity.SEGMENT, 10, INTERVAL_TO_INDEX, null}
     );
   }
 
@@ -120,13 +109,12 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
 
   public HashPartitionMultiPhaseParallelIndexingTest(
       LockGranularity lockGranularity,
-      boolean useInputFormatApi,
       int maxNumConcurrentSubTasks,
       @Nullable Interval intervalToIndex,
       @Nullable Integer numShards
   )
   {
-    super(lockGranularity, useInputFormatApi, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(lockGranularity, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
     this.intervalToIndex = intervalToIndex;
     this.numShards = numShards;
@@ -336,35 +324,18 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       boolean dropExisting
   )
   {
-    if (isUseInputFormatApi()) {
-      return createTask(
-          TIMESTAMP_SPEC,
-          DIMENSIONS_SPEC,
-          INPUT_FORMAT,
-          null,
-          intervalToIndex,
-          inputDirectory,
-          INPUT_FILTER,
-          partitionsSpec,
-          maxNumConcurrentSubTasks,
-          appendToExisting,
-          dropExisting
-      );
-    } else {
-      return createTask(
-          null,
-          null,
-          null,
-          PARSE_SPEC,
-          intervalToIndex,
-          inputDirectory,
-          INPUT_FILTER,
-          partitionsSpec,
-          maxNumConcurrentSubTasks,
-          appendToExisting,
-          dropExisting
-      );
-    }
+    return createTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
+        intervalToIndex,
+        inputDirectory,
+        INPUT_FILTER,
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        appendToExisting,
+        dropExisting
+    );
   }
 
   private void assertHashedPartition(

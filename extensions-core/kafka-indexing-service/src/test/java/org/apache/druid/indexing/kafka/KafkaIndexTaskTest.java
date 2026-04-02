@@ -1752,8 +1752,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
     Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
-    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
-    Assert.assertEquals(1, observedSegmentGenerationMetrics.numPersists());
+    Assert.assertEquals(0, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(0, observedSegmentGenerationMetrics.numPersists());
     Assert.assertEquals(0, observedSegmentGenerationMetrics.handOffCount());
   }
 

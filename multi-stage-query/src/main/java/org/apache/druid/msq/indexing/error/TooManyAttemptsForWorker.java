@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 import java.util.Objects;
 
@@ -84,6 +85,15 @@ public class TooManyAttemptsForWorker extends BaseMSQFault
   public String getRootErrorMessage()
   {
     return rootErrorMessage;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
+                         .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

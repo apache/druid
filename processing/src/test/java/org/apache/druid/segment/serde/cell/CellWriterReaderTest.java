@@ -54,7 +54,7 @@ public class CellWriterReaderTest extends BytesReadWriteTestBase
                 TestCaseResult.of(575673)
             )
             .setTestCaseValue(BytesReadWriteTest::testSingleUncompressableBlock, TestCaseResult.of(65750))
-            .setTestCaseValue(BytesReadWriteTest::testSingleWriteByteBufferZSTD, TestCaseResult.of(845))
+            .setTestCaseValue(BytesReadWriteTest::testSingleWriteByteBufferZSTD, TestCaseResult.of(648))
             .setTestCaseValue(
                 BytesReadWriteTest::testSingleWriteByteBufferAlternateByteBufferProvider,
                 TestCaseResult.of(1552)

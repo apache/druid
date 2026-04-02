@@ -42,6 +42,15 @@ public class DelimitedInputFormat extends FlatTextInputFormat
 {
   public static final String TYPE_KEY = "tsv";
 
+  /**
+   * Creates a new {@link DelimitedInputFormat} with only a column list, using 'default' values for everything else
+   * (no custom delimiters, no headers/no skip rows, no number parsing, etc.)
+   */
+  public static DelimitedInputFormat forColumns(List<String> columns)
+  {
+    return new DelimitedInputFormat(columns, null, null, null, null, 0, null);
+  }
+
   private static final String DEFAULT_DELIMITER = "\t";
 
   @JsonCreator

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.msq.indexing.error.DruidExceptionFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -709,6 +710,32 @@ public class MSQFaultsTest extends MSQTestBase
                          )
                      )
                      .verifyExecutionError();
+  }
+
+  @Test
+  public void testDruidExceptionFault()
+  {
+    // BITWISE_COMPLEMENT(m1 * 1e19) throws because the double value exceeds Long range. The expression engine
+    // wraps this in DruidException, which getFaultFromException() converts to DruidExceptionFault.
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                                    .putAll(DEFAULT_MSQ_CONTEXT)
+                                                    .put("vectorize", "false")
+                                                    .build();
+
+    testSelectQuery()
+        .setSql("SELECT BITWISE_COMPLEMENT(m1 * 1e19) FROM foo")
+        .setQueryContext(context)
+        .setExpectedMSQFault(
+            new DruidExceptionFault(
+                "general",
+                "USER",
+                "INVALID_INPUT",
+                "Function[bitwiseComplement] Possible data truncation, param [10000000000000000000.000000]"
+                + " is out of LONG value range",
+                Collections.emptyMap()
+            )
+        )
+        .verifyResults();
   }
 
   private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)

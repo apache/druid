@@ -197,7 +197,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       }
     }
     catch (IOException e) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                           .build(
                               e,
@@ -223,7 +223,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       if (stream != null) {
         stream.close();
       }
-      throw DruidException.forPersona(DruidException.Persona.USER)
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                           .build(e, "Exception occurred while opening a stream to the export location [%s].", exportFilePath);
     }

@@ -60,11 +60,13 @@ public class MSQErrorReportTest
     Assert.assertEquals(new RowTooLargeFault(10), MSQErrorReport.getFaultFromException(tooLargeException));
 
     UnexpectedMultiValueDimensionException mvException = new UnexpectedMultiValueDimensionException(ERROR_MESSAGE);
-    Assert.assertEquals(QueryRuntimeFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
+    Assert.assertEquals(DruidExceptionFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
 
+    // QueryTimeoutException (legacy QueryException, not a DruidException) becomes an UnknownFault.
+    // Only DruidExceptions become nice faults.
     QueryTimeoutException queryException = new QueryTimeoutException(ERROR_MESSAGE);
     Assert.assertEquals(
-        new QueryRuntimeFault(ERROR_MESSAGE, null),
+        UnknownFault.forException(queryException),
         MSQErrorReport.getFaultFromException(queryException)
     );
 

@@ -192,6 +192,7 @@ public class SystemSchema extends AbstractSchema
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
       .add("version", ColumnType.STRING)
+      .add("build_revision", ColumnType.STRING)
       .add("labels", ColumnType.STRING)
       .add("available_processors", ColumnType.LONG)
       .add("total_memory", ColumnType.LONG)
@@ -697,6 +698,7 @@ public class SystemSchema extends AbstractSchema
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
+          node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
           discoveryDruidNode.getTotalMemory()
@@ -725,6 +727,7 @@ public class SystemSchema extends AbstractSchema
           isLeader ? 1L : 0L,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
+          node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
           discoveryDruidNode.getTotalMemory()
@@ -765,6 +768,7 @@ public class SystemSchema extends AbstractSchema
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
+          node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
           discoveryDruidNode.getTotalMemory()

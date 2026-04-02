@@ -547,6 +547,44 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.FINISHED);
   }
 
+  /**
+   * Test that the controller handles the case where a worker reports ResultsComplete without first
+   * reporting DoneReadingInput, which can happen if the worker finishes reading inputs very quickly.
+   */
+  @Test
+  public void testResultsCompleteWithoutDoneReadingInput()
+  {
+    // Stage 0: GLOBAL_SORT with maxPartitions=1 (mustGatherResultKeyStatistics = false), 2 workers
+    // Stage 1: reads from stage 0
+    final ControllerQueryKernelTester tester = testControllerQueryKernel(
+        configBuilder -> configBuilder.maxConcurrentStages(2).pipeline(true).build()
+    );
+
+    tester.queryDefinition(
+        new MockQueryDefinitionBuilder(2)
+            .addEdge(0, 1)
+            .defineStage(0, ShuffleKind.GLOBAL_SORT, 2, 1)
+            .getQueryDefinitionBuilder()
+            .build()
+    );
+    tester.init();
+
+    Assert.assertEquals(ImmutableSet.of(0), tester.createAndGetNewStageNumbers());
+
+    tester.startStage(0);
+    tester.sendWorkOrdersForWorkers(0, 0, 1);
+
+    // Worker 0 reports doneReadingInput normally
+    tester.doneReadingInputForWorkers(0, 0);
+
+    // Worker 1 skips doneReadingInput and reports resultsComplete directly (the race condition)
+    tester.setResultsCompleteForStageAndWorkers(0, 1);
+
+    // Stage 0 should reach POST_READING; stage 1 should be ready to run
+    tester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    Assert.assertEquals(ImmutableSet.of(1), tester.createAndGetNewStageNumbers());
+  }
+
   private static void transitionNewToResultsComplete(ControllerQueryKernelTester queryKernelTester, int stageNumber)
   {
     queryKernelTester.startStage(stageNumber);
