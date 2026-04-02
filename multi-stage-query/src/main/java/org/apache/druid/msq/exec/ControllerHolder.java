@@ -22,13 +22,13 @@ package org.apache.druid.msq.exec;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -142,17 +142,16 @@ public class ControllerHolder
   }
 
   /**
-   * Runs {@link Controller#run(QueryListener)} in the provided executor. Optionally registers the controller with
-   * the provided registry while it is running. Schedules a timeout on the provided {@code scheduledExec} based
-   * on the query deadline from the controller's query context.
+   * Runs {@link Controller#run(QueryListener)} in {@link ControllerThreadPool#getRunExecutorService()}. Optionally
+   * registers the controller with the provided registry while it is running. Schedules a timeout on the provided
+   * {@link ControllerThreadPool#getTimeoutExecutorService()} .
    *
    * @return future that resolves when the controller is done or canceled
    */
   public ListenableFuture<?> runAsync(
       final QueryListener listener,
       @Nullable final ControllerRegistry controllerRegistry,
-      final ListeningExecutorService exec,
-      final ScheduledExecutorService scheduledExec
+      final ControllerThreadPool controllerThreadPool
   )
   {
     if (controllerRegistry != null) {
@@ -163,9 +162,9 @@ public class ControllerHolder
 
     // Schedule timeout based on the query deadline. The scheduled task calls cancel(), which is
     // safe even if the controller has already finished (cancel is a no-op for terminal states).
-    final ScheduledFuture<?> timeoutFuture = scheduleTimeout(scheduledExec);
+    final ScheduledFuture<?> timeoutFuture = scheduleTimeout(controllerThreadPool.getTimeoutExecutorService());
 
-    final ListenableFuture<?> future = exec.submit(() -> {
+    final ListenableFuture<?> runFuture = controllerThreadPool.getRunExecutorService().submit(() -> {
       final String threadName = Thread.currentThread().getName();
       Thread.currentThread().setName(makeThreadName());
 
@@ -233,7 +232,7 @@ public class ControllerHolder
     // Must not cancel the above future, otherwise "deregister" may never get called. If a controller is canceled
     // before it runs, the runnable above stays in the queue until it gets a thread, then it exits without running
     // the controller.
-    return Futures.nonCancellationPropagating(future);
+    return Futures.nonCancellationPropagating(runFuture);
   }
 
   /**

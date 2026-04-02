@@ -270,8 +270,7 @@ public class DartQueryMaker implements QueryMaker
       controllerHolder.runAsync(
           listener,
           controllerRegistry,
-          controllerThreadPool.getRunExecutorService(),
-          controllerThreadPool.getTimeoutExecutorService()
+          controllerThreadPool
       ).get();
 
       // Return a sequence with just one row (the report).
@@ -304,8 +303,7 @@ public class DartQueryMaker implements QueryMaker
     controllerHolder.runAsync(
         listener,
         controllerRegistry,
-        controllerThreadPool.getRunExecutorService(),
-        controllerThreadPool.getTimeoutExecutorService()
+        controllerThreadPool
     );
 
     return Sequences.wrap(

@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -50,23 +51,25 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ControllerHolderTest
 {
   private static final Logger log = new Logger(ControllerHolderTest.class);
-  private ListeningExecutorService exec;
-  private ScheduledExecutorService scheduledExec;
+  private ControllerThreadPool controllerThreadPool;
 
   @Before
   public void setUp()
   {
-    exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "controller-holder-test-%s"));
-    scheduledExec = Executors.newSingleThreadScheduledExecutor(
-        Execs.makeThreadFactory("controller-holder-test-timeout-%s")
+    controllerThreadPool = new ControllerThreadPool(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "controller-holder-test-%s")),
+        Executors.newSingleThreadScheduledExecutor(
+            Execs.makeThreadFactory("controller-holder-test-timeout-%s")
+        )
     );
   }
 
   @After
   public void tearDown() throws InterruptedException
   {
-    exec.shutdownNow();
-    scheduledExec.shutdownNow();
+    final ListeningExecutorService exec = controllerThreadPool.getRunExecutorService();
+    final ScheduledExecutorService scheduledExec = controllerThreadPool.getTimeoutExecutorService();
+    controllerThreadPool.stop();
     if (!exec.awaitTermination(5, TimeUnit.MINUTES)) {
       log.warn("Could not terminate run executor within 5 minutes");
     }
@@ -101,7 +104,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
 
     controllerStarted.await();
     holder.cancel(CancellationReason.USER_REQUEST);
@@ -150,7 +153,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
 
     controllerStarted.await();
     holder.cancel(CancellationReason.USER_REQUEST);
@@ -172,7 +175,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
@@ -199,7 +202,7 @@ public class ControllerHolderTest
     Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
 
     // Run should complete quickly without running the controller
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertFalse("Controller should not have run", controllerRan.get());
@@ -230,7 +233,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
 
     controllerStarted.await();
 
@@ -255,7 +258,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
@@ -278,11 +281,14 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "id", null, null, DateTimes.nowUtc());
+    final ControllerThreadPool directPool = new ControllerThreadPool(
+        Execs.directExecutor(),
+        controllerThreadPool.getTimeoutExecutorService()
+    );
     final ListenableFuture<?> future = holder.runAsync(
         new NoopQueryListener(),
         null,
-        Execs.directExecutor(),
-        scheduledExec
+        directPool
     );
     future.get(5, TimeUnit.SECONDS);
 
@@ -319,7 +325,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), registry, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), registry, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
     Assert.assertTrue("Should have been registered", registered.get());
@@ -353,7 +359,7 @@ public class ControllerHolderTest
     };
 
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
-    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, exec, scheduledExec);
+    final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(30, TimeUnit.SECONDS);
 
     Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());

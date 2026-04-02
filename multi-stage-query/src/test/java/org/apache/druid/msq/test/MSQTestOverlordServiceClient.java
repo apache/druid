@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryListener;
@@ -70,8 +71,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MSQTestOverlordServiceClient extends NoopOverlordClient
@@ -201,18 +200,20 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           DateTimes.nowUtc()
       );
 
-      final ScheduledExecutorService timeoutExec =
-          Execs.scheduledSingleThreaded("msq-test-controller-timeout-%s");
+      final ControllerThreadPool controllerThreadPool = new ControllerThreadPool(
+          Execs.directExecutor(),
+          Execs.scheduledSingleThreaded("msq-test-controller-timeout-%s")
+      );
 
       try {
-        controllerHolder.runAsync(queryListener, null, Execs.directExecutor(), timeoutExec).get();
+        controllerHolder.runAsync(queryListener, null, controllerThreadPool).get();
         testTaskDetails.taskStatus = queryListener.getStatusReport().toTaskStatus(cTask.getId());
       }
       catch (Exception e) {
         testTaskDetails.taskStatus = TaskStatus.failure(cTask.getId(), e.toString());
       }
       finally {
-        timeoutExec.shutdownNow();
+        controllerThreadPool.stop();
       }
       return Futures.immediateFuture(null);
     }
