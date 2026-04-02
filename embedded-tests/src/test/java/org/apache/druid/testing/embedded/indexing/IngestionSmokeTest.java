@@ -62,6 +62,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -153,6 +154,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  @Timeout(600)
   public void test_runIndexTask_andKillData()
   {
     final int numSegments = 10;

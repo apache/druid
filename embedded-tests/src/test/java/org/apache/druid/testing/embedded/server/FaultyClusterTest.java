@@ -80,6 +80,7 @@ public class FaultyClusterTest extends StreamIndexTestBase
         "clusterTesting",
         Map.of("metadataConfig", Map.of("cleanupPendingSegments", false))
     );
+    final int expectedRecords = 1000;
 
     // Set up the topic and supervisor
     final String topic = IdUtils.getRandomId();
@@ -92,12 +93,14 @@ public class FaultyClusterTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisorSpec);
 
     final int recordCount = publish1kRecords(topic, true);
-    waitUntilPublishedRecordsAreIngested(recordCount);
+    Assertions.assertEquals(expectedRecords, recordCount);
 
-    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    waitUntilPublishedRecordsAreIngested(expectedRecords);
+
+    String suspendedSupervisorId = cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    Assertions.assertTrue(cluster.callApi().getSupervisorStatus(suspendedSupervisorId).isSuspended());
     kafkaServer.deleteTopic(topic);
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     verifyRowCount(recordCount);
 
     // Verify that pending segments are not cleaned up

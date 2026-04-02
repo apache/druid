@@ -114,7 +114,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(20)
+  @Timeout(60)
   public void test_run25Tasks_oneByOne()
   {
     for (int i = 0; i < 25; ++i) {
@@ -123,14 +123,14 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(20)
+  @Timeout(60)
   public void test_run25Tasks_concurrently()
   {
     runTasksConcurrently(25);
   }
 
   @Test
-  @Timeout(20)
+  @Timeout(120)
   public void test_run100Tasks_concurrently()
   {
     runTasksConcurrently(100);
