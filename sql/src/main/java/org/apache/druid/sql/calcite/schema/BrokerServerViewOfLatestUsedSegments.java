@@ -201,14 +201,16 @@ public class BrokerServerViewOfLatestUsedSegments implements TimelineServerView
 
       synchronized (lock) {
         final SegmentId segmentId = segment.getId();
-        shouldRemainVisibleAsUnavailable = metadataSegments.containsKey(segmentId)
-                                           && !metadataRemovedSegmentIds.contains(segmentId);
+        final boolean wasMetadataRemoved = metadataRemovedSegmentIds.contains(segmentId);
+        shouldRemainVisibleAsUnavailable = metadataSegments.containsKey(segmentId) && !wasMetadataRemoved;
         if (shouldRemainVisibleAsUnavailable) {
           upsertMergedSelector(createEmptySelector(segment));
         } else {
           removeMergedSelector(segmentId);
+          // Both BSV and MSV now agree the segment is gone - clear the guard entry
+          metadataRemovedSegmentIds.remove(segmentId);
         }
-        shouldFireRemoved = !shouldRemainVisibleAsUnavailable && !metadataRemovedSegmentIds.contains(segmentId);
+        shouldFireRemoved = !shouldRemainVisibleAsUnavailable && !wasMetadataRemoved;
       }
 
       if (shouldFireRemoved) {

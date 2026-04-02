@@ -95,9 +95,6 @@ public class MetadataSegmentView
   private final ConcurrentMap<MetadataSegmentViewCallback, Executor> segmentViewCallbacks;
   /**
    * A set containing the identifiers of the segments currently being managed or tracked by this view.
-   * <p>
-   * This field is immutable and provides a snapshot of segment identifiers at a given point
-   * in time. It is intended for internal use by the class to ensure thread-safe access.
    */
   private final Set<SegmentId> currentSegmentIds;
   /**
