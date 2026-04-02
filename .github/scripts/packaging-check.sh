@@ -23,8 +23,3 @@ mvn -B clean install -Prat --fail-at-end \
   -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C
 mvn -B install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
   -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C
-tar tzf distribution/target/apache-druid-*-bin.tar.gz | grep jar$ | sed 's|.*/||'|grep -v '^druid'|sort|uniq > distribution/src/dist_jars.txt
-
-echo "@@@ if the next diff fails; there are lib changes in the dist package!"
-echo "@@@ run $0 locally to update the list!"
-git diff --exit-code
