@@ -113,6 +113,7 @@ public class NestedMergeVirtualColumnTest
   {
     EqualsVerifier.forClass(NestedMergeVirtualColumn.class)
                   .withNonnullFields("columns")
+                  .withIgnoredFields("macroTable")
                   .usingGetClass()
                   .verify();
   }
