@@ -172,7 +172,6 @@ import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
@@ -219,7 +218,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -251,6 +249,13 @@ public class ControllerImpl implements Controller
 
   // For system error reporting. This is the very first error we got from a worker. (We only report that one.)
   private final AtomicReference<MSQErrorReport> workerErrorRef = new AtomicReference<>();
+
+  /**
+   * Set by {@link #stop(CancellationReason)}. If non-null, this reason takes priority over any exception
+   * encountered during execution when building the error report. If we didn't do this, interrupts arising
+   * from cancellation could produce errors that are less informative than the actual cancellation reason.
+   */
+  private volatile CancellationReason cancelReason;
 
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
@@ -376,7 +381,9 @@ public class ControllerImpl implements Controller
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
     log.info("Query [%s] canceled.", queryDef != null ? queryDef.getQueryId() : "<no id yet>");
 
+    cancelReason = reason;
     stopExternalFetchers();
+    kernelManipulationQueue.clear(); // No point processing any possibly-queued commands.
     addToKernelManipulationQueue(
         kernel -> {
           throw new MSQException(new CanceledFault(reason));
@@ -471,7 +478,12 @@ public class ControllerImpl implements Controller
       MSQErrorReport workerError = workerErrorRef.get();
 
       taskStateForReport = TaskState.FAILED;
-      errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
+
+      if (cancelReason != null) {
+        errorForReport = MSQErrorReport.fromFault(queryId(), selfHost, null, new CanceledFault(cancelReason));
+      } else {
+        errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
+      }
 
       // Log the errors we encountered.
       if (controllerError != null) {
@@ -667,6 +679,9 @@ public class ControllerImpl implements Controller
    * controller loop in {@link RunQueryUntilDone#run()}.
    * <p>
    * If the consumer throws an exception, the query fails.
+   * <p>
+   * Consumers must not perform blocking operations (network calls, waiting on futures, sleeping, etc.), because
+   * the main controller loop executes them in sequence and blocking would delay controller operations.
    */
   public void addToKernelManipulationQueue(Consumer<ControllerQueryKernel> kernelConsumer)
   {
@@ -2328,10 +2343,6 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
-      final DateTime queryFailDeadline = getQueryDeadline();
-
-      // The timeout could have already elapsed while waiting for the controller to start, check it now.
-      checkTimeout(queryFailDeadline);
 
       while (!queryKernel.isDone()) {
         startStages();
@@ -2344,10 +2355,8 @@ public class ControllerImpl implements Controller
         checkForErrorsInSketchFetcher();
 
         if (!runAgain) {
-          runKernelCommands(queryFailDeadline);
+          runKernelCommands();
         }
-
-        checkTimeout(queryFailDeadline);
       }
 
       if (!queryKernel.isSuccess()) {
@@ -2357,34 +2366,6 @@ public class ControllerImpl implements Controller
       updateLiveReportMaps();
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
-    }
-
-    /**
-     * Retrieves the timeout and start time from the query context and reads or calculates the deadline.
-     */
-    private DateTime getQueryDeadline()
-    {
-      DateTime deadline = MultiStageQueryContext.getQueryDeadline(querySpec.getContext());
-
-      if (deadline == null) {
-        // Newer Brokers set the deadline, but older ones might not. Fall back to startTime and timeout in this case.
-        final long timeout = querySpec.getContext().getTimeout(QueryContexts.NO_TIMEOUT);
-        if (timeout != QueryContexts.NO_TIMEOUT) {
-          deadline = MultiStageQueryContext.getStartTime(querySpec.getContext()).plus(timeout);
-        }
-      }
-
-      return deadline != null ? deadline : DateTimes.MAX;
-    }
-
-    /**
-     * Checks the queryFailDeadline and fails the query with a {@link CanceledFault} if it has passed.
-     */
-    private void checkTimeout(DateTime queryFailDeadline)
-    {
-      if (queryFailDeadline.isBeforeNow()) {
-        throw new MSQException(CanceledFault.timeout());
-      }
     }
 
     private void checkForErrorsInSketchFetcher()
@@ -2472,24 +2453,21 @@ public class ControllerImpl implements Controller
 
     /**
      * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
+     * Timeouts are handled externally by {@link ControllerHolder}, which calls {@link Controller#stop}
+     * to enqueue a {@link CanceledFault} and then interrupts this thread when the query deadline elapses.
      */
-    private void runKernelCommands(DateTime queryFailDeadline) throws InterruptedException
+    private void runKernelCommands() throws InterruptedException
     {
       if (!queryKernel.isDone()) {
-        // Run the next command, waiting till timeout for it if necessary.
-        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.poll(
-            queryFailDeadline.getMillis() - DateTimes.nowUtc().getMillis(),
-            TimeUnit.MILLISECONDS
-        );
-        if (command == null) {
-          return;
-        }
+        // Run the next command, waiting for it if necessary.
+        final Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
         command.accept(queryKernel);
 
         // Run all pending commands after that one. Helps avoid deep queues.
         // After draining the command queue, move on to the next iteration of the controller loop.
-        while ((command = kernelManipulationQueue.poll()) != null) {
-          command.accept(queryKernel);
+        Consumer<ControllerQueryKernel> next;
+        while ((next = kernelManipulationQueue.poll()) != null) {
+          next.accept(queryKernel);
         }
       }
     }

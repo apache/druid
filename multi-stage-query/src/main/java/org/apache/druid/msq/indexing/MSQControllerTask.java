@@ -40,9 +40,14 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.ResultsContext;
@@ -71,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
 
 @JsonTypeName(MSQControllerTask.TYPE)
 public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
@@ -113,7 +119,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @JacksonInject
   private Injector injector;
 
-  private volatile Controller controller;
+  private volatile ControllerHolder controllerHolder;
 
   @JsonCreator
   public MSQControllerTask(
@@ -262,11 +268,20 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     final ControllerContext context = injector.getInstance(IndexerControllerContextFactory.class)
                                               .buildWithTask(this, toolbox);
-    controller = new ControllerImpl(
+
+    final ControllerImpl controller = new ControllerImpl(
         querySpec,
         new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
         context,
         injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+    );
+
+    controllerHolder = new ControllerHolder(
+        controller,
+        controller.getQueryContext().getString(QueryContexts.CTX_SQL_QUERY_ID, controller.queryId()),
+        getSqlQuery(),
+        null,
+        DateTimes.nowUtc()
     );
 
     final ResultsContext resultsContext = new ResultsContext(getSqlTypeNames(), getSqlResultsContext());
@@ -280,15 +295,29 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         resultsContext
     );
 
-    controller.run(queryListener);
-    return queryListener.getStatusReport().toTaskStatus(getId());
+    final ControllerThreadPool controllerThreadPool = new ControllerThreadPool(
+        Execs.directExecutor(),
+        ScheduledExecutors.fixed(
+            1,
+            "controller-timeout[" + StringUtils.encodeForFormat(controller.queryId()) + "]-%s"
+        )
+    );
+
+    try {
+      controllerHolder.runAsync(queryListener, null, controllerThreadPool).get();
+      return queryListener.getStatusReport().toTaskStatus(getId());
+    }
+    finally {
+      controllerThreadPool.stop();
+    }
   }
 
   @Override
   public void stopGracefully(final TaskConfig taskConfig)
   {
-    if (controller != null) {
-      controller.stop(CancellationReason.TASK_SHUTDOWN);
+    final ControllerHolder holder = controllerHolder;
+    if (holder != null) {
+      holder.cancel(CancellationReason.TASK_SHUTDOWN);
     }
   }
 
