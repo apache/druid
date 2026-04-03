@@ -68,6 +68,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.WeightedQueryLaningStrategy;
 import org.easymock.EasyMock;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.After;
@@ -79,7 +80,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -604,6 +607,103 @@ public class QuerySchedulerTest
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("twenty"));
     Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
+  }
+
+  @Test
+  public void testConfigWeighted()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.setProperty(propertyPrefix + ".numThreads", "10");
+    properties.setProperty(propertyPrefix + ".laning.strategy", "weighted");
+    properties.setProperty(propertyPrefix + ".laning.segmentCountThreshold", "1");
+    properties.setProperty(propertyPrefix + ".laning.lanes", "{\"low\": {\"minScore\": 1, \"maxPercent\": 30}}");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(3, scheduler.getLaneAvailableCapacity("low"));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
+  }
+
+  @Test
+  public void testWeightedLaneAssignment()
+  {
+    ObservableQueryScheduler weightedScheduler = new ObservableQueryScheduler(
+        TEST_HI_CAPACITY,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new WeightedQueryLaningStrategy(
+            null,
+            null,
+            1,
+            null,
+            Map.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
+        ),
+        SERVER_CONFIG_WITH_TOTAL
+    );
+
+    // Query with 2 segments exceeds segmentCountThreshold=1 → "low" lane
+    Query<?> query = weightedScheduler.prioritizeAndLaneQuery(
+        QueryPlus.wrap(makeDefaultQuery()),
+        Set.of(
+            EasyMock.createMock(SegmentServerSelector.class),
+            EasyMock.createMock(SegmentServerSelector.class)
+        )
+    );
+    Assert.assertEquals("low", query.context().getLane());
+
+    // Query with 0 segments → no lane
+    Query<?> noLaneQuery = weightedScheduler.prioritizeAndLaneQuery(
+        QueryPlus.wrap(makeDefaultQuery()),
+        Set.of()
+    );
+    Assert.assertNull(noLaneQuery.context().getLane());
+  }
+
+  @Test
+  public void testWeightedFailsWhenOutOfLaneCapacity()
+  {
+    ObservableQueryScheduler weightedScheduler = new ObservableQueryScheduler(
+        TEST_HI_CAPACITY,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new WeightedQueryLaningStrategy(
+            null,
+            null,
+            1,
+            null,
+            Map.of("low", new WeightedQueryLaningStrategy.LaneConfig(1, 40))
+        ),
+        SERVER_CONFIG_WITH_TOTAL
+    );
+
+    Set<SegmentServerSelector> manySegments = Set.of(
+        EasyMock.createMock(SegmentServerSelector.class),
+        EasyMock.createMock(SegmentServerSelector.class)
+    );
+
+    // Fill the low lane (capacity = ceil(5 * 40/100) = 2)
+    Query<?> q1 = weightedScheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeDefaultQuery()), manySegments);
+    Yielders.each(weightedScheduler.run(q1, Sequences.empty()));
+    Assert.assertEquals(1, weightedScheduler.getLaneAvailableCapacity("low"));
+
+    Query<?> q2 = weightedScheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeDefaultQuery()), manySegments);
+    Yielders.each(weightedScheduler.run(q2, Sequences.empty()));
+    Assert.assertEquals(0, weightedScheduler.getLaneAvailableCapacity("low"));
+
+    // Third should fail with 429
+    Assert.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> Yielders.each(
+            weightedScheduler.run(
+                weightedScheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeDefaultQuery()), manySegments),
+                Sequences.empty()
+            )
+        )
+    );
   }
 
   private void maybeDelayNextIteration(int i) throws InterruptedException
