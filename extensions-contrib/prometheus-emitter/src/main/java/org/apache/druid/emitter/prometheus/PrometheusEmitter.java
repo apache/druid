@@ -19,7 +19,7 @@
 
 package org.apache.druid.emitter.prometheus;
 
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.prometheus.client.CollectorRegistry;
@@ -30,24 +30,26 @@ import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.AbstractFilteringEmitter;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.MetricAllowlistLoader;
+import org.apache.druid.java.util.emitter.core.MetricAllowlistParser;
+import org.apache.druid.java.util.emitter.core.MetricAllowlistParsers;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-/**
- *
- */
-public class PrometheusEmitter implements Emitter
+public class PrometheusEmitter extends AbstractFilteringEmitter
 {
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
@@ -70,6 +72,23 @@ public class PrometheusEmitter implements Emitter
 
   public PrometheusEmitter(PrometheusEmitterConfig config)
   {
+    super(
+        config.isShouldFilterMetrics(),
+        config.isShouldFilterMetrics()
+        ? config.getMetricSpecPath()
+                .or(() -> Optional.ofNullable(config.getDimensionMapPath()))
+                .map(path -> MetricAllowlistLoader.loadAllowlistFromFile(
+                    new ObjectMapper(),
+                    path,
+                    MetricAllowlistParsers::parseMetricNameObject
+                ))
+                .orElseGet(() -> MetricAllowlistLoader.loadAllowlistFromClasspath(
+                    new ObjectMapper(),
+                    PrometheusEmitterConfig.DEFAULT_METRIC_SPEC_PATH,
+                    MetricAllowlistParsers::parseMetricNameObject
+                ))
+        : Collections.emptySet()
+    );
     this.config = config;
     this.strategy = config.getStrategy();
     metrics = new Metrics(config);
@@ -135,15 +154,20 @@ public class PrometheusEmitter implements Emitter
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
   {
-    if (event instanceof ServiceMetricEvent) {
-      emitMetric((ServiceMetricEvent) event);
-    }
+    return !(event instanceof ServiceMetricEvent)
+           || shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
   }
 
-  private void emitMetric(ServiceMetricEvent metricEvent)
+  @Override
+  protected void emitFilteredEvent(final Event event)
   {
+    // for events passed initial filering when it's diasabled
+    if (!(event instanceof ServiceMetricEvent)) {
+      return;
+    }
+    final ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
     String host = metricEvent.getHost();
@@ -284,6 +308,12 @@ public class PrometheusEmitter implements Emitter
   public void setPushGateway(PushGateway pushGateway)
   {
     this.pushGateway = pushGateway;
+  }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
   }
 
   /**

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.core.GlobalEmitterConfig;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -35,8 +36,9 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public class PrometheusEmitterConfig
+public class PrometheusEmitterConfig extends GlobalEmitterConfig
 {
+  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultPrometheusMetrics.json";
 
   static final Pattern PATTERN = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
@@ -46,6 +48,11 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final String namespace;
 
+  /**
+   * Deprecated in favor of {@link GlobalEmitterConfig#getMetricSpecPath()} kept for backward compatibility.
+   * If metricSpecPath is not provided, the emitter falls back to this value.
+   */
+  @Deprecated
   @JsonProperty
   @Nullable
   private final String dimensionMapPath;
@@ -159,6 +166,10 @@ public class PrometheusEmitterConfig
     return namespace;
   }
 
+  /**
+   * Deprecated alias for {@link GlobalEmitterConfig#getMetricSpecPath()}.
+   */
+  @Deprecated
   public String getDimensionMapPath()
   {
     return dimensionMapPath;

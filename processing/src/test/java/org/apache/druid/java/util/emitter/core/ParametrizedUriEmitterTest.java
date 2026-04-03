@@ -20,10 +20,12 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
@@ -63,6 +65,11 @@ public class ParametrizedUriEmitterTest
 
   private Emitter parametrizedEmmiter(String uriPattern) throws Exception
   {
+    return parametrizedEmmiter(uriPattern, ImmutableMap.of());
+  }
+
+  private Emitter parametrizedEmmiter(String uriPattern, Map<String, String> extraProps) throws Exception
+  {
     final Properties props = new Properties();
     props.setProperty("org.apache.druid.java.util.emitter.type", "parametrized");
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrlPattern", uriPattern);
@@ -70,6 +77,9 @@ public class ParametrizedUriEmitterTest
         "org.apache.druid.java.util.emitter.httpEmitting.flushTimeOut",
         String.valueOf(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
     );
+    for (Map.Entry<String, String> entry : extraProps.entrySet()) {
+      props.setProperty(entry.getKey(), entry.getValue());
+    }
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
     Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
@@ -218,5 +228,44 @@ public class ParametrizedUriEmitterTest
           )
       );
     }
+  }
+
+  @Test
+  public void testFilteringAllowsConfiguredMetricAndNonMetricEvent() throws Exception
+  {
+    final Emitter emitter = parametrizedEmmiter(
+        "http://example.com/{feed}",
+        ImmutableMap.of(
+            "org.apache.druid.java.util.emitter.shouldFilterMetrics", "true"
+        )
+    );
+
+    final Map<String, JsonNode> requests = new HashMap<>();
+    httpClient.setGoHandler(
+        new GoHandler()
+        {
+          @Override
+          protected ListenableFuture<Response> go(final Request request) throws Exception
+          {
+            requests.put(
+                request.getUrl(),
+                JSON_MAPPER.readTree(StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString())
+            );
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
+          }
+        }.times(2)
+    );
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 200).build("test", "localhost"));
+    emitter.emit(new UnitEvent("alerts", 1));
+    emitter.flush();
+
+    Assert.assertTrue(httpClient.succeeded());
+    final JsonNode metricsPayload = requests.get("http://example.com/metrics");
+    Assert.assertNotNull(metricsPayload);
+    Assert.assertEquals(1, metricsPayload.size());
+    Assert.assertEquals("query/time", metricsPayload.get(0).get("metric").asText());
+    Assert.assertNotNull(requests.get("http://example.com/alerts"));
   }
 }

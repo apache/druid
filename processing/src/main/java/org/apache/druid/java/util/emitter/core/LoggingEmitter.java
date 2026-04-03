@@ -19,13 +19,8 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-/**
- */
-
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -33,31 +28,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.slf4j.MarkerFactory;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- */
-public class LoggingEmitter implements Emitter
+public class LoggingEmitter extends AbstractFilteringEmitter
 {
-  private static final Logger LOGGER = new Logger(LoggingEmitter.class);
-  private static final String DEFAULT_ALLOWED_METRICS_RESOURCE = "defaultMetrics.json";
-
   private final Logger log;
   private final Level level;
   private final ObjectMapper jsonMapper;
-  @Nullable
-  private final Set<String> allowedMetrics;
-
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public LoggingEmitter(LoggingEmitterConfig config, ObjectMapper jsonMapper)
@@ -66,14 +46,14 @@ public class LoggingEmitter implements Emitter
         new Logger(config.getLoggerClass()),
         Level.toLevel(config.getLogLevel()),
         jsonMapper,
-        config.shouldFilterMetrics(),
-        config.getAllowedMetricsPath()
+        config.isShouldFilterMetrics(),
+        config.getMetricSpecPath().orElse(null)
     );
   }
 
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper)
   {
-    this(log, level, jsonMapper, false, null);
+    this(log, level, jsonMapper, false, "");
   }
 
   public LoggingEmitter(
@@ -81,68 +61,30 @@ public class LoggingEmitter implements Emitter
       Level level,
       ObjectMapper jsonMapper,
       boolean shouldFilterMetrics,
-      @Nullable String allowedMetricsPath
+      String metricSpecPath
   )
   {
+    this(
+        log,
+        level,
+        jsonMapper,
+        shouldFilterMetrics,
+        loadAllowedMetricNames(
+            shouldFilterMetrics,
+            jsonMapper,
+            Strings.isNullOrEmpty(metricSpecPath) ? Optional.empty() : Optional.of(metricSpecPath),
+            LoggingEmitterConfig.DEFAULT_METRIC_SPEC_PATH,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+    );
+  }
+
+  public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean shouldFilterMetrics, Set<String> metricNames)
+  {
+    super(shouldFilterMetrics, metricNames);
     this.log = log;
     this.level = level;
     this.jsonMapper = jsonMapper;
-    this.allowedMetrics = shouldFilterMetrics ? loadAllowedMetrics(allowedMetricsPath, jsonMapper) : null;
-  }
-
-  /**
-   * Loads the allowed metric names from a JSON file. If the path is null or empty,
-   * loads from the bundled classpath resource (defaultMetrics.json). If a custom
-   * path is provided but the file is missing, logs a warning and falls back to
-   * the default classpath resource.
-   */
-  private static Set<String> loadAllowedMetrics(@Nullable String path, ObjectMapper jsonMapper)
-  {
-    final InputStream is = openAllowedMetricsStream(path);
-    try {
-      final Map<String, Object> metricsMap = jsonMapper.readValue(is, new TypeReference<Map<String, Object>>() {});
-      return Collections.unmodifiableSet(metricsMap.keySet());
-    }
-    catch (IOException e) {
-      final String source = path == null || Strings.isNullOrEmpty(path) ? DEFAULT_ALLOWED_METRICS_RESOURCE : path;
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(e, "Allowed metrics file must be a JSON object with metric names as keys; failed to parse [%s]", source);
-    }
-  }
-
-  /**
-   * Opens the allowed metrics configuration stream. Uses classpath resource when
-   * path is null/empty. When a custom path is specified but the file is missing,
-   * logs a warning and falls back to the default classpath resource.
-   */
-  private static InputStream openAllowedMetricsStream(@Nullable String path)
-  {
-    if (Strings.isNullOrEmpty(path)) {
-      LOGGER.info("Using default allowed metrics configuration from classpath resource [%s]", DEFAULT_ALLOWED_METRICS_RESOURCE);
-      return openDefaultAllowedMetricsResource();
-    }
-    try {
-      final InputStream is = new FileInputStream(new File(path));
-      LOGGER.info("Using allowed metrics configuration at [%s]", path);
-      return is;
-    }
-    catch (FileNotFoundException e) {
-      LOGGER.warn(e, "Allowed metrics file [%s] not found, falling back to default classpath resource [%s]",
-                  path, DEFAULT_ALLOWED_METRICS_RESOURCE);
-      return openDefaultAllowedMetricsResource();
-    }
-  }
-
-  private static InputStream openDefaultAllowedMetricsResource()
-  {
-    final InputStream is = LoggingEmitter.class.getClassLoader().getResourceAsStream(DEFAULT_ALLOWED_METRICS_RESOURCE);
-    if (is == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("Could not find default allowed metrics resource [%s] on classpath", DEFAULT_ALLOWED_METRICS_RESOURCE);
-    }
-    return is;
   }
 
   @Override
@@ -179,23 +121,25 @@ public class LoggingEmitter implements Emitter
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
+  {
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void preEmit()
   {
     synchronized (started) {
       if (!started.get()) {
         throw new RejectedExecutionException("Service not started.");
       }
     }
+  }
 
-    // Allowlist filtering: only applies to ServiceMetricEvents.
-    // Non-metric events (alerts, etc.) always pass through.
-    if (allowedMetrics != null && event instanceof ServiceMetricEvent) {
-      final String metricName = ((ServiceMetricEvent) event).getMetric();
-      if (!allowedMetrics.contains(metricName)) {
-        return;
-      }
-    }
-
+  @Override
+  protected void emitFilteredEvent(final Event event)
+  {
     try {
       switch (level) {
         case TRACE:
@@ -271,7 +215,14 @@ public class LoggingEmitter implements Emitter
     return "LoggingEmitter{" +
            "log=" + log +
            ", level=" + level +
+           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
            '}';
+  }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
   }
 
   public enum Level

@@ -27,8 +27,9 @@ import org.apache.druid.utils.JvmUtils;
 import javax.validation.constraints.Min;
 import java.util.concurrent.TimeUnit;
 
-public class BaseHttpEmittingConfig
+public class BaseHttpEmittingConfig extends GlobalEmitterConfig
 {
+  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultMetrics.json";
   public static final long DEFAULT_FLUSH_MILLIS = 60 * 1000;
   public static final int DEFAULT_FLUSH_COUNTS = 500;
 
@@ -181,6 +182,8 @@ public class BaseHttpEmittingConfig
         ", contentEncoding=" + contentEncoding +
         ", batchQueueSizeLimit=" + batchQueueSizeLimit +
         ", httpTimeoutAllowanceFactor=" + httpTimeoutAllowanceFactor +
-        ", minHttpTimeoutMillis=" + minHttpTimeoutMillis;
+        ", minHttpTimeoutMillis=" + minHttpTimeoutMillis +
+        ", shouldFilterMetrics=" + isShouldFilterMetrics() +
+        ", metricSpecPath='" + getMetricSpecPath() + '\'';
   }
 }

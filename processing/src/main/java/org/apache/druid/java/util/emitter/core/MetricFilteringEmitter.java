@@ -19,42 +19,22 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
-
 /**
+ * Contract for emitters that can filter metric events based on metric name.
  */
-public class LoggingEmitterConfig extends GlobalEmitterConfig
+public interface MetricFilteringEmitter
 {
-  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultMetrics.json";
+  /**
+   * Returns whether a metric should be filtered out (not emitted).
+   *
+   * @param metricName metric name from {@link org.apache.druid.java.util.emitter.service.ServiceMetricEvent}
+   *
+   * @return {@code true} when the metric should be dropped
+   */
+  boolean shouldFilterOutMetric(String metricName);
 
-  @NotNull
-  @JsonProperty
-  private String loggerClass = LoggingEmitter.class.getName();
-
-  @NotNull
-  @JsonProperty
-  private String logLevel = "info";
-
-  public String getLoggerClass()
-  {
-    return loggerClass;
-  }
-
-  public String getLogLevel()
-  {
-    return logLevel;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LoggingEmitterConfig{" +
-           "loggerClass='" + loggerClass + '\'' +
-           ", logLevel='" + logLevel + '\'' +
-           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
-           ", metricSpecPath='" + getMetricSpecPath() + '\'' +
-           '}';
-  }
+  /**
+   * Returns the parser used to load metric names from the configured metric specification.
+   */
+  MetricAllowlistParser getMetricAllowlistParser();
 }
