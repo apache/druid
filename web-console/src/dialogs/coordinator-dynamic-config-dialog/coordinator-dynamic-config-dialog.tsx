@@ -18,30 +18,73 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
-import type { FormJsonTabs } from '../../components';
+import type { Field, FormJsonTabs } from '../../components';
 import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
 import type { CoordinatorDynamicConfig } from '../../druid-models';
 import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
+import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getApiArray, getDruidErrorMessage } from '../../utils';
+import { filterMap, getApiArray, getDruidErrorMessage, queryDruidSql } from '../../utils';
 import { SnitchDialog } from '..';
 
 import { COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS } from './coordinator-dynamic-config-completions';
+import { ServerMultiSelectDialog } from './server-multi-select-dialog';
+import type { TieredServers } from './tiered-servers';
+import { buildTieredServers } from './tiered-servers';
 
 import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps {
+  capabilities: Capabilities;
   onClose(): void;
+}
+
+function attachServerPickerDialogs(
+  fields: Field<CoordinatorDynamicConfig>[],
+  servers: TieredServers | undefined,
+): Field<CoordinatorDynamicConfig>[] {
+  return fields.map(field => {
+    switch (field.name) {
+      case 'decommissioningNodes':
+        return {
+          ...field,
+          customDialog: ({ value, onValueChange, onClose }) => (
+            <ServerMultiSelectDialog
+              title="Decommissioning nodes"
+              servers={servers}
+              selectedServers={value || []}
+              onSave={v => onValueChange(v)}
+              onClose={onClose}
+            />
+          ),
+        };
+      case 'turboLoadingNodes':
+        return {
+          ...field,
+          customDialog: ({ value, onValueChange, onClose }) => (
+            <ServerMultiSelectDialog
+              title="Turbo loading nodes"
+              servers={servers}
+              selectedServers={value || []}
+              onSave={v => onValueChange(v)}
+              onClose={onClose}
+            />
+          ),
+        };
+      default:
+        return field;
+    }
+  });
 }
 
 export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDynamicConfigDialog(
   props: CoordinatorDynamicConfigDialogProps,
 ) {
-  const { onClose } = props;
+  const { capabilities, onClose } = props;
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [dynamicConfig, setDynamicConfig] = useState<CoordinatorDynamicConfig | undefined>();
   const [jsonError, setJsonError] = useState<Error | undefined>();
@@ -71,6 +114,38 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     },
   });
 
+  const [serversState] = useQueryManager<Capabilities, TieredServers>({
+    initQuery: capabilities,
+    processQuery: async (capabilities, signal) => {
+      if (capabilities.hasSql()) {
+        const sqlResp = await queryDruidSql<{ server: string; tier: string }>(
+          {
+            query: `SELECT "server", "tier"
+FROM "sys"."servers"
+WHERE "server_type" = 'historical'
+ORDER BY "tier", "server"`,
+            context: { engine: 'native' },
+          },
+          signal,
+        );
+        return buildTieredServers(sqlResp);
+      } else if (capabilities.hasCoordinatorAccess()) {
+        const servers = await getApiArray('/druid/coordinator/v1/servers?simple', signal);
+        const rows = filterMap(servers, (s: any) =>
+          s.type === 'historical' ? { server: s.host, tier: s.tier } : undefined,
+        );
+        return buildTieredServers(rows);
+      } else {
+        throw new Error('Must have SQL or coordinator access');
+      }
+    },
+  });
+
+  const fields = useMemo(
+    () => attachServerPickerDialogs(COORDINATOR_DYNAMIC_CONFIG_FIELDS, serversState.data),
+    [serversState.data],
+  );
+
   async function saveConfig(comment: string) {
     try {
       await Api.instance.post('/druid/coordinator/v1/config', dynamicConfig, {
@@ -85,6 +160,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`,
       });
+      return;
     }
 
     AppToaster.show({
@@ -121,11 +197,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             }}
           />
           {currentTab === 'form' ? (
-            <AutoForm
-              fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
-              model={dynamicConfig}
-              onChange={setDynamicConfig}
-            />
+            <AutoForm fields={fields} model={dynamicConfig} onChange={setDynamicConfig} />
           ) : (
             <JsonInput
               value={dynamicConfig}
