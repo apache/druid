@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -265,10 +264,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (compactionConfig == null) {
       return CompactionConfigValidationResult.failure("Cannot be null");
     } else {
-      return ClientCompactionRunnerInfo.validateCompactionConfig(
-          compactionConfig,
-          getLatestClusterConfig().getEngine()
-      );
+      return compactionConfig.validate(getLatestClusterConfig());
     }
   }
 
