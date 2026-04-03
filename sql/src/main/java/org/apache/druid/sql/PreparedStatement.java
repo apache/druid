@@ -88,9 +88,11 @@ public class PreparedStatement extends AbstractStatement
    */
   public DirectStatement execute(List<TypedValue> parameters)
   {
+    String remoteAddr = (String) originalRequest.context().get("remoteAddress");
     return new DirectStatement(
         sqlToolbox,
-        originalRequest.freshCopy().withParameters(parameters)
+        originalRequest.freshCopy().withParameters(parameters),
+        remoteAddr
     );
   }
 

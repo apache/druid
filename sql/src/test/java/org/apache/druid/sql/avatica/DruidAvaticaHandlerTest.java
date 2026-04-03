@@ -501,7 +501,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of(
                   "PLAN",
                   StringUtils.format(
-                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"forbidden-key\":\"system-default-value\",\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
+                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"forbidden-key\":\"system-default-value\",\"remoteAddress\":\"127.0.0.1\",\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
@@ -1949,5 +1949,88 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       m.put(entry.lhs, entry.rhs);
     }
     return m;
+  }
+
+  /**
+   * Test that remote address is properly captured and logged for JDBC Avatica connections.
+   * This verifies the fix for issue #19230 which ensures that the client's remote address
+   * is tracked through the entire SQL execution lifecycle.
+   */
+  @Test
+  public void testRemoteAddressInLogs() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null", remoteAddress);
+
+    Assert.assertTrue(
+        "Remote address should be a valid IP or localhost",
+        remoteAddress.contains("localhost") ||
+        remoteAddress.contains("127.0.0.1") ||
+        remoteAddress.contains("0:0:0:0:0:0:0:1") ||
+        (remoteAddress.contains(".") && remoteAddress.length() >= 7)
+    );
+  }
+
+  /**
+   * Test that remote address is captured even when a query fails.
+   */
+  @Test
+  public void testRemoteAddressInFailedQuery() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT nonexistent FROM druid.foo");
+      Assert.fail("Query should have failed");
+    }
+    catch (SQLException e) {
+      // Expected exception
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null even in failed query", remoteAddress);
+    Assert.assertFalse("Remote address should not be empty even in failed query", remoteAddress.length() == 0);
+  }
+
+  /**
+   * Test that remote address is captured for prepared statements.
+   */
+  @Test
+  public void testRemoteAddressInPreparedStatement() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (PreparedStatement stmt = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ?")) {
+      stmt.setString(1, "abc");
+      stmt.executeQuery();
+    }
+
+    Assert.assertTrue(
+        "Should have at least one log entry",
+        testRequestLogger.getSqlQueryLogs().size() >= 1
+    );
+
+    // Check that at least one log entry (the actual query execution) has a remote address
+    boolean hasRemoteAddress = false;
+    for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
+      String remoteAddress = logLine.getRemoteAddr();
+      if (remoteAddress != null && remoteAddress.length() > 0) {
+        hasRemoteAddress = true;
+        break;
+      }
+    }
+    Assert.assertTrue("At least one log entry should have a remote address", hasRemoteAddress);
   }
 }
