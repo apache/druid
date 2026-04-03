@@ -48,6 +48,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -129,6 +130,26 @@ public interface Expr extends Cacheable
   {
     // overridden by things that are identifiers
     return null;
+  }
+
+  /**
+   * Replaces {@link IdentifierExpr} whose {@link IdentifierExpr#binding} are present as a key in the supplied map with
+   * the map value.
+   */
+  default Expr rewriteBindings(Map<String, String> rewriteMap)
+  {
+    return visit(expr -> {
+      if (expr instanceof IdentifierExpr identifier) {
+        final String replacement = rewriteMap.get(identifier.binding);
+        if (replacement != null) {
+          if (Objects.equals(identifier.identifier, identifier.binding)) {
+            return new IdentifierExpr(replacement, replacement);
+          }
+          return new IdentifierExpr(identifier.identifier, replacement);
+        }
+      }
+      return expr;
+    });
   }
 
   /**

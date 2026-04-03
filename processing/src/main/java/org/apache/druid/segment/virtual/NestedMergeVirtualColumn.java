@@ -36,6 +36,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -71,6 +72,7 @@ import java.util.stream.Collectors;
 public class NestedMergeVirtualColumn extends SpecializedExpressionVirtualColumn
 {
   private final List<String> columns;
+  private final ExprMacroTable macroTable;
 
   @JsonCreator
   public NestedMergeVirtualColumn(
@@ -93,6 +95,7 @@ public class NestedMergeVirtualColumn extends SpecializedExpressionVirtualColumn
     );
 
     this.columns = columns;
+    this.macroTable = macroTable;
   }
 
   @JsonProperty
@@ -119,6 +122,23 @@ public class NestedMergeVirtualColumn extends SpecializedExpressionVirtualColumn
         return null;
       }
     };
+  }
+
+  @Override
+  public boolean supportsRequiredRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public VirtualColumn rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    List<String> rewritten = columns.stream().map(x -> columnRewrites.getOrDefault(x, x)).toList();
+    return new NestedMergeVirtualColumn(
+        delegate.getOutputName(),
+        rewritten,
+        macroTable
+    );
   }
 
   @Override

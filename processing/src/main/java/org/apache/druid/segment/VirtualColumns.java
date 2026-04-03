@@ -199,13 +199,48 @@ public class VirtualColumns implements Cacheable
   }
 
   /**
-   * Check if a virtual column is already defined which is the same as some other virtual column, ignoring output name,
-   * returning that virtual column if it exists, or null if there is no equivalent virtual column.
+   * Check if {@link #virtualColumns} contains a virtual column which is equivalent to some other virtual column,
+   * ignoring output name, returning it if it exists or null if there is no equivalent virtual column.
+   * <p>
+   * If the other virtual column depends on other virtual columns (from the supplied {@link VirtualColumns}), this
+   * method will attempt to locate equivalent entries in {@link #virtualColumns} to build a map of equivalent output
+   * names. Then, we rewrite the inputs of the other virtual column using
+   * {@link VirtualColumn#rewriteRequiredColumns(Map)} so that differently named inputs are normalized prior to testing
+   * for equivalence.
    */
   @Nullable
-  public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
+  public VirtualColumn findEquivalent(VirtualColumns otherVirtualColumns, VirtualColumn otherVirtualColumn)
   {
-    return equivalence.get().get(virtualColumn.getEquivalanceKey());
+    // check to see if the virtual column refers to other virtual columns to see if we need to normalize it
+    // by rewriting its inputs first to refer to the equivalent virtual columns
+    final Map<String, String> equivalenceRewriteMap = new HashMap<>();
+    for (String column : otherVirtualColumn.requiredColumns()) {
+      final VirtualColumn dependent = otherVirtualColumns.getVirtualColumn(column);
+      if (dependent != null) {
+        final VirtualColumn equivalentDependent = findEquivalent(otherVirtualColumns, dependent);
+        if (equivalentDependent != null) {
+          equivalenceRewriteMap.put(dependent.getOutputName(), equivalentDependent.getOutputName());
+        } else {
+          // missing an equivalent dependent, that means we cannot be equivalent so just bail early
+          return null;
+        }
+      }
+    }
+
+    if (!equivalenceRewriteMap.isEmpty() && !otherVirtualColumn.supportsRequiredRewrite()) {
+      // cannot safely check for equivalence if the rewrite map is not empty and rewrites are not supported
+      return null;
+    }
+
+    final VirtualColumn toCheckForEquivalence;
+    // rewrite if needed
+    if (equivalenceRewriteMap.isEmpty()) {
+      toCheckForEquivalence = otherVirtualColumn;
+    } else {
+      toCheckForEquivalence = otherVirtualColumn.rewriteRequiredColumns(equivalenceRewriteMap);
+    }
+
+    return equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
   }
 
   /**
