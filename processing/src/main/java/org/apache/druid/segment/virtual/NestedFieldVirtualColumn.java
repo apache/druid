@@ -91,6 +91,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -794,6 +795,26 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   public List<String> requiredColumns()
   {
     return Collections.singletonList(fieldSpec.columnName);
+  }
+
+  @Override
+  public boolean supportsRequiredRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public VirtualColumn rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    return new NestedFieldVirtualColumn(
+        columnRewrites.getOrDefault(fieldSpec.columnName, fieldSpec.columnName),
+        outputName,
+        fieldSpec.expectedType,
+        fieldSpec.parts,
+        fieldSpec.processFromRaw,
+        null,
+        null
+    );
   }
 
   @Override

@@ -47,6 +47,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
+  private final Map<VirtualColumn, Optional<VirtualColumn>> shardEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -58,6 +59,7 @@ public class FilterSegmentPruner implements SegmentPruner
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
+    this.shardEquivalenceCache = new HashMap<>();
   }
 
 
@@ -79,7 +81,10 @@ public class FilterSegmentPruner implements SegmentPruner
       for (String dimension : dimensions) {
         final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
         if (shardVirtualColumn != null) {
-          final VirtualColumn queryEquivalent = virtualColumns.findEquivalent(shardVirtualColumn);
+          final VirtualColumn queryEquivalent = getQueryEquivalent(
+              shard.getDomainVirtualColumns(),
+              shardVirtualColumn
+          );
           if (queryEquivalent != null) {
             if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
               final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
@@ -160,5 +165,15 @@ public class FilterSegmentPruner implements SegmentPruner
            ", filterFields=" + filterFields +
            ", virtualColumns=" + virtualColumns +
            '}';
+  }
+
+  @Nullable
+  private VirtualColumn getQueryEquivalent(VirtualColumns shardVirtualColumns, VirtualColumn shardVirtualColumn)
+  {
+    final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
+        shardVirtualColumn,
+        virtualColumn -> Optional.ofNullable(virtualColumns.findEquivalent(shardVirtualColumns, virtualColumn))
+    );
+    return cached.orElse(null);
   }
 }

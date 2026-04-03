@@ -67,6 +67,7 @@ import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
@@ -699,6 +700,187 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         new DimensionRangeShardSpec(
             List.of("v0"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
+  }
+
+  @Test
+  public void test_compaction_cluster_by_nested_virtualcolumn()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine, null);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "LL"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "MM"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "NN"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "OO"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "PP"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "QQ"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "RR"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .granularitySpec("DAY", null, false);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    // getClusterByVirtualColumnMappings does the order 'backwards' since it finds the column referenced by the
+    // clustered by expression and then adds its dependencies after when collecting virtual columns. this test will
+    // fail if that ever changes (unless we do something like make equals on VirtualColumns not care about order)
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "lower(\"v0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new NestedFieldVirtualColumn("obj", "$.a", "v0", ColumnType.STRING)
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(4, null, List.of("v1"), false))
+                    .build()
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v1"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v1"),
+            virtualColumns,
+            StringTuple.create("oo"),
+            null,
+            1,
+            2
+        ),
+        segments.get(1).getShardSpec()
+    );
+  }
+
+  @Test
+  public void test_compaction_cluster_by_nested_virtualcolumn_rollup()
+  {
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine, null);
+
+    String jsonDataWithNestedColumn =
+        """
+            {"timestamp": "2023-01-01T00:00:00", "str":"a",    "obj":{"a": "LL"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"",     "obj":{"a": "MM"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"null", "obj":{"a": "NN"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"b",    "obj":{"a": "OO"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"c",    "obj":{"a": "PP"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":"d",    "obj":{"a": "QQ"}}
+            {"timestamp": "2023-01-01T00:00:00", "str":null,   "obj":{"a": "RR"}}
+            """;
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .dataSchema(builder -> builder.withAggregators(new CountAggregatorFactory("count")))
+        .granularitySpec("DAY", "MINUTE", true);
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(7, getTotalRowCount());
+
+    // getClusterByVirtualColumnMappings does the order 'backwards' since it finds the column referenced by the
+    // clustered by expression and then adds its dependencies after when collecting virtual columns. this test will
+    // fail if that ever changes (unless we do something like make equals on VirtualColumns not care about order)
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "lower(\"v0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new NestedFieldVirtualColumn("obj", "$.a", "v0", ColumnType.STRING)
+    );
+
+    InlineSchemaDataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withTransformSpec(
+                new CompactionTransformSpec(
+                    null,
+                    virtualColumns
+                )
+            )
+            .withTuningConfig(
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(4, null, List.of("v1"), false))
+                    .build()
+            )
+            .build();
+
+    runCompactionWithSpec(config);
+    waitForAllCompactionTasksToFinish();
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    List<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).stream().toList();
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v1"),
+            virtualColumns,
+            null,
+            StringTuple.create("oo"),
+            0,
+            2
+        ),
+        segments.get(0).getShardSpec()
+    );
+    Assertions.assertEquals(
+        new DimensionRangeShardSpec(
+            List.of("v1"),
             virtualColumns,
             StringTuple.create("oo"),
             null,
