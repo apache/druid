@@ -124,6 +124,10 @@ public class StringDimensionSchema extends DimensionSchema
   @Override
   public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
   {
+    // If there's no per-column or job-level string format config, nothing to resolve
+    if (columnFormatSpec == null && indexSpec.getStringColumnFormatSpec() == null) {
+      return this;
+    }
     StringColumnFormatSpec effective =
         StringColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec);
     return new StringDimensionSchema(
