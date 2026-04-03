@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
+import java.util.Map;
 
 public class SamplerResourceTest
 {
@@ -98,7 +99,8 @@ public class SamplerResourceTest
     EasyMock.expect(mockAuthorizer.authorize(
         EasyMock.anyObject(AuthenticationResult.class),
         EasyMock.eq(Resource.STATE_RESOURCE),
-        EasyMock.eq(Action.WRITE))).andReturn(Access.OK);
+        EasyMock.eq(Action.WRITE),
+        EasyMock.eq(Map.of()))).andReturn(Access.OK);
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
     EasyMock.expect(samplerSpec.sample()).andReturn(null);
     EasyMock.replay(
