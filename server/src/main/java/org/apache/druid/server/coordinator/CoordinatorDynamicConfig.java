@@ -77,6 +77,13 @@ public class CoordinatorDynamicConfig
   private final Map<String, String> cloneServers;
 
   /**
+   * Map from alias tier name to the set of actual tier names it represents.
+   * For example, "hot" -> {"hot_1", "hot_2"} allows rules targeting "hot" to apply
+   * to servers in either tier.
+   */
+  private final Map<String, Set<String>> historicalTierAliases;
+
+  /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
    * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
    */
@@ -126,7 +133,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+      @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -172,6 +180,7 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
+    this.historicalTierAliases = Configs.valueOrDefault(historicalTierAliases, Map.of());
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -338,6 +347,12 @@ public class CoordinatorDynamicConfig
     return cloneServers;
   }
 
+  @JsonProperty
+  public Map<String, Set<String>> getHistoricalTierAliases()
+  {
+    return historicalTierAliases;
+  }
+
   /**
    * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
    * segments. This causes decreases the average time taken to load segments. However, this also means less resources
@@ -371,6 +386,7 @@ public class CoordinatorDynamicConfig
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
+           ", historicalTierAliases=" + historicalTierAliases +
            '}';
   }
 
@@ -407,7 +423,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
-           && Objects.equals(cloneServers, that.cloneServers);
+           && Objects.equals(cloneServers, that.cloneServers)
+           && Objects.equals(historicalTierAliases, that.historicalTierAliases);
   }
 
   @Override
@@ -431,7 +448,8 @@ public class CoordinatorDynamicConfig
         pauseCoordination,
         debugDimensions,
         turboLoadingNodes,
-        cloneServers
+        cloneServers,
+        historicalTierAliases
     );
   }
 
@@ -488,6 +506,7 @@ public class CoordinatorDynamicConfig
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
     private Map<String, String> cloneServers;
+    private Map<String, Set<String>> historicalTierAliases;
 
     public Builder()
     {
@@ -512,7 +531,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+        @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -533,6 +553,7 @@ public class CoordinatorDynamicConfig
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
       this.cloneServers = cloneServers;
+      this.historicalTierAliases = historicalTierAliases;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -631,6 +652,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withHistoricalTierAliases(Map<String, Set<String>> historicalTierAliases)
+    {
+      this.historicalTierAliases = historicalTierAliases;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -658,7 +685,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
           turboLoadingNodes,
-          cloneServers
+          cloneServers,
+          historicalTierAliases
       );
     }
 
@@ -690,7 +718,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
-          valueOrDefault(cloneServers, defaults.getCloneServers())
+          valueOrDefault(cloneServers, defaults.getCloneServers()),
+          valueOrDefault(historicalTierAliases, defaults.getHistoricalTierAliases())
       );
     }
   }
