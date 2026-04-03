@@ -21,8 +21,10 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
@@ -37,6 +39,8 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -52,6 +56,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -303,7 +308,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
-      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
+      log.info("Stopping [%d] supervisors", supervisors.size());
       for (String id : supervisors.keySet()) {
         try {
           stopFutures.add(supervisors.get(id).lhs.stopAsync());
@@ -393,6 +398,137 @@ public class SupervisorManager implements SupervisorStatsProvider
       autoscaler.reset();
     }
     return true;
+  }
+
+  /**
+   * Resets a supervisor to latest offsets and backfills the skipped offset ranges.
+   * Requirements:
+   * - Supervisor must be a SeekableStreamSupervisor
+   * - useEarliestOffset must be false (otherwise supervisor always starts from earliest)
+   * - useConcurrentLocks must be true
+   * - Supervisor must be RUNNING - needs active stream connection
+   * @param id supervisor ID
+   * @return Map containing supervisorId and skipped offset ranges
+   * @throws IllegalArgumentException if supervisor doesn't exist or if useEarliestOffset is true
+   * @throws IllegalStateException if supervisor is not running or if either checkpointed or latest offsets is empty
+   */
+  public Map<String, Object> resetSupervisorAndBackfill(String id)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
+    if (supervisorPair == null || supervisorPair.lhs == null || supervisorPair.rhs == null) {
+      throw new IAE("Supervisor[%s] does not exist", id);
+    }
+    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+      throw new IAE("Supervisor[%s] is not a SeekableStreamSupervisor", id);
+    }
+    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
+    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+
+    // Verify useEarliestOffset is false
+    if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
+      throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
+    }
+
+    // Verify useConcurrentLocks is enabled
+    if (streamSpec.getContext() == null || !Boolean.TRUE.equals(streamSpec.getContext().get("useConcurrentLocks"))) {
+      throw new IAE(
+          "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
+      );
+    }
+
+    // We need an active recordSupplier to query the latest offsets from the stream
+    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
+      throw new ISE("A running supervisor is required to query the latest offsets from the stream");
+    }
+
+    log.info("Capturing latest offsets from stream for supervisor[%s]", id);
+    streamSupervisor.updatePartitionLagFromStream();
+    Map<?, ?> latestOffsets = streamSupervisor.getLatestSequencesFromStream();
+
+    log.info("Capturing checkpointed offsets for supervisor[%s]", id);
+    Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorage();
+
+    // Validate that we successfully retrieved offsets
+    if (latestOffsets == null || latestOffsets.isEmpty()) {
+      throw new ISE("Skipping reset: Failed to get latest offsets from stream for supervisor[%s]", id);
+    }
+    if (startOffsets == null || startOffsets.isEmpty()) {
+      throw new ISE("Skipping reset: Failed to get checkpointed offsets for supervisor[%s]", id);
+    }
+
+    log.info("Resetting supervisor[%s] metadata to latest offsets", id);
+    DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
+      streamSupervisor.getIoConfig().getStream(),
+      latestOffsets
+    );
+
+    streamSupervisor.resetOffsets(resetMetadata);
+
+    // Reset autoscaler if present
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.reset();
+    }
+
+    Map<?, Object> backfillRange = calculateBackfillRange(startOffsets, latestOffsets);
+
+    streamSupervisor.submitBackfillTask(startOffsets, latestOffsets);
+
+    log.info("Successfully reset supervisor[%s] to latest. Backfill range: %s", id, backfillRange);
+
+    return ImmutableMap.of(
+      "id", id,
+      "backfillRange", backfillRange
+    );
+  }
+
+  /**
+   * Calculates the backfill range between start and end offsets for display purposes.
+   * Returns a map with partition ID as key and offset range details as value.
+   *
+   * @param startOffsets Starting offsets (last checkpointed)
+   * @param endOffsets Ending offsets (latest from stream)
+   * @return Map of partition ID to offset range [start, end]
+   */
+  @VisibleForTesting
+  public Map<?, Object> calculateBackfillRange(
+      Map<?, ?> startOffsets,
+      Map<?, ?> endOffsets
+  )
+  {
+    Map<Object, Object> backfillRange = new HashMap<>();
+
+    for (Map.Entry<?, ?> entry : endOffsets.entrySet()) {
+      Object partition = entry.getKey();
+      Object endOffset = entry.getValue();
+      Object startOffset = (startOffsets != null) ? startOffsets.get(partition) : null;
+
+      if (startOffset != null) {
+        // Both start and end exist - calculate range
+        backfillRange.put(
+            partition,
+            ImmutableMap.of(
+                "start", startOffset,
+                "end", endOffset
+            )
+        );
+      } else {
+        // No checkpoint exists for this partition
+        backfillRange.put(
+            partition,
+            ImmutableMap.of(
+                "start", "none",
+                "end", endOffset,
+                "note", "No committed offset found for this partition"
+            )
+        );
+      }
+    }
+
+    return backfillRange;
   }
 
   public boolean checkPointDataSourceMetadata(

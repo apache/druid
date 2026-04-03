@@ -592,9 +592,16 @@ public class SupervisorResource
   @Path("/{id}/reset")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response reset(@PathParam("id") final String id)
+  public Response reset(
+      @PathParam("id") final String id,
+      @QueryParam("backfill") Boolean backfill
+  )
   {
-    return handleResetRequest(id, null);
+    if (Boolean.TRUE.equals(backfill)) {
+      return handleResetAndBackfill(id);
+    } else {
+      return handleResetRequest(id, null);
+    }
   }
 
   @POST
@@ -622,6 +629,33 @@ public class SupervisorResource
           } else {
             return Response.status(Response.Status.NOT_FOUND)
                            .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
+          }
+        }
+    );
+  }
+
+  private Response handleResetAndBackfill(final String id)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          try {
+            Map<String, Object> result = manager.resetSupervisorAndBackfill(id);
+            return Response.ok(result).build();
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+          catch (IllegalStateException e) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+          catch (Exception e) {
+            return Response.serverError()
+                           .entity(ImmutableMap.of("error", e.getMessage()))
                            .build();
           }
         }

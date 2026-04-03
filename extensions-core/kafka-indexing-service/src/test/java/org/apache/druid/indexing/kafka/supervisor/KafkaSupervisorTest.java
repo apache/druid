@@ -5401,7 +5401,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Map.of(
             10, 2,
             20, 3
-        )
+        ),
+        null
     );
 
     Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
@@ -5686,7 +5687,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         idleConfig,
         null,
         true,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5781,6 +5783,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 
@@ -5876,6 +5879,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 
@@ -6201,6 +6205,144 @@ public class KafkaSupervisorTest extends EasyMockSupport
       CopyOnWriteArrayList<?> groups = getPendingCompletionTaskGroups(groupId);
       return groups != null ? groups.size() : 0;
     }
+  }
+
+  @Test
+  public void testSubmitBackfillTask()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
+
+    Capture<Task> capturedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(capturedTasks))).andReturn(true).times(2);
+
+    replayAll();
+
+    supervisor = getTestableSupervisor(2, 4, true, false, null, null, null);
+
+    // Create start and end offsets for 3 partitions
+    Map<KafkaTopicPartition, Long> startOffsets = ImmutableMap.of(
+        new KafkaTopicPartition(false, topic, 0), 100L,
+        new KafkaTopicPartition(false, topic, 1), 200L,
+        new KafkaTopicPartition(false, topic, 2), 300L
+    );
+
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(
+        new KafkaTopicPartition(false, topic, 0), 150L,
+        new KafkaTopicPartition(false, topic, 1), 250L,
+        new KafkaTopicPartition(false, topic, 2), 350L
+    );
+
+    supervisor.submitBackfillTask(startOffsets, endOffsets);
+
+    List<Task> tasks = capturedTasks.getValues();
+    Assert.assertEquals(2, tasks.size());
+
+    // Verify both tasks are KafkaIndexTask
+    for (Task task : tasks) {
+      Assert.assertTrue(task instanceof KafkaIndexTask);
+      KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
+
+      // Verify useTransaction=false for backfill tasks
+      Assert.assertFalse(
+          "Backfill tasks should have useTransaction=false",
+          kafkaTask.getIOConfig().isUseTransaction()
+      );
+
+      // Verify task has correct datasource
+      Assert.assertEquals(DATASOURCE, kafkaTask.getDataSource());
+
+      // Verify offsets are within the expected range
+      Map<KafkaTopicPartition, Long> taskStartOffsets =
+          kafkaTask.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap();
+      Map<KafkaTopicPartition, Long> taskEndOffsets =
+          kafkaTask.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap();
+
+      for (Map.Entry<KafkaTopicPartition, Long> entry : taskStartOffsets.entrySet()) {
+        KafkaTopicPartition partition = entry.getKey();
+        Long startOffset = entry.getValue();
+        Long endOffset = taskEndOffsets.get(partition);
+
+        // Verify offsets are from our original maps
+        Assert.assertTrue(startOffsets.containsKey(partition));
+        Assert.assertEquals(startOffsets.get(partition), startOffset);
+        Assert.assertEquals(endOffsets.get(partition), endOffset);
+      }
+    }
+
+    verifyAll();
+  }
+
+  @Test
+  public void testSubmitBackfillTaskWithNullStartOffset()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
+
+    Capture<Task> capturedTask = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(capturedTask))).andReturn(true).once();
+
+    replayAll();
+
+    supervisor = getTestableSupervisor(2, 2, true, false, null, null, null);
+
+    KafkaTopicPartition partition0 = new KafkaTopicPartition(false, topic, 0);
+    KafkaTopicPartition partition1 = new KafkaTopicPartition(false, topic, 1);
+
+    // partition0 has a start offset, partition1 does not (null in startOffsets map)
+    Map<KafkaTopicPartition, Long> startOffsets = ImmutableMap.of(
+        partition0, 100L
+        // partition1 intentionally missing - simulates no checkpoint for this partition
+    );
+
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(
+        partition0, 150L,
+        partition1, 250L
+    );
+
+    supervisor.submitBackfillTask(startOffsets, endOffsets);
+
+    // Verify task was submitted
+    Task task = capturedTask.getValue();
+    Assert.assertTrue(task instanceof KafkaIndexTask);
+    KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
+
+    Map<KafkaTopicPartition, Long> taskStartOffsets =
+        kafkaTask.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap();
+    Map<KafkaTopicPartition, Long> taskEndOffsets =
+        kafkaTask.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap();
+
+    // partition0 should use its start offset
+    Assert.assertEquals(Long.valueOf(100L), taskStartOffsets.get(partition0));
+    Assert.assertEquals(Long.valueOf(150L), taskEndOffsets.get(partition0));
+
+    // partition1 should have startOffset set equal to endOffset (since start was null)
+    Assert.assertEquals(Long.valueOf(250L), taskStartOffsets.get(partition1));
+    Assert.assertEquals(Long.valueOf(250L), taskEndOffsets.get(partition1));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testSubmitBackfillTaskWithEmptyOffsets()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+
+    replayAll();
+
+    supervisor = getTestableSupervisor(2, 2, true, false, null, null, null);
+
+    // Submit with empty offsets - should return early without submitting any tasks
+    supervisor.submitBackfillTask(ImmutableMap.of(), ImmutableMap.of());
+
+    // Verify no tasks were submitted (taskQueue.add should never be called)
+    verifyAll();
   }
 
   private static class TestableKafkaSupervisorWithCustomIsTaskCurrent extends TestableKafkaSupervisor

@@ -791,6 +791,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -848,6 +849,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, null),
+        null,
         null,
         null
     )
@@ -1461,6 +1463,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           null,
           null,
+          null,
           null
       )
       {
@@ -1480,6 +1483,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
           LagAggregator.DEFAULT,
+          null,
           null,
           null,
           null,

@@ -3154,9 +3154,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * gets mapping of partitions in stream to their latest offsets.
+   * Gets mapping of partitions in stream to their latest offsets.
+   * This returns the cached latest offsets that were captured by the most recent
+   * call to {@link #updatePartitionLagFromStream()}.
+   *
+   * @return Map of partition ID to latest sequence offset
    */
-  protected Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
+  public Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
   {
     return new HashMap<>();
   }
@@ -4273,7 +4277,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
+  /**
+   * Gets the last committed offsets from metadata storage.
+   * This represents the offsets that have been successfully published by tasks.
+   *
+   * @return Map of partition ID to sequence offset, or empty map if no metadata exists or stream doesn't match
+   */
+  public Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
@@ -4488,7 +4498,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
-  protected abstract void updatePartitionLagFromStream();
+  public abstract void updatePartitionLagFromStream();
 
   /**
    * Gets 'lag' of currently processed offset behind latest offset as a measure of difference between offsets.
@@ -4574,6 +4584,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public SeekableStreamSupervisorIOConfig getIoConfig()
   {
     return ioConfig;
+  }
+
+  protected TaskMaster getTaskMaster()
+  {
+    return taskMaster;
   }
 
   @Override
@@ -4720,13 +4735,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract boolean doesTaskMatchSupervisor(Task task);
 
   /**
+   * Submits a backfill task to process skipped offsets between startOffsets and endOffsets.
+   * The backfill task will use supervisorId = datasource + "_backfill" and useTransaction = false
+   * to avoid interference with the main supervisor.
+   *
+   * Default implementation does nothing. Subclasses should override to implement backfill logic.
+   *
+   * @param startOffsets Starting offsets (old checkpoint)
+   * @param endOffsets Ending offsets (new reset target)
+   */
+  public void submitBackfillTask(
+      Map<PartitionIdType, SequenceOffsetType> startOffsets,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets
+  )
+  {
+    log.info("submitBackfillTask not implemented for supervisor[%s], skipping backfill submission", supervisorId);
+  }
+
+  /**
    * creates a specific instance of kafka/kinesis datasource metadata. Only used for reset.
    *
    * @param stream stream name
    * @param map    partitionId -> sequence
    * @return specific instance of datasource metadata
    */
-  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
+  public abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
       String stream,
       Map<PartitionIdType, SequenceOffsetType> map
   );

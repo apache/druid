@@ -788,21 +788,65 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 sequenceToCheckpoint,
                 sequences
             );
-            requestPause();
-            final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
-                getSupervisorId(),
-                ioConfig.getTaskGroupId(),
-                null,
-                createDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(
-                        stream,
-                        sequenceToCheckpoint.getStartOffsets(),
-                        sequenceToCheckpoint.getExclusiveStartPartitions()
-                    )
-                )
-            );
-            if (!toolbox.getTaskActionClient().submit(checkpointAction)) {
-              throw new ISE("Checkpoint request with sequences [%s] failed, dying", currOffsets);
+
+            if (ioConfig.isUseTransaction()) {
+              // Normal checkpoint with supervisor coordination
+              requestPause();
+              final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
+                  getSupervisorId(),
+                  ioConfig.getTaskGroupId(),
+                  null,
+                  createDataSourceMetadata(
+                      new SeekableStreamStartSequenceNumbers<>(
+                          stream,
+                          sequenceToCheckpoint.getStartOffsets(),
+                          sequenceToCheckpoint.getExclusiveStartPartitions()
+                      )
+                  )
+              );
+              if (!toolbox.getTaskActionClient().submit(checkpointAction)) {
+                throw new ISE("Checkpoint request with sequences [%s] failed, dying", currOffsets);
+              }
+            } else {
+              // useTransaction=false: skip supervisor coordination but still create a new sequence to respect maxRowsPerSegment
+              log.info(
+                  "useTransaction=false - skipping checkpoint coordination for sequence [%s], but finalizing sequence to respect segment size limits. Current offsets: [%s]",
+                  sequenceToCheckpoint.getSequenceName(),
+                  currOffsets
+              );
+
+              // Set end offsets for the current sequence to current position to trigger segment publish
+              sequenceToCheckpoint.setEndOffsets(currOffsets);
+
+              // Determine exclusive start partitions for the new sequence
+              final Set<PartitionIdType> exclusiveStartPartitions;
+              if (isEndOffsetExclusive()) {
+                // When end offsets are exclusive, no partitions need exclusive start
+                exclusiveStartPartitions = Collections.emptySet();
+              } else {
+                // When end offsets are inclusive, all partitions in the new sequence need exclusive start
+                exclusiveStartPartitions = ImmutableSet.copyOf(currOffsets.keySet());
+              }
+
+              // Create a new sequence starting from current offsets, ending at the task's overall end offsets
+              final int nextSequenceId = getLastSequenceMetadata().getSequenceId() + 1;
+              final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
+                  nextSequenceId,
+                  StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), nextSequenceId),
+                  currOffsets,
+                  this.endOffsets, // Continue to the task's end offsets
+                  false, // not checkpointed
+                  exclusiveStartPartitions,
+                  getTaskLockType()
+              );
+              addSequence(newSequence);
+
+              log.info(
+                  "Created new sequence [%s] starting from offsets [%s], will read until end offsets [%s]",
+                  newSequence.getSequenceName(),
+                  currOffsets,
+                  this.endOffsets
+              );
             }
           }
         }
@@ -811,7 +855,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // (1) catch all exceptions while reading from kafka
         if (Throwables.getRootCause(e) instanceof InterruptedException) {
           // Suppress InterruptedException stack trace to avoid flooding the logs
-          log.error("Encounted InterrupedException in run() before persisting");
+          log.error("Encountered InterrupedException in run() before persisting");
         } else {
           log.error(e, "Encountered exception in run() before persisting.");
         }

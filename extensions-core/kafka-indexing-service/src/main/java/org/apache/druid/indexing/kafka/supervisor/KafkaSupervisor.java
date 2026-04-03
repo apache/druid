@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.kafka.KafkaSequenceNumber;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -266,6 +268,130 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
+  public void submitBackfillTask(
+      Map<KafkaTopicPartition, Long> startOffsets,
+      Map<KafkaTopicPartition, Long> endOffsets
+  )
+  {
+    if (startOffsets == null || startOffsets.isEmpty() || endOffsets == null || endOffsets.isEmpty()) {
+      log.info("No offsets to backfill, skipping backfill task submission");
+      return;
+    }
+
+    try {
+      String backfillSupervisorId = spec.getSpec().getDataSchema().getDataSource() + "_backfill";
+
+      // Get the backfillTaskCount from config
+      int backfillTaskCount = spec.getSpec().getIOConfig().getBackfillTaskCount();
+      List<KafkaTopicPartition> partitions = new ArrayList<>(endOffsets.keySet());
+
+      // Determine actual number of tasks (can't have more tasks than partitions)
+      int numTasks = Math.min(backfillTaskCount, partitions.size());
+
+      log.info(
+          "Submitting %d backfill task(s) with supervisorId[%s] for %d partition(s)",
+          numTasks,
+          backfillSupervisorId,
+          partitions.size()
+      );
+
+      // Split partitions into groups for each task
+      int partitionsPerTask = partitions.size() / numTasks;
+      int remainder = partitions.size() % numTasks;
+
+      int startIdx = 0;
+      for (int taskNum = 0; taskNum < numTasks; taskNum++) {
+        // Distribute remainder across first few tasks
+        int taskPartitionCount = partitionsPerTask + (taskNum < remainder ? 1 : 0);
+        int endIdx = startIdx + taskPartitionCount;
+
+        List<KafkaTopicPartition> taskPartitions = partitions.subList(startIdx, endIdx);
+
+        // Create offset maps for this task's partitions only
+        Map<KafkaTopicPartition, Long> taskStartOffsets = new HashMap<>();
+        Map<KafkaTopicPartition, Long> taskEndOffsets = new HashMap<>();
+        for (KafkaTopicPartition partition : taskPartitions) {
+          Long startOffset = startOffsets.get(partition);
+          if (startOffset == null) {
+            log.info("No checkpoint has occurred before for partition [%s], setting startOffset equal to endOffset to skip data consumption", partition);
+            startOffset = endOffsets.get(partition);
+          }
+          taskStartOffsets.put(partition, startOffset);
+          taskEndOffsets.put(partition, endOffsets.get(partition));
+        }
+
+        String baseSequenceName = generateSequenceName(
+            taskStartOffsets,
+            null, // minimumMessageTime - process all data in range
+            null, // maximumMessageTime - process all data in range
+            spec.getSpec().getDataSchema(),
+            spec.getSpec().getTuningConfig()
+        );
+
+        KafkaSupervisorIOConfig kafkaIoConfig = spec.getSpec().getIOConfig();
+        KafkaIndexTaskIOConfig backfillIoConfig = new KafkaIndexTaskIOConfig(
+            taskNum, // taskGroupId
+            baseSequenceName,
+            null,
+            null,
+            new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getStream(), taskStartOffsets, Collections.emptySet()),
+            new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getStream(), taskEndOffsets),
+            kafkaIoConfig.getConsumerProperties(),
+            kafkaIoConfig.getPollTimeout(),
+            false, // useTransaction = false for backfill (no supervisor coordination)
+            null, // minimumMessageTime - no time filtering for backfill
+            null, // maximumMessageTime - no time filtering for backfill
+            kafkaIoConfig.getInputFormat(),
+            kafkaIoConfig.getConfigOverrides(),
+            kafkaIoConfig.isMultiTopic(),
+            null // refreshRejectionPeriodsInMinutes - don't refresh rejection periods for backfill
+        );
+
+        // Create backfill task with different supervisorId
+        String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
+        Map<String, Object> context = createBaseTaskContexts();
+        // Use APPEND locks to allow writing to intervals that may overlap with main supervisor
+        context.put("useConcurrentLocks", true);
+
+        KafkaIndexTask backfillTask = new KafkaIndexTask(
+            taskId,
+            backfillSupervisorId, // Use backfill supervisorId instead of spec.getId()
+            new TaskResource(baseSequenceName, 1),
+            spec.getSpec().getDataSchema(),
+            spec.getSpec().getTuningConfig(),
+            backfillIoConfig,
+            context,
+            sortingMapper,
+            null // no server priority for backfill tasks
+        );
+
+        Optional<TaskQueue> taskQueue = getTaskMaster().getTaskQueue();
+        if (taskQueue.isPresent()) {
+          log.info(
+              "Submitting backfill task[%s] (task %d of %d) with supervisorId[%s] for partitions %s, offsets from [%s] to [%s]",
+              taskId,
+              taskNum + 1,
+              numTasks,
+              backfillSupervisorId,
+              taskPartitions,
+              taskStartOffsets,
+              taskEndOffsets
+          );
+          taskQueue.get().add(backfillTask);
+        } else {
+          log.error("Failed to submit backfill task because I'm not the leader!");
+          break;
+        }
+
+        startIdx = endIdx;
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to submit backfill task, skipping backfill");
+    }
+  }
+
+  @Override
   protected Map<KafkaTopicPartition, Long> getPartitionRecordLag()
   {
     OffsetSnapshot<KafkaTopicPartition, Long> offsetSnapshot = offsetSnapshotRef.get();
@@ -355,7 +481,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<KafkaTopicPartition, Long> map)
+  public KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<KafkaTopicPartition, Long> map)
   {
     return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
@@ -516,7 +642,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
    * </p>
    */
   @Override
-  protected void updatePartitionLagFromStream()
+  public void updatePartitionLagFromStream()
   {
     if (getIoConfig().isEmitTimeLagMetrics()) {
       updatePartitionTimeAndRecordLagFromStream();
@@ -565,7 +691,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected Map<KafkaTopicPartition, Long> getLatestSequencesFromStream()
+  public Map<KafkaTopicPartition, Long> getLatestSequencesFromStream()
   {
     return offsetSnapshotRef.get().getLatestOffsetsFromStream();
   }
@@ -598,17 +724,17 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
    * Gets the offsets as stored in the metadata store. The map returned will only contain
    * offsets from topic partitions that match the current supervisor config stream. This
    * override is needed because in the case of multi-topic, a user could have updated the supervisor
-   * config from single topic to mult-topic, where the new multi-topic pattern regex matches the
+   * config from single topic to multi-topic, where the new multi-topic pattern regex matches the
    * old config single topic. Without this override, the previously stored metadata for the single
    * topic would be deemed as different from the currently configure stream, and not be included in
    * the offset map returned. This implementation handles these cases appropriately.
    *
-   * @return the previoulsy stored offsets from metadata storage, possibly updated with offsets removed
+   * @return the previously stored offsets from metadata storage, possibly updated with offsets removed
    * for topics that do not match the currently configured supervisor topic. Topic partition keys may also be
    * updated to single topic or multi-topic depending on the supervisor config, as needed.
    */
   @Override
-  protected Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
+  public Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (checkSourceMetadataMatch(dataSourceMetadata)) {

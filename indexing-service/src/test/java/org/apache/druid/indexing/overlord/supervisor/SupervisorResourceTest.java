@@ -1257,12 +1257,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     )).andReturn(false);
     replayAll();
 
-    Response response = supervisorResource.reset("my-id");
+    Response response = supervisorResource.reset("my-id", false);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
-    response = supervisorResource.reset("my-id-2");
+    response = supervisorResource.reset("my-id-2", false);
 
     Assert.assertEquals(404, response.getStatus());
     Assert.assertEquals("my-id", id1.getValue());
@@ -1322,6 +1322,109 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.terminate("my-id");
+
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
+  public void testResetOffsetsAndBackfill()
+  {
+    Capture<String> id1 = Capture.newInstance();
+    Map<String, Object> expectedResult = ImmutableMap.of(
+        "id", "my-id",
+        "backfillRange", ImmutableMap.of(
+            "0", ImmutableMap.of("start", 50L, "end", 100L),
+            "1", ImmutableMap.of("start", 150L, "end", 200L),
+            "2", ImmutableMap.of("start", 250L, "end", 300L)
+        )
+    );
+
+    // Test 200 - Success
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill(
+        EasyMock.capture(id1)
+    )).andReturn(expectedResult);
+    replayAll();
+
+    Response response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedResult, response.getEntity());
+    Assert.assertEquals("my-id", id1.getValue());
+    verifyAll();
+
+    resetAll();
+
+    // Test 400 - Supervisor not found
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("non-existent"))
+            .andThrow(new IllegalArgumentException("Supervisor[non-existent] does not exist"));
+    replayAll();
+
+    response = supervisorResource.reset("non-existent", true);
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertTrue(
+        response.getEntity().toString().contains("Supervisor[non-existent] does not exist")
+    );
+    verifyAll();
+
+    resetAll();
+
+    // Test 400 - useConcurrentLocks not enabled
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id"))
+            .andThrow(new IllegalArgumentException("Backfill tasks require 'useConcurrentLocks' to be set to true"));
+    replayAll();
+
+    response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertTrue(
+        response.getEntity().toString().contains("Backfill tasks require 'useConcurrentLocks'")
+    );
+    verifyAll();
+
+    resetAll();
+
+    // Test 400 - useEarliestOffset is enabled
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id"))
+            .andThrow(new IllegalArgumentException("Reset with skipped offsets is not supported when useEarliestOffset is true"));
+    replayAll();
+
+    response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertTrue(
+        response.getEntity().toString().contains("Reset with skipped offsets is not supported when useEarliestOffset is true")
+    );
+    verifyAll();
+
+    resetAll();
+
+    // Test 404 - Supervisor not running
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id"))
+            .andThrow(new IllegalStateException("A running supervisor is required to query the latest offsets from the stream"));
+    replayAll();
+
+    response = supervisorResource.reset("my-id", true);
+
+    Assert.assertEquals(404, response.getStatus());
+    Assert.assertTrue(
+        response.getEntity().toString().contains("A running supervisor is required")
+    );
+    verifyAll();
+
+    resetAll();
+
+    // Test 503 - Service unavailable
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.reset("my-id", true);
 
     Assert.assertEquals(503, response.getStatus());
     verifyAll();
