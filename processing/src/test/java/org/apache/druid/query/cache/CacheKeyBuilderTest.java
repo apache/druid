@@ -297,6 +297,28 @@ public class CacheKeyBuilderTest
   }
 
   @Test
+  public void testAppendCacheableWithNullInput()
+  {
+    final byte[] key = new CacheKeyBuilder((byte) 10)
+        .appendCacheable(null)
+        .build();
+
+    Assert.assertNotNull("appendCacheable(null) should not invalidate the key", key);
+  }
+
+  @Test
+  public void testAppendCacheableWithUncacheableObject()
+  {
+    final Cacheable uncacheable = () -> null;
+
+    final byte[] key = new CacheKeyBuilder((byte) 10)
+        .appendCacheable(uncacheable)
+        .build();
+
+    Assert.assertNull("appendCacheable with getCacheKey()==null should invalidate the key", key);
+  }
+
+  @Test
   public void testIgnoringOrder()
   {
     byte[] actual = new CacheKeyBuilder((byte) 10)

@@ -103,15 +103,18 @@ public class CacheKeyBuilder
     return buffer.array();
   }
 
+  @Nullable
   private static byte[] cacheableToByteArray(@Nullable Cacheable cacheable)
   {
     if (cacheable == null) {
       return EMPTY_BYTES;
-    } else {
-      final byte[] key = cacheable.getCacheKey();
-      Preconditions.checkArgument(!Arrays.equals(key, EMPTY_BYTES), "cache key is equal to the empty key");
-      return key;
     }
+    final byte[] key = cacheable.getCacheKey();
+    if (key == null) {
+      return null;
+    }
+    Preconditions.checkArgument(key.length > 0, "cache key is equal to the empty key");
+    return key;
   }
 
   private static byte[] stringCollectionToByteArray(
@@ -269,12 +272,12 @@ public class CacheKeyBuilder
 
   public CacheKeyBuilder appendCacheable(@Nullable Cacheable input)
   {
-    byte[] cacheableToByteArray = cacheableToByteArray(input);
-    if (cacheableToByteArray == null) {
+    final byte[] bytes = cacheableToByteArray(input);
+    if (bytes == null) {
       invalidKey = true;
       return this;
     }
-    appendItem(CACHEABLE_KEY, cacheableToByteArray);
+    appendItem(CACHEABLE_KEY, bytes);
     return this;
   }
 
