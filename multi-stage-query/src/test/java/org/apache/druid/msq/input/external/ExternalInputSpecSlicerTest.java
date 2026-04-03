@@ -20,6 +20,7 @@
 package org.apache.druid.msq.input.external;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -27,8 +28,10 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.TaskAuthContextAware;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.Streams;
@@ -42,6 +45,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -427,6 +431,135 @@ public class ExternalInputSpecSlicerTest
       return "TestSplittableInputSource{" +
              "strings=" + strings +
              '}';
+    }
+  }
+
+  @Test
+  public void test_sliceStatic_authContextPropagatedToTaskAuthContextAware()
+  {
+    TaskAuthContext authContext = new TaskAuthContext()
+    {
+      @Override
+      public String getIdentity()
+      {
+        return "testUser";
+      }
+
+      @Override
+      public Map<String, String> getCredentials()
+      {
+        return Map.of("token", "secret");
+      }
+    };
+
+    ExternalInputSpecSlicer slicerWithAuth = new ExternalInputSpecSlicer(authContext);
+
+    AuthAwareSplittableInputSource source = new AuthAwareSplittableInputSource(
+        Arrays.asList("a", "b"),
+        false
+    );
+    ExternalInputSpec spec = new ExternalInputSpec(source, INPUT_FORMAT, SIGNATURE);
+
+    List<InputSlice> slices = slicerWithAuth.sliceStatic(spec, null, 2);
+    Assert.assertFalse(slices.isEmpty());
+    Assert.assertNotNull(source.getReceivedAuthContext());
+    Assert.assertEquals("testUser", source.getReceivedAuthContext().getIdentity());
+  }
+
+  @Test
+  public void test_sliceStatic_noAuthContextDoesNotFailNonAwareSources()
+  {
+    ExternalInputSpecSlicer slicerNoAuth = new ExternalInputSpecSlicer();
+
+    TestSplittableInputSource source = new TestSplittableInputSource(
+        Arrays.asList("a", "b"),
+        false
+    );
+    ExternalInputSpec spec = new ExternalInputSpec(source, INPUT_FORMAT, SIGNATURE);
+
+    List<InputSlice> slices = slicerNoAuth.sliceStatic(spec, null, 2);
+    Assert.assertFalse(slices.isEmpty());
+  }
+
+  private static class AuthAwareSplittableInputSource
+      implements SplittableInputSource<List<String>>, TaskAuthContextAware
+  {
+    private final List<String> strings;
+    private final boolean useSplitHintSpec;
+    private TaskAuthContext receivedAuthContext;
+
+    public AuthAwareSplittableInputSource(final List<String> strings, final boolean useSplitHintSpec)
+    {
+      this.strings = strings;
+      this.useSplitHintSpec = useSplitHintSpec;
+    }
+
+    @Override
+    public void setTaskAuthContext(@Nullable TaskAuthContext taskAuthContext)
+    {
+      this.receivedAuthContext = taskAuthContext;
+    }
+
+    @Nullable
+    public TaskAuthContext getReceivedAuthContext()
+    {
+      return receivedAuthContext;
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
+    }
+
+    @Override
+    public InputSourceReader reader(
+        InputRowSchema inputRowSchema,
+        @Nullable InputFormat inputFormat,
+        File temporaryDirectory
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Stream<InputSplit<List<String>>> createSplits(
+        InputFormat inputFormat,
+        @Nullable SplitHintSpec splitHintSpec
+    )
+    {
+      return strings.stream().map(s -> new InputSplit<>(Collections.singletonList(s)));
+    }
+
+    @Override
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public InputSource withSplit(InputSplit<List<String>> split)
+    {
+      return new AuthAwareSplittableInputSource(split.get(), useSplitHintSpec);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      AuthAwareSplittableInputSource that = (AuthAwareSplittableInputSource) o;
+      return Objects.equals(strings, that.strings);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(strings);
     }
   }
 }

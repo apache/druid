@@ -26,6 +26,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import org.apache.druid.auth.TaskAuthContext;
+import org.apache.druid.auth.TaskAuthContextRedactionMixIn;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -83,7 +85,9 @@ public class ExecutorLifecycle
     this.taskConfig = taskConfig;
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
-    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.jsonMapper = jsonMapper.copy()
+        .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class)
+        .addMixIn(TaskAuthContext.class, TaskAuthContextRedactionMixIn.class);
   }
 
   @LifecycleStart

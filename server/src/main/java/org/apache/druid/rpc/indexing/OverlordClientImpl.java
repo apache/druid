@@ -99,12 +99,23 @@ public class OverlordClientImpl implements OverlordClient
   @Override
   public ListenableFuture<Void> runTask(final String taskId, final Object taskObject)
   {
+    return runTask(taskId, taskObject, Collections.emptyMap());
+  }
+
+  @Override
+  public ListenableFuture<Void> runTask(
+      final String taskId,
+      final Object taskObject,
+      final Map<String, String> extraHeaders
+  )
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/task")
+        .jsonContent(jsonMapper, taskObject);
+    for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+      requestBuilder.header(entry.getKey(), entry.getValue());
+    }
     return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/task")
-                .jsonContent(jsonMapper, taskObject),
-            new BytesFullResponseHandler()
-        ),
+        client.asyncRequest(requestBuilder, new BytesFullResponseHandler()),
         holder -> {
           final Map<String, Object> map =
               JacksonUtils.readValue(jsonMapper, holder.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);

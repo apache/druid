@@ -34,6 +34,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.TaskAuthContextAware;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -539,6 +540,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
       initializeSubTaskCleaner();
       this.toolbox = toolbox;
+
+      // Propagate auth context to input source for credential vending (e.g., Iceberg REST Catalog)
+      if (baseInputSource instanceof TaskAuthContextAware) {
+        ((TaskAuthContextAware) baseInputSource).setTaskAuthContext(getTaskAuthContext());
+      }
 
       if (isParallelMode()) {
         // emit metric for parallel batch ingestion mode:

@@ -30,6 +30,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.Configs;
@@ -43,6 +44,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskAuthContextProvider;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -67,6 +69,7 @@ import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -122,6 +125,13 @@ public class OverlordResource
 
   private final AuthConfig authConfig;
 
+  /**
+   * Optional provider for injecting auth context into tasks.
+   * If not bound, no auth context will be injected.
+   */
+  @Nullable
+  private TaskAuthContextProvider taskAuthContextProvider;
+
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
       = ImmutableSet.of("index", "index_parallel", "compact", "kill");
@@ -150,6 +160,16 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.authConfig = authConfig;
+  }
+
+  /**
+   * Optional setter for TaskAuthContextProvider. If bound in Guice, this will be called
+   * to enable auth context injection into tasks.
+   */
+  @Inject(optional = true)
+  public void setTaskAuthContextProvider(@Nullable TaskAuthContextProvider provider)
+  {
+    this.taskAuthContextProvider = provider;
   }
 
   /**
@@ -183,6 +203,27 @@ public class OverlordResource
     );
     if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
+    }
+
+    // Inject auth context if provider is configured
+    if (taskAuthContextProvider != null) {
+      final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      if (authenticationResult != null) {
+        final TaskAuthContext taskAuthContext = taskAuthContextProvider.createTaskAuthContext(
+            authenticationResult,
+            task
+        );
+        if (taskAuthContext != null) {
+          task.setTaskAuthContext(taskAuthContext);
+          if (task.getTaskAuthContext() == null) {
+            log.warn(
+                "Auth context was provided but task type [%s] does not support it (dropped for task [%s])",
+                task.getType(),
+                task.getId()
+            );
+          }
+        }
+      }
     }
 
     return asLeaderWith(

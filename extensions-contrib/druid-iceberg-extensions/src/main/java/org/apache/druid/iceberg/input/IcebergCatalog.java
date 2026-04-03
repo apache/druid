@@ -20,6 +20,7 @@
 package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -37,6 +39,7 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,11 +81,43 @@ public abstract class IcebergCatalog
       ResidualFilterMode residualFilterMode
   )
   {
+    return extractSnapshotDataFilesWithCredentials(
+        tableNamespace,
+        tableName,
+        icebergFilter,
+        snapshotTime,
+        residualFilterMode
+    ).getDataFilePaths();
+  }
+
+  /**
+   * Extract the iceberg data files and any vended credentials from the catalog.
+   *
+   * <p>For REST catalogs with credential vending enabled, this method will return
+   * temporary S3 credentials alongside the file paths. These credentials should be
+   * used to access the data files.
+   *
+   * @param tableNamespace     The catalog namespace under which the table is defined
+   * @param tableName          The iceberg table name
+   * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
+   * @param snapshotTime       Datetime that will be used to fetch the most recent snapshot as of this time
+   * @param residualFilterMode Controls how residual filters are handled
+   * @return data file paths with optional vended credentials
+   */
+  public IcebergDataFilesWithCredentials extractSnapshotDataFilesWithCredentials(
+      String tableNamespace,
+      String tableName,
+      IcebergFilter icebergFilter,
+      DateTime snapshotTime,
+      ResidualFilterMode residualFilterMode
+  )
+  {
     Catalog catalog = retrieveCatalog();
     Namespace namespace = Namespace.of(tableNamespace);
     String tableIdentifier = tableNamespace + "." + tableName;
 
     List<String> dataFilePaths = new ArrayList<>();
+    VendedCredentials vendedCredentials;
 
     ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
@@ -96,7 +131,15 @@ public abstract class IcebergCatalog
                                                       ));
 
       long start = System.currentTimeMillis();
-      TableScan tableScan = catalog.loadTable(icebergTableIdentifier).newScan();
+      Table table = catalog.loadTable(icebergTableIdentifier);
+
+      // Extract vended credentials from the table (subclasses can override)
+      vendedCredentials = extractCredentials(table);
+      if (vendedCredentials != null && !vendedCredentials.isEmpty()) {
+        log.info("Extracted vended credentials for table [%s]", tableIdentifier);
+      }
+
+      TableScan tableScan = table.newScan();
 
       if (icebergFilter != null) {
         tableScan = icebergFilter.filter(tableScan);
@@ -151,6 +194,30 @@ public abstract class IcebergCatalog
     finally {
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
-    return dataFilePaths;
+    return new IcebergDataFilesWithCredentials(dataFilePaths, vendedCredentials);
+  }
+
+  /**
+   * Extracts vended credentials from the loaded table.
+   *
+   * <p>Subclasses (like RestIcebergCatalog) can override this to extract
+   * credentials from table properties or FileIO configuration.
+   *
+   * @param table the loaded Iceberg table
+   * @return vended credentials, or null if none available
+   */
+  @Nullable
+  protected VendedCredentials extractCredentials(Table table)
+  {
+    return null;
+  }
+
+  /**
+   * Sets the task auth context. Subclasses that need credentials (e.g., {@link RestIcebergCatalog})
+   * should override this.
+   */
+  public void setTaskAuthContext(@Nullable TaskAuthContext taskAuthContext)
+  {
+    // no-op by default
   }
 }
