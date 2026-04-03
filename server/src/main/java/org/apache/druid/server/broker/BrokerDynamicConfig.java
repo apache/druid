@@ -21,6 +21,7 @@ package org.apache.druid.server.broker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryBlocklistRule;
@@ -28,6 +29,7 @@ import org.apache.druid.server.QueryBlocklistRule;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -52,14 +54,24 @@ public class BrokerDynamicConfig
    */
   private final QueryContext queryContext;
 
+  /**
+   * Per-datasource per-segment timeout configuration. Maps datasource name to its
+   * {@link PerSegmentTimeoutConfig}. When a query targets a datasource in this map,
+   * the broker injects the configured {@code perSegmentTimeout} into the query context
+   * (unless the caller already set it explicitly).
+   */
+  private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
+
   @JsonCreator
   public BrokerDynamicConfig(
       @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
-      @JsonProperty("queryContext") @Nullable QueryContext queryContext
+      @JsonProperty("queryContext") @Nullable QueryContext queryContext,
+      @JsonProperty("perSegmentTimeoutConfig") @Nullable Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig
   )
   {
     this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Collections.emptyList());
     this.queryContext = Configs.valueOrDefault(queryContext, QueryContext.empty());
+    this.perSegmentTimeoutConfig = Configs.valueOrDefault(perSegmentTimeoutConfig, ImmutableMap.of());
   }
 
   @JsonProperty
@@ -74,6 +86,12 @@ public class BrokerDynamicConfig
     return queryContext;
   }
 
+  @JsonProperty
+  public Map<String, PerSegmentTimeoutConfig> getPerSegmentTimeoutConfig()
+  {
+    return perSegmentTimeoutConfig;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -85,13 +103,14 @@ public class BrokerDynamicConfig
     }
     BrokerDynamicConfig that = (BrokerDynamicConfig) o;
     return Objects.equals(queryBlocklist, that.queryBlocklist)
-           && Objects.equals(queryContext, that.queryContext);
+           && Objects.equals(queryContext, that.queryContext)
+           && Objects.equals(perSegmentTimeoutConfig, that.perSegmentTimeoutConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryBlocklist, queryContext);
+    return Objects.hash(queryBlocklist, queryContext, perSegmentTimeoutConfig);
   }
 
   @Override
@@ -100,6 +119,7 @@ public class BrokerDynamicConfig
     return "BrokerDynamicConfig{" +
            "queryBlocklist=" + queryBlocklist +
            ", queryContext=" + queryContext +
+           ", perSegmentTimeoutConfig=" + perSegmentTimeoutConfig +
            '}';
   }
 
@@ -112,6 +132,7 @@ public class BrokerDynamicConfig
   {
     private List<QueryBlocklistRule> queryBlocklist;
     private QueryContext queryContext;
+    private Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
 
     public Builder()
     {
@@ -120,11 +141,13 @@ public class BrokerDynamicConfig
     @JsonCreator
     public Builder(
         @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
-        @JsonProperty("queryContext") @Nullable QueryContext queryContext
+        @JsonProperty("queryContext") @Nullable QueryContext queryContext,
+        @JsonProperty("perSegmentTimeoutConfig") @Nullable Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig
     )
     {
       this.queryBlocklist = queryBlocklist;
       this.queryContext = queryContext;
+      this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
     }
 
     public Builder withQueryBlocklist(List<QueryBlocklistRule> queryBlocklist)
@@ -139,9 +162,15 @@ public class BrokerDynamicConfig
       return this;
     }
 
+    public Builder withPerSegmentTimeoutConfig(Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig)
+    {
+      this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
+      return this;
+    }
+
     public BrokerDynamicConfig build()
     {
-      return new BrokerDynamicConfig(queryBlocklist, queryContext);
+      return new BrokerDynamicConfig(queryBlocklist, queryContext, perSegmentTimeoutConfig);
     }
 
     /**
@@ -152,7 +181,8 @@ public class BrokerDynamicConfig
     {
       return new BrokerDynamicConfig(
           Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null),
-          Configs.valueOrDefault(queryContext, defaults != null ? defaults.getQueryContext() : null)
+          Configs.valueOrDefault(queryContext, defaults != null ? defaults.getQueryContext() : null),
+          Configs.valueOrDefault(perSegmentTimeoutConfig, defaults != null ? defaults.getPerSegmentTimeoutConfig() : null)
       );
     }
   }
