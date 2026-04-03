@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.GcNotificationMetricCollector.DrainResult;
+import org.apache.druid.java.util.metrics.GcNotificationMetricCollector.GcPauseEvent;
 
 import javax.annotation.Nullable;
 import java.lang.management.BufferPoolMXBean;
@@ -46,6 +48,7 @@ public class JvmMonitor extends FeedDefiningMonitor
   final GcCollectors gcCollectors;
   @Nullable
   private final AllocationMetricCollector collector;
+  private final GcNotificationMetricCollector gcNotificationCollector;
 
   public JvmMonitor()
   {
@@ -57,6 +60,30 @@ public class JvmMonitor extends FeedDefiningMonitor
     super(feed);
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
     this.gcCollectors = new GcCollectors();
+    this.gcNotificationCollector = new GcNotificationMetricCollector();
+  }
+
+  @VisibleForTesting
+  JvmMonitor(String feed, GcNotificationMetricCollector gcNotificationCollector)
+  {
+    super(feed);
+    this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
+    this.gcCollectors = new GcCollectors();
+    this.gcNotificationCollector = gcNotificationCollector;
+  }
+
+  @Override
+  public void start()
+  {
+    super.start();
+    gcNotificationCollector.start();
+  }
+
+  @Override
+  public void stop()
+  {
+    gcNotificationCollector.stop();
+    super.stop();
   }
 
   @Override
@@ -65,6 +92,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     emitJvmMemMetrics(emitter);
     emitDirectMemMetrics(emitter);
     emitGcMetrics(emitter);
+    emitGcNotificationMetrics(emitter);
     emitThreadAllocationMetrics(emitter);
 
     return true;
@@ -139,6 +167,36 @@ public class JvmMonitor extends FeedDefiningMonitor
     gcCollectors.emit(emitter);
   }
 
+  private void emitGcNotificationMetrics(ServiceEmitter emitter)
+  {
+    DrainResult result = gcNotificationCollector.drain();
+
+    final ServiceMetricEvent.Builder rateBuilder = builder();
+    rateBuilder.setDimension(JVM_VERSION, JAVA_VERSION);
+    emitter.emit(rateBuilder.setMetric("jvm/gc/allocationRate/bytes", result.getAllocationRateBytes()));
+    emitter.emit(rateBuilder.setMetric("jvm/gc/promotionRate/bytes", result.getPromotionRateBytes()));
+    emitter.emit(rateBuilder.setMetric("jvm/gc/liveDataSize/bytes", result.getLiveDataSizeBytes()));
+    emitter.emit(rateBuilder.setMetric("jvm/gc/maxDataSize/bytes", result.getMaxDataSizeBytes()));
+
+    for (GcPauseEvent event : result.getPauseEvents()) {
+      final ServiceMetricEvent.Builder pauseBuilder = builder();
+      pauseBuilder
+          .setDimension(JVM_VERSION, JAVA_VERSION)
+          .setDimension("gcAction", event.getGcAction())
+          .setDimension("gcCause", event.getGcCause());
+      emitter.emit(pauseBuilder.setMetric("jvm/gc/pause", event.getDurationSeconds()));
+    }
+
+    for (GcPauseEvent event : result.getConcurrentPhaseEvents()) {
+      final ServiceMetricEvent.Builder concurrentBuilder = builder();
+      concurrentBuilder
+          .setDimension(JVM_VERSION, JAVA_VERSION)
+          .setDimension("gcAction", event.getGcAction())
+          .setDimension("gcCause", event.getGcCause());
+      emitter.emit(concurrentBuilder.setMetric("jvm/gc/concurrentPhaseTime", event.getDurationSeconds()));
+    }
+  }
+
   private class GcCollectors
   {
     private final List<GcGenerationCollector> generationCollectors = new ArrayList<>();
@@ -184,8 +242,11 @@ public class JvmMonitor extends FeedDefiningMonitor
     private static final String SERIAL_COLLECTOR_NAME = "serial";
     private static final String ZGC_COLLECTOR_NAME = "zgc";
     private static final String SHENANDOAN_COLLECTOR_NAME = "shenandoah";
+    private static final String GC_PAUSE_TYPE_STW = "stw";
+    private static final String GC_PAUSE_TYPE_CONCURRENT = "concurrent";
     private final String generation;
     private final String collectorName;
+    private final String pauseType;
     private final GarbageCollectorMXBean gcBean;
     private long lastInvocations = 0;
     private long lastCpuMillis = 0;
@@ -195,7 +256,32 @@ public class JvmMonitor extends FeedDefiningMonitor
       Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
       this.generation = gcNamePair.lhs;
       this.collectorName = gcNamePair.rhs;
+      this.pauseType = getPauseType(gcBean.getName());
       this.gcBean = gcBean;
+    }
+
+    private String getPauseType(String name)
+    {
+      switch (name) {
+        case "ConcurrentMarkSweep":
+        case "ZGC":
+        case "ZGC Cycles":
+        case "G1 Concurrent GC":
+        case "Shenandoah Cycles":
+          return GC_PAUSE_TYPE_CONCURRENT;
+        case "ParNew":
+        case "G1 Young Generation":
+        case "G1 Old Generation":
+        case "PS Scavenge":
+        case "PS MarkSweep":
+        case "Copy":
+        case "MarkSweepCompact":
+        case "ZGC Pauses":
+        case "Shenandoah Pauses":
+          return GC_PAUSE_TYPE_STW;
+        default:
+          return name;
+      }
     }
 
     private Pair<String, String> getReadableName(String name)
@@ -212,6 +298,8 @@ public class JvmMonitor extends FeedDefiningMonitor
           return new Pair<>(GC_YOUNG_GENERATION_NAME, G1_COLLECTOR_NAME);
         case "G1 Old Generation":
           return new Pair<>(GC_OLD_GENERATION_NAME, G1_COLLECTOR_NAME);
+        case "G1 Concurrent GC":
+          return new Pair<>(GC_OLD_GENERATION_NAME, G1_COLLECTOR_NAME);
 
         // Parallel
         case "PS Scavenge":
@@ -227,6 +315,8 @@ public class JvmMonitor extends FeedDefiningMonitor
 
         //zgc
         case "ZGC":
+        case "ZGC Cycles":
+        case "ZGC Pauses":
           return new Pair<>(GC_ZGC_GENERATION_NAME, ZGC_COLLECTOR_NAME);
 
         //Shenandoah
@@ -247,6 +337,7 @@ public class JvmMonitor extends FeedDefiningMonitor
           .put("gcGen", new String[]{generation});
 
       dimensionsCopyBuilder.put("gcName", new String[]{collectorName});
+      dimensionsCopyBuilder.put("gcPauseType", new String[]{pauseType});
 
       Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
 
