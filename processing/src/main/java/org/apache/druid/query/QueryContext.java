@@ -686,14 +686,6 @@ public class QueryContext
     );
   }
 
-  public boolean isExtendedFilteredSumRewrite()
-  {
-    return getBoolean(
-        QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED,
-        QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED
-    );
-  }
-
   /**
    * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set.
    */
