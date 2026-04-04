@@ -1,0 +1,289 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ServerMultiSelectDialog matches snapshot when servers are loading 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="server-multi-select-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Decommissioning nodes"
+>
+  <Memo(Loader) />
+</Blueprint5.Dialog>
+`;
+
+exports[`ServerMultiSelectDialog matches snapshot with existing selection 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="server-multi-select-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Turbo loading nodes"
+>
+  <React.Fragment>
+    <div
+      className="bp5-dialog-body"
+    >
+      <Blueprint5.InputGroup
+        leftIcon="search"
+        onChange={[Function]}
+        placeholder="Search servers..."
+        style={
+          {
+            "marginBottom": 10,
+          }
+        }
+        value=""
+      />
+      <div
+        style={
+          {
+            "maxHeight": 400,
+            "overflowY": "auto",
+          }
+        }
+      >
+        <div
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <Blueprint5.Checkbox
+            checked={false}
+            indeterminate={true}
+            labelElement={
+              <React.Fragment>
+                <strong>
+                  hot
+                </strong>
+              </React.Fragment>
+            }
+            onChange={[Function]}
+          />
+          <div
+            style={
+              {
+                "paddingLeft": 20,
+              }
+            }
+          >
+            <Blueprint5.Checkbox
+              checked={true}
+              label="hot-host1:8083"
+              onChange={[Function]}
+            />
+            <Blueprint5.Checkbox
+              checked={false}
+              label="hot-host2:8083"
+              onChange={[Function]}
+            />
+          </div>
+        </div>
+        <div
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <Blueprint5.Checkbox
+            checked={false}
+            indeterminate={false}
+            labelElement={
+              <React.Fragment>
+                <strong>
+                  cold
+                </strong>
+              </React.Fragment>
+            }
+            onChange={[Function]}
+          />
+          <div
+            style={
+              {
+                "paddingLeft": 20,
+              }
+            }
+          >
+            <Blueprint5.Checkbox
+              checked={false}
+              label="cold-host1:8083"
+              onChange={[Function]}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      className="bp5-dialog-footer"
+    >
+      <div
+        className="bp5-dialog-footer-actions"
+      >
+        <span
+          style={
+            {
+              "alignSelf": "center",
+              "flex": 1,
+            }
+          }
+        >
+          1
+           server
+          
+           selected
+        </span>
+        <Blueprint5.Button
+          onClick={[Function]}
+          text="Cancel"
+        />
+        <Blueprint5.Button
+          intent="primary"
+          onClick={[Function]}
+          text="Save"
+        />
+      </div>
+    </div>
+  </React.Fragment>
+</Blueprint5.Dialog>
+`;
+
+exports[`ServerMultiSelectDialog matches snapshot with no selection 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="server-multi-select-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Decommissioning nodes"
+>
+  <React.Fragment>
+    <div
+      className="bp5-dialog-body"
+    >
+      <Blueprint5.InputGroup
+        leftIcon="search"
+        onChange={[Function]}
+        placeholder="Search servers..."
+        style={
+          {
+            "marginBottom": 10,
+          }
+        }
+        value=""
+      />
+      <div
+        style={
+          {
+            "maxHeight": 400,
+            "overflowY": "auto",
+          }
+        }
+      >
+        <div
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <Blueprint5.Checkbox
+            checked={false}
+            indeterminate={false}
+            labelElement={
+              <React.Fragment>
+                <strong>
+                  hot
+                </strong>
+              </React.Fragment>
+            }
+            onChange={[Function]}
+          />
+          <div
+            style={
+              {
+                "paddingLeft": 20,
+              }
+            }
+          >
+            <Blueprint5.Checkbox
+              checked={false}
+              label="hot-host1:8083"
+              onChange={[Function]}
+            />
+            <Blueprint5.Checkbox
+              checked={false}
+              label="hot-host2:8083"
+              onChange={[Function]}
+            />
+          </div>
+        </div>
+        <div
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <Blueprint5.Checkbox
+            checked={false}
+            indeterminate={false}
+            labelElement={
+              <React.Fragment>
+                <strong>
+                  cold
+                </strong>
+              </React.Fragment>
+            }
+            onChange={[Function]}
+          />
+          <div
+            style={
+              {
+                "paddingLeft": 20,
+              }
+            }
+          >
+            <Blueprint5.Checkbox
+              checked={false}
+              label="cold-host1:8083"
+              onChange={[Function]}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      className="bp5-dialog-footer"
+    >
+      <div
+        className="bp5-dialog-footer-actions"
+      >
+        <span
+          style={
+            {
+              "alignSelf": "center",
+              "flex": 1,
+            }
+          }
+        >
+          0
+           server
+          s
+           selected
+        </span>
+        <Blueprint5.Button
+          onClick={[Function]}
+          text="Cancel"
+        />
+        <Blueprint5.Button
+          intent="primary"
+          onClick={[Function]}
+          text="Save"
+        />
+      </div>
+    </div>
+  </React.Fragment>
+</Blueprint5.Dialog>
+`;

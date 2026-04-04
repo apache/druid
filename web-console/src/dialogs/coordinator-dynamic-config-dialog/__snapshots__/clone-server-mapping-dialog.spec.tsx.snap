@@ -1,0 +1,526 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CloneServerMappingDialog matches snapshot when servers are loading 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="clone-server-mapping-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  style={
+    {
+      "width": 600,
+    }
+  }
+  title="Clone server mappings"
+>
+  <Memo(Loader) />
+</Blueprint5.Dialog>
+`;
+
+exports[`CloneServerMappingDialog matches snapshot with existing mappings 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="clone-server-mapping-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  style={
+    {
+      "width": 600,
+    }
+  }
+  title="Clone server mappings"
+>
+  <React.Fragment>
+    <div
+      className="bp5-dialog-body"
+    >
+      <Blueprint5.Callout
+        icon="info-sign"
+        intent="primary"
+        style={
+          {
+            "marginBottom": 10,
+          }
+        }
+      >
+        Each target server clones all segments from its source server. The target does not participate in regular segment assignment or balancing.
+      </Blueprint5.Callout>
+      <table
+        className="bp5-html-table"
+        style={
+          {
+            "width": "100%",
+          }
+        }
+      >
+        <thead>
+          <tr>
+            <th>
+              Target
+            </th>
+            <th />
+            <th>
+              Source
+            </th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host2:8083",
+                    "host1:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host2:8083"
+              />
+            </td>
+            <td
+              style={
+                {
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                }
+              }
+            >
+              clones
+            </td>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host2:8083",
+                    "host1:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host1:8083"
+              />
+            </td>
+            <td>
+              <Blueprint5.Button
+                icon="cross"
+                intent="danger"
+                minimal={true}
+                onClick={[Function]}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <Blueprint5.Button
+        icon="plus"
+        minimal={true}
+        onClick={[Function]}
+        style={
+          {
+            "marginTop": 5,
+          }
+        }
+        text="Add mapping"
+      />
+    </div>
+    <div
+      className="bp5-dialog-footer"
+    >
+      <div
+        className="bp5-dialog-footer-actions"
+      >
+        <Blueprint5.Button
+          onClick={[Function]}
+          text="Cancel"
+        />
+        <Blueprint5.Button
+          disabled={false}
+          intent="primary"
+          onClick={[Function]}
+          text="Save"
+        />
+      </div>
+    </div>
+  </React.Fragment>
+</Blueprint5.Dialog>
+`;
+
+exports[`CloneServerMappingDialog matches snapshot with no existing mappings 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="clone-server-mapping-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  style={
+    {
+      "width": 600,
+    }
+  }
+  title="Clone server mappings"
+>
+  <React.Fragment>
+    <div
+      className="bp5-dialog-body"
+    >
+      <Blueprint5.Callout
+        icon="info-sign"
+        intent="primary"
+        style={
+          {
+            "marginBottom": 10,
+          }
+        }
+      >
+        Each target server clones all segments from its source server. The target does not participate in regular segment assignment or balancing.
+      </Blueprint5.Callout>
+      <Blueprint5.Button
+        icon="plus"
+        minimal={true}
+        onClick={[Function]}
+        style={
+          {
+            "marginTop": 5,
+          }
+        }
+        text="Add mapping"
+      />
+    </div>
+    <div
+      className="bp5-dialog-footer"
+    >
+      <div
+        className="bp5-dialog-footer-actions"
+      >
+        <Blueprint5.Button
+          onClick={[Function]}
+          text="Cancel"
+        />
+        <Blueprint5.Button
+          disabled={false}
+          intent="primary"
+          onClick={[Function]}
+          text="Save"
+        />
+      </div>
+    </div>
+  </React.Fragment>
+</Blueprint5.Dialog>
+`;
+
+exports[`CloneServerMappingDialog renders self-clone mapping (filtered on save by component logic) 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="clone-server-mapping-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  style={
+    {
+      "width": 600,
+    }
+  }
+  title="Clone server mappings"
+>
+  <React.Fragment>
+    <div
+      className="bp5-dialog-body"
+    >
+      <Blueprint5.Callout
+        icon="info-sign"
+        intent="primary"
+        style={
+          {
+            "marginBottom": 10,
+          }
+        }
+      >
+        Each target server clones all segments from its source server. The target does not participate in regular segment assignment or balancing.
+      </Blueprint5.Callout>
+      <table
+        className="bp5-html-table"
+        style={
+          {
+            "width": "100%",
+          }
+        }
+      >
+        <thead>
+          <tr>
+            <th>
+              Target
+            </th>
+            <th />
+            <th>
+              Source
+            </th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host1:8083",
+                    "host2:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host1:8083"
+              />
+            </td>
+            <td
+              style={
+                {
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                }
+              }
+            >
+              clones
+            </td>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host1:8083",
+                    "host2:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host1:8083"
+              />
+            </td>
+            <td>
+              <Blueprint5.Button
+                icon="cross"
+                intent="danger"
+                minimal={true}
+                onClick={[Function]}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host1:8083",
+                    "host2:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host2:8083"
+              />
+            </td>
+            <td
+              style={
+                {
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                }
+              }
+            >
+              clones
+            </td>
+            <td>
+              <ServerSelect
+                disabledServers={
+                  Set {
+                    "host1:8083",
+                    "host2:8083",
+                  }
+                }
+                onChange={[Function]}
+                servers={
+                  {
+                    "allServers": [
+                      "host1:8083",
+                      "host2:8083",
+                      "host3:8083",
+                    ],
+                    "serverToTier": {
+                      "host1:8083": "_default_tier",
+                      "host2:8083": "_default_tier",
+                      "host3:8083": "_default_tier",
+                    },
+                    "serversByTier": {
+                      "_default_tier": [
+                        "host1:8083",
+                        "host2:8083",
+                        "host3:8083",
+                      ],
+                    },
+                    "tiers": [
+                      "_default_tier",
+                    ],
+                  }
+                }
+                value="host1:8083"
+              />
+            </td>
+            <td>
+              <Blueprint5.Button
+                icon="cross"
+                intent="danger"
+                minimal={true}
+                onClick={[Function]}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <Blueprint5.Button
+        icon="plus"
+        minimal={true}
+        onClick={[Function]}
+        style={
+          {
+            "marginTop": 5,
+          }
+        }
+        text="Add mapping"
+      />
+    </div>
+    <div
+      className="bp5-dialog-footer"
+    >
+      <div
+        className="bp5-dialog-footer-actions"
+      >
+        <Blueprint5.Button
+          onClick={[Function]}
+          text="Cancel"
+        />
+        <Blueprint5.Button
+          disabled={true}
+          intent="primary"
+          onClick={[Function]}
+          text="Save"
+        />
+      </div>
+    </div>
+  </React.Fragment>
+</Blueprint5.Dialog>
+`;
