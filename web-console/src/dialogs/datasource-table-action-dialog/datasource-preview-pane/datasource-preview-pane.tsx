@@ -39,13 +39,13 @@ export const DatasourcePreviewPane = React.memo(function DatasourcePreviewPane(
 ) {
   const [recordState] = useQueryManager<string, QueryResult>({
     initQuery: props.datasource,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       let result: QueryResult;
       try {
         result = await queryRunner.runQuery({
           query: `SELECT * FROM ${T(datasource)} ORDER BY __time DESC`,
           extraQueryContext: { sqlOuterLimit: 100 },
-          cancelToken,
+          signal,
         });
       } catch (e) {
         throw new DruidError(e);

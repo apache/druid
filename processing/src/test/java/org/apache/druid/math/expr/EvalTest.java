@@ -522,7 +522,7 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals("hello", ExprEval.ofComplex(ExpressionType.NESTED_DATA, "hello").asString());
     Assert.assertEquals(ExpressionType.STRING, cast.type());
 
-    cast = ExprEval.of("hello").castTo(ExpressionType.NESTED_DATA);
+    cast = ExprEval.ofString("hello").castTo(ExpressionType.NESTED_DATA);
     Assert.assertEquals("hello", cast.value());
     Assert.assertEquals(ExpressionType.NESTED_DATA, cast.type());
 
@@ -613,7 +613,7 @@ public class EvalTest extends InitializedNullHandlingTest
         new Object[]{1234L},
         cast.asArray()
     );
-    cast = ExprEval.of("hello").castTo(nestedArray);
+    cast = ExprEval.ofString("hello").castTo(nestedArray);
     Assert.assertEquals(nestedArray, cast.type());
     Assert.assertArrayEquals(
         new Object[]{"hello"},
@@ -770,7 +770,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> ExprEval.of("hello").castTo(someComplex)
+        () -> ExprEval.ofString("hello").castTo(someComplex)
     );
     Assert.assertEquals("Invalid type, cannot cast [STRING] to [COMPLEX<tester>]", t.getMessage());
 
@@ -820,9 +820,9 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertFalse(ExprEval.ofDouble(1.0).isNumericNull());
     Assert.assertTrue(ExprEval.ofDouble(null).isNumericNull());
 
-    Assert.assertTrue(ExprEval.of(null).isNumericNull());
-    Assert.assertTrue(ExprEval.of("one").isNumericNull());
-    Assert.assertFalse(ExprEval.of("1").isNumericNull());
+    Assert.assertTrue(ExprEval.ofString(null).isNumericNull());
+    Assert.assertTrue(ExprEval.ofString("one").isNumericNull());
+    Assert.assertFalse(ExprEval.ofString("1").isNumericNull());
 
     Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
     Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());

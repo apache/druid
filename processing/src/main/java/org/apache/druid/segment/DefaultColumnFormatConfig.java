@@ -33,16 +33,22 @@ public class DefaultColumnFormatConfig
 {
   private static final Logger LOG = new Logger(DefaultColumnFormatConfig.class);
 
-  public static void validateNestedFormatVersion(@Nullable Integer formatVersion)
+  @Nullable
+  public static Integer validateNestedFormatVersion(@Nullable Integer formatVersion)
   {
     if (formatVersion != null) {
       if (formatVersion != 5) {
         LOG.warn("Unsupported nested column format version[%s], using default version instead", formatVersion);
+        return null;
       }
     }
+    return formatVersion;
   }
 
-  private static void validateMultiValueHandlingMode(@Nullable String stringMultiValueHandlingMode)
+  @Nullable
+  private static String validateMultiValueHandlingMode(
+      @Nullable String stringMultiValueHandlingMode
+  )
   {
     if (stringMultiValueHandlingMode != null) {
       try {
@@ -59,27 +65,62 @@ public class DefaultColumnFormatConfig
                             );
       }
     }
+    return stringMultiValueHandlingMode;
   }
 
   @Nullable
-  @JsonProperty("nestedColumnFormatVersion")
+  private static Integer validateMaxStringLength(@Nullable Integer maxStringLength)
+  {
+    if (maxStringLength != null && maxStringLength < 0) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Invalid value[%s] specified for 'druid.indexing.formats.maxStringLength'."
+                              + " Value must be a non-negative integer.",
+                              maxStringLength
+                          );
+    }
+    return maxStringLength;
+  }
+
+  @JsonProperty("stringMultiValueHandlingMode")
+  @Nullable
   private final Integer nestedColumnFormatVersion;
 
+  @JsonProperty("nestedColumnFormatVersion")
   @Nullable
-  @JsonProperty("stringMultiValueHandlingMode")
   private final String stringMultiValueHandlingMode;
+
+  @JsonProperty("indexSpec")
+  @Nullable
+  private final IndexSpec indexSpec;
+
+  @JsonProperty("maxStringLength")
+  @Nullable
+  private final Integer maxStringLength;
 
   @JsonCreator
   public DefaultColumnFormatConfig(
+      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode,
       @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion,
-      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode
+      @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("maxStringLength") @Nullable Integer maxStringLength
   )
   {
-    validateNestedFormatVersion(nestedColumnFormatVersion);
     validateMultiValueHandlingMode(stringMultiValueHandlingMode);
+    validateNestedFormatVersion(nestedColumnFormatVersion);
 
+    this.stringMultiValueHandlingMode = validateMultiValueHandlingMode(stringMultiValueHandlingMode);
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode;
+    this.indexSpec = indexSpec;
+    this.maxStringLength = validateMaxStringLength(maxStringLength);
+  }
+
+  @Nullable
+  @JsonProperty("stringMultiValueHandlingMode")
+  public String getStringMultiValueHandlingMode()
+  {
+    return stringMultiValueHandlingMode;
   }
 
   @Nullable
@@ -90,10 +131,17 @@ public class DefaultColumnFormatConfig
   }
 
   @Nullable
-  @JsonProperty("stringMultiValueHandlingMode")
-  public String getStringMultiValueHandlingMode()
+  @JsonProperty("indexSpec")
+  public IndexSpec getIndexSpec()
   {
-    return stringMultiValueHandlingMode;
+    return indexSpec;
+  }
+
+  @Nullable
+  @JsonProperty("maxStringLength")
+  public Integer getMaxStringLength()
+  {
+    return maxStringLength;
   }
 
   @Override
@@ -107,21 +155,25 @@ public class DefaultColumnFormatConfig
     }
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
     return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
-           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode);
+           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode)
+           && Objects.equals(indexSpec, that.indexSpec)
+           && Objects.equals(maxStringLength, that.maxStringLength);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode);
+    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode, indexSpec, maxStringLength);
   }
 
   @Override
   public String toString()
   {
     return "DefaultColumnFormatConfig{" +
-           "nestedColumnFormatVersion=" + nestedColumnFormatVersion +
-           ", stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
+           "stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
+           ", nestedColumnFormatVersion=" + nestedColumnFormatVersion +
+           ", indexSpec=" + indexSpec +
+           ", maxStringLength=" + maxStringLength +
            '}';
   }
 }

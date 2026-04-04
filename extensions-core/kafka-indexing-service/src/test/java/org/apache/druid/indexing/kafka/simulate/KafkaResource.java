@@ -20,15 +20,20 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.TestcontainerResource;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.CreatePartitionsResult;
+import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +42,19 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Kafka container for use in embedded tests.
+ * <p>
+ * {@link #KAFKA_IMAGE} can be overriden via system property to use a different Kafka Docker image.
+ * </p>
  */
-public class KafkaResource extends TestcontainerResource<KafkaContainer>
+public class KafkaResource extends StreamIngestResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+  /**
+   * Kafka Docker image used in embedded tests. The image name is
+   * read from the system property {@code druid.testing.kafka.image} and
+   * defaults to {@code apache/kafka}. Environments that cannot run that
+   * image should set the system property to {@code apache/kafka-native}.
+   */
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.1.1");
 
   private EmbeddedDruidCluster cluster;
 
@@ -65,6 +79,38 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     };
   }
 
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    cluster.addExtension(KafkaIndexTaskModule.class);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records)
+  {
+    publishRecordsToTopic(topic, records, null);
+  }
+
+  @Override
+  public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsWithoutTransaction(producerRecords);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsToTopic(producerRecords, properties);
+  }
+
   public String getBootstrapServerUrl()
   {
     ensureRunning();
@@ -78,6 +124,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return props;
   }
 
+  @Override
   public void createTopicWithPartitions(String topicName, int numPartitions)
   {
     try (Admin admin = newAdminClient()) {
@@ -100,6 +147,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
+  @Override
   public void deleteTopic(String topicName)
   {
     try (Admin admin = newAdminClient()) {
@@ -111,17 +159,65 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
   }
 
   /**
-   * Produces records to a topic of this embedded Kafka server.
+   * Increases the number of partitions in the given Kakfa topic. The topic must
+   * already exist. This method waits until the increase in the partition count
+   * has started (but not necessarily finished).
    */
-  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  @Override
+  public void increasePartitionsInTopic(String topic, int newPartitionCount)
   {
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer()) {
+    try (Admin admin = newAdminClient()) {
+      final CreatePartitionsResult result = admin.createPartitions(
+          Map.of(topic, NewPartitions.increaseTo(newPartitionCount))
+      );
+
+      // Wait for the partitioning to start
+      result.values().get(topic).get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void produceRecordsToTopic(
+      List<ProducerRecord<byte[], byte[]>> records,
+      Map<String, Object> extraProducerProperties
+  )
+  {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer(extraProducerProperties)) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
         kafkaProducer.send(record);
       }
       kafkaProducer.commitTransaction();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Produces records to a topic of this embedded Kafka server.
+   */
+  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    produceRecordsToTopic(records, null);
+  }
+
+  /**
+   * Produces records to a topic of this embedded Kafka server without using
+   * Kafka transactions.
+   */
+  public void produceRecordsWithoutTransaction(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    final Map<String, Object> props = producerProperties();
+    props.remove(ProducerConfig.TRANSACTIONAL_ID_CONFIG);
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = new KafkaProducer<>(props)) {
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record);
+      }
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -152,9 +248,13 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return "KafkaResource";
   }
 
-  private KafkaProducer<byte[], byte[]> newProducer()
+  private KafkaProducer<byte[], byte[]> newProducer(Map<String, Object> extraProperties)
   {
-    return new KafkaProducer<>(producerProperties());
+    final Map<String, Object> producerProperties = new HashMap<>(producerProperties());
+    if (extraProperties != null) {
+      producerProperties.putAll(extraProperties);
+    }
+    return new KafkaProducer<>(producerProperties);
   }
 
   private Map<String, Object> commonClientProperties()

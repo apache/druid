@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,6 +47,20 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
     eval("regexp_like('a', 'b', 'c')", InputBindings.nilBindings());
+  }
+
+  @Test
+  public void testInvalidRegexpLikePattern()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> eval("regexp_like('a', '[Ab-C]')", InputBindings.nilBindings())),
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "An invalid pattern [[Ab-C]] was provided for the [regexp_like] function,"
+            + " error: [Illegal character range near index 4"
+        )
+    );
   }
 
   @Test

@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>35.0.0-SNAPSHOT</version>
+        <version>37.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -130,12 +130,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-indexing-hadoop</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>nl.jqno.equalsverifier</groupId>
             <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
@@ -169,25 +163,22 @@
                 <dependency>
                     <groupId>com.amazonaws</groupId>
                     <artifactId>aws-java-sdk-s3</artifactId>
-                    <version>${aws.sdk.version}</version>
+                    <version>${aws.sdk.v1.version}</version>
                     <scope>runtime</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-api</artifactId>
-                    <version>${log4j.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-core</artifactId>
-                    <version>${log4j.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-1.2-api</artifactId>
-                    <version>${log4j.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>

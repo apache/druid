@@ -28,15 +28,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.google.common.io.Closeables;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -44,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -90,17 +88,18 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Array;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -327,7 +326,8 @@ public class AggregationTestHelper implements Closeable
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       File inputDataFile,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       long minTimestamp,
       Granularity gran,
@@ -336,13 +336,14 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    createIndex(inputDataFile, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
     return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       File inputDataFile,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       long minTimestamp,
       Granularity gran,
@@ -351,13 +352,24 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    createIndex(
+        inputDataFile,
+        inputSchema,
+        inputFormat,
+        aggregators,
+        segmentDir,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        true
+    );
     return runQueryOnSegments(Collections.singletonList(segmentDir), query);
   }
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       File inputDataFile,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       long minTimestamp,
       Granularity gran,
@@ -367,13 +379,24 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
+    createIndex(
+        inputDataFile,
+        inputSchema,
+        inputFormat,
+        aggregators,
+        segmentDir,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        rollup
+    );
     return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       long minTimestamp,
       Granularity gran,
@@ -383,7 +406,8 @@ public class AggregationTestHelper implements Closeable
   {
     return createIndexAndRunQueryOnSegment(
         inputDataStream,
-        parserJson,
+        inputSchema,
+        inputFormat,
         aggregators,
         minTimestamp,
         gran,
@@ -395,7 +419,8 @@ public class AggregationTestHelper implements Closeable
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       long minTimestamp,
       Granularity gran,
@@ -405,13 +430,24 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
+    createIndex(
+        inputDataStream,
+        inputSchema,
+        inputFormat,
+        aggregators,
+        segmentDir,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        rollup
+    );
     return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
   public void createIndex(
       File inputDataFile,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       File outDir,
       long minTimestamp,
@@ -421,7 +457,8 @@ public class AggregationTestHelper implements Closeable
   {
     createIndex(
         new FileInputStream(inputDataFile),
-        parserJson,
+        inputSchema,
+        inputFormat,
         aggregators,
         outDir,
         minTimestamp,
@@ -433,7 +470,8 @@ public class AggregationTestHelper implements Closeable
 
   public void createIndex(
       File inputDataFile,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
       File outDir,
       long minTimestamp,
@@ -444,7 +482,8 @@ public class AggregationTestHelper implements Closeable
   {
     createIndex(
         new FileInputStream(inputDataFile),
-        parserJson,
+        inputSchema,
+        inputFormat,
         aggregators,
         outDir,
         minTimestamp,
@@ -456,45 +495,9 @@ public class AggregationTestHelper implements Closeable
 
   public void createIndex(
       InputStream inputDataStream,
-      String parserJson,
+      InputRowSchema inputSchema,
+      InputFormat inputFormat,
       String aggregators,
-      File outDir,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      boolean rollup
-  ) throws Exception
-  {
-    try {
-      StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
-
-      LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
-      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
-          aggregators,
-          new TypeReference<>() {}
-      );
-
-      createIndex(
-          iter,
-          parser,
-          aggregatorSpecs.toArray(new AggregatorFactory[0]),
-          outDir,
-          minTimestamp,
-          gran,
-          maxRowCount,
-          rollup
-      );
-    }
-    finally {
-      Closeables.close(inputDataStream, true);
-    }
-  }
-
-
-  public void createIndex(
-      Iterator rows,
-      InputRowParser parser,
-      final AggregatorFactory[] metrics,
       File outDir,
       long minTimestamp,
       Granularity gran,
@@ -506,11 +509,32 @@ public class AggregationTestHelper implements Closeable
     List<File> toMerge = new ArrayList<>();
 
     try {
+      InputEntity streamEntity = new InputEntity()
+      {
+        @Nullable
+        @Override
+        public URI getUri()
+        {
+          return null;
+        }
+
+        @Override
+        public InputStream open()
+        {
+          return inputDataStream;
+        }
+      };
+      InputEntityReader reader = inputFormat.createReader(inputSchema, streamEntity, tempFolder.newFolder());
+      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
+          aggregators,
+          new TypeReference<>() {}
+      );
+      AggregatorFactory[] metrics = aggregatorSpecs.toArray(new AggregatorFactory[0]);
       index = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
-                  .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
+                  .withDimensionsSpec(inputSchema.getDimensionsSpec())
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
                   .withRollup(rollup)
@@ -519,52 +543,47 @@ public class AggregationTestHelper implements Closeable
           .setMaxRowCount(maxRowCount)
           .build();
 
-      while (rows.hasNext()) {
-        Object row = rows.next();
-        if (!index.canAppendRow()) {
-          File tmp = tempFolder.newFolder();
-          toMerge.add(tmp);
-          indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
-          index.close();
-          index = new OnheapIncrementalIndex.Builder()
-              .setIndexSchema(
-                  new IncrementalIndexSchema.Builder()
-                      .withMinTimestamp(minTimestamp)
-                      .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
-                      .withQueryGranularity(gran)
-                      .withMetrics(metrics)
-                      .withRollup(rollup)
-                      .build()
-              )
-              .setMaxRowCount(maxRowCount)
-              .build();
-        }
-        if (row instanceof String && parser instanceof StringInputRowParser) {
-          //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
-          //InputRowsParser<String>
-          index.add(((StringInputRowParser) parser).parse((String) row));
-
-        } else {
-          index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
+      try (CloseableIterator<InputRow> iter = reader.read()) {
+        while (iter.hasNext()) {
+          InputRow row = iter.next();
+          if (!index.canAppendRow()) {
+            File tmp = tempFolder.newFolder();
+            toMerge.add(tmp);
+            indexMerger.persist(index, tmp, IndexSpec.getDefault(), null);
+            index.close();
+            index = new OnheapIncrementalIndex.Builder()
+                .setIndexSchema(
+                    new IncrementalIndexSchema.Builder()
+                        .withMinTimestamp(minTimestamp)
+                        .withDimensionsSpec(inputSchema.getDimensionsSpec())
+                        .withQueryGranularity(gran)
+                        .withMetrics(metrics)
+                        .withRollup(rollup)
+                        .build()
+                )
+                .setMaxRowCount(maxRowCount)
+                .build();
+          }
+          index.add(row);
         }
       }
 
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
+        indexMerger.persist(index, tmp, IndexSpec.getDefault(), null);
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, IndexSpec.DEFAULT, null, -1);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, IndexSpec.getDefault(), null, -1);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
+        indexMerger.persist(index, outDir, IndexSpec.getDefault(), null);
       }
     }
     finally {
@@ -584,69 +603,6 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  public static IncrementalIndex createIncrementalIndex(
-      Iterator rows,
-      InputRowParser parser,
-      List<DimensionSchema> dimensions,
-      final AggregatorFactory[] metrics,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      boolean rollup
-  )
-  {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(minTimestamp)
-                .withQueryGranularity(gran)
-                .withDimensionsSpec(new DimensionsSpec(dimensions))
-                .withMetrics(metrics)
-                .withRollup(rollup)
-                .build()
-        )
-        .setMaxRowCount(maxRowCount)
-        .build();
-
-    while (rows.hasNext()) {
-      Object row = rows.next();
-      if (!index.canAppendRow()) {
-        throw new IAE("Can't add row to index");
-      }
-      if (row instanceof String && parser instanceof StringInputRowParser) {
-        //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
-        //InputRowsParser<String>
-        index.add(((StringInputRowParser) parser).parse((String) row));
-      } else {
-        index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
-      }
-    }
-
-    return index;
-  }
-
-  public static IncrementalIndex createIncrementalIndex(
-      Iterator rows,
-      InputRowParser parser,
-      final AggregatorFactory[] metrics,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      boolean rollup
-  )
-  {
-    return createIncrementalIndex(
-        rows,
-        parser,
-        null,
-        metrics,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        rollup
-    );
-  }
-
   public Segment persistIncrementalIndex(
       IncrementalIndex index,
       File outDir
@@ -655,7 +611,7 @@ public class AggregationTestHelper implements Closeable
     if (outDir == null) {
       outDir = tempFolder.newFolder();
     }
-    indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
+    indexMerger.persist(index, outDir, IndexSpec.getDefault(), null);
 
     return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy(""));
   }

@@ -25,6 +25,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
 
 public final class IndexedStringDictionaryEncodedStringValueIndex<TDictionary extends Indexed<String>>
     implements DictionaryEncodedStringValueIndex
@@ -61,6 +62,12 @@ public final class IndexedStringDictionaryEncodedStringValueIndex<TDictionary ex
   public BitmapFactory getBitmapFactory()
   {
     return bitmapFactory;
+  }
+
+  @Override
+  public Iterator<String> getValueIterator()
+  {
+    return dictionary.iterator();
   }
 
   @Override

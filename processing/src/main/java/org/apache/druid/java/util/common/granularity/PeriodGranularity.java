@@ -40,6 +40,15 @@ import org.joda.time.format.DateTimeFormatter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.zone.ZoneOffsetTransition;
+import java.time.zone.ZoneRules;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * PeriodGranularity buckets data based on any custom time period
@@ -214,6 +223,169 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
            ", timeZone=" + getTimeZone() +
            ", origin=" + getOrigin() +
            '}';
+  }
+
+  /**
+   * Returns true if this granularity can be mapped to the target granularity. A granularity can be mapped when each
+   * interval of the source fits entirely within a single interval of the target under the given time zone.
+   *
+   * <p>Examples:
+   * <ul>
+   *   <li>{@code Period("PT1H")} in UTC can be mapped to {@code Period("P1D")} in UTC,
+   *       since every hourly interval is fully contained within some day interval.</li>
+   *   <li>{@code Period("PT1H")} in {@code America/Los_Angeles} can be mapped to
+   *       {@code Period("PT1H")} in UTC, since each hour in local time still fits inside
+   *       a corresponding hour in UTC (even though offsets can differ due to daylight saving).</li>
+   *   <li>{@code Period("P1D")} in {@code America/Los_Angeles} cannot be mapped to
+   *       {@code Period("P1D")} in UTC, since local day boundaries may cross UTC days and
+   *       are not fully contained within a single UTC day.</li>
+   *   <li>{@code Period("PT1H")} in {@code Asia/Kolkata} cannot be mapped to
+   *       {@code Period("PT1H")} in UTC, since the 30-minute offset causes local hour
+   *       intervals to straddle two UTC hour intervals.</li>
+   * </ul>
+   *
+   * @param target the target granularity to check against
+   * @return {@code true} if this granularity is fully contained within the target granularity; {@code false} otherwise
+   */
+  public boolean canBeMappedTo(PeriodGranularity target)
+  {
+    if (hasOrigin || target.hasOrigin) {
+      return false;
+    }
+
+    if (getTimeZone().equals(target.getTimeZone())) {
+      int periodMonths = period.getYears() * 12 + period.getMonths();
+      int targetMonths = target.period.getYears() * 12 + target.period.getMonths();
+      if (targetMonths == 0 && periodMonths != 0) {
+        // cannot map if target has no month, but period has month, e.x. P1M cannot be mapped to P1D or P1W
+        return false;
+      }
+
+      Optional<Long> periodStandardSeconds = getStandardSeconds(period.withYears(0).withMonths(0));
+      if (periodStandardSeconds.isEmpty()) {
+        // millisecond precision period is not supported
+        return false;
+      }
+      Optional<Long> targetStandardSeconds = getStandardSeconds(target.period.withYears(0).withMonths(0));
+      if (targetStandardSeconds.isEmpty()) {
+        // millisecond precision period is not supported
+        return false;
+      }
+      if (targetMonths == 0 && periodMonths == 0) {
+        // both periods have zero months, we only need to check standard seconds
+        // e.x. PT1H can be mapped to PT3H, PT15M can be mapped to PT1H
+        return targetStandardSeconds.get() % periodStandardSeconds.get() == 0;
+      }
+      // if we reach here, targetMonths != 0
+      if (periodMonths == 0) {
+        // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
+        // e.x PT3H can be mapped to P1M
+        return targetStandardSeconds.get() == 0 && (3600 * 24) % periodStandardSeconds.get() == 0;
+      } else {
+        // can map if 1.target&period not have week/day/hour/minute/second, and 2.period month can be mapped to target month
+        // e.x. P1M can be mapped to P3M, P1M can be mapped to P1Y
+        return targetMonths % periodMonths == 0
+               && targetStandardSeconds.get() == 0
+               && periodStandardSeconds.get() == 0;
+      }
+    }
+
+    // different time zones, we'd map to UTC first, then check if the target can cover the UTC-mapped period
+    Optional<Long> standardSeconds = getStandardSeconds(period);
+    if (standardSeconds.isEmpty()) {
+      // must be in whole seconds, i.e. no years, months, or milliseconds.
+      return false;
+    }
+    Optional<Long> utcMappablePeriodSeconds = getUtcMappablePeriodSeconds();
+    if (utcMappablePeriodSeconds.isEmpty()) {
+      return false;
+    }
+    if (!standardSeconds.get().equals(utcMappablePeriodSeconds.get())) {
+      // the period cannot be mapped to UTC with the same period, e.x. PT1H in Asia/Kolkata cannot be mapped to PT1H in UTC
+      return false;
+    }
+    if (target.period.getYears() == 0 && target.period.getMonths() == 0) {
+      Optional<Long> targetUtcMappablePeriodSeconds = target.getUtcMappablePeriodSeconds();
+      if (targetUtcMappablePeriodSeconds.isEmpty()) {
+        return false;
+      }
+      // both periods have zero months, we only need to check standard seconds
+      // e.x. PT30M in Asia/Kolkata can be mapped to PT1H in America/Los_Angeles
+      return targetUtcMappablePeriodSeconds.get() % standardSeconds.get() == 0;
+    } else {
+      // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
+      // e.x PT1H in America/Los_Angeles can be mapped to P1M in Asia/Shanghai
+      Optional<Long> targetStandardSecondsIgnoringMonth = getStandardSeconds(target.period.withYears(0).withMonths(0));
+      return targetStandardSecondsIgnoringMonth.isPresent()
+             && targetStandardSecondsIgnoringMonth.get() == 0
+             && (3600 * 24) % standardSeconds.get() == 0;
+    }
+  }
+
+  /**
+   * Returns the maximum possible period seconds that this granularity can be mapped to UTC.
+   * <p>
+   * Returns empty if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
+   */
+  private Optional<Long> getUtcMappablePeriodSeconds()
+  {
+    Optional<Long> periodSeconds = PeriodGranularity.getStandardSeconds(period);
+    if (periodSeconds.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (ISOChronology.getInstanceUTC().getZone().equals(getTimeZone())) {
+      return periodSeconds;
+    }
+    ZoneRules rules = ZoneId.of(getTimeZone().getID()).getRules();
+    Set<Integer> offsets = Stream.concat(
+        Stream.of(rules.getStandardOffset(Instant.now())),
+        rules.getTransitions()
+             .stream()
+             .filter(t -> t.getInstant().isAfter(Instant.EPOCH)) // timezone transitions before epoch are patchy
+             .map(ZoneOffsetTransition::getOffsetBefore)
+    ).map(ZoneOffset::getTotalSeconds).collect(Collectors.toSet());
+
+    if (offsets.isEmpty()) {
+      // no offsets
+      return periodSeconds;
+    }
+
+    if (offsets.stream().allMatch(o -> o % periodSeconds.get() == 0)) {
+      // all offsets are multiples of the period, e.x. PT8H and PT2H in Asia/Shanghai
+      return periodSeconds;
+    } else if (periodSeconds.get() % 3600 == 0 && offsets.stream().allMatch(o -> o % 3600 == 0)) {
+      // fall back to hour if period is a multiple of hour and all offsets are multiples of hour, e.x. PT1H in America/Los_Angeles
+      return Optional.of(3600L);
+    } else if (periodSeconds.get() % 1800 == 0 && offsets.stream().allMatch(o -> o % 1800 == 0)) {
+      // fall back to 30 minutes if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes, e.x. PT30M in Asia/Kolkata
+      return Optional.of(1800L);
+    } else if (periodSeconds.get() % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
+      // fall back to minute if period is a multiple of minute and all offsets are multiples of minute
+      return Optional.of(60L);
+    } else {
+      // default to second
+      return Optional.of(1L);
+    }
+  }
+
+  /**
+   * Returns the standard whole seconds for the given period.
+   * <p>
+   * Returns empty if the period cannot be mapped to whole seconds, i.e. one of the following applies:
+   * <ul>
+   * <li>it has years or months
+   * <li>it has milliseconds
+   */
+  private static Optional<Long> getStandardSeconds(Period period)
+  {
+    if (period.getYears() == 0 && period.getMonths() == 0) {
+      long millis = period.toStandardDuration().getMillis();
+      return millis % 1000 == 0
+             ? Optional.of(millis / 1000)
+             : Optional.empty();
+    }
+    return Optional.empty();
   }
 
   private static boolean isCompoundPeriod(Period period)

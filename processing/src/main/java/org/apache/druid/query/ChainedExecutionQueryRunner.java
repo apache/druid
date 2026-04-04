@@ -81,6 +81,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     final int priority = query.context().getPriority();
     final Ordering ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
+
+    final QueryContext context = query.context();
+    final boolean usePerSegmentTimeout = context.usePerSegmentTimeout();
+    final long perSegmentTimeout = context.getPerSegmentTimeout();
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<>()
         {
@@ -97,42 +101,54 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                             throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                           }
 
-                          return queryProcessingPool.submitRunnerTask(
-                              new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
-                              {
-                                @Override
-                                public Iterable<T> call()
-                                {
-                                  try {
-                                    Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
-                                    if (result == null) {
-                                      throw new ISE("Got a null result! Segments are missing!");
-                                    }
-
-                                    List<T> retVal = result.toList();
-                                    if (retVal == null) {
-                                      throw new ISE("Got a null list of results");
-                                    }
-
-                                    return retVal;
-                                  }
-                                  catch (QueryInterruptedException e) {
-                                    throw new RuntimeException(e);
-                                  }
-                                  catch (QueryTimeoutException e) {
-                                    throw e;
-                                  }
-                                  catch (Exception e) {
-                                    if (query.context().isDebug()) {
-                                      log.error(e, "Exception with one of the sequences!");
-                                    } else {
-                                      log.noStackTrace().error(e, "Exception with one of the sequences!");
-                                    }
-                                    Throwables.propagateIfPossible(e);
-                                    throw new RuntimeException(e);
-                                  }
+                          final AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T> callable = new AbstractPrioritizedQueryRunnerCallable<>(
+                              priority,
+                              input
+                          )
+                          {
+                            @Override
+                            public Iterable<T> call()
+                            {
+                              try {
+                                Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
+                                if (result == null) {
+                                  throw new ISE("Got a null result! Segments are missing!");
                                 }
-                              });
+
+                                List<T> retVal = result.toList();
+                                if (retVal == null) {
+                                  throw new ISE("Got a null list of results");
+                                }
+
+                                return retVal;
+                              }
+                              catch (QueryInterruptedException e) {
+                                throw new RuntimeException(e);
+                              }
+                              catch (QueryTimeoutException e) {
+                                throw e;
+                              }
+                              catch (Exception e) {
+                                if (query.context().isDebug()) {
+                                  log.error(e, "Exception with one of the sequences!");
+                                } else {
+                                  log.noStackTrace().error(e, "Exception with one of the sequences!");
+                                }
+                                Throwables.throwIfUnchecked(e);
+                                throw new RuntimeException(e);
+                              }
+                            }
+                          };
+
+                          if (usePerSegmentTimeout) {
+                            return queryProcessingPool.submitRunnerTask(
+                                callable,
+                                perSegmentTimeout,
+                                TimeUnit.MILLISECONDS
+                            );
+                          } else {
+                            return queryProcessingPool.submitRunnerTask(callable);
+                          }
                         }
                     )
                 );
@@ -141,7 +157,6 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQueryFuture(query, future);
 
             try {
-              final QueryContext context = query.context();
               return new MergeIterable<>(
                   context.hasTimeout() ?
                       future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
@@ -149,24 +164,26 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                   ordering.nullsFirst()
               ).iterator();
             }
-            catch (InterruptedException e) {
-              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              //Note: canceling combinedFuture first so that it can complete with INTERRUPTED as its final state. See ChainedExecutionQueryRunnerTest.testQueryTimeout()
+            catch (CancellationException | InterruptedException e) {
+              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results for query [%s]", query.getId());
               GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
-            catch (CancellationException e) {
-              throw new QueryInterruptedException(e);
-            }
-            catch (TimeoutException e) {
-              log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
+            catch (TimeoutException | QueryTimeoutException e) {
+              log.noStackTrace().warn(e, "Query timeout, cancelling pending results for query [%s]", query.getId());
               GuavaUtils.cancelAll(true, future, futures);
               throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
             }
             catch (ExecutionException e) {
+              log.noStackTrace().warn(e, "Query error, cancelling pending results for query [%s]", query.getId());
               GuavaUtils.cancelAll(true, future, futures);
-              Throwables.propagateIfPossible(e.getCause());
-              throw new RuntimeException(e.getCause());
+              Throwable cause = e.getCause();
+              // Nested per-segment future timeout
+              if (cause instanceof TimeoutException) {
+                throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
+              }
+              Throwables.throwIfUnchecked(cause);
+              throw new RuntimeException(cause);
             }
           }
 

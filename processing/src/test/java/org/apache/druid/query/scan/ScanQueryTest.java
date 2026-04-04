@@ -76,7 +76,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
 
     ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
-    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, 42L);
     events1.add(event1);
 
     s1 = new ScanResultValue(
@@ -87,7 +87,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
 
     ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
     HashMap<String, Object> event2 = new HashMap<>();
-    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, 43L);
     events2.add(event2);
 
     s2 = new ScanResultValue(

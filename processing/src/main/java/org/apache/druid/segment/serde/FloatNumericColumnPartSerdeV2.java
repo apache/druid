@@ -22,11 +22,11 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -121,7 +121,7 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
         }
 
         @Override
-        public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+        public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileSmoosher) throws IOException
         {
           delegate.writeTo(channel, fileSmoosher);
         }

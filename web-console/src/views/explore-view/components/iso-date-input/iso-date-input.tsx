@@ -19,39 +19,18 @@
 import { InputGroup, Intent } from '@blueprintjs/core';
 import { useState } from 'react';
 
-function isoParseDate(dateString: string): Date | undefined {
-  const dateParts = dateString.split(/[-T:. ]/g);
-
-  // Extract the individual date and time components
-  const year = parseInt(dateParts[0], 10);
-  if (!(1000 < year && year < 4000)) return;
-
-  const month = parseInt(dateParts[1], 10);
-  if (month > 12) return;
-
-  const day = parseInt(dateParts[2], 10);
-  if (day > 31) return;
-
-  const hour = parseInt(dateParts[3], 10);
-  if (hour > 23) return;
-
-  const minute = parseInt(dateParts[4], 10);
-  if (minute > 59) return;
-
-  const second = parseInt(dateParts[5], 10);
-  if (second > 59) return;
-
-  const millisecond = parseInt(dateParts[6], 10);
-  if (millisecond >= 1000) return;
-
-  const value = Date.UTC(year, month - 1, day, hour, minute, second, millisecond); // Month is zero-based
-  if (isNaN(value)) return;
-
-  return new Date(value);
-}
+import { parseIsoDate } from '../../../../utils';
 
 function normalizeDateString(dateString: string): string {
   return dateString.replace(/[^\-0-9T:./Z ]/g, '');
+}
+
+function tryParseIsoDate(dateString: string): Date | undefined {
+  try {
+    return parseIsoDate(dateString);
+  } catch {
+    return undefined;
+  }
 }
 
 function formatDate(date: Date): string {
@@ -61,7 +40,7 @@ function formatDate(date: Date): string {
 export interface UtcDateInputProps {
   date: Date;
   onChange(newDate: Date): void;
-  onIssue(): void;
+  onIssue(issue: string): void;
 }
 
 export function IsoDateInput(props: UtcDateInputProps) {
@@ -77,20 +56,20 @@ export function IsoDateInput(props: UtcDateInputProps) {
       intent={!focused && invalidDateString ? Intent.DANGER : undefined}
       value={
         invalidDateString ??
-        (customDateString && isoParseDate(customDateString)?.valueOf() === date.valueOf()
+        (customDateString && tryParseIsoDate(customDateString)?.valueOf() === date.valueOf()
           ? customDateString
           : undefined) ??
         formatDate(date)
       }
       onChange={e => {
         const normalizedDateString = normalizeDateString(e.target.value);
-        const parsedDate = isoParseDate(normalizedDateString);
-        if (parsedDate) {
+        try {
+          const parsedDate = parseIsoDate(normalizedDateString);
           onChange(parsedDate);
           setInvalidDateString(undefined);
           setCustomDateString(normalizedDateString);
-        } else {
-          onIssue();
+        } catch (e) {
+          onIssue(e.message);
           setInvalidDateString(normalizedDateString);
           setCustomDateString(undefined);
         }

@@ -26,9 +26,9 @@ import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,7 +46,7 @@ import java.util.TreeMap;
  * Class that works in conjunction with FileSmoosher.  This class knows how to map in a set of files smooshed
  * by the FileSmoosher.
  */
-public class SmooshedFileMapper implements Closeable
+public class SmooshedFileMapper implements SegmentFileMapper
 {
   /**
    * Interner for smoosh internal files, which includes all column names since every column has an internal file
@@ -114,15 +114,13 @@ public class SmooshedFileMapper implements Closeable
     this.internalFiles = internalFiles;
   }
 
+  @Override
   public Set<String> getInternalFilenames()
   {
     return internalFiles.keySet();
   }
 
-  /**
-   * Returns a mapped buffer of the smooshed file with the given name. Buffer's contents from 0 to capacity() are the
-   * whole mapped file contents, limit() is equal to capacity().
-   */
+  @Override
   public ByteBuffer mapFile(String name) throws IOException
   {
     final Metadata metadata = internalFiles.get(name);

@@ -1,4 +1,5 @@
 ---
+id: dropwizard
 layout: doc_page
 title: "Dropwizard metrics emitter"
 ---

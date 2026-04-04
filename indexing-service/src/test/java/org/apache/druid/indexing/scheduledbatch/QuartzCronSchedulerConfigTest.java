@@ -25,6 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -111,8 +112,14 @@ public class QuartzCronSchedulerConfigTest
             DruidException.class,
             () -> new QuartzCronSchedulerConfig("0 15 10 * *")
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"
+        // Expected parts order varies due to non-deterministic Set iteration.
+        Matchers.anyOf(
+            DruidExceptionMatcher.invalidInput().expectMessageIs(
+                "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"
+            ),
+            DruidExceptionMatcher.invalidInput().expectMessageIs(
+                "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [7, 6]]"
+            )
         )
     );
   }

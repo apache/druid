@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 
-export * from './react-table-filters';
+export * from './constants';
 export * from './react-table-inputs';
 export * from './react-table-pagination/react-table-pagination';

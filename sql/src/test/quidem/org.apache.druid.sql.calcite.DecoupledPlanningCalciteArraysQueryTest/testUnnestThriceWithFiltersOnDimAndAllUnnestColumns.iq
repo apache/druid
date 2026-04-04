@@ -22,7 +22,7 @@
 !ok
 LogicalProject(dimZipf=[$0], dim3_unnest1=[CAST('Baz':VARCHAR):VARCHAR], dim3_unnest2=[$1], dim3_unnest3=[$3])
   LogicalUnnest(unnestExpr=[MV_TO_ARRAY($2)], filter=[=($0, 'World')])
-    LogicalProject(dimZipf=[$1], EXPR$0=[$2], dimMultivalEnumerated0=[$0])
+    LogicalProject(dimZipf=[$1], EXPR$00=[$2], dimMultivalEnumerated0=[$0])
       LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'Hello')])
         LogicalProject(dimMultivalEnumerated=[$0], dimZipf=[$1])
           LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'Baz')])
@@ -33,7 +33,7 @@ LogicalProject(dimZipf=[$0], dim3_unnest1=[CAST('Baz':VARCHAR):VARCHAR], dim3_un
 !logicalPlan
 DruidProject(dimZipf=[$0], dim3_unnest1=[CAST('Baz':VARCHAR):VARCHAR], dim3_unnest2=[$1], dim3_unnest3=[$3], druid=[logical])
   DruidUnnest(unnestExpr=[MV_TO_ARRAY($2)], filter=[=($0, 'World')])
-    DruidProject(dimZipf=[$1], EXPR$0=[$2], dimMultivalEnumerated0=[$0], druid=[logical])
+    DruidProject(dimZipf=[$1], EXPR$00=[$2], dimMultivalEnumerated0=[$0], druid=[logical])
       DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'Hello')])
         DruidProject(dimMultivalEnumerated=[$0], dimZipf=[$1], druid=[logical])
           DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'Baz')])

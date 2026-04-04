@@ -101,4 +101,10 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void createIndexingStatesTable()
+  {
+    throw new UnsupportedOperationException();
+  }
 }

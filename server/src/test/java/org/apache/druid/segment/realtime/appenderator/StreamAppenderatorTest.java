@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -56,6 +55,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -63,6 +63,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -164,23 +165,37 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ImmutableMap.of("x", "3"),
           segmentsAndCommitMetadata.getCommitMetadata()
       );
-      Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
-          sorted(
-              Lists.transform(
-                  segmentsAndCommitMetadata.getSegments(),
-                  new Function<DataSegment, SegmentIdWithShardSpec>()
-                  {
-                    @Override
-                    public SegmentIdWithShardSpec apply(DataSegment input)
-                    {
-                      return SegmentIdWithShardSpec.fromDataSegment(input);
-                    }
-                  }
-              )
-          )
+      final List<String> segments = Lists.transform(
+          sorted(segmentsAndCommitMetadata.getSegments()),
+          DataSegment::toString
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
+      Assert.assertEquals(
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(2)
+                         .build()
+                         .toString(),
+              DataSegment.builder(IDENTIFIERS.get(1).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(1).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(1)
+                         .build()
+                         .toString()
+          ), segments);
+      Assert.assertEquals(Lists.transform(sorted(tester.getPushedSegments()), DataSegment::toString), segments);
+
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
+      Assert.assertEquals(2, segmentGenerationMetrics.numPersists());
+      Assert.assertEquals(3, segmentGenerationMetrics.rowOutput());
+      Assert.assertTrue(segmentGenerationMetrics.persistTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.persistCpuTime() > 0);
+
+      Assert.assertTrue(segmentGenerationMetrics.mergeTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.mergeCpuTime() > 0);
 
       // clear
       appenderator.clear();
@@ -267,6 +282,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(
               CoreMatchers.startsWith("Push failure test"))))
       );
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
+      Assert.assertEquals(1, segmentGenerationMetrics.failedHandoffs());
     }
   }
 
@@ -2446,6 +2463,102 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
           deltaSchemaId2Row1.getColumnTypeMap());
+    }
+  }
+
+
+  @Test
+  public void test_dropSegment_unlocksInterval() throws Exception
+  {
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
+
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
+        .basePersistDirectory(temporaryFolder.newFolder())
+        .maxRowsInMemory(2)
+        .releaseLocksOnHandoff(true)
+        .taskIntervalUnlocker(intervalUnlocker)
+        .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T01:00/2000-01-01T02:00", "version1", 0);
+
+      final InputRow row1 = new MapBasedInputRow(
+          DateTimes.of("2000"),
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
+      );
+
+      final InputRow row2 = new MapBasedInputRow(
+          DateTimes.of("2000-01-01T02:30"),
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
+      );
+
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
+
+      Assert.assertEquals(2, appenderator.getSegments().size());
+
+      appenderator.drop(segmentId1).get();
+
+      synchronized (unlockedIntervals) {
+        Assert.assertEquals(1, unlockedIntervals.size());
+        Assert.assertEquals(segmentId1.getInterval(), unlockedIntervals.get(0));
+      }
+
+      Assert.assertEquals(1, appenderator.getSegments().size());
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
+    }
+  }
+
+  @Test
+  public void test_dropSegment_skipsUnlockInterval_ifOverlappingSinkIsActive() throws Exception
+  {
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
+
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
+        .basePersistDirectory(temporaryFolder.newFolder())
+        .maxRowsInMemory(2)
+        .releaseLocksOnHandoff(true)
+        .taskIntervalUnlocker(intervalUnlocker)
+        .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T00:30/2000-01-01T01:30", "version2", 0);
+
+      final InputRow row1 = new MapBasedInputRow(
+          DateTimes.of("2000"),
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
+      );
+
+      final InputRow row2 = new MapBasedInputRow(
+          DateTimes.of("2000-01-01T02:30"),
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
+      );
+
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
+
+      Assert.assertEquals(2, appenderator.getSegments().size());
+
+      appenderator.drop(segmentId1).get();
+
+      synchronized (unlockedIntervals) {
+        Assert.assertEquals(0, unlockedIntervals.size());
+      }
+
+      Assert.assertEquals(1, appenderator.getSegments().size());
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
     }
   }
 

@@ -36,6 +36,15 @@ import java.util.function.Consumer;
  */
 public final class CloseableUtils
 {
+  public static Closer forIterable(Iterable<? extends Closeable> closeables)
+  {
+    final Closer retVal = Closer.create();
+    for (Closeable closeable : closeables) {
+      retVal.register(closeable);
+    }
+    return retVal;
+  }
+
   /**
    * Call method instead of code like
    *

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: druid-${service}
+  namespace: druid
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: druid-${service}
+  template:
+    metadata:
+      labels:
+        app: druid-${service}
+    spec:
+      hostNetwork: true
+      containers:
+        - name: druid-${service}
+          image: ${image}
+          args: ["${command}"]
+          ports:
+            - containerPort: ${port}
+          env:
+            - name: DRUID_SET_HOST_IP
+              value: "0"
+            - name: DRUID_SET_HOST
+              value: "0"
+            - name: DRUID_XMS
+              value: "128m"
+            - name: DRUID_XMX
+              value: "128m"
+          volumeMounts:
+            - name: druid-common-props
+              mountPath: /opt/druid/conf/druid/cluster/_common/common.runtime.properties
+              subPath: common.runtime.properties
+            - name: druid-${service}-props
+              mountPath: /opt/druid/conf/druid/cluster/${serviceFolder}/runtime.properties
+              subPath: runtime.properties
+      volumes:
+        - name: druid-common-props
+          configMap:
+            name: druid-common-props
+        - name: druid-${service}-props
+          configMap:
+            name: druid-${service}-props
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: druid-${service}
+  namespace: druid
+spec:
+  selector:
+    app: druid-${service}
+  ports:
+    - port: ${port}

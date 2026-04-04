@@ -61,7 +61,7 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
     if (CursorFactory.class == clazz) {
       return (T) cursorFactory;
     }
-    return RowsAndColumns.super.as(clazz);
+    return null;
   }
 
   @Override

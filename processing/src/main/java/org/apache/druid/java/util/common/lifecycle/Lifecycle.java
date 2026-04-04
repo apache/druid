@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -336,8 +337,9 @@ public class Lifecycle
       }
       for (Map.Entry<Stage, ? extends List<Handler>> e : handlers.entrySet()) {
         currStage = e.getKey();
-        log.info("Starting lifecycle [%s] stage [%s]", name, currStage.name());
-        for (Handler handler : e.getValue()) {
+        final List<Handler> handlersToStart = e.getValue();
+        log.info("Starting lifecycle [%s] stage [%s] for handlers [%s]", name, currStage.name(), handlersToStart);
+        for (Handler handler : handlersToStart) {
           handler.start();
         }
       }
@@ -362,13 +364,14 @@ public class Lifecycle
       Exception thrown = null;
 
       for (Stage s : handlers.navigableKeySet().descendingSet()) {
-        log.info("Stopping lifecycle [%s] stage [%s]", name, s.name());
-        for (Handler handler : Lists.reverse(handlers.get(s))) {
+        final List<Handler> handlersToStop = Lists.reverse(handlers.get(s));
+        log.info("Stopping lifecycle [%s] stage [%s] for handlers [%s]", name, s.name(), handlersToStop);
+        for (Handler handler : handlersToStop) {
           try {
             handler.stop();
           }
           catch (Exception e) {
-            log.warn(e, "Lifecycle [%s] encountered exception while stopping %s", name, handler);
+            log.warn(e, "Lifecycle [%s] encountered exception while stopping handler [%s]", name, handler);
             if (thrown == null) {
               thrown = e;
             } else {
@@ -443,7 +446,12 @@ public class Lifecycle
         }
         if (doStart) {
           log.info("Starting lifecycle [%s#%s]", o.getClass().getSimpleName(), method.getName());
-          method.invoke(o);
+          try {
+            method.invoke(o);
+          }
+          catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
+          }
         }
       }
     }
@@ -460,7 +468,7 @@ public class Lifecycle
           }
         }
         if (doStop) {
-          log.debug("Stopping lifecyle [%s#%s].", o.getClass().getSimpleName(), method.getName());
+          log.info("Stopping lifecyle [%s#%s].", o.getClass().getSimpleName(), method.getName());
           try {
             method.invoke(o);
           }
@@ -469,6 +477,12 @@ public class Lifecycle
           }
         }
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return o.getClass().getSimpleName();
     }
   }
 
@@ -508,8 +522,14 @@ public class Lifecycle
         stopMethod.invoke(o);
       }
       catch (Exception e) {
-        log.error(e, "Unable to invoke stopMethod() on %s", o.getClass());
+        log.error(e, "Unable to invoke stopMethod() on [%s]", o.getClass());
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return o.getClass().getSimpleName();
     }
   }
 
@@ -539,6 +559,12 @@ public class Lifecycle
       catch (Exception e) {
         log.error(e, "Exception when closing object [%s]", o);
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return o.getClass().getSimpleName();
     }
   }
 }

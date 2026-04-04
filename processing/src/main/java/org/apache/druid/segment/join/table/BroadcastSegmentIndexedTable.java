@@ -223,7 +223,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         VirtualColumns.EMPTY,
         Cursors.getTimeOrdering(queryableIndex.getOrdering()),
         offset,
-        new ColumnCache(queryableIndex, closer)
+        new ColumnCache(queryableIndex, VirtualColumns.EMPTY, closer)
     );
   }
 

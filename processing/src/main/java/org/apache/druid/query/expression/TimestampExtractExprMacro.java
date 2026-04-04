@@ -19,12 +19,18 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.vector.DoubleUnivariateLongFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -64,47 +70,52 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     return FN_NAME;
   }
 
-  private ExprEval getExprEval(final DateTime dateTime, final Unit unit)
+  private long evalAsLong(final DateTime dateTime, final Unit unit)
   {
-    long epoch = dateTime.getMillis() / 1000;
     switch (unit) {
       case EPOCH:
-        return ExprEval.of(epoch);
+        return dateTime.getMillis() / 1000;
       case MILLISECOND:
-        return ExprEval.of(dateTime.millisOfSecond().get());
+        return dateTime.millisOfSecond().get();
       case SECOND:
-        return ExprEval.of(dateTime.secondOfMinute().get());
+        return dateTime.secondOfMinute().get();
       case MINUTE:
-        return ExprEval.of(dateTime.minuteOfHour().get());
+        return dateTime.minuteOfHour().get();
       case HOUR:
-        return ExprEval.of(dateTime.hourOfDay().get());
+        return dateTime.hourOfDay().get();
       case DAY:
-        return ExprEval.of(dateTime.dayOfMonth().get());
+        return dateTime.dayOfMonth().get();
       case DOW:
-        return ExprEval.of(dateTime.dayOfWeek().get());
       case ISODOW:
-        return ExprEval.of(dateTime.dayOfWeek().get());
+        return dateTime.dayOfWeek().get();
       case DOY:
-        return ExprEval.of(dateTime.dayOfYear().get());
+        return dateTime.dayOfYear().get();
       case WEEK:
-        return ExprEval.of(dateTime.weekOfWeekyear().get());
+        return dateTime.weekOfWeekyear().get();
       case MONTH:
-        return ExprEval.of(dateTime.monthOfYear().get());
+        return dateTime.monthOfYear().get();
       case QUARTER:
-        return ExprEval.of((dateTime.monthOfYear().get() - 1) / 3 + 1);
+        return (dateTime.monthOfYear().get() - 1) / 3 + 1;
       case YEAR:
-        return ExprEval.of(dateTime.year().get());
       case ISOYEAR:
-        return ExprEval.of(dateTime.year().get());
+        return dateTime.year().get();
       case DECADE:
         // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
-        return ExprEval.of(dateTime.year().get() / 10);
+        return dateTime.year().get() / 10;
+      default:
+        throw TimestampExtractExprMacro.this.validationFailed("unhandled unit[%s]", unit);
+    }
+  }
+
+  private double evalAsDouble(final DateTime dateTime, final Unit unit)
+  {
+    switch (unit) {
       case CENTURY:
-        return ExprEval.of(Math.ceil((double) dateTime.year().get() / 100));
+        return Math.ceil((double) dateTime.year().get() / 100);
       case MILLENNIUM:
         // Years in the 1900s are in the second millennium. The third millennium started January 1, 2001.
         // See https://www.postgresql.org/docs/10/functions-datetime.html
-        return ExprEval.of(Math.ceil((double) dateTime.year().get() / 1000));
+        return Math.ceil((double) dateTime.year().get() / 1000);
       default:
         throw TimestampExtractExprMacro.this.validationFailed("unhandled unit[%s]", unit);
     }
@@ -168,13 +179,20 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      Object val = args.get(0).eval(bindings).value();
-      if (val == null) {
+      final ExprEval<?> eval = args.get(0).eval(bindings);
+      if (eval.value() == null) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofType(getOutputExpressionType(unit), null);
       }
-      final DateTime dateTime = new DateTime(val, chronology);
-      return getExprEval(dateTime, unit);
+      final DateTime dateTime = new DateTime(eval.value(), chronology);
+      switch (getOutputExpressionType(unit).getType()) {
+        case LONG:
+          return ExprEval.of(evalAsLong(dateTime, unit));
+        case DOUBLE:
+          return ExprEval.of(evalAsDouble(dateTime, unit));
+        default:
+          throw DruidException.defensive("Unexpected type[%s]", getOutputExpressionType(unit).getType());
+      }
     }
 
     @Nullable
@@ -182,6 +200,32 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return getOutputExpressionType(unit);
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      final ExprVectorProcessor<?> processor;
+
+      if (getOutputExpressionType(unit).is(ExprType.DOUBLE)) {
+        processor = new DoubleUnivariateLongFunctionVectorProcessor(
+            args.get(0).asVectorProcessor(inspector),
+            input -> evalAsDouble(new DateTime(input, chronology), unit)
+        );
+      } else {
+        processor = new LongUnivariateLongFunctionVectorProcessor(
+            args.get(0).asVectorProcessor(inspector),
+            input -> evalAsLong(new DateTime(input, chronology), unit)
+        );
+      }
+
+      return (ExprVectorProcessor<T>) processor;
     }
   }
 
@@ -199,14 +243,21 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      Object val = args.get(0).eval(bindings).value();
-      if (val == null) {
+      final ExprEval<?> eval = args.get(0).eval(bindings);
+      if (eval.value() == null) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofType(getOutputExpressionType(unit), null);
       }
-      final ISOChronology chronology = computeChronology(args, bindings);
-      final DateTime dateTime = new DateTime(val, chronology);
-      return getExprEval(dateTime, unit);
+      final Chronology chronology = computeChronology(args, bindings);
+      final DateTime dateTime = new DateTime(eval.value(), chronology);
+      switch (getOutputExpressionType(unit).getType()) {
+        case LONG:
+          return ExprEval.of(evalAsLong(dateTime, unit));
+        case DOUBLE:
+          return ExprEval.of(evalAsDouble(dateTime, unit));
+        default:
+          throw DruidException.defensive("Unexpected type[%s]", getOutputExpressionType(unit).getType());
+      }
     }
 
     @Nullable

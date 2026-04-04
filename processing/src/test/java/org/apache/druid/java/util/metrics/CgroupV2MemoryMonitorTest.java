@@ -62,7 +62,10 @@ public class CgroupV2MemoryMonitorTest
   @Test
   public void testMonitor()
   {
-    final CgroupMemoryMonitor monitor = new CgroupV2MemoryMonitor(discoverer);
+    final CgroupV2MemoryMonitor monitor = new CgroupV2MemoryMonitor(
+        discoverer,
+        FeedDefiningMonitor.DEFAULT_METRICS_FEED
+    );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();

@@ -1,0 +1,86 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`FillIndicator matches snapshot at full capacity 1`] = `
+<div
+  class="fill-indicator"
+  style="background: rgb(218, 218, 218);"
+>
+  <div
+    class="bar"
+    style="width: 100%;"
+  />
+  <div
+    class="label"
+  >
+    100.0%
+  </div>
+</div>
+`;
+
+exports[`FillIndicator matches snapshot at zero capacity 1`] = `
+<div
+  class="fill-indicator"
+  style="background: rgb(218, 218, 218);"
+>
+  <div
+    class="bar"
+    style="width: 0%;"
+  />
+  <div
+    class="label"
+  >
+    0.0%
+  </div>
+</div>
+`;
+
+exports[`FillIndicator matches snapshot with different values (over-capacity) 1`] = `
+<div
+  class="fill-indicator"
+  style="background: rgb(10, 102, 64);"
+>
+  <div
+    class="bar"
+    style="width: 60%;"
+  />
+  <div
+    class="label"
+  >
+    1.20×
+  </div>
+</div>
+`;
+
+exports[`FillIndicator matches snapshot with equal values (normal capacity) 1`] = `
+<div
+  class="fill-indicator"
+  style="background: rgb(218, 218, 218);"
+>
+  <div
+    class="bar"
+    style="width: 75%;"
+  />
+  <div
+    class="label"
+  >
+    75.0%
+  </div>
+</div>
+`;
+
+exports[`FillIndicator matches snapshot with very small value showing ~0.0% 1`] = `
+<div
+  class="fill-indicator"
+  style="background: rgb(218, 218, 218);"
+>
+  <div
+    class="bar"
+    style="width: 0.01%;"
+  />
+  <div
+    class="label"
+  >
+    ~0.0%
+  </div>
+</div>
+`;

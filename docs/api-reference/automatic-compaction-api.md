@@ -886,9 +886,10 @@ This includes the following fields:
 |------|-----------|-------------|
 |`compactionTaskSlotRatio`|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
 |`maxCompactionTaskSlots`|Maximum number of task slots that can be taken up by compaction tasks and sub-tasks. Minimum number of task slots available for compaction is 1. When using MSQ engine or Native engine with range partitioning, a single compaction job occupies more than one task slot. In this case, the minimum is 2 so that at least one compaction job can always run in the cluster.|2147483647 (i.e. total task slots)|
-|`compactionPolicy`|Policy to choose intervals for compaction. Currently, the only supported policy is [Newest segment first](#compaction-policy-newestsegmentfirst).|Newest segment first|
+|`compactionPolicy`|Policy to choose intervals for compaction. Supported policies are [Newest segment first](#compaction-policy-newestsegmentfirst), [Most fragmented first](#compaction-policy-mostfragmentedfirst), and [Fixed interval order](#compaction-policy-fixedintervalorder).|Newest segment first|
 |`useSupervisors`|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
 |`engine`|Engine used for running compaction tasks, unless overridden in the datasource-level compaction config. Possible values are `native` and `msq`. `msq` engine can be used for compaction only if `useSupervisors` is `true`.|`native`|
+|`storeCompactionStatePerSegment`|**This configuration only takes effect if `useSupervisors` is `true`.** Whether to persist the full compaction state in segment metadata. When `true` (default), compaction state is stored in both the segment metadata and the indexing states table. This is historically how Druid has worked. When `false`, only a fingerprint reference is stored in the segment metadata, reducing storage overhead in the segments table. The actual compaction state is stored in the indexing states table and can be referenced with the aforementioned fingerprint. Eventually this configuration will be removed and all compaction will use the fingerprint method only. This configuration exists for operators to opt into this future pattern early. **WARNING: if you set this to false and then compact data, rolling back to a Druid version that predates indexing state fingerprinting (< Druid 37) will result in missing compaction states and trigger compaction on segments that may already be compacted.**|`true`|
 
 #### Compaction policy `newestSegmentFirst`
 
@@ -896,6 +897,29 @@ This includes the following fields:
 |-----|-----------|-------------|
 |`type`|This must always be `newestSegmentFirst`||
 |`priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
+
+#### Compaction policy `mostFragmentedFirst`
+
+This experimental policy prioritizes compaction of intervals with the largest number of small uncompacted segments. It favors cluster stability by reducing segment count over performance of queries on newer intervals.
+
+|Field|Description|Default value|
+|-----|-----------|-------------|
+|`type`|This must always be `mostFragmentedFirst`||
+|`priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
+|`minUncompactedCount`|Minimum number of uncompacted segments that must be present in an interval to make it eligible for compaction. Must be greater than 0.|100|
+|`minUncompactedBytes`|Minimum total bytes of uncompacted segments that must be present in an interval to make it eligible for compaction. Human-readable byte format (e.g., "10MiB").|10 MiB|
+|`maxAverageUncompactedBytesPerSegment`|Maximum average size of uncompacted segments in an interval eligible for compaction. Human-readable byte format (e.g., "2GiB").|2 GiB|
+|`minUncompactedBytesPercentForFullCompaction`|Threshold percentage (0-100) of uncompacted bytes to total bytes below which minor compaction is eligible instead of full compaction.|0|
+|`minUncompactedRowsPercentForFullCompaction`|Threshold percentage (0-100) of uncompacted rows to total rows below which minor compaction is eligible instead of full compaction.|0|
+
+#### Compaction policy `fixedIntervalOrder`
+
+This policy specifies the datasources and intervals eligible for compaction and their order. It is primarily used for integration tests.
+
+|Field|Description|Default value|
+|-----|-----------|-------------|
+|`type`|This must always be `fixedIntervalOrder`||
+|`eligibleCandidates`|List of datasource-interval pairs eligible for compaction. Each entry contains `datasource` (string) and `interval` (ISO-8601 interval) fields. Compaction processes candidates in the order specified.|None|
 
 
 #### URL

@@ -29,6 +29,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.Query;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -95,6 +96,7 @@ public class CacheConfigTest
     Assert.assertEquals(true, config.isPopulateCache());
     Assert.assertEquals(true, config.isUseCache());
   }
+
   @Test
   public void testInjection2()
   {
@@ -158,5 +160,22 @@ public class CacheConfigTest
     throw new IllegalStateException("Should have already failed");
   }
 
+  @Test
+  public void testDefaultUnCacheableList()
+  {
+    configProvider.inject(properties, configurator);
+    CacheConfig config = configProvider.get();
+    injector.injectMembers(config);
 
+    Assert.assertFalse(config.isQueryCacheable(Query.SCAN));
+
+    properties.clear();
+    configProvider = JsonConfigProvider.of(PROPERTY_PREFIX, CacheConfig.class);
+
+    properties.put(PROPERTY_PREFIX + ".unCacheable", "[]");
+    configProvider.inject(properties, configurator);
+    CacheConfig config2 = configProvider.get();
+    injector.injectMembers(config2);
+    Assert.assertTrue(config2.isQueryCacheable(Query.SCAN));
+  }
 }

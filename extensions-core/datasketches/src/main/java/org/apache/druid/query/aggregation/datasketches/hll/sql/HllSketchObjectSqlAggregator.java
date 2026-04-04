@@ -72,4 +72,10 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
         null
     );
   }
+
+  @Override
+  protected String getName()
+  {
+    return NAME;
+  }
 }

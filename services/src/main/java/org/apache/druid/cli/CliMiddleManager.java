@@ -48,7 +48,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -70,6 +69,9 @@ import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -251,8 +253,10 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceTaskLogsModule(getProperties()),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
-        new LookupSerdeModule()
+        new LookupSerdeModule(),
+        new MSQIndexingModule(),
+        new MSQDurableStorageModule(),
+        new MSQExternalDataSourceModule()
     );
   }
 

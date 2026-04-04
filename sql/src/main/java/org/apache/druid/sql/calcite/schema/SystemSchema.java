@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.DataContext;
@@ -53,11 +54,14 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -72,8 +76,13 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.QueryInfo;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
@@ -99,6 +108,7 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
+  private static final String QUERIES_TABLE = "queries";
 
   private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
       SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
@@ -178,8 +188,14 @@ public class SystemSchema extends AbstractSchema
       .add("tier", ColumnType.STRING)
       .add("curr_size", ColumnType.LONG)
       .add("max_size", ColumnType.LONG)
+      .add("storage_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
+      .add("version", ColumnType.STRING)
+      .add("build_revision", ColumnType.STRING)
+      .add("labels", ColumnType.STRING)
+      .add("available_processors", ColumnType.LONG)
+      .add("total_memory", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -219,6 +235,24 @@ public class SystemSchema extends AbstractSchema
       .add("spec", ColumnType.STRING)
       .build();
 
+  static final RowSignature QUERIES_SIGNATURE = RowSignature
+      .builder()
+      .add("id", ColumnType.STRING)
+      .add("engine", ColumnType.STRING)
+      .add("state", ColumnType.STRING)
+      .add("info", ColumnType.STRING)
+      .build();
+
+  /**
+   * Index of the "info" column in {@link #QUERIES_SIGNATURE}. Used for projection pushdown.
+   */
+  private static final int QUERIES_INFO_INDEX = QUERIES_SIGNATURE.indexOf("info");
+
+  /**
+   * List of [0..n) where n is the size of {@link #QUERIES_SIGNATURE}.
+   */
+  private static final int[] QUERIES_PROJECT_ALL = IntStream.range(0, QUERIES_SIGNATURE.size()).toArray();
+
   private final Map<String, Table> tableMap;
 
   @Inject
@@ -231,28 +265,40 @@ public class SystemSchema extends AbstractSchema
       final CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      @EscalatedClient final HttpClient httpClient,
+      final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
+      final PlannerConfig plannerConfig
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
-    this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE,
-        new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+
+    final ImmutableMap.Builder<String, Table> builder = ImmutableMap.builder();
+    builder.put(SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper));
+    builder.put(
         SERVERS_TABLE,
         new ServersTable(
             druidNodeDiscoveryProvider,
             serverInventoryView,
             authorizerMapper,
             overlordClient,
-            coordinatorClient
-        ),
-        SERVER_SEGMENTS_TABLE,
-        new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE,
-        new TasksTable(overlordClient, authorizerMapper),
-        SUPERVISOR_TABLE,
-        new SupervisorsTable(overlordClient, authorizerMapper)
+            coordinatorClient,
+            jsonMapper
+        )
     );
+    builder.put(SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper));
+    builder.put(TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper));
+    builder.put(SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper));
+    builder.put(
+        SystemServerPropertiesTable.TABLE_NAME,
+        new SystemServerPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
+    );
+
+    if (plannerConfig.isEnableSysQueriesTable()) {
+      builder.put(QUERIES_TABLE, new QueriesTable(sqlEngineRegistryProvider, jsonMapper, authorizerMapper));
+    }
+
+    this.tableMap = builder.build();
   }
 
   @Override
@@ -321,22 +367,29 @@ public class SystemSchema extends AbstractSchema
             final AvailableSegmentMetadata availableSegmentMetadata =
                 availableMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
             segmentsAlreadySeen.add(segment.getId());
-            long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
 
+            long numReplicas = 0L, isAvailable = 0L;
             if (availableSegmentMetadata != null) {
               numReplicas = availableSegmentMetadata.getNumReplicas();
               isAvailable = availableSegmentMetadata.getNumReplicas() > 0 ? IS_AVAILABLE_TRUE : IS_ACTIVE_FALSE;
-              numRows = availableSegmentMetadata.getNumRows();
             }
 
-            // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
-            // broker might have outdated or no information regarding numRows and rowSignature for a segment.
-            // In that case, we should use {@code numRows} from the segment polled from the coordinator.
-            if (null != val.getNumRows()) {
+            final long numRows;
+            if (segment.getTotalRows() != null) {
+              // the recent version of DataSegment stores numRows
+              numRows = segment.getTotalRows().longValue();
+            } else if (val.getNumRows() != null) {
+              // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
+              // broker might have outdated or no information regarding numRows and rowSignature for a segment.
+              // In that case, we should use {@code numRows} from the segment polled from the coordinator.
               numRows = val.getNumRows();
+            } else if (availableSegmentMetadata != null) {
+              numRows = availableSegmentMetadata.getNumRows();
+            } else {
+              numRows = 0L;
             }
 
-            isRealtime = val.isRealtime() ? 1 : 0;
+            long isRealtime = val.isRealtime() ? 1 : 0;
 
             // set of segments returned from Coordinator include published and realtime segments
             // so realtime segments are not published and vice versa
@@ -390,7 +443,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
                 val.getNumReplicas(),
-                val.getNumRows(),
+                segment.getTotalRows() != null ? segment.getTotalRows() : val.getNumRows(),
                 // is_active is true for unpublished segments iff they are realtime
                 val.isRealtime() /* is_active */,
                 // is_published is false for unpublished segments
@@ -525,13 +578,15 @@ public class SystemSchema extends AbstractSchema
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
     private final CoordinatorClient coordinatorClient;
+    private final ObjectMapper jsonMapper;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        CoordinatorClient coordinatorClient
+        CoordinatorClient coordinatorClient,
+        ObjectMapper jsonMapper
     )
     {
       this.authorizerMapper = authorizerMapper;
@@ -539,6 +594,7 @@ public class SystemSchema extends AbstractSchema
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
       this.coordinatorClient = coordinatorClient;
+      this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -626,7 +682,7 @@ public class SystemSchema extends AbstractSchema
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private static Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
+    private Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
       return new Object[]{
@@ -638,15 +694,21 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
           null,
-          toStringOrNull(discoveryDruidNode.getStartTime())
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
+          node.getBuildRevision(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private static Object[] buildRowForNonDataServerWithLeadership(
+    private Object[] buildRowForNonDataServerWithLeadership(
         DiscoveryDruidNode discoveryDruidNode,
         boolean isLeader
     )
@@ -661,8 +723,14 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
           isLeader ? 1L : 0L,
-          toStringOrNull(discoveryDruidNode.getStartTime())
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
+          node.getBuildRevision(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -671,7 +739,7 @@ public class SystemSchema extends AbstractSchema
      * {@code serverFromInventoryView} if available which is the current state of the server. Otherwise, it
      * will get the information from {@code discoveryDruidNode} which has only static configurations.
      */
-    private static Object[] buildRowForDiscoverableDataServer(
+    private Object[] buildRowForDiscoverableDataServer(
         DiscoveryDruidNode discoveryDruidNode,
         @Nullable DruidServer serverFromInventoryView
     )
@@ -696,8 +764,14 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
+          druidServerToUse.getStorageSize(),
           null,
-          toStringOrNull(discoveryDruidNode.getStartTime())
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
+          node.getBuildRevision(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -719,6 +793,7 @@ public class SystemSchema extends AbstractSchema
             druidNode.getHostAndPort(),
             druidNode.getHostAndTlsPort(),
             dataNodeService.getMaxSize(),
+            dataNodeService.getStorageSize(),
             dataNodeService.getServerType(),
             dataNodeService.getTier(),
             dataNodeService.getPriority()
@@ -728,13 +803,6 @@ public class SystemSchema extends AbstractSchema
       }
     }
 
-    private static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
-    {
-      return Arrays.stream(NodeRole.values())
-                   .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
-                   .collect(Collectors.toList())
-                   .iterator();
-    }
   }
 
   /**
@@ -1033,7 +1101,7 @@ public class SystemSchema extends AbstractSchema
       );
 
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getDataSource()));
 
       final Iterable<SupervisorStatus> authorizedSupervisors = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
@@ -1092,7 +1160,7 @@ public class SystemSchema extends AbstractSchema
   /**
    * Checks if an authenticated user has the STATE READ permissions needed to view server information.
    */
-  private static void checkStateReadAccessForServers(
+  public static void checkStateReadAccessForServers(
       AuthenticationResult authenticationResult,
       AuthorizerMapper authorizerMapper
   )
@@ -1106,6 +1174,17 @@ public class SystemSchema extends AbstractSchema
     if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException("Insufficient permission to view servers: " + authResult.getErrorMessage());
     }
+  }
+
+  /**
+   * Returns an iterator over all discoverable Druid nodes in the cluster.
+   */
+  public static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
+  {
+    return Arrays.stream(NodeRole.values())
+                 .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
+                 .collect(Collectors.toList())
+                 .iterator();
   }
 
   /**
@@ -1146,5 +1225,137 @@ public class SystemSchema extends AbstractSchema
       }
     }
     return projectedRow;
+  }
+
+  /**
+   * This table contains currently running and recently completed queries from all SQL engines.
+   * Enabled based on {@link PlannerConfig#isEnableSysQueriesTable()}.
+   */
+  static class QueriesTable extends AbstractTable implements ProjectableFilterableTable
+  {
+    private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
+    private final ObjectMapper jsonMapper;
+    private final AuthorizerMapper authorizerMapper;
+
+    public QueriesTable(
+        final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
+        final ObjectMapper jsonMapper,
+        final AuthorizerMapper authorizerMapper
+    )
+    {
+      this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
+      this.jsonMapper = jsonMapper;
+      this.authorizerMapper = authorizerMapper;
+    }
+
+    @Override
+    public RelDataType getRowType(final RelDataTypeFactory typeFactory)
+    {
+      return RowSignatures.toRelDataType(QUERIES_SIGNATURE, typeFactory);
+    }
+
+    @Override
+    public TableType getJdbcTableType()
+    {
+      return TableType.SYSTEM_TABLE;
+    }
+
+    @Override
+    public Enumerable<Object[]> scan(
+        final DataContext root,
+        final List<RexNode> filters,
+        @Nullable final int[] projects
+    )
+    {
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
+
+      // Check STATE READ authorization
+      final AuthorizationResult stateReadAuthorization = AuthorizationUtils.authorizeAllResourceActions(
+          authenticationResult,
+          Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+          authorizerMapper
+      );
+
+      // Get queries from all engines
+      final List<QueryInfo> allQueries = new ArrayList<>();
+      for (final SqlEngine sqlEngine : sqlEngineRegistryProvider.get().getAllEngines()) {
+        final GetQueriesResponse response = sqlEngine.getRunningQueries(
+            false, // selfOnly false to get queries from all servers
+            true, // includeComplete true to include all queries
+            authenticationResult,
+            stateReadAuthorization
+        );
+        allQueries.addAll(response.getQueries());
+      }
+
+      // Determine if we need to serialize the info field (based on projection pushdown)
+      final int[] nonNullProjects = projects == null ? QUERIES_PROJECT_ALL : projects;
+      final boolean includeInfo = containsIndex(nonNullProjects, QUERIES_INFO_INDEX);
+
+      // Build rows
+      final FluentIterable<Object[]> results = FluentIterable
+          .from(allQueries)
+          .transform(queryInfo -> buildQueryRow(queryInfo, includeInfo, jsonMapper))
+          .transform(row -> projectQueriesRow(row, nonNullProjects));
+
+      return Linq4j.asEnumerable(results);
+    }
+
+    /**
+     * Build a full row for a query.
+     */
+    private static Object[] buildQueryRow(
+        final QueryInfo queryInfo,
+        final boolean includeInfo,
+        final ObjectMapper jsonMapper
+    )
+    {
+      final Object[] row = new Object[QUERIES_SIGNATURE.size()];
+      row[0] = queryInfo.executionId();
+      row[1] = queryInfo.engine();
+      row[2] = queryInfo.state();
+
+      // Only serialize info if it's in the projection
+      if (includeInfo) {
+        try {
+          row[3] = jsonMapper.writeValueAsString(queryInfo);
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        row[3] = null;
+      }
+
+      return row;
+    }
+
+    /**
+     * Project a row to include only the columns in the projection.
+     */
+    private static Object[] projectQueriesRow(final Object[] row, final int[] projects)
+    {
+      final Object[] projectedRow = new Object[projects.length];
+      for (int i = 0; i < projects.length; i++) {
+        projectedRow[i] = row[projects[i]];
+      }
+      return projectedRow;
+    }
+
+    /**
+     * Check if an array contains a specific index.
+     */
+    private static boolean containsIndex(final int[] array, final int index)
+    {
+      for (final int i : array) {
+        if (i == index) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 }

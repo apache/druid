@@ -36,10 +36,8 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -151,14 +149,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   static final AggregatorFactory[] DEFAULT_METRICS_SPEC = new AggregatorFactory[]{
       new LongSumAggregatorFactory("val", "val")
   };
-  static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      DEFAULT_TIMESTAMP_SPEC,
-      DEFAULT_DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim", "val"),
-      false,
-      0
-  );
   static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
       null,
@@ -318,7 +308,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     SimpleThreadingTaskRunner(String threadNameBase)
     {
-      service = MoreExecutors.listeningDecorator(Execs.multiThreaded(5, threadNameBase + "-%d"));
+      service = MoreExecutors.listeningDecorator(Execs.multiThreaded(20, threadNameBase + "-%d"));
       taskKiller.scheduleAtFixedRate(
           () -> {
             for (TaskContainer taskContainer : tasks.values()) {
@@ -422,6 +412,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       task.addToContextIfAbsent(
           SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
           SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
+      );
+      task.addToContextIfAbsent(
+          PartialDimensionDistributionTask.CTX_BLOOM_FILTER_EXPECTED_INSERTIONS,
+          1_000
       );
       final ListenableFuture<TaskStatus> statusFuture = service.submit(
           () -> {
@@ -686,7 +680,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .jsonMapper(objectMapper)
         .taskWorkDir(temporaryFolder.newFolder(task.getId()))
         .indexIO(getIndexIO())
-        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .policyEnforcer(NoopPolicyEnforcer.instance())

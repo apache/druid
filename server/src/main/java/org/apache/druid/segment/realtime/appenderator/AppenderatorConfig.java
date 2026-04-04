@@ -38,6 +38,14 @@ public interface AppenderatorConfig extends TuningConfig
 
   boolean isSkipBytesInMemoryOverheadCheck();
 
+  /**
+   * @return true if locks should be released after segments have been handed off to Historicals.
+   */
+  default boolean isReleaseLocksOnHandoff()
+  {
+    return false;
+  }
+
   default int getNumPersistThreads()
   {
     return DEFAULT_NUM_PERSIST_THREADS;

@@ -48,6 +48,7 @@ export const SourceQueryPane = React.memo(function SourceQueryPane(props: Source
     processQuery: async () => {
       return await queryDruidSql<ColumnMetadata>({
         query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+        context: { engine: 'native' },
       });
     },
   });

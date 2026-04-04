@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -34,8 +35,8 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
-import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
@@ -43,9 +44,12 @@ import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -63,9 +67,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // must have a kind / minikube cluster installed and the image pushed to your repository
 @Disabled
@@ -87,8 +88,8 @@ public class DruidPeonClientIntegrationTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
-    k8sClient = new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
+    k8sClient = new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig(), new ObjectMapper()), new ConfigBuilder().build());
+    peonClient = new KubernetesPeonClient(k8sClient, "default", null, false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,
@@ -109,9 +110,9 @@ public class DruidPeonClientIntegrationTest
     PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
 
     Task task = K8sTestUtils.getTask();
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("default")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("default")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         k8sClient,
         config,
@@ -136,7 +137,7 @@ public class DruidPeonClientIntegrationTest
 
     // there should be one job that is a k8s peon job that exists
     List<Job> jobs = peonClient.getPeonJobs();
-    assertEquals(1, jobs.size());
+    Assertions.assertEquals(1, jobs.size());
 
     K8sTaskId taskId = new K8sTaskId(null, task.getId());
     InputStream peonLogs = peonClient.getPeonLogs(taskId).get();
@@ -157,11 +158,13 @@ public class DruidPeonClientIntegrationTest
 
     // assert that the env variable is corret
     Task taskFromEnvVar = adapter.toTask(job);
-    assertEquals(task, taskFromEnvVar);
+    Assertions.assertEquals(task, taskFromEnvVar);
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");
-    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId.getK8sJobName());
+    Optional<Pod> maybeMainJobPod = peonClient.getPeonPod(taskId.getK8sJobName());
+    Assertions.assertTrue(maybeMainJobPod.isPresent());
+    Pod mainJobPod = maybeMainJobPod.get();
     k8sClient.executeRequest(client -> {
       client.pods()
             .inNamespace("default")
@@ -173,19 +176,19 @@ public class DruidPeonClientIntegrationTest
 
     String taskJsonFromPod = FileUtils.readFileToString(new File(downloadPath.toString()), StandardCharsets.UTF_8);
     Task taskFromPod = jsonMapper.readValue(taskJsonFromPod, Task.class);
-    assertEquals(task, taskFromPod);
+    Assertions.assertEquals(task, taskFromPod);
 
 
     JobResponse jobStatusResult = peonClient.waitForPeonJobCompletion(taskId, 2, TimeUnit.MINUTES);
     thread.join();
-    assertEquals(PeonPhase.SUCCEEDED, jobStatusResult.getPhase());
+    Assertions.assertEquals(PeonPhase.SUCCEEDED, jobStatusResult.getPhase());
     // as long as there were no exceptions we are good!
-    assertEquals(expectedLogs, actualLogs);
+    Assertions.assertEquals(expectedLogs, actualLogs);
     // cleanup my job
-    assertTrue(peonClient.deletePeonJob(taskId));
+    Assertions.assertTrue(peonClient.deletePeonJob(taskId));
 
     // we cleaned up the job, none should exist
     List<Job> existingJobs = peonClient.getPeonJobs();
-    assertEquals(0, existingJobs.size());
+    Assertions.assertEquals(0, existingJobs.size());
   }
 }

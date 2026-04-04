@@ -27,6 +27,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -84,9 +85,9 @@ public class ComposingWritableFrameChannelTest
         partitionToChannelMap
     );
 
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 1));
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 2));
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 3));
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 1);
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 2);
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 3);
 
     // Assert the location of the channels where the frames have been written to
     Assert.assertEquals(ImmutableSet.of(0), partitionToChannelMap.get(1));
@@ -124,17 +125,12 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
-    public void write(FrameWithPartition frameWithPartition)
+    public void write(RowsAndColumns rac, int partitionNumber)
     {
       if (curFrame >= maxFrames) {
         throw new ResourceLimitExceededException("Cannot write more frames to the channel");
       }
       ++curFrame;
-    }
-
-    @Override
-    public void write(Frame frame)
-    {
     }
 
     @Override

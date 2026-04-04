@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Verify;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -37,6 +36,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -55,6 +55,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.MarkSegmentToUpgradeAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -77,38 +78,45 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -125,6 +133,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 /**
  * The client representation of this task is {@link ClientCompactionTaskQuery}. JSON
@@ -133,7 +142,7 @@ import java.util.stream.IntStream;
  */
 public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
-  public static final String TYPE = "compact";
+  public static final String TYPE = CompactionSlotManager.COMPACTION_TASK_TYPE;
   private static final Logger log = new Logger(CompactionTask.class);
 
   /**
@@ -147,10 +156,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  static {
-    Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
-  }
 
   private final CompactionIOConfig ioConfig;
   @Nullable
@@ -218,6 +223,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
+
+    if (ioConfig != null && ioConfig.getInputSpec() != null && ioConfig.getInputSpec() instanceof MinorCompactionInputSpec) {
+      if (computeCompactionIngestionMode(ioConfig) != IngestionMode.REPLACE) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[isDropExisting] to true.");
+      }
+
+      boolean usingConcurrentLocks = this.getContextValue(Tasks.USE_CONCURRENT_LOCKS, Tasks.DEFAULT_USE_CONCURRENT_LOCKS);
+
+      if (!usingConcurrentLocks) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[%s] to true.", Tasks.USE_CONCURRENT_LOCKS);
+      }
+    }
+
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
     this.metricsSpec = metricsSpec;
@@ -443,7 +465,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
-    return determineLockGranularityAndTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
+    return determineLockGranularityAndTryLock(taskActionClient, List.of(umbrellaInterval(segments, segmentProvider)));
   }
 
   @Override
@@ -471,13 +493,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
    * This method returns true only for MSQ engine when either of the following holds true:
    * <ul>
-   * <li> Range partitioning is done on a string dimension or an unknown dimension
+   * <li> Range partitioning is done on a possibly multi-valued string dimension or an unknown dimension
    * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
-   * <li> Rollup is done on a string dimension or an unknown dimension
+   * <li> Rollup is done on a multi-valued string dimension or an unknown dimension
    * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
    * </ul>
-   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a string
-   * or unknown dimension.
+   *
+   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a multi-valued
+   * string or unknown dimension.
    */
   boolean identifyMultiValuedDimensions()
   {
@@ -486,28 +509,31 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
     final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
-    boolean isRangePartitioned = tuningConfig != null
-                                 && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+    final DimensionRangePartitionsSpec rangeSpec;
+    if (tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      rangeSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
+    } else {
+      rangeSpec = null;
+    }
+    final boolean isRangePartitioned = rangeSpec != null;
 
     if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
       return isPossiblyRollup || isRangePartitioned;
     } else {
-      boolean isRollupOnStringDimension = isPossiblyRollup &&
-                                          dimensionsSpec.getDimensions()
-                                                        .stream()
-                                                        .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
+      boolean isRollupOnMultiValueStringDimension = isPossiblyRollup &&
+                                                    dimensionsSpec.getDimensions()
+                                                                  .stream()
+                                                                  .anyMatch(DimensionSchema::canBeMultiValued);
 
-      boolean isPartitionedOnStringDimension =
+      boolean isPartitionedOnMultiValueStringDimension =
           isRangePartitioned &&
           dimensionsSpec.getDimensions()
                         .stream()
                         .anyMatch(
-                            dim -> ColumnType.STRING.equals(dim.getColumnType())
-                                   && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
-                                       .getPartitionDimensions()
-                                       .contains(dim.getName())
+                            dim -> dim.canBeMultiValued()
+                                   && rangeSpec.getPartitionDimensions().contains(dim.getName())
                         );
-      return isRollupOnStringDimension || isPartitionedOnStringDimension;
+      return isRollupOnMultiValueStringDimension || isPartitionedOnMultiValueStringDimension;
     }
   }
 
@@ -516,7 +542,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   {
     emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
-    final Map<Interval, DataSchema> intervalDataSchemas = createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = createInputDataSchemas(
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
@@ -532,22 +558,26 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
     CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(
         this,
-        intervalDataSchemas
+        inputSchemas
     );
     if (!supportsCompactionConfig.isValid()) {
       throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
-    return compactionRunner.runCompactionTasks(this, intervalDataSchemas, toolbox);
+    return compactionRunner.runCompactionTasks(this, inputSchemas, toolbox);
   }
 
   /**
-   * Generate dataschema for segments in each interval.
+   * Creates input data schemas for compaction by grouping segments and generating {@link DataSchema}s.
+   * When segment granularity is not specified, preserves original granularity and creates a schema
+   * for each unified interval. When segment granularity is specified, creates a single schema for all
+   * segments. For minor compaction, validates that all segments are completely within the target
+   * interval and submits already-compacted segments via {@link MarkSegmentToUpgradeAction} for direct upgrade.
    *
-   * @throws IOException if an exception occurs whie retrieving used segments to
-   *                     determine schemas.
+   * @return map from {@link QuerySegmentSpec} to {@link DataSchema} for each group of segments to compact
+   * @throws IOException if an exception occurs while retrieving segments
    */
   @VisibleForTesting
-  static Map<Interval, DataSchema> createDataSchemasForIntervals(
+  static Map<QuerySegmentSpec, DataSchema> createInputDataSchemas(
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
@@ -570,8 +600,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return Collections.emptyMap();
     }
 
+    if (segmentProvider.minorCompaction) {
+      Iterable<DataSegment> segmentsNotCompletelyWithinin =
+          Iterables.filter(timelineSegments, s -> !segmentProvider.interval.contains(s.getInterval()));
+      if (segmentsNotCompletelyWithinin.iterator().hasNext()) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Minor compaction doesn't allow segments not completely within interval[%s]",
+                                segmentProvider.interval
+                            );
+      }
+    }
+
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
-      Map<Interval, DataSchema> intervalDataSchemaMap = new HashMap<>();
+      Map<QuerySegmentSpec, DataSchema> inputSchemas = new HashMap<>();
+      // if segment is already compacted in minor compaction, they need to be upgraded directly, supported in MSQ
+      Set<DataSegment> segmentsToUpgrade = new HashSet<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -579,8 +624,21 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
 
       for (final DataSegment dataSegment : timelineSegments) {
-        intervalToSegments.computeIfAbsent(dataSegment.getInterval(), k -> new ArrayList<>())
-                          .add(dataSegment);
+        if (segmentProvider.shouldUpgradeSegment(dataSegment)) {
+          segmentsToUpgrade.add(dataSegment);
+        } else {
+          intervalToSegments.computeIfAbsent(dataSegment.getInterval(), k -> new ArrayList<>())
+                            .add(dataSegment);
+        }
+      }
+      if (!segmentsToUpgrade.isEmpty()) {
+        log.info(
+            "Marking [%d]segments to upgrade, showing the first 10 segments:%s",
+            segmentsToUpgrade.size(),
+            segmentsToUpgrade.stream().map(DataSegment::getId).map(SegmentId::toString).limit(10L)
+        );
+        toolbox.getTaskActionClient()
+               .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
       }
 
       // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
@@ -615,7 +673,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricBuilder,
             segmentProvider.dataSource,
             interval,
-            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
+            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager()),
             dimensionsSpec,
             transformSpec,
             metricsSpec,
@@ -625,25 +683,46 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             projections,
             needMultiValuedColumns
         );
-        intervalDataSchemaMap.put(interval, dataSchema);
+        final QuerySegmentSpec querySegmentSpec;
+        if (segmentProvider.minorCompaction) {
+          querySegmentSpec = new MultipleSpecificSegmentSpec(segmentsToCompact.stream()
+                                                                              .map(DataSegment::toDescriptor)
+                                                                              .collect(Collectors.toList()));
+        } else {
+          querySegmentSpec = new MultipleIntervalSegmentSpec(List.of(interval));
+        }
+        inputSchemas.put(querySegmentSpec, dataSchema);
       }
-      return intervalDataSchemaMap;
+      return inputSchemas;
     } else {
       // given segment granularity
+      Set<DataSegment> segmentsToUpgrade = new HashSet<>();
+      Iterables.addAll(segmentsToUpgrade, Iterables.filter(
+          timelineSegments,
+          segmentProvider::shouldUpgradeSegment
+      ));
+      if (!segmentsToUpgrade.isEmpty()) {
+        log.info(
+            "Marking [%d]segments to upgrade, showing the first 10 segments:%s",
+            segmentsToUpgrade.size(),
+            segmentsToUpgrade.stream().map(DataSegment::getId).map(SegmentId::toString).limit(10L)
+        );
+        toolbox.getTaskActionClient()
+               .submit(new MarkSegmentToUpgradeAction(segmentProvider.dataSource, segmentsToUpgrade));
+      }
+
+      final Iterable<DataSegment> segmentsToCompact = Iterables.filter(
+          timelineSegments,
+          s -> !segmentProvider.shouldUpgradeSegment(s)
+      );
       final DataSchema dataSchema = createDataSchema(
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          JodaUtils.umbrellaInterval(
-              Iterables.transform(
-                  timelineSegments,
-                  DataSegment::getInterval
-              )
-          ),
+          JodaUtils.umbrellaInterval(Iterables.transform(timelineSegments, DataSegment::getInterval)),
           lazyFetchSegments(
-              timelineSegments,
-              toolbox.getSegmentCacheManager(),
-              toolbox.getIndexIO()
+              segmentsToCompact,
+              toolbox.getSegmentCacheManager()
           ),
           dimensionsSpec,
           transformSpec,
@@ -652,7 +731,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           projections,
           needMultiValuedColumns
       );
-      return Collections.singletonMap(segmentProvider.interval, dataSchema);
+      final QuerySegmentSpec querySegmentSpec;
+      if (segmentProvider.minorCompaction) {
+        querySegmentSpec = new MultipleSpecificSegmentSpec(StreamSupport.stream(segmentsToCompact.spliterator(), false)
+                                                                        .map(DataSegment::toDescriptor)
+                                                                        .collect(Collectors.toList()));
+      } else {
+        querySegmentSpec = new MultipleIntervalSegmentSpec(List.of(segmentProvider.interval));
+      }
+      return Map.of(querySegmentSpec, dataSchema);
     }
   }
 
@@ -662,13 +749,21 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       LockGranularity lockGranularityInUse
   ) throws IOException
   {
-    final List<DataSegment> usedSegments =
-        segmentProvider.findSegments(toolbox.getTaskActionClient());
+    final List<DataSegment> usedSegments = segmentProvider.findSegments(toolbox.getTaskActionClient());
     segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
     return VersionedIntervalTimeline.getAllObjects(timelineSegments);
+  }
+
+  private static Interval umbrellaInterval(Iterable<DataSegment> segments, SegmentProvider segmentProvider)
+  {
+    return JodaUtils.umbrellaInterval(
+        List.of(
+            JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval)),
+            segmentProvider.interval
+        ));
   }
 
   private static DataSchema createDataSchema(
@@ -768,13 +863,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   private static Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> lazyFetchSegments(
       Iterable<DataSegment> dataSegments,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager)
     );
   }
 
@@ -783,43 +877,41 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   // an error. Creating a function keeps everyone happy.
   private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
       DataSegment dataSegment,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
-    return Pair.of(
-        dataSegment,
-        () -> {
-          try {
-            final Closer closer = Closer.create();
-            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
-            closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
-            return new ResourceHolder<QueryableIndex>()
-            {
-              @Override
-              public QueryableIndex get()
-              {
-                return queryableIndex;
-              }
+    return Pair.of(dataSegment, () -> fetchSegmentInternal(dataSegment, segmentCacheManager));
+  }
 
-              @Override
-              public void close()
-              {
-                try {
-                  closer.close();
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-            };
-          }
-          catch (Exception e) {
-            throw new RuntimeException(e);
-          }
+  private static ResourceHolder<QueryableIndex> fetchSegmentInternal(
+      DataSegment dataSegment,
+      SegmentCacheManager segmentCacheManager
+  )
+  {
+    final Closer closer = Closer.create();
+    try {
+      final AcquireSegmentAction acquireAction = closer.register(segmentCacheManager.acquireSegment(dataSegment));
+      final ReferenceCountedObjectProvider<Segment> segmentProvider =
+          FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
+      final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
+      return new ResourceHolder<>()
+      {
+        @Override
+        public QueryableIndex get()
+        {
+          return segment.as(QueryableIndex.class);
         }
-    );
+
+        @Override
+        public void close()
+        {
+          CloseableUtils.closeAndWrapExceptions(closer);
+        }
+      };
+    }
+    catch (Exception e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+    }
   }
 
   /**
@@ -954,11 +1046,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimName) && !includeTimeAsDimension) {
                        return null;
                      } else {
-                       return Preconditions.checkNotNull(
-                           dimensionSchemaMap.get(dimName),
-                           "Cannot find dimension[%s] from dimensionSchemaMap",
-                           dimName
-                       );
+                       return dimensionSchemaMap.get(dimName);
                      }
                    })
                    .filter(Objects::nonNull)
@@ -967,9 +1055,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // Store forceSegmentSortByTime only if false, for compatibility with legacy compaction states.
       final Boolean forceSegmentSortByTime = includeTimeAsDimension ? false : null;
       return DimensionsSpec.builder()
-          .setDimensions(dimensionSchemas)
-          .setForceSegmentSortByTime(forceSegmentSortByTime)
-          .build();
+                           .setDimensions(dimensionSchemas)
+                           .setForceSegmentSortByTime(forceSegmentSortByTime)
+                           .build();
     }
 
     public AggregatorFactory[] getMetricsSpec()
@@ -1019,7 +1107,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
      * Sort {@link #segmentsIterable} in order, such that we look at later segments prior to earlier ones. Useful when
      * analyzing dimensions, as it allows us to take the latest value we see, and therefore prefer types from more
      * recent segments, if there was a change.
-     *
+     * <p>
      * Returns a List copy of the original Iterable.
      */
     private List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> sortSegmentsListNewestFirst()
@@ -1145,11 +1233,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (metadata != null && metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
         projections = new HashMap<>();
         for (AggregateProjectionMetadata projectionMetadata : metadata.getProjections()) {
-          final AggregateProjectionMetadata.Schema schema = projectionMetadata.getSchema();
+          final AggregateProjectionSchema schema = projectionMetadata.getSchema();
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );
-          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(schema.getGroupingColumns().size());
+          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(
+              schema.getGroupingColumns().size()
+          );
           for (String groupingColumn : schema.getGroupingColumns()) {
             if (groupingColumn.equals(schema.getTimeColumnName())) {
               columnSchemas.add(
@@ -1211,6 +1301,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
+  /**
+   * Provides segment discovery and validation for compaction.
+   * For minor compaction (MinorCompactionInputSpec), finds all segments
+   * in the interval and partitions them into 'compact and upgrade metadata' vs 'upgrade metadata only' via {@link #shouldUpgradeSegment}.
+   */
   @VisibleForTesting
   static class SegmentProvider
   {
@@ -1218,11 +1313,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final CompactionInputSpec inputSpec;
     private final Interval interval;
 
+    private final boolean minorCompaction;
+    private final Set<SegmentDescriptor> segmentsToCompact;
+
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
       this.dataSource = Preconditions.checkNotNull(dataSource);
       this.inputSpec = inputSpec;
       this.interval = inputSpec.findInterval(dataSource);
+      if (inputSpec instanceof MinorCompactionInputSpec) {
+        minorCompaction = true;
+        segmentsToCompact = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getSegments());
+      } else {
+        minorCompaction = false;
+        segmentsToCompact = null;
+      }
+    }
+
+    private boolean shouldUpgradeSegment(DataSegment s)
+    {
+      if (minorCompaction) {
+        return !segmentsToCompact.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
+      } else {
+        return false;
+      }
     }
 
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
@@ -1253,6 +1367,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final String dataSource;
     private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
+    @Nullable
+    private String id;
     private CompactionIOConfig ioConfig;
     @Nullable
     private DimensionsSpec dimensionsSpec;
@@ -1281,9 +1397,20 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
     }
 
+    public Builder id(String id)
+    {
+      this.id = id;
+      return this;
+    }
+
     public Builder interval(Interval interval)
     {
       return inputSpec(new CompactionIntervalSpec(interval, null));
+    }
+
+    public Builder interval(Interval interval, boolean dropExisting)
+    {
+      return inputSpec(new CompactionIntervalSpec(interval, null), dropExisting);
     }
 
     public Builder segments(List<DataSegment> segments)
@@ -1366,7 +1493,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     public CompactionTask build()
     {
       return new CompactionTask(
-          null,
+          id,
           null,
           dataSource,
           null,
@@ -1389,7 +1516,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   /**
    * Compcation Task Tuning Config.
-   *
+   * <p>
    * An extension of ParallelIndexTuningConfig. As of now, all this TuningConfig
    * does is fail if the TuningConfig contains
    * `awaitSegmentAvailabilityTimeoutMillis` that is != 0 since it is not

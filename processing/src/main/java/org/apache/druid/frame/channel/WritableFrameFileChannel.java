@@ -22,6 +22,7 @@ package org.apache.druid.frame.channel;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.file.FrameFileWriter;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -40,9 +41,9 @@ public class WritableFrameFileChannel implements WritableFrameChannel
   }
 
   @Override
-  public void write(FrameWithPartition frame) throws IOException
+  public void write(RowsAndColumns rac, int partitionNumber) throws IOException
   {
-    writer.writeFrame(frame.frame(), frame.partition());
+    writer.write(rac, partitionNumber);
   }
 
   @Override

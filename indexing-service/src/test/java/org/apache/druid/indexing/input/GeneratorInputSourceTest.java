@@ -133,7 +133,7 @@ public class GeneratorInputSourceTest
     );
 
     InputRowSchema rowSchema = new InputRowSchema(
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null
     );
@@ -173,7 +173,7 @@ public class GeneratorInputSourceTest
     Assert.assertFalse(inputSource.needsFormat());
     Assert.assertEquals(2, inputSource.createSplits(null, null).count());
     Assert.assertEquals(
-        new Long(2048L),
+        Long.valueOf(2048L),
         ((GeneratorInputSource) inputSource.withSplit(new InputSplit<>(2048L))).getSeed()
     );
   }

@@ -34,10 +34,10 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
@@ -65,6 +65,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -96,9 +97,10 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final List<QueryBlocklistRule> queryBlocklist;
   private final long startMs;
   private final long startNs;
 
@@ -118,9 +120,10 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      final List<QueryBlocklistRule> queryBlocklist,
       final long startMs,
       final long startNs
   )
@@ -131,9 +134,10 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.queryBlocklist = queryBlocklist;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -213,7 +217,7 @@ public class QueryLifecycle
     }
 
     Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        defaultQueryConfig.getContext(),
+        queryConfigProvider.getContext(),
         baseQuery.getContext()
     );
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
@@ -310,6 +314,31 @@ public class QueryLifecycle
     }
   }
 
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    if (queryBlocklist == null || queryBlocklist.isEmpty()) {
+      return;
+    }
+
+    for (QueryBlocklistRule rule : queryBlocklist) {
+      if (rule.matches(this.baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build(
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
+                                rule.getRuleName()
+                            );
+      }
+    }
+  }
+
   private AuthorizationResult doAuthorize(
       final AuthenticationResult authenticationResult,
       final AuthorizationResult authorizationResult
@@ -322,6 +351,10 @@ public class QueryLifecycle
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
+      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+      // This ensures the exception is properly handled as an authorization failure
+      checkQueryBlocklist();
+
       transition(State.AUTHORIZING, State.AUTHORIZED);
       this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
                                                               .withPolicies(
@@ -401,6 +434,9 @@ public class QueryLifecycle
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
+
+      final int statusCode = DruidMetrics.computeStatusCode(e);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(queryTimeNs);
 
       if (bytesWritten >= 0) {
@@ -417,6 +453,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());

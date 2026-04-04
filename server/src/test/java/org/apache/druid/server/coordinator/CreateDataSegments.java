@@ -62,7 +62,8 @@ public class CreateDataSegments
   private DateTime lastUpdatedTime;
   private String upgradedFromSegmentId;
   private String schemaFingerprint;
-  private Long numRows;
+  private Integer numRows;
+  private String indexingStateFingerprint;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -105,13 +106,17 @@ public class CreateDataSegments
     return this;
   }
 
+  /**
+   * Specifies the version to use for creating the segments. Default version is
+   * {@code "1"}.
+   */
   public CreateDataSegments withVersion(String version)
   {
     this.version = version;
     return this;
   }
 
-  public CreateDataSegments withNumRows(Long numRows)
+  public CreateDataSegments withNumRows(Integer numRows)
   {
     this.numRows = numRows;
     return this;
@@ -120,6 +125,12 @@ public class CreateDataSegments
   public CreateDataSegments withSchemaFingerprint(String schemaFingerprint)
   {
     this.schemaFingerprint = schemaFingerprint;
+    return this;
+  }
+
+  public CreateDataSegments withIndexingStateFingerprint(String indexingStateFingerprint)
+  {
+    this.indexingStateFingerprint = indexingStateFingerprint;
     return this;
   }
 
@@ -183,7 +194,9 @@ public class CreateDataSegments
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
                 compactionState,
-                sizeInBytes
+                sizeInBytes,
+                numRows,
+                indexingStateFingerprint
             )
         );
       }
@@ -201,8 +214,9 @@ public class CreateDataSegments
         lastUpdatedTime,
         used,
         schemaFingerprint,
-        numRows,
-        upgradedFromSegmentId
+        numRows == null ? null : numRows.longValue(),
+        upgradedFromSegmentId,
+        indexingStateFingerprint
     );
   }
 
@@ -221,7 +235,9 @@ public class CreateDataSegments
         NumberedShardSpec shardSpec,
         int uniqueId,
         CompactionState compactionState,
-        long size
+        long size,
+        Integer numRows,
+        String indexingStateFingerprint
     )
     {
       super(
@@ -236,6 +252,8 @@ public class CreateDataSegments
           compactionState,
           IndexIO.CURRENT_VERSION_ID,
           size,
+          numRows,
+          indexingStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
       this.uniqueId = uniqueId;

@@ -27,6 +27,15 @@ import { QueryManager, QueryState } from '../../utils';
 
 import './show-log.scss';
 
+function showSpecialInstructions(endpoint: string, logState: QueryState<string>): React.ReactNode {
+  if (endpoint && !logState.getErrorMessage()?.includes('No log was found for this task')) return;
+  return (
+    <div className="special-instructions" style={{ padding: '20px', textAlign: 'center' }}>
+      <p>No log was found for this task.</p>
+    </div>
+  );
+}
+
 function removeFirstPartialLine(log: string): string {
   const lines = log.split('\n');
   if (lines.length > 1) {
@@ -62,11 +71,11 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     };
 
     this.showLogQueryManager = new QueryManager({
-      processQuery: async (_, cancelToken) => {
+      processQuery: async (_, signal) => {
         const { endpoint, tailOffset } = this.props;
         const resp = await Api.instance.get(
           endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''),
-          { cancelToken },
+          { signal },
         );
         const data = resp.data;
 
@@ -184,12 +193,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           {logState.loading ? (
             <Loader />
           ) : (
-            <textarea
-              className={Classes.INPUT}
-              readOnly
-              value={logState.data || logState.getErrorMessage()}
-              ref={this.log}
-            />
+            showSpecialInstructions(endpoint, logState) ?? (
+              <textarea
+                className={Classes.INPUT}
+                readOnly
+                value={logState.data || logState.getErrorMessage()}
+                ref={this.log}
+              />
+            )
           )}
         </div>
       </div>

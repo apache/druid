@@ -32,9 +32,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.sql.BloomFilterSqlAggregatorTest.BloomFilterSqlAggComponentSupplier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -80,10 +78,13 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       final QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -246,15 +247,19 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "substring(\"dim1\", 0, 1)",
+                          ColumnType.STRING,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
                               "a0",
-                              new ExtractionDimensionSpec(
-                                  "dim1",
-                                  "a0:dim1",
-                                  new SubstringDimExtractionFn(0, 1)
-                              ),
+                              new DefaultDimensionSpec("v0", "a0:v0"),
                               TEST_NUM_ENTRIES
                           )
                       )

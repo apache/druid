@@ -49,6 +49,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.utils.JvmUtils;
@@ -141,7 +142,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
       // initialize them all with 0 rows
-      AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
+      AggregateProjectionSchema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
       if (projections.containsKey(projectionSpec.getName())) {
         throw DruidException.defensive("duplicate projection[%s]", projectionSpec.getName());
@@ -395,6 +396,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     return Projections.findMatchingProjection(
         buildSpec,
         aggregateProjections,
+        getInterval(),
         (specName, columnName) -> projections.get(specName).getDimensionsMap().containsKey(columnName)
                                   || getColumnCapabilities(columnName) == null,
         projections::get

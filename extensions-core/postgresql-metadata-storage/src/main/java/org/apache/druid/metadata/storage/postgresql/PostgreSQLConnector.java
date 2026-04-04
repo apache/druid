@@ -308,4 +308,23 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   {
     return super.getIndexOnTable(StringUtils.toLowerCase(tableName));
   }
+
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23505 for PostgreSQL
+        if ("23505".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+    return false;
+  }
 }

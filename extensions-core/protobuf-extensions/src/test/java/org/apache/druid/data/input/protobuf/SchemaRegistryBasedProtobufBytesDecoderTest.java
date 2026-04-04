@@ -119,7 +119,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()
   {
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    return ProtobufInputRowParserTest.buildFlatData(dateTime);
+    return ProtobufInputFormatTest.buildFlatData(dateTime);
   }
 
 
@@ -221,7 +221,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   private ProtobufSchema parseProtobufSchema() throws IOException
   {
     InputStream fin;
-    fin = this.getClass().getClassLoader().getResourceAsStream("ProtoTest.proto");
+    fin = this.getClass().getClassLoader().getResourceAsStream("proto_test_event.proto");
     assertNotNull(fin);
     String protobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
 

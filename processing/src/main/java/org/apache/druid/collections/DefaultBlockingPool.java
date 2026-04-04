@@ -29,11 +29,14 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Pool that pre-generates objects up to a limit, then permits possibly-blocking "take" operations.
@@ -56,11 +59,40 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       int limit
   )
   {
+    this(generator, limit, false);
+  }
+
+  public DefaultBlockingPool(
+      Supplier<T> generator,
+      int limit,
+      boolean parallelInit
+  )
+  {
     this.objects = new ArrayDeque<>(limit);
     this.maxSize = limit;
 
-    for (int i = 0; i < limit; i++) {
-      objects.add(generator.get());
+    // Parallize allocations can significantly speed up node boot times
+    if (parallelInit) {
+      int parallelism = Runtime.getRuntime().availableProcessors();
+      ForkJoinPool fjp = new ForkJoinPool(parallelism);
+      try {
+        objects.addAll(fjp.submit(
+            () -> IntStream.range(0, limit)
+                           .parallel()
+                           .mapToObj(i -> generator.get())
+                           .collect(Collectors.toCollection(ArrayList::new))
+        ).get());
+      }
+      catch (ExecutionException | InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        fjp.shutdown();
+      }
+    } else {
+      for (int i = 0; i < limit; i++) {
+        objects.add(generator.get());
+      }
     }
 
     this.lock = new ReentrantLock();

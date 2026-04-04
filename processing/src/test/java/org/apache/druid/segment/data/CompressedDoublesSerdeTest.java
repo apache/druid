@@ -25,7 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -173,7 +173,7 @@ public class CompressedDoublesSerdeTest
         serializer.add(random.nextLong());
       }
 
-      try (SmooshedWriter primaryWriter = smoosher.addWithSmooshedWriter(columnName, serializer.getSerializedSize())) {
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
         serializer.writeTo(primaryWriter, smoosher);
       }
     }

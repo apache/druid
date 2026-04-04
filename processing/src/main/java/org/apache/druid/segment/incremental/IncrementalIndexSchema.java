@@ -21,7 +21,6 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -161,20 +160,6 @@ public class IncrementalIndexSchema
     public Builder withDimensionsSpec(@Nullable DimensionsSpec dimensionsSpec)
     {
       this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.EMPTY : dimensionsSpec;
-      return this;
-    }
-
-    @Deprecated
-    public Builder withDimensionsSpec(@Nullable InputRowParser parser)
-    {
-      if (parser != null
-          && parser.getParseSpec() != null
-          && parser.getParseSpec().getDimensionsSpec() != null) {
-        this.dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
-      } else {
-        this.dimensionsSpec = DimensionsSpec.EMPTY;
-      }
-
       return this;
     }
 

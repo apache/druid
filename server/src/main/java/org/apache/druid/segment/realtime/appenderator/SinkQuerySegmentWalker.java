@@ -56,7 +56,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
@@ -224,6 +223,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
     final ConcurrentHashMap<String, SinkMetricsEmittingQueryRunner.SegmentMetrics> segmentMetricsAccumulator = new ConcurrentHashMap<>();
 
+    final List<SegmentDescriptor> missingSegments = new ArrayList<>();
     try {
       for (final SegmentDescriptor descriptor : specs) {
         final PartitionChunk<SinkHolder> chunk = upgradedSegmentsTimeline.findChunk(
@@ -233,10 +233,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         );
 
         if (chunk == null) {
-          allRunners.put(
-              descriptor,
-              Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor))
-          );
+          missingSegments.add(descriptor);
           continue;
         }
 
@@ -248,10 +245,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
         if (sinkSegmentReferences == null) {
           // We failed to acquire references for all subsegments. Bail and report the entire sink missing.
-          allRunners.put(
-              descriptor,
-              Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor))
-          );
+          missingSegments.add(descriptor);
         } else if (sinkSegmentReferences.isEmpty()) {
           allRunners.put(descriptor, Collections.singletonList(new NoopQueryRunner<>()));
         } else {
@@ -394,7 +388,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
               ),
               () -> CloseableUtils.closeAll(allSegmentReferences)
           )
-      );
+      )
+      {
+        @Override
+        public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
+        {
+          responseContext.addMissingSegments(missingSegments);
+          return super.run(queryPlus, responseContext);
+        }
+      };
     }
     catch (Throwable e) {
       throw CloseableUtils.closeAndWrapInCatch(e, () -> CloseableUtils.closeAll(allSegmentReferences));

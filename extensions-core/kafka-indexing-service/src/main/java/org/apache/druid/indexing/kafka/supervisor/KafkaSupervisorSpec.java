@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
@@ -74,14 +75,9 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   {
     super(
         id,
-        ingestionSchema != null
-        ? ingestionSchema
-        : new KafkaSupervisorIngestionSpec(
-            dataSchema,
-            ioConfig,
-            tuningConfig != null
-            ? tuningConfig
-            : KafkaSupervisorTuningConfig.defaultConfig()
+        Configs.valueOrDefault(
+            ingestionSchema,
+            new KafkaSupervisorIngestionSpec(dataSchema, ioConfig, tuningConfig)
         ),
         context,
         suspended,

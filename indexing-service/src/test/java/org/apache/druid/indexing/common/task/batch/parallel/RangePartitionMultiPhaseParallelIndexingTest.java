@@ -26,10 +26,8 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -76,7 +74,6 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiPhaseParallelIndexingTest
 {
-  private static final boolean USE_INPUT_FORMAT_API = true;
   private static final boolean USE_MULTIVALUE_DIM = true;
   private static final int NUM_FILE = 10;
   private static final int NUM_ROW = 20;
@@ -94,14 +91,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
   );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      LIST_DELIMITER,
-      Arrays.asList(TIME, DIM1, DIM2, "val"),
-      false,
-      0
-  );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TIME, DIM1, DIM2, "val"),
       LIST_DELIMITER,
@@ -111,16 +100,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       null
   );
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}, intervalToIndex={4}")
+  @Parameterized.Parameters(name = "{0}, maxNumConcurrentSubTasks={1}, useMultiValueDim={2}, intervalToIndex={3}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, !USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
-        new Object[]{LockGranularity.TIME_CHUNK, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
-        new Object[]{LockGranularity.TIME_CHUNK, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, null},
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 1, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},  // will spawn subtask
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX}  // expected to fail
+        new Object[]{LockGranularity.TIME_CHUNK, 10, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
+        new Object[]{LockGranularity.TIME_CHUNK, 10, !USE_MULTIVALUE_DIM, null},
+        new Object[]{LockGranularity.SEGMENT, 10, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
+        new Object[]{LockGranularity.SEGMENT, 1, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},  // will spawn subtask
+        new Object[]{LockGranularity.SEGMENT, 10, USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX}  // expected to fail
     );
   }
 
@@ -134,13 +122,12 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
   public RangePartitionMultiPhaseParallelIndexingTest(
       LockGranularity lockGranularity,
-      boolean useInputFormatApi,
       int maxNumConcurrentSubTasks,
       boolean useMultivalueDim,
       @Nullable Interval intervalToIndex
   )
   {
-    super(lockGranularity, useInputFormatApi, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(lockGranularity, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
     this.useMultivalueDim = useMultivalueDim;
     this.intervalToIndex = intervalToIndex;
@@ -400,35 +387,18 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       boolean dropExisting
   )
   {
-    if (isUseInputFormatApi()) {
-      return createTask(
-          TIMESTAMP_SPEC,
-          DIMENSIONS_SPEC,
-          INPUT_FORMAT,
-          null,
-          intervalToIndex,
-          inputDirectory,
-          TEST_FILE_NAME_PREFIX + "*",
-          partitionsSpec,
-          maxNumConcurrentSubTasks,
-          appendToExisting,
-          dropExisting
-      );
-    } else {
-      return createTask(
-          null,
-          null,
-          null,
-          PARSE_SPEC,
-          intervalToIndex,
-          inputDirectory,
-          TEST_FILE_NAME_PREFIX + "*",
-          partitionsSpec,
-          maxNumConcurrentSubTasks,
-          appendToExisting,
-          dropExisting
-      );
-    }
+    return createTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
+        intervalToIndex,
+        inputDirectory,
+        TEST_FILE_NAME_PREFIX + "*",
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        appendToExisting,
+        dropExisting
+    );
   }
 
   private void assertRangePartitions(Set<DataSegment> publishedSegments) throws IOException

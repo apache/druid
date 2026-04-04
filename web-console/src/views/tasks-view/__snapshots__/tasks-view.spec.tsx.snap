@@ -201,8 +201,10 @@ exports[`TasksView matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Created time",
           "accessor": "created_time",
+          "filterMethod": [Function],
+          "headerClassName": "enable-comparisons",
           "show": true,
-          "width": 190,
+          "width": 220,
         },
         {
           "Aggregated": [Function],

@@ -59,9 +59,7 @@ public class CpuTest
   @Test
   public void testWontCrash()
   {
-    final Cpu cpu = new Cpu(cgroup -> {
-      throw new RuntimeException("Should still continue");
-    });
+    final Cpu cpu = new Cpu(TestUtils.exceptionThrowingDiscoverer());
     final Cpu.CpuMetrics metric = cpu.snapshot();
     Assert.assertEquals(-1L, metric.getShares());
     Assert.assertEquals(0, metric.getQuotaUs());

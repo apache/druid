@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -70,13 +70,11 @@
     <dependency>
       <groupId>org.roaringbitmap</groupId>
       <artifactId>RoaringBitmap</artifactId>
-      <version>0.9.49</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil-core</artifactId>
-      <version>8.5.4</version>
       <scope>provided</scope>
     </dependency>
 

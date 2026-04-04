@@ -34,7 +34,7 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerde() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null, null);
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null, null, null, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
     Assert.assertEquals(defaultColumnFormatConfig, andBack);
@@ -45,17 +45,20 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerdeOverride() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(5, "ARRAY");
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig("ARRAY", 5, null, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
     Assert.assertEquals(defaultColumnFormatConfig, andBack);
     Assert.assertEquals(5, (int) andBack.getNestedColumnFormatVersion());
     Assert.assertEquals(DimensionSchema.MultiValueHandling.ARRAY.toString(), andBack.getStringMultiValueHandlingMode());
+    Assert.assertNull(andBack.getMaxStringLength());
   }
 
   @Test
   public void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(DefaultColumnFormatConfig.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DefaultColumnFormatConfig.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

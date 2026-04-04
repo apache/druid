@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -228,9 +227,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
 
   protected static ResponseContext responseContext()
   {
-    final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
-    responseContext.initializeRemainingResponses();
-    return responseContext;
+    return DirectDruidClient.makeResponseContextForQuery();
   }
 
   protected static DataSegment newSegment(

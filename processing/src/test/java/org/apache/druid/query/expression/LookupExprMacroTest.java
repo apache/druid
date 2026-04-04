@@ -93,7 +93,7 @@ public class LookupExprMacroTest extends MacroTestBase
   {
     return args.stream().map(a -> {
       if (a != null && a instanceof String) {
-        return ExprEval.of(a.toString()).toExpr();
+        return ExprEval.ofString(a.toString()).toExpr();
       }
       return ExprEval.bestEffortOf(null).toExpr();
     }).collect(Collectors.toList());

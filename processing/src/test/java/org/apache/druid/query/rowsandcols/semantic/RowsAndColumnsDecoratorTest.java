@@ -86,8 +86,8 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         {9L, "e", 789L, 8L},
         {10L, "f", 123L, 9L},
         {11L, "f", 456L, 10L},
-        {12L, "g", 789L, 11L},
-        };
+        {12L, "g", 789L, 11L}
+    };
 
     RowSignature siggy = RowSignature.builder()
                                      .add("__time", ColumnType.LONG)
@@ -172,8 +172,8 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         {9L, 9L, 789L, 8L},
         {10L, 10L, 123L, 9L},
         {11L, 11L, 456L, 10L},
-        {12L, 12L, 789L, 11L},
-        };
+        {12L, 12L, 789L, 11L}
+    };
 
     Interval[] intervals = new Interval[]{Intervals.utc(0, 6), Intervals.utc(6, 13), Intervals.utc(4, 8)};
     Filter[] filters = new Filter[]{
@@ -237,7 +237,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         {8L, 4L},
         {9L, 0L},
         {10L, 0L}
-        };
+    };
 
     MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(

@@ -70,7 +70,13 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
         return (
           <div className="execution-details-pane-general">
             <p>
-              General info for <Tag minimal>{execution.id}</Tag>
+              General info for execution ID: <Tag minimal>{execution.id}</Tag>
+              {execution.sqlQueryId && (
+                <>
+                  {' '}
+                  (SQL ID <Tag minimal>{execution.sqlQueryId}</Tag>)
+                </>
+              )}
               {ingestDatasource && (
                 <>
                   {' '}
@@ -80,8 +86,9 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
             </p>
             {execution.startTime && !!execution.duration && (
               <p>
-                Query took <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag>{' '}
-                (starting at <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)
+                {execution.status === 'RUNNING' ? 'Query is running for ' : 'Query took '}
+                <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag> (starting at{' '}
+                <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)
               </p>
             )}
             {execution.destination && (

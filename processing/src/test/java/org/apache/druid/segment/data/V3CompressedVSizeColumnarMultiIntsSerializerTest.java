@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -184,7 +184,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
         serializer.addValues(new ArrayBasedIndexedInts(new int[]{random.nextInt() ^ Integer.MIN_VALUE}));
       }
 
-      try (SmooshedWriter primaryWriter = smoosher.addWithSmooshedWriter(columnName, serializer.getSerializedSize())) {
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
         serializer.writeTo(primaryWriter, smoosher);
       }
     }
@@ -377,7 +377,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
         writer.addValues(new ArrayBasedIndexedInts(val));
       }
 
-      final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
+      final SegmentFileChannel channel = smoosher.addWithChannel("test", writer.getSerializedSize());
       writer.writeTo(channel, smoosher);
       channel.close();
       smoosher.close();
@@ -457,7 +457,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
         writer.addValues(new ArrayBasedIndexedInts(generateRow(rand, maxValue, maxValuesPerRow)));
       }
 
-      final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
+      final SegmentFileChannel channel = smoosher.addWithChannel("test", writer.getSerializedSize());
       writer.writeTo(channel, smoosher);
       channel.close();
       smoosher.close();

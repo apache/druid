@@ -108,6 +108,17 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
    */
   public DruidContainerResource usingTestImage()
   {
+    return usingImage(DockerImageName.parse(getTestDruidImageName()));
+  }
+
+  /**
+   * Gets the Druid image name specified by the system property
+   * {@link #PROPERTY_TEST_IMAGE}.
+   *
+   * @throws org.apache.druid.error.DruidException if the system property is not set.
+   */
+  public static String getTestDruidImageName()
+  {
     final String imageName = System.getProperty(PROPERTY_TEST_IMAGE);
     InvalidInput.conditionalException(
         imageName != null,
@@ -118,7 +129,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
             PROPERTY_TEST_IMAGE, PROPERTY_TEST_IMAGE
         )
     );
-    return usingImage(DockerImageName.parse(imageName));
+    return imageName;
   }
 
   public DruidContainerResource addProperty(String key, String value)
@@ -143,7 +154,9 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     );
 
     // Mount directories used by this container for easier debugging with service logs
-    this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
+    final File clusterDirectory = new File("druid-container-logs", cluster.getTestClassName());
+    this.containerDirectory = new File(clusterDirectory, name);
+    cleanDirectory(containerDirectory);
 
     final File logDirectory = new File(containerDirectory, "log");
     this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
@@ -168,7 +181,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     log.info(
         "Starting Druid container[%s] with image[%s], exposed ports[%s] and mounted directory[%s].",
-        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory
+        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory.getAbsolutePath()
     );
 
     setCommonProperties(container);
@@ -218,6 +231,16 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     try {
       FileUtils.mkdirp(dir);
       Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static void cleanDirectory(File dir)
+  {
+    try {
+      FileUtils.deleteDirectory(dir);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

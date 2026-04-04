@@ -23,15 +23,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -144,16 +148,18 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setMaxRowCount(5000)
         .build();
 
-    StringInputRowParser parser = new StringInputRowParser(
-        new CSVParseSpec(
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags"))),
-            "\t",
-            ImmutableList.of("timestamp", "product", "tags", "othertags"),
-            false,
-            0
-        ),
-        "UTF-8"
+    InputRowSchema csvSchema = new InputRowSchema(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product", "tags", "othertags"))),
+        ColumnsFilter.all()
+    );
+    CsvInputFormat csvFormat = new CsvInputFormat(
+        List.of("timestamp", "product", "tags", "othertags"),
+        "\t",
+        null,
+        false,
+        0,
+        null
     );
 
     String[] rows = new String[]{
@@ -163,24 +169,27 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         "2011-01-14T00:00:00.000Z,product_4,\"\",u2"
     };
 
-    for (String row : rows) {
-      incrementalIndex.add(parser.parse(row));
+    try (CloseableIterator<InputRow> iter = new InlineInputSource(String.join("\n", rows))
+        .reader(csvSchema, csvFormat, null)
+        .read()) {
+      while (iter.hasNext()) {
+        incrementalIndex.add(iter.next());
+      }
     }
 
 
     persistedSegmentDir = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.getDefault(), null);
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
 
 
-    StringInputRowParser parserNullSampler = new StringInputRowParser(
-        new JSONParseSpec(
-            new TimestampSpec("time", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")))
-        ),
-        "UTF-8"
+    InputRowSchema jsonSchema = new InputRowSchema(
+        new TimestampSpec("time", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product", "tags", "othertags"))),
+        ColumnsFilter.all()
     );
+    JsonInputFormat jsonFormat = new JsonInputFormat(null, null, null, null, null);
 
     incrementalIndexNullSampler = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -198,12 +207,16 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         "{\"time\":\"2011-01-16T00:00:00.000Z\",\"product\":\"product_8\",\"tags\":[\"\"],\"othertags\":[]}"
     };
 
-    for (String row : rowsNullSampler) {
-      incrementalIndexNullSampler.add(parserNullSampler.parse(row));
+    try (CloseableIterator<InputRow> iter = new InlineInputSource(String.join("\n", rowsNullSampler))
+        .reader(jsonSchema, jsonFormat, null)
+        .read()) {
+      while (iter.hasNext()) {
+        incrementalIndexNullSampler.add(iter.next());
+      }
     }
     persistedSegmentDirNullSampler = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.getDefault(), null);
 
     queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }

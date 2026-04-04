@@ -378,13 +378,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v1",
-                "concat('virtual-column-', \"channel\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v1",
+            "concat('virtual-column-', \"channel\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 
@@ -448,13 +446,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     // a selector filter on an ExpressionVirtualColumn
     Filter originalFilter = new SelectorFilter("v0", "VIRGINIA");
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v0",
-                "upper(\"r1.regionName\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v0",
+            "upper(\"r1.regionName\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 
@@ -497,6 +493,50 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+  }
+
+  @Test
+  public void test_filterPushDown_orFilterWithPostJoinVirtualColumnIsNotPushedDown()
+  {
+    // An OR filter where one sub-filter references a base-table virtual column and the other references a
+    // post-join virtual column (defined on a join column). The entire OR must not be pushed down, because
+    // the post-join virtual column cannot be evaluated on the base table alone.
+    final Filter originalFilter = new OrFilter(
+        ImmutableList.of(
+            new SelectorFilter("v0", "virtual-column-#en.wikipedia"),
+            new SelectorFilter("v1", "VIRGINIA")
+        )
+    );
+
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "v0",
+            "concat('virtual-column-', \"channel\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        ),
+        new ExpressionVirtualColumn(
+            "v1",
+            "upper(\"r1.regionName\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        )
+    );
+
+    final JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        originalFilter,
+        ImmutableList.of(factToRegion(JoinType.LEFT)),
+        virtualColumns
+    );
+
+    final JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        null,
+        originalFilter,
+        ImmutableSet.of()
+    );
+
+    final JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 

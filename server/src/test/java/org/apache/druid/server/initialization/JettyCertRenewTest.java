@@ -115,86 +115,21 @@ public class JettyCertRenewTest extends BaseJettyTest
       File trustStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("truststore.jks").getFile());
       tmpTrustStore = Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
       pp = () -> "druid123";
-      tlsConfig = new TLSServerConfig()
-      {
-        @Override
-        public String getKeyStorePath()
-        {
-          return tmpKeyStore.toString();
-        }
-
-        @Override
-        public String getKeyStoreType()
-        {
-          return "jks";
-        }
-
-        @Override
-        public PasswordProvider getKeyStorePasswordProvider()
-        {
-          return pp;
-        }
-
-        @Override
-        public PasswordProvider getKeyManagerPasswordProvider()
-        {
-          return pp;
-        }
-
-        @Override
-        public String getTrustStorePath()
-        {
-          return tmpTrustStore.toString();
-        }
-
-        @Override
-        public String getTrustStoreAlgorithm()
-        {
-          return "PKIX";
-        }
-
-        @Override
-        public PasswordProvider getTrustStorePasswordProvider()
-        {
-          return pp;
-        }
-
-        @Override
-        public String getCertAlias()
-        {
-          return "druid";
-        }
-
-        @Override
-        public boolean isRequireClientCertificate()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean isRequestClientCertificate()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean isValidateHostnames()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean isReloadSslContext()
-        {
-          return true;
-        }
-
-        @Override
-        public int getReloadSslContextSeconds()
-        {
-          return 1;
-        }
-      };
+      tlsConfig = TLSServerConfig.builder()
+          .keyStorePath(tmpKeyStore.toString())
+          .keyStoreType("jks")
+          .keyStorePasswordProvider(pp)
+          .keyManagerPasswordProvider(pp)
+          .trustStorePath(tmpTrustStore.toString())
+          .trustStoreAlgorithm("PKIX")
+          .trustStorePasswordProvider(pp)
+          .certAlias("druid")
+          .requireClientCertificate(false)
+          .requestClientCertificate(false)
+          .validateHostnames(false)
+          .reloadSslContext(true)
+          .reloadSslContextSeconds(1)
+          .build();
     }
     catch (IOException e) {
       throw new RuntimeException(e);

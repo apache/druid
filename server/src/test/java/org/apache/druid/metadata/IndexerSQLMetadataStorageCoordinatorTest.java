@@ -27,6 +27,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -42,19 +43,25 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.NoopIndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
+import org.apache.druid.segment.metadata.SqlIndexingStateStorage;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -68,6 +75,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
@@ -112,6 +120,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private StubServiceEmitter emitter;
   private SqlSegmentMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
+  private SqlIndexingStateStorage indexingStateStorage;
 
   private final SegmentMetadataCache.UsageMode cacheMode;
 
@@ -141,12 +150,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     derbyConnector.createSegmentTable();
     derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createIndexingStatesTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 
     fingerprintGenerator = new FingerprintGenerator(mapper);
     segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
+    indexingStateStorage = new SqlIndexingStateStorage(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        mapper,
+        derbyConnector
+    );
 
     emitter = new StubServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
@@ -158,6 +173,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         () -> new SegmentsMetadataManagerConfig(null, cacheMode, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopSegmentSchemaCache(),
+        new NoopIndexingStateCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,
@@ -198,7 +214,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        indexingStateStorage
     )
     {
       @Override
@@ -544,14 +561,149 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           ImmutableMap.of("path", "b-" + i),
           ImmutableList.of("dim1"),
           ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 9),
+          new NumberedShardSpec(i - 1, 8),
           9,
           100
       );
       replacingSegments.add(segment);
     }
 
-    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null);
+    Assert.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
+
+    Assert.assertEquals(
+        2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
+        retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
+    );
+
+    final Set<DataSegment> usedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        "foo",
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
+    for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(appendSegment.getId().toString()));
+    }
+    usedSegments.removeAll(segmentsAppendedWithReplaceLock);
+    Assert.assertEquals(usedSegments, coordinator.retrieveAllUsedSegments("foo", Segments.ONLY_VISIBLE));
+
+    Assert.assertTrue(usedSegments.containsAll(replacingSegments));
+    for (DataSegment replaceSegment : replacingSegments) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
+    }
+    usedSegments.removeAll(replacingSegments);
+
+    Assert.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
+    for (DataSegment segmentReplicaWithNewVersion : usedSegments) {
+      boolean hasBeenCarriedForward = false;
+      for (DataSegment appendedSegment : segmentsAppendedWithReplaceLock) {
+        if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
+          Assert.assertEquals(
+              appendedSegment.getId().toString(),
+              upgradedFromSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
+          );
+          hasBeenCarriedForward = true;
+          break;
+        }
+      }
+      Assert.assertTrue(hasBeenCarriedForward);
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsInInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-01-01/2023-02-01"));
+    Assert.assertEquals(2, pendingSegmentsInInterval.size());
+    final SegmentId rootPendingSegmentId = pendingSegmentInInterval.getId().asSegmentId();
+    if (pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId() == null) {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(0).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(1).getUpgradedFromSegmentId());
+    } else {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(1).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId());
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsOutsideInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-04-01/2023-05-01"));
+    Assert.assertEquals(1, pendingSegmentsOutsideInterval.size());
+    Assert.assertEquals(
+        pendingSegmentOutsideInterval.getId().asSegmentId(), pendingSegmentsOutsideInterval.get(0).getId().asSegmentId()
+    );
+  }
+
+  @Test
+  public void testCommitReplaceSegmentsWithUpdatedCorePartitions()
+  {
+    // this test is very similar to testCommitReplaceSegments, except both append/replace segments use DimensionRangeShardSpec
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
+    final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final PendingSegmentRecord pendingSegmentInInterval = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-01-01/2023-01-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    final PendingSegmentRecord pendingSegmentOutsideInterval = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-04-01/2023-04-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
+          "2023-01-0" + i,
+          ImmutableMap.of("path", "a-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
+          9,
+          100
+      );
+      segmentsAppendedWithReplaceLock.add(segment);
+      appendedSegmentToReplaceLockMap.put(segment, replaceLock);
+    }
+
+    segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, Collections.emptyMap());
+    insertPendingSegments(
+        "foo",
+        List.of(pendingSegmentInInterval, pendingSegmentOutsideInterval),
+        true
+    );
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
+
+    final Set<DataSegment> replacingSegments = new HashSet<>();
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-01/2023-02-01"),
+          "2023-02-01",
+          ImmutableMap.of("path", "b-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
+          9,
+          100
+      );
+      replacingSegments.add(segment);
+    }
+
+    Assert.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
 
     Assert.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
@@ -572,6 +724,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
+    Set<DataSegment> fetched = coordinator.retrieveAllUsedSegments("foo", Segments.ONLY_VISIBLE);
+    Assert.assertEquals(usedSegments, fetched);
+    // all segments have the same corePartitions, exactly the size of replaced + appended
+    List<ShardSpec> shardSpecs = fetched.stream().map(DataSegment::getShardSpec).toList();
+    Assert.assertTrue(shardSpecs.stream().allMatch(s -> s.getNumCorePartitions() == usedSegments.size()));
+    Assert.assertTrue(shardSpecs.stream().allMatch(s -> s instanceof DimensionRangeShardSpec));
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
     for (DataSegment replaceSegment : replacingSegments) {
       Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
@@ -794,7 +952,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     )
     {
       @Override
@@ -929,8 +1088,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
-            + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            "Stored metadata state[ObjectMetadata{theObject={foo=baz}}] has already been updated by other tasks"
+            + " and has diverged from the expected start metadata state[ObjectMetadata{theObject=null}]."
+            + " This task will be replaced by the supervisor with a new task using updated start offsets."
+            + " Try resetting the supervisor if the issue persists."
         ),
         result2
     );
@@ -953,7 +1114,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     )
     {
       @Override
@@ -1076,8 +1238,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
-            + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            "Stored metadata state[ObjectMetadata{theObject={foo=baz}}] has already been updated by other tasks"
+            + " and has diverged from the expected start metadata state[ObjectMetadata{theObject={foo=qux}}]."
+            + " This task will be replaced by the supervisor with a new task using updated start offsets."
+            + " Try resetting the supervisor if the issue persists."
         ),
         result2
     );
@@ -3459,6 +3623,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
               metrics,
               new DimensionRangeShardSpec(
                   Collections.singletonList("dim"),
+                  VirtualColumns.EMPTY,
                   i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
                   i == 5 ? null : StringTuple.create(String.valueOf(i)),
                   i,
@@ -4153,7 +4318,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           loadspec,
           dimensions,
           metrics,
-          new DimensionRangeShardSpec(dimensions, null, null, 0, 1),
+          new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, null, null, 0, 1),
           0,
           100
       );
@@ -4313,6 +4478,97 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertTrue(writeAction.get().isEmpty());
     emitter.verifyValue(Metric.READ_WRITE_TRANSACTIONS, 1L);
+  }
+
+  @Test
+  public void testCommitSegmentsAndMetadata_marksPendingIndexingStateAsActive()
+  {
+    String fingerprint = "vanillaFingerprint";
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withIndexingStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    coordinator.commitSegmentsAndMetadata(
+        ImmutableSet.of(segment),
+        SUPERVISOR_ID,
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
+  }
+
+  @Test
+  public void testCommitReplaceSegments_marksPendingIndexingStateAsActive()
+  {
+    String fingerprint = "replaceFingerprint";
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withIndexingStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    final String replaceTaskId = "replaceTask";
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
+        replaceTaskId,
+        Intervals.of("2023-01-01/2023-01-02"),
+        "2024-01-01"
+    );
+
+    coordinator.commitReplaceSegments(
+        ImmutableSet.of(segment),
+        ImmutableSet.of(replaceLock),
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
+  }
+
+  @Test
+  public void testCommitAppendSegments_marksPendingIndexingStateAsActive()
+  {
+    String fingerprint = "appendFingerprint";
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withIndexingStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    final String taskAllocatorId = "appendTask";
+
+    coordinator.commitAppendSegments(
+        ImmutableSet.of(segment),
+        Map.of(),
+        taskAllocatorId,
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
+  }
+
+  private CompactionState createTestIndexingState()
+  {
+    return new CompactionState(
+        new DynamicPartitionsSpec(100, null),
+        null, null, null,
+        IndexSpec.getDefault(),
+        null, null
+    );
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

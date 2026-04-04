@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -75,7 +80,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assert.assertEquals(3L, postAgg.compute(metricValues));
   }
 
   @Test
@@ -98,7 +103,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assert.assertEquals(3L, postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
   }
 
@@ -124,7 +129,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
-    Assert.assertEquals(new Double(9.0f), arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     EasyMock.verify();
   }
 
@@ -134,13 +139,13 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test_val1"))
-            .andReturn(new Long(10L))
+            .andReturn(10L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val2"))
-            .andReturn(new Long(21))
+            .andReturn(21L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val3"))
-            .andReturn(new Long(3))
+            .andReturn(3L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val4"))
             .andReturn(null)
@@ -211,23 +216,6 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
       String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
                           + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                         + "  }"
-                         + "}";
-
       String query = "{"
                      + "\"queryType\": \"groupBy\","
                      + "\"dataSource\": \"test_datasource\","
@@ -248,7 +236,14 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+          ),
           metricSpec,
           0,
           Granularities.NONE,

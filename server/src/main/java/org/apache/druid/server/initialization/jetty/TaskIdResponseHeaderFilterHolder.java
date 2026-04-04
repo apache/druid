@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.ChatHandlerResource;
 
+import javax.annotation.Nullable;
+
 public class TaskIdResponseHeaderFilterHolder extends ResponseHeaderFilterHolder
 {
-  public TaskIdResponseHeaderFilterHolder(String path, String taskId)
+  public TaskIdResponseHeaderFilterHolder(String path, @Nullable String taskId)
   {
     super(path,
           taskId == null

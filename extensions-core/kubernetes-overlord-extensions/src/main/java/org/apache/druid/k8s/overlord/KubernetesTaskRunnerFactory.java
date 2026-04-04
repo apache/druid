@@ -21,17 +21,21 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.common.CachingKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<KubernetesTaskRunner>
@@ -39,23 +43,27 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private final KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private final TaskLogs taskLogs;
   private final DruidKubernetesClient druidKubernetesClient;
+  private final DruidKubernetesCachingClient druidKubernetesCachingClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
   private final TaskAdapter taskAdapter;
+  private final ConfigManager configManager;
   private final Set<String> adapterTypeAllowingTasksInDifferentNamespaces = Set.of(PodTemplateTaskAdapter.TYPE);
 
   @Inject
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       @EscalatedGlobal final HttpClient httpClient,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig,
       TaskLogs taskLogs,
       DruidKubernetesClient druidKubernetesClient,
       ServiceEmitter emitter,
-      TaskAdapter taskAdapter
+      TaskAdapter taskAdapter,
+      ConfigManager configManager,
+      @Nullable DruidKubernetesCachingClient druidKubernetesCachingClient
   )
   {
     this.smileMapper = smileMapper;
@@ -63,19 +71,24 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
     this.taskLogs = taskLogs;
     this.druidKubernetesClient = druidKubernetesClient;
+    this.druidKubernetesCachingClient = druidKubernetesCachingClient;
     this.emitter = emitter;
     this.taskAdapter = taskAdapter;
+    this.configManager = configManager;
   }
 
   @Override
   public KubernetesTaskRunner build()
   {
     KubernetesPeonClient peonClient;
-    if (adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType())) {
-      peonClient = new KubernetesPeonClient(
-          druidKubernetesClient,
+    boolean enableCache = kubernetesTaskRunnerConfig.isUseK8sSharedInformers();
+    boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
+
+    if (enableCache && druidKubernetesCachingClient != null) {
+      peonClient = new CachingKubernetesPeonClient(
+          druidKubernetesCachingClient,
           kubernetesTaskRunnerConfig.getNamespace(),
-          kubernetesTaskRunnerConfig.getOverlordNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
           kubernetesTaskRunnerConfig.isDebugJobs(),
           emitter
       );
@@ -83,6 +96,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       peonClient = new KubernetesPeonClient(
           druidKubernetesClient,
           kubernetesTaskRunnerConfig.getNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
           kubernetesTaskRunnerConfig.isDebugJobs(),
           emitter
       );
@@ -93,8 +107,14 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
-        emitter
+        new KubernetesPeonLifecycleFactory(
+            peonClient,
+            taskLogs,
+            smileMapper,
+            kubernetesTaskRunnerConfig.getLogSaveTimeout().toStandardDuration().getMillis()
+        ),
+        emitter,
+        configManager
     );
     return runner;
   }

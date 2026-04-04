@@ -41,16 +41,6 @@ public class ExtensionsConfig
   private boolean useExtensionClassloaderFirst = false;
 
   @JsonProperty
-  private String hadoopDependenciesDir = "hadoop-dependencies";
-
-  @JsonProperty
-  private String hadoopContainerDruidClasspath = null;
-
-  //Only applicable when hadoopContainerDruidClasspath is explicitly specified.
-  @JsonProperty
-  private boolean addExtensionsToHadoopContainer = false;
-
-  @JsonProperty
   private LinkedHashSet<String> loadList;
 
   @JsonProperty
@@ -69,21 +59,6 @@ public class ExtensionsConfig
   public boolean isUseExtensionClassloaderFirst()
   {
     return useExtensionClassloaderFirst;
-  }
-
-  public String getHadoopDependenciesDir()
-  {
-    return hadoopDependenciesDir;
-  }
-
-  public String getHadoopContainerDruidClasspath()
-  {
-    return hadoopContainerDruidClasspath;
-  }
-
-  public boolean getAddExtensionsToHadoopContainer()
-  {
-    return addExtensionsToHadoopContainer;
   }
 
   public LinkedHashSet<String> getLoadList()
@@ -108,9 +83,6 @@ public class ExtensionsConfig
            "searchCurrentClassloader=" + searchCurrentClassloader +
            ", directory='" + directory + '\'' +
            ", useExtensionClassloaderFirst=" + useExtensionClassloaderFirst +
-           ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
-           ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
-           ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +
            ", loadList=" + loadList +
            '}';
   }

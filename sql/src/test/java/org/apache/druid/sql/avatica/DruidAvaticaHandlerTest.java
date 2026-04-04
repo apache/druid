@@ -39,8 +39,9 @@ import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
@@ -55,7 +56,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -90,6 +93,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
@@ -253,7 +257,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   // Default implementation is for JSON to allow debugging of tests.
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(
         druidMeta,
@@ -269,6 +273,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(new LifecycleModule())
         .addModule(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
@@ -282,6 +287,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                     .toInstance(AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build());
               binder.bind(DefaultQueryConfig.class)
                     .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
+              binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
@@ -572,6 +578,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE5),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -671,6 +683,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -1337,6 +1355,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testParameterBinding() throws SQLException
   {
+    testRequestLogger.clear();
     try (PreparedStatement statement = client.prepareStatement(
         "SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?")) {
       statement.setString(1, "abc");
@@ -1348,6 +1367,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of("cnt", 2L)
           ),
           rows
+      );
+      Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+      Assert.assertEquals(
+          List.of(
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
+              new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
+          ),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
       );
     }
   }

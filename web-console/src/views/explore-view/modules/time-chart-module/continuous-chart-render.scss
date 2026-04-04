@@ -41,17 +41,6 @@ $default-chart-color: $druid-brand;
       }
     }
 
-    .selected-bar {
-      fill: none;
-      stroke: #ffffff;
-      stroke-width: 1px;
-      opacity: 0.8;
-
-      &.finalized {
-        opacity: 1;
-      }
-    }
-
     .shifter {
       fill: white;
       fill-opacity: 0.2;
@@ -73,43 +62,10 @@ $default-chart-color: $druid-brand;
       }
     }
 
-    .h-gridline {
-      line {
-        stroke: $white;
-        stroke-dasharray: 5, 5;
-        opacity: 0.5;
-      }
-    }
-
     .now-line {
       stroke: $orange4;
       stroke-dasharray: 2, 2;
       opacity: 0.7;
-    }
-
-    .mark-bar {
-      fill: #00b6c3;
-    }
-
-    .mark-line {
-      stroke-width: 1.5px;
-      stroke: $default-chart-color;
-      fill: none;
-    }
-
-    .mark-area {
-      fill: $default-chart-color;
-      opacity: 0.5;
-    }
-
-    .single-point {
-      stroke: $default-chart-color;
-      opacity: 0.7;
-      stroke-width: 1.5px;
-    }
-
-    .selected-point {
-      fill: $default-chart-color;
     }
   }
 

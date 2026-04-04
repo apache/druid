@@ -24,12 +24,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.ColumnarFloatsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -134,12 +134,12 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     SerializerUtils.writeInt(channel, Ints.checkedCast(writer.getSerializedSize()));
-    writer.writeTo(channel, smoosher);
+    writer.writeTo(channel, fileBuilder);
     if (!nullRowsBitmap.isEmpty()) {
-      nullValueBitmapWriter.writeTo(channel, smoosher);
+      nullValueBitmapWriter.writeTo(channel, fileBuilder);
     }
   }
 }

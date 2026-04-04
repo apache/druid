@@ -114,6 +114,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -176,6 +177,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9Factory INDEX_MERGER_V9_FACTORY;
+  private static final IndexMergerV10Factory INDEX_MERGER_V10_FACTORY;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
 
@@ -183,6 +185,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
     INDEX_MERGER_V9_FACTORY = TEST_UTILS.getIndexMergerV9Factory();
+    INDEX_MERGER_V10_FACTORY = TEST_UTILS.getIndexMergerV10Factory();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
 
@@ -376,7 +379,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = IndexSpec.DEFAULT;
+    indexSpec = IndexSpec.getDefault();
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -437,7 +440,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
-    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, null);
+    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null);
     return taskStorage;
   }
 
@@ -484,18 +487,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     return new DataSegmentPusher()
     {
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
@@ -599,10 +590,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new CacheConfig(),
         new CachePopulatorStats(),
         INDEX_MERGER_V9_FACTORY,
+        INDEX_MERGER_V10_FACTORY,
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -677,7 +669,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -741,6 +733,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
                           new UniformGranularitySpec(
@@ -749,7 +742,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                               ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                           )
                       )
-                      .withObjectMapper(mapper)
                       .build(),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
@@ -1173,7 +1165,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -1262,7 +1254,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(

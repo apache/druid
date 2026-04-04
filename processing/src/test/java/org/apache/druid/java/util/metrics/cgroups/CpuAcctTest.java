@@ -63,9 +63,7 @@ public class CpuAcctTest
   @Test
   public void testWontCrash()
   {
-    final CpuAcct cpuAcct = new CpuAcct(cgroup -> {
-      throw new RuntimeException("Should still continue");
-    });
+    final CpuAcct cpuAcct = new CpuAcct(TestUtils.exceptionThrowingDiscoverer());
     final CpuAcct.CpuAcctMetric metric = cpuAcct.snapshot();
     Assert.assertEquals(0L, metric.cpuCount());
     Assert.assertEquals(0L, metric.usrTime());

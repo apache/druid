@@ -53,7 +53,7 @@ export const ColumnPickerMenu = function ColumnPickerMenu(props: ColumnPickerMen
       <InputGroup
         className="search-input"
         value={columnSearch}
-        onChange={e => setColumnSearch(e.target.value)}
+        onChange={e => setColumnSearch(e.target.value.trimStart())}
         placeholder="Search"
         autoFocus
       />

@@ -86,7 +86,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
 
       final String patternString = (String) patternExpr.getLiteralValue();
       this.arg = args.get(0);
-      this.pattern = Pattern.compile(StringUtils.nullToEmptyNonDruidDataString(patternString));
+      this.pattern = RegexpExprUtils.compilePattern(patternString, FN_NAME);
     }
 
     @Nonnull

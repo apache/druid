@@ -168,7 +168,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
   @Test
   public void test_case_long_double()
   {
-    final FallbackVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
+    final ExprVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
         new Function.CaseSimpleFunc(),
         ImmutableList.of(
             Parser.parse("long + double", ExprMacroTable.nil()),
@@ -200,7 +200,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
   @Test
   public void test_upper_string()
   {
-    final FallbackVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
+    final ExprVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
         new Function.UpperFunc(),
         ImmutableList.of(
             Parser.parse("str", ExprMacroTable.nil())
@@ -220,7 +220,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
   @Test
   public void test_concat_string_doubleNoNulls()
   {
-    final FallbackVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
+    final ExprVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
         new Function.ConcatFunc(),
         ImmutableList.of(
             Parser.parse("str", ExprMacroTable.nil()),
@@ -241,7 +241,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
   @Test
   public void test_array_length()
   {
-    final FallbackVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
+    final ExprVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
         new Function.ArrayLengthFunction(),
         ImmutableList.of(
             Parser.parse("arr", ExprMacroTable.nil())
@@ -269,7 +269,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
   @Test
   public void test_array_concat()
   {
-    final FallbackVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
+    final ExprVectorProcessor<Object[]> processor = FallbackVectorProcessor.create(
         new Function.ArrayConcatFunction(),
         ImmutableList.of(
             Parser.parse("arr", ExprMacroTable.nil()),

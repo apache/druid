@@ -469,7 +469,9 @@ public class PartialDimensionDistributionTaskTest
       Supplier<PartialDimensionDistributionTask.DedupInputRowFilter> supplier =
           dedupRowDimValueFilterSupplier == null
           ? () -> new PartialDimensionDistributionTask.DedupInputRowFilter(
-              dataSchema.getGranularitySpec().getQueryGranularity()
+              dataSchema.getGranularitySpec().getQueryGranularity(),
+              null,
+              null
           )
           : dedupRowDimValueFilterSupplier;
 

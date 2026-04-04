@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -39,23 +38,14 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
 
   private final KeyedDiff diff = new KeyedDiff();
 
-  private Map<String, String[]> dimensions;
-
   public JvmCpuMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
-  public JvmCpuMonitor(Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
-  }
-
-  public JvmCpuMonitor(Map<String, String[]> dimensions, String feed)
+  public JvmCpuMonitor(String feed)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
   }
 
   @Override
@@ -65,7 +55,6 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
     try {
       ProcCpu procCpu = sigar.getProcCpu(currentProcessId);
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // delta for total, sys, user
       Map<String, Long> procDiff = diff.to(
           "proc/cpu", ImmutableMap.of(

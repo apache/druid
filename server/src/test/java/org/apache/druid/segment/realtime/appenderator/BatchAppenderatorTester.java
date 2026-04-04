@@ -21,8 +21,6 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -137,21 +135,10 @@ public class BatchAppenderatorTester implements AutoCloseable
     objectMapper = new DefaultObjectMapper();
     objectMapper.registerSubtypes(LinearShardSpec.class);
 
-    final Map<String, Object> parserMap = objectMapper.convertValue(
-        new MapInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("ts", "auto", null),
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                null
-            )
-        ),
-        Map.class
-    );
-
     schema = DataSchema.builder()
                        .withDataSource(DATASOURCE)
+                       .withTimestamp(new TimestampSpec("ts", "auto", null))
+                       .withDimensions(DimensionsSpec.EMPTY)
                        .withAggregators(
                            new CountAggregatorFactory("count"),
                            new LongSumAggregatorFactory("met", "met")
@@ -159,8 +146,6 @@ public class BatchAppenderatorTester implements AutoCloseable
                        .withGranularity(
                            new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
                        )
-                       .withParserMap(parserMap)
-                       .withObjectMapper(objectMapper)
                        .build();
 
     tuningConfig = new TestAppenderatorConfig(
@@ -168,13 +153,14 @@ public class BatchAppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         0,
         false,
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+        null
     );
     metrics = new SegmentGenerationMetrics();
 
@@ -195,19 +181,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     DataSegmentPusher dataSegmentPusher = new DataSegmentPusher()
     {
       private boolean mustFail = true;
-
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
-
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException

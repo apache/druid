@@ -33,10 +33,10 @@ export interface LookupsCardProps {
 export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardProps) {
   const [lookupsCountState] = useQueryManager<Capabilities, number>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasCoordinatorAccess()) {
         const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status', {
-          cancelToken,
+          signal,
         });
         const data = resp.data;
         return sum(Object.keys(data).map(k => Object.keys(data[k]).length));

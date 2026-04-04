@@ -80,6 +80,7 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
+  private String testClassName;
   private EmbeddedHostname embeddedHostname = EmbeddedHostname.localhost();
   private boolean startedFirstDruidServer = false;
 
@@ -142,6 +143,21 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   {
     addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
     extensionModules.add(LatchableEmitterModule.class);
+    return this;
+  }
+
+  /**
+   * Configures this cluster to use the given default timeout with the
+   * {@link LatchableEmitter}. Slow tests may set a higher value for the timeout
+   * to avoid failures. If the cluster does not {@link #useLatchableEmitter()},
+   * this method has no effect. The default timeout is 10 seconds.
+   */
+  public EmbeddedDruidCluster useDefaultTimeoutForLatchableEmitter(long timeoutSeconds)
+  {
+    addCommonProperty(
+        "druid.emitter.latching.defaultWaitTimeoutMillis",
+        String.valueOf(timeoutSeconds * 1000)
+    );
     return this;
   }
 
@@ -232,6 +248,16 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   {
     this.embeddedHostname = EmbeddedHostname.containerFriendly();
     return this;
+  }
+
+  public void setTestClassName(String testClassName)
+  {
+    this.testClassName = testClassName;
+  }
+
+  public String getTestClassName()
+  {
+    return testClassName;
   }
 
   /**

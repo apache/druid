@@ -127,7 +127,9 @@ public class SupervisorStateManager
    */
   public synchronized void maybeSetState(State proposedState)
   {
-    if (BasicState.STOPPING.equals(this.supervisorState)) {
+    if (BasicState.STOPPING.equals(this.supervisorState) || BasicState.STOPPING.equals(proposedState)) {
+      // STOPPING takes precedence over all other states
+      supervisorState = BasicState.STOPPING;
       return;
     }
 

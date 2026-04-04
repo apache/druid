@@ -68,6 +68,7 @@ public class PostAggregatorIds
   public static final byte KLL_FLOATS_SKETCH_TO_STRING_CACHE_TYPE_ID = 44;
   public static final byte SPECTATOR_HISTOGRAM_SKETCH_PERCENTILE_CACHE_TYPE_ID = 45;
   public static final byte SPECTATOR_HISTOGRAM_SKETCH_PERCENTILES_CACHE_TYPE_ID = 46;
+  public static final byte SPECTATOR_HISTOGRAM_SKETCH_COUNT_CACHE_TYPE_ID = 47;
   public static final byte DDSKETCH_QUANTILES_TYPE_ID = 51;
   public static final byte DDSKETCH_QUANTILE_TYPE_ID = 52;
   public static final byte BITMAP64_EXACT_COUNT_TYPE_ID = 53;

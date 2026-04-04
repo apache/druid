@@ -22,13 +22,14 @@ package org.apache.druid.segment.vector;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import junitparams.converters.Nullable;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
@@ -84,11 +85,10 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
       )
   );
 
-  private static final MapInputRowParser OLD_SCHOOL = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TS, "iso", null),
-          DIMS
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TS, "iso", null),
+      DIMS,
+      ColumnsFilter.all()
   );
 
   private static Map<String, Object> makeRow(
@@ -143,12 +143,12 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
                                 .build()
                         )
                         .rows(
-                            RAW_ROWS.stream().sequential().map(r -> OLD_SCHOOL.parseBatch(r).get(0)).collect(Collectors.toList())
+                            RAW_ROWS.stream().map(r -> MapInputRowParser.parse(SCHEMA, r)).collect(Collectors.toList())
                         )
                         .buildMMappedIndex();
 
     closer.register(index);
-    theCache = new ColumnCache(index, closer);
+    theCache = new ColumnCache(index, VirtualColumns.EMPTY, closer);
   }
 
   @After
@@ -162,7 +162,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY
@@ -204,7 +203,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY
@@ -256,7 +254,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, RAW_ROWS.size());
     QueryableIndexVectorColumnSelectorFactory factory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
         offset,
         theCache,
         VirtualColumns.EMPTY

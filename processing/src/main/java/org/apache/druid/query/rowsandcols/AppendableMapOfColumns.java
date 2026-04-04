@@ -79,4 +79,14 @@ public class AppendableMapOfColumns implements AppendableRowsAndColumns
     }
     return retVal;
   }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> T as(Class<T> clazz)
+  {
+    if (AppendableRowsAndColumns.class.equals(clazz)) {
+      return (T) this;
+    }
+    return null;
+  }
 }

@@ -19,6 +19,7 @@
 import { Capabilities } from '../../helpers';
 import { QueryState } from '../../utils';
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ServicesView } from './services-view';
 
@@ -88,7 +89,7 @@ describe('ServicesView', () => {
   it('renders data', () => {
     const comp = (
       <ServicesView
-        filters={[]}
+        filters={TableFilters.empty()}
         onFiltersChange={() => {}}
         goToQuery={() => {}}
         capabilities={Capabilities.FULL}

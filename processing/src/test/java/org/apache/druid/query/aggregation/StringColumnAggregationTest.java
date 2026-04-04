@@ -26,7 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -37,8 +37,10 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
@@ -101,15 +103,22 @@ public class StringColumnAggregationTest
         tempFolder
     );
 
-    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
-        inputRows.iterator(),
-        new NoopInputRowParser(null),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        0,
-        Granularities.NONE,
-        100,
-        false
-    );
+    IncrementalIndex index =
+        IndexBuilder.create()
+                    .rows(inputRows)
+                    .schema(
+                        IncrementalIndexSchema.builder()
+                                              .withDimensionsSpec(
+                                                  DimensionsSpec.builder()
+                                                                .setDefaultSchemaDimensions(dimensions)
+                                                                .build()
+                                              )
+                                              .withMetrics(
+                                                  new CountAggregatorFactory("count")
+                                              )
+                                              .build()
+                    )
+                    .buildIncrementalIndex();
 
     this.segments = ImmutableList.of(
         new IncrementalIndexSegment(index, SegmentId.dummy("test")),

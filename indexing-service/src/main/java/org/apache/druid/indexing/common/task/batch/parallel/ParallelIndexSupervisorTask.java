@@ -59,6 +59,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -761,6 +762,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       if (cardinalityRunner.getReports().isEmpty()) {
         String msg = "No valid rows for hash partitioning."
                      + " All rows may have invalid timestamps or have been filtered out.";
+
         LOG.warn(msg);
         return TaskStatus.success(getId(), msg);
       }
@@ -876,8 +878,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       if (intervalToPartitions.isEmpty()) {
         String msg = "No valid rows for range partitioning."
                      + " All rows may have invalid timestamps or multiple dimension values.";
-        LOG.warn(msg);
-        return TaskStatus.success(getId(), msg);
+
+        if (getIngestionMode() == IngestionMode.REPLACE) {
+          // In REPLACE mode, publish segments (and tombstones, when called for) even when no new data was produced
+          publishSegments(toolbox, Collections.emptyMap());
+          TaskStatus taskStatus = TaskStatus.success(getId(), msg);
+          updateAndWriteCompletionReports(taskStatus);
+          return taskStatus;
+        } else {
+          LOG.warn(msg);
+          return TaskStatus.success(getId(), msg);
+        }
       }
     }
     catch (Exception e) {
@@ -1162,11 +1173,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         Tasks.STORE_COMPACTION_STATE_KEY,
         Tasks.DEFAULT_STORE_COMPACTION_STATE
     );
-    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = addCompactionStateToSegments(
-        storeCompactionState,
-        toolbox,
-        ingestionSchema
+    final String indexingStateFingerprint = getContextValue(
+        Tasks.INDEXING_STATE_FINGERPRINT_KEY,
+        null
     );
+
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
+        addCompactionStateToSegments(
+            storeCompactionState,
+            toolbox,
+            ingestionSchema
+        ).andThen(
+            addIndexingStateFingerprintToSegments(indexingStateFingerprint)
+        );
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1202,7 +1221,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
       emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
-
+      emitMetric(toolbox.getEmitter(), "ingest/rows/published", IndexTaskUtils.getTotalRowCount(newSegments));
     } else {
       throw new ISE("Failed to publish segments");
     }
@@ -1602,11 +1621,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       return (RowIngestionMetersTotals) buildSegmentsRowStats;
     } else if (buildSegmentsRowStats instanceof Map) {
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
+      Map<String, Integer> thrownAwayByReason = (Map) buildSegmentsRowStatsMap.get("thrownAwayByReason");
       return new RowIngestionMetersTotals(
           ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
+          // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+          thrownAwayByReason != null ? CollectionUtils.mapValues(thrownAwayByReason, Integer::longValue) : null,
           ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
       );
     } else {
@@ -1814,6 +1836,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
+    try {
+      toolbox.getDataSegmentKiller().killRecursively(
+          DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
+      );
+    }
+    catch (IOException e) {
+      LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
+    }
+
     if (!isCompactionTask) {
       super.cleanUp(toolbox, taskStatus);
     }

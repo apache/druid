@@ -21,17 +21,25 @@ package org.apache.druid.test.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,12 +51,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestSegmentCacheManager extends NoopSegmentCacheManager
 {
   private final List<DataSegment> cachedSegments;
+  private final Map<SegmentId, ReferenceCountedSegmentProvider> referenceProviders;
+  private final Map<SegmentId, DataSegment> segmentLookup;
 
   private final List<DataSegment> observedBootstrapSegments;
-  private final List<DataSegment> observedBootstrapSegmentsLoadedIntoPageCache;
   private final List<DataSegment> observedSegments;
-  private final List<DataSegment> observedSegmentsLoadedIntoPageCache;
-  private final List<DataSegment> observedSegmentsRemovedFromCache;
+  private final Set<SegmentId> observedSegmentsRemovedFromCache;
   private final AtomicInteger observedShutdownBootstrapCount;
 
   public TestSegmentCacheManager()
@@ -59,16 +67,26 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   public TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
   {
     this.cachedSegments = ImmutableList.copyOf(segmentsToCache);
+    this.referenceProviders = new ConcurrentHashMap<>();
+    this.segmentLookup = new ConcurrentHashMap<>();
 
     // While inneficient, these CopyOnWriteArrayList objects greatly simplify meeting the thread
     // safety mandate from SegmentCacheManager. For testing, this should be ok.
     this.observedBootstrapSegments = new CopyOnWriteArrayList<>();
-    this.observedBootstrapSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
     this.observedSegments = new CopyOnWriteArrayList<>();
-    this.observedSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
-    this.observedSegmentsRemovedFromCache = new CopyOnWriteArrayList<>();
+    this.observedSegmentsRemovedFromCache = ConcurrentHashMap.newKeySet();
 
     this.observedShutdownBootstrapCount = new AtomicInteger(0);
+  }
+
+  /**
+   * Registers a pre-built segment, so that {@link #acquireSegment} and {@link #acquireCachedSegment}
+   * will return this segment instead of creating one from the DataSegment's loadSpec.
+   */
+  public void registerSegment(final DataSegment dataSegment, final Segment segment)
+  {
+    segmentLookup.put(dataSegment.getId(), dataSegment);
+    referenceProviders.put(dataSegment.getId(), ReferenceCountedSegmentProvider.of(segment));
   }
 
   @Override
@@ -84,45 +102,67 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
-    return getSegmentInternal(segment);
+    getSegmentInternal(segment);
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getSegment(final DataSegment segment)
+  public void load(final DataSegment segment)
   {
     observedSegments.add(segment);
-    return getSegmentInternal(segment);
+    getSegmentInternal(segment);
   }
 
   private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)
   {
-    if (segment.isTombstone()) {
-      return ReferenceCountedSegmentProvider
-          .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-    } else {
-      return ReferenceCountedSegmentProvider.wrapSegment(
-          new TestSegmentUtils.SegmentForTesting(
-              segment.getDataSource(),
-              (Interval) segment.getLoadSpec().get("interval"),
-              MapUtils.getString(segment.getLoadSpec(), "version")
-          ), segment.getShardSpec()
-      );
+    segmentLookup.putIfAbsent(segment.getId(), segment);
+    return referenceProviders.compute(
+        segment.getId(),
+        (id, existingProvider) -> {
+          if (existingProvider == null) {
+            final DataSegment s = segmentLookup.get(id);
+            if (s.isTombstone()) {
+              return ReferenceCountedSegmentProvider.of(TombstoneSegmentizerFactory.segmentForTombstone(s));
+            } else {
+              return ReferenceCountedSegmentProvider.of(
+                  new TestSegmentUtils.SegmentForTesting(
+                      s.getDataSource(),
+                      (Interval) s.getLoadSpec().get("interval"),
+                      MapUtils.getString(s.getLoadSpec(), "version")
+                  )
+              );
+            }
+          }
+          return existingProvider;
+        }
+    );
+  }
+
+  @Override
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  {
+    if (observedSegmentsRemovedFromCache.contains(segmentId)) {
+      return Optional.empty();
     }
+    final ReferenceCountedSegmentProvider provider = referenceProviders.get(segmentId);
+    if (provider == null) {
+      return Optional.empty();
+    }
+    return provider.acquireReference();
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
-    observedSegmentsLoadedIntoPageCache.add(segment);
-  }
-
-  @Override
-  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
-  {
-    observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
+    if (observedSegmentsRemovedFromCache.contains(dataSegment.getId())) {
+      return AcquireSegmentAction.missingSegment();
+    }
+    return new AcquireSegmentAction(
+        () -> Futures.immediateFuture(AcquireSegmentResult.cached(getSegmentInternal(dataSegment))),
+        null
+    );
   }
 
   @Override
@@ -132,19 +172,28 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
+  public void shutdown()
+  {
+    // do nothing
+  }
+
+  @Override
   public void storeInfoFile(DataSegment segment)
   {
+    // do nothing
   }
 
   @Override
   public void removeInfoFile(DataSegment segment)
   {
+    // do nothing
   }
 
   @Override
-  public void cleanup(DataSegment segment)
+  public void drop(DataSegment segment)
   {
-    observedSegmentsRemovedFromCache.add(segment);
+    getSegmentInternal(segment).close();
+    observedSegmentsRemovedFromCache.add(segment.getId());
   }
 
   public List<DataSegment> getObservedBootstrapSegments()
@@ -152,22 +201,13 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     return observedBootstrapSegments;
   }
 
-  public List<DataSegment> getObservedBootstrapSegmentsLoadedIntoPageCache()
-  {
-    return observedBootstrapSegmentsLoadedIntoPageCache;
-  }
-
   public List<DataSegment> getObservedSegments()
   {
     return observedSegments;
   }
 
-  public List<DataSegment> getObservedSegmentsLoadedIntoPageCache()
-  {
-    return observedSegmentsLoadedIntoPageCache;
-  }
 
-  public List<DataSegment> getObservedSegmentsRemovedFromCache()
+  public Set<SegmentId> getObservedSegmentsRemovedFromCache()
   {
     return observedSegmentsRemovedFromCache;
   }

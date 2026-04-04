@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write;
 
-import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
@@ -304,12 +303,13 @@ public class RowBasedFrameWriter implements FrameWriter
                                       .column(signature.getColumnName(i))
                                       .build();
       }
-      catch (ParseException pe) {
-        throw Throwables.propagate(pe);
+      catch (DruidException | ParseException e) {
+        throw e;
       }
       catch (Exception e) {
         throw InvalidFieldException.builder().column(signature.getColumnName(i))
                                    .errorMsg(e.getMessage())
+                                   .cause(e)
                                    .build();
       }
 

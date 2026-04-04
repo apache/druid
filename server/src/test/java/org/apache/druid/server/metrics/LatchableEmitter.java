@@ -24,6 +24,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -63,11 +66,17 @@ public class LatchableEmitter extends StubServiceEmitter
   private final List<Event> processedEvents = new ArrayList<>();
 
   /**
+   * Default timeout to use while waiting for events.
+   */
+  private final long defaultWaitTimeoutMillis;
+
+  /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host)
+  public LatchableEmitter(String service, String host, LatchableEmitterConfig config, TaskHolder taskHolder)
   {
-    super(service, host);
+    super(service, host, taskHolder);
+    this.defaultWaitTimeoutMillis = config.getDefaultWaitTimeoutMillis();
   }
 
   @Override
@@ -104,7 +113,8 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Waits until an event that satisfies the given predicate is emitted.
+   * Waits until an event that satisfies the given predicate is emitted, considering all previously observed events
+   * since the last call to {@link #flush()} as potential candidates for match as well.
    *
    * @param condition     condition to wait for
    * @param timeoutMillis timeout, or negative to not use a timeout
@@ -117,7 +127,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for event");
+        throw new ISE("Timed out waiting for event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {
@@ -129,15 +139,57 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Wait indefinitely until a metric event that matches the given condition is emitted.
+   * Waits until the next event that satisfies the given predicate is emitted. This method should only be called
+   * if the caller is certain that a metric matching the condition is going to be emitted, such as from a monitor.
+   *
+   * @param condition     condition to wait for
+   * @param timeoutMillis timeout, or negative to not use a timeout
+   */
+  public void waitForNextEvent(Predicate<Event> condition, long timeoutMillis)
+  {
+    final WaitCondition waitCondition = new WaitCondition(condition);
+    registerWaitConditionNextEvent(waitCondition);
+
+    try {
+      final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
+      if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
+        throw new ISE("Timed out waiting for next event after [%,d]ms", awaitTime);
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      waitConditions.remove(waitCondition);
+    }
+  }
+
+  /**
+   * Wait until a metric event that matches the given condition is emitted, considering all previously observed events
+   * since the last call to {@link #flush()} as potential candidates for match as well.
+   * Uses the {@link LatchableEmitterConfig#defaultWaitTimeoutMillis}.
    */
   public ServiceMetricEvent waitForEvent(UnaryOperator<EventMatcher> condition)
   {
     final EventMatcher matcher = condition.apply(new EventMatcher());
     waitForEvent(
-        event -> event instanceof ServiceMetricEvent
-                 && matcher.test((ServiceMetricEvent) event),
-        -1
+        event -> event instanceof ServiceMetricEvent && matcher.test((ServiceMetricEvent) event),
+        defaultWaitTimeoutMillis
+    );
+    return matcher.matchingEvent.get();
+  }
+
+  /**
+   * Wait until the next metric event that matches the given condition is emitted. This method should only be called
+   * if the caller is certain that a metric matching the condition is going to be emitted, such as from a monitor.
+   * Uses the {@link LatchableEmitterConfig#defaultWaitTimeoutMillis}.
+   */
+  public ServiceMetricEvent waitForNextEvent(UnaryOperator<EventMatcher> condition)
+  {
+    final EventMatcher matcher = condition.apply(new EventMatcher());
+    waitForNextEvent(
+        event -> event instanceof ServiceMetricEvent && matcher.test((ServiceMetricEvent) event),
+        defaultWaitTimeoutMillis
     );
     return matcher.matchingEvent.get();
   }
@@ -158,7 +210,7 @@ public class LatchableEmitter extends StubServiceEmitter
         event -> event instanceof ServiceMetricEvent
                  && eventMatcher.test((ServiceMetricEvent) event)
                  && aggregateMatcher.test((ServiceMetricEvent) event),
-        300_000
+        defaultWaitTimeoutMillis
     );
   }
 
@@ -218,6 +270,17 @@ public class LatchableEmitter extends StubServiceEmitter
     }
   }
 
+  /**
+   * Evaluates the given new condition for all past events and then adds it to
+   * {@link #waitConditions}.
+   */
+  private void registerWaitConditionNextEvent(WaitCondition condition)
+  {
+    eventProcessingLock.lock();
+    waitConditions.add(condition);
+    eventProcessingLock.unlock();
+  }
+
   private static class WaitCondition
   {
     private final Predicate<Event> predicate;
@@ -238,8 +301,8 @@ public class LatchableEmitter extends StubServiceEmitter
     private String host;
     private String service;
     private String metricName;
-    private Long metricValue;
-    private final Map<String, Object> dimensions = new HashMap<>();
+    private Matcher<Long> valueMatcher;
+    private final Map<String, Matcher<Object>> dimensionMatchers = new HashMap<>();
 
     private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
 
@@ -253,12 +316,11 @@ public class LatchableEmitter extends StubServiceEmitter
     }
 
     /**
-     * Matches an event only if it has a metric value equal to or greater than
-     * the given value.
+     * Matches an event only if the metric value satisfies the given matcher.
      */
-    public EventMatcher hasValueAtLeast(long metricValue)
+    public EventMatcher hasValueMatching(Matcher<Long> valueMatcher)
     {
-      this.metricValue = metricValue;
+      this.valueMatcher = valueMatcher;
       return this;
     }
 
@@ -267,7 +329,16 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Object value)
     {
-      dimensions.put(dimension, value);
+      dimensionMatchers.put(dimension, Matchers.equalTo(value));
+      return this;
+    }
+
+    /**
+     * Matches an event if the value of the given dimension satisfies the matcher.
+     */
+    public EventMatcher hasDimensionMatching(String dimension, Matcher<Object> matcher)
+    {
+      dimensionMatchers.put(dimension, matcher);
       return this;
     }
 
@@ -294,7 +365,7 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (metricValue != null && event.getValue().longValue() < metricValue) {
+      } else if (valueMatcher != null && !valueMatcher.matches(event.getValue())) {
         return false;
       } else if (service != null && !service.equals(event.getService())) {
         return false;
@@ -302,10 +373,8 @@ public class LatchableEmitter extends StubServiceEmitter
         return false;
       }
 
-      final boolean matches = dimensions.entrySet().stream().allMatch(
-          dimValue -> event.getUserDims()
-                           .getOrDefault(dimValue.getKey(), "")
-                           .equals(dimValue.getValue())
+      final boolean matches = dimensionMatchers.entrySet().stream().allMatch(
+          dimValue -> dimValue.getValue().matches(event.getUserDims().get(dimValue.getKey()))
       );
 
       if (matches) {

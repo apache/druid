@@ -29,7 +29,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -43,6 +45,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -54,6 +57,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -74,8 +79,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -98,6 +106,7 @@ import java.util.stream.Collectors;
 public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 {
   private static final EmittingLogger log = new EmittingLogger(KubernetesTaskRunner.class);
+  private static final String OBSERVER_KEY = "k8s-task-runner-capacity-%s";
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   // to cleanup old jobs that might not have been deleted.
@@ -109,11 +118,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final KubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
   private final ListeningExecutorService exec;
+  private final ThreadPoolExecutor tpe;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
+
+  private final AtomicInteger currentCapacity;
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -121,7 +133,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ConfigManager configManager
   )
   {
     this.adapter = adapter;
@@ -130,10 +143,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.httpClient = httpClient;
     this.peonLifecycleFactory = peonLifecycleFactory;
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
-    this.exec = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
-    );
     this.emitter = emitter;
+
+    this.currentCapacity = new AtomicInteger(config.getCapacity());
+    this.tpe = new ThreadPoolExecutor(currentCapacity.get(), currentCapacity.get(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
+    this.exec = MoreExecutors.listeningDecorator(this.tpe);
+    configManager.addListener(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, StringUtils.format(OBSERVER_KEY, Thread.currentThread().getId()), this::syncCapacityWithDynamicConfig);
   }
 
   @Override
@@ -175,6 +190,24 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           )
       ));
     }
+  }
+
+  private void syncCapacityWithDynamicConfig(KubernetesTaskRunnerDynamicConfig config)
+  {
+    int newCapacity = config.getCapacity();
+    if (newCapacity == currentCapacity.get()) {
+      return;
+    }
+    log.info("Adjusting k8s task runner capacity from [%d] to [%d]", currentCapacity.get(), newCapacity);
+    // maximum pool size must always be greater than or equal to the core pool size
+    if (newCapacity < currentCapacity.get()) {
+      tpe.setCorePoolSize(newCapacity);
+      tpe.setMaximumPoolSize(newCapacity);
+    } else {
+      tpe.setMaximumPoolSize(newCapacity);
+      tpe.setCorePoolSize(newCapacity);
+    }
+    currentCapacity.set(newCapacity);
   }
 
   private TaskStatus runTask(Task task)
@@ -221,8 +254,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
       return taskStatus;
     }
+    catch (KubernetesResourceNotFoundException e) {
+      // The stack trace of this error is less informative than the message, in surfacing the root cause of the problem.
+      log.error("Task[%s] failed because %s", task.getId(), e.getMessage());
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(e.getMessage());
+    }
     catch (Exception e) {
-      log.error(e, "Task [%s] execution caught an exception", task.getId());
+      log.error(e, "Task[%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
   }
@@ -285,7 +325,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     synchronized (tasks) {
       tasks.remove(taskid);
     }
-    
+
   }
 
   @Override
@@ -411,7 +451,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) currentCapacity.get());
   }
 
   @Override
@@ -429,13 +469,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, currentCapacity.get() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(currentCapacity.get(), tasks.size()));
   }
 
   @Override
@@ -526,7 +566,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public int getTotalCapacity()
   {
-    return config.getCapacity();
+    return currentCapacity.get();
   }
 
   @Override

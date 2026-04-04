@@ -113,4 +113,13 @@ public final class ExprEvalObjectVector extends BaseExprEvalVector<Object[]>
   {
     return values;
   }
+
+  @Override
+  public boolean elementAsBoolean(int index)
+  {
+    if (type.is(ExprType.STRING)) {
+      return Evals.asBoolean((String) values[index]);
+    }
+    return ExprEval.ofType(type, values[index]).asBoolean();
+  }
 }

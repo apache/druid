@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -181,21 +182,20 @@ public interface Expr extends Cacheable
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
-   *
-   * @param inspector
+   * <p>
+   * Note that this method is insufficient by itself for determining to use vector processors, as it only checks whether
+   * the expression tree itself supports vectorization, but ignores schema-level constraints that
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner} enforces.
+   * <p>
+   * Most callers should instead prefer to use
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner#plan(ColumnInspector, Expr)} and check for
+   * {@link org.apache.druid.segment.virtual.ExpressionPlan.Trait#VECTORIZABLE} on the resulting plan.
    */
   default boolean canVectorize(InputBindingInspector inspector)
   {
     return false;
   }
 
-
-  default boolean canFallbackVectorize(InputBindingInspector inspector, List<Expr> args)
-  {
-    return ExpressionProcessing.allowVectorizeFallback() &&
-           getOutputType(inspector) != null &&
-           inspector.canVectorize(args);
-  }
   /**
    * Possibly convert the {@link Expr} into an optimized, possibly not thread-safe {@link Expr}. Does not convert
    * child {@link Expr}. Most callers should use {@link Expr#singleThreaded(Expr, InputBindingInspector)} to convert

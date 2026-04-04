@@ -36,8 +36,8 @@ export const ExecutionStagesPaneLoader = React.memo(function ExecutionStagesPane
 
   const [executionState, queryManager] = useQueryManager<string, Execution>({
     initQuery: id,
-    processQuery: (id, cancelToken) => {
-      return getTaskExecution(id, undefined, cancelToken);
+    processQuery: (id, signal) => {
+      return getTaskExecution(id, undefined, signal);
     },
   });
 

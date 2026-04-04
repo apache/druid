@@ -73,6 +73,10 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
         documentation: 'Enable vectorized query execution',
       },
       {
+        value: 'realtimeSegmentsOnly',
+        documentation: 'Whether to query only realtime segments',
+      },
+      {
         value: 'vectorSize',
         documentation: 'Vector size for vectorized execution',
       },
@@ -106,6 +110,7 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'forceSegmentSortByTime', documentation: 'Force segments to be sorted by time' },
       { value: 'includeAllCounters', documentation: 'Include all counters in task reports' },
       // SQL specific
+      { value: 'sqlQueryId', documentation: 'Query ID for SQL queries' },
       { value: 'sqlTimeZone', documentation: 'Time zone for SQL queries' },
       { value: 'useApproximateCountDistinct', documentation: 'Use approximate COUNT DISTINCT' },
       { value: 'useApproximateTopN', documentation: 'Use approximate TOP N queries' },

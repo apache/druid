@@ -19,324 +19,79 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+
 import java.util.List;
 import java.util.Map;
 
-public class KubernetesTaskRunnerConfig
+public interface KubernetesTaskRunnerConfig
 {
-  @JsonProperty
-  @NotNull
-  private String namespace;
+  String getNamespace();
 
-  @JsonProperty
-  private String k8sTaskPodNamePrefix = "";
+  String getOverlordNamespace();
 
-  // This property is the namespace that the Overlord is running in.
-  // For cases where we want task pods to run on different namespace from the overlord, we need to specify the namespace of the overlord here.
-  // Else, we can simply leave this field alone.
-  @JsonProperty
-  private String overlordNamespace = "";
+  String getK8sTaskPodNamePrefix();
 
-  @JsonProperty
-  private boolean debugJobs = false;
+  boolean isDebugJobs();
+
+  @Deprecated
+  boolean isSidecarSupport();
+
+  String getPrimaryContainerName();
+
+  String getKubexitImage();
+
+  Long getGraceTerminationPeriodSeconds();
+
+  boolean isDisableClientProxy();
+
+  Period getTaskTimeout();
+
+  Period getTaskJoinTimeout();
+
+  Period getTaskCleanupDelay();
+
+  Period getTaskCleanupInterval();
+
+  Period getTaskLaunchTimeout();
+
+  Period getLogSaveTimeout();
+
+  List<String> getPeonMonitors();
+
+  List<String> getJavaOptsArray();
+
+  int getCpuCoreInMicro();
+
+  Map<String, String> getLabels();
+
+  Map<String, String> getAnnotations();
+
+  Integer getCapacity();
 
   /**
-   * Deprecated, please specify adapter type runtime property instead
+   * Whether to use caching for Kubernetes resources tied to indexing tasks.
    * <p>
-   * I.E `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`
+   * Enabling shared informers can significantly reduce the number of API calls made to the Kubernetes API server,
+   * improving performance and reducing load on the server. However, it also increases memory usage as informers
+   * maintain local caches of resources.
+   * </p>
    */
-  @Deprecated
-  @JsonProperty
-  private boolean sidecarSupport = false;
+  boolean isUseK8sSharedInformers();
 
-  @JsonProperty
-  // if this is not set, then the first container in your pod spec is assumed to be the overlord container.
-  // usually this is fine, but when you are dynamically adding sidecars like istio, the service mesh could
-  // in fact place the istio-proxy container as the first container.  Thus, you would specify this value to
-  // the name of your primary container.  e.g. druid-overlord
-  private String primaryContainerName = null;
+  /**
+   * The resync period for the Kubernetes shared informers, if enabled.
+   * <p>
+   * Periodic resyncs ensure that the informer's local cache is kept up to date with the remote Kubernetes API server
+   * state. This helps handle missed events or transient errors.
+   * </p>
+   */
+  Period getK8sSharedInformerResyncPeriod();
 
-  @JsonProperty
-  // for multi-container jobs, we need this image to shut down sidecars after the main container
-  // has completed
-  private String kubexitImage = "karlkfi/kubexit:v0.3.2";
-
-  // how much time to wait for preStop hooks to execute
-  // lower number speeds up pod termination time to release locks
-  // faster, defaults to your k8s setup, usually 30 seconds.
-  private Long graceTerminationPeriodSeconds = null;
-
-  @JsonProperty
-  // disable using http / https proxy environment variables
-  private boolean disableClientProxy;
-
-  @JsonProperty
-  @NotNull
-  private Period maxTaskDuration = new Period("PT4H");
-
-  @JsonProperty
-  @NotNull
-  // how long to wait for the jobs to be cleaned up.
-  private Period taskCleanupDelay = new Period("P2D");
-
-  @JsonProperty
-  @NotNull
-  // interval for k8s job cleanup to run
-  private Period taskCleanupInterval = new Period("PT10m");
-
-  @JsonProperty
-  @NotNull
-  // how long to wait to join peon k8s jobs on startup
-  private Period taskJoinTimeout = new Period("PT1M");
-
-
-  @JsonProperty
-  @NotNull
-  // how long to wait for the peon k8s job to launch
-  private Period k8sjobLaunchTimeout = new Period("PT1H");
-
-  @JsonProperty
-  // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
-  // the peon inherits the monitors from the overlord, so if someone specifies
-  // a TaskCountStatsMonitor in the overlord for example, the peon process
-  // fails because it can not inject this monitor in the peon process.
-  private List<String> peonMonitors = ImmutableList.of();
-
-  @JsonProperty
-  @NotNull
-  private List<String> javaOptsArray = ImmutableList.of();
-
-  @JsonProperty
-  @NotNull
-  private int cpuCoreInMicro = 0;
-
-  @JsonProperty
-  @NotNull
-  private Map<String, String> labels = ImmutableMap.of();
-
-  @JsonProperty
-  @NotNull
-  private Map<String, String> annotations = ImmutableMap.of();
-
-  @JsonProperty
-  @Min(1)
-  @Max(Integer.MAX_VALUE)
-  @NotNull
-  private Integer capacity = Integer.MAX_VALUE;
-
-  public KubernetesTaskRunnerConfig()
-  {
-  }
-
-  private KubernetesTaskRunnerConfig(
-      @Nonnull String namespace,
-      String overlordNamespace,
-      String k8sTaskPodNamePrefix,
-      boolean debugJobs,
-      boolean sidecarSupport,
-      String primaryContainerName,
-      String kubexitImage,
-      Long graceTerminationPeriodSeconds,
-      boolean disableClientProxy,
-      Period maxTaskDuration,
-      Period taskCleanupDelay,
-      Period taskCleanupInterval,
-      Period k8sjobLaunchTimeout,
-      List<String> peonMonitors,
-      List<String> javaOptsArray,
-      int cpuCoreInMicro,
-      Map<String, String> labels,
-      Map<String, String> annotations,
-      Integer capacity,
-      Period taskJoinTimeout
-  )
-  {
-    this.namespace = namespace;
-    this.overlordNamespace = ObjectUtils.defaultIfNull(
-        overlordNamespace,
-        this.overlordNamespace
-    );
-    this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
-    this.debugJobs = ObjectUtils.defaultIfNull(
-        debugJobs,
-        this.debugJobs
-    );
-    this.sidecarSupport = ObjectUtils.defaultIfNull(
-        sidecarSupport,
-        this.sidecarSupport
-    );
-    this.primaryContainerName = ObjectUtils.defaultIfNull(
-        primaryContainerName,
-        this.primaryContainerName
-    );
-    this.kubexitImage = ObjectUtils.defaultIfNull(
-        kubexitImage,
-        this.kubexitImage
-    );
-    this.graceTerminationPeriodSeconds = ObjectUtils.defaultIfNull(
-        graceTerminationPeriodSeconds,
-        this.graceTerminationPeriodSeconds
-    );
-    this.disableClientProxy = disableClientProxy;
-    this.maxTaskDuration = ObjectUtils.defaultIfNull(
-        maxTaskDuration,
-        this.maxTaskDuration
-    );
-    this.taskCleanupDelay = ObjectUtils.defaultIfNull(
-        taskCleanupDelay,
-        this.taskCleanupDelay
-    );
-    this.taskCleanupInterval = ObjectUtils.defaultIfNull(
-        taskCleanupInterval,
-        this.taskCleanupInterval
-    );
-    this.k8sjobLaunchTimeout = ObjectUtils.defaultIfNull(
-        k8sjobLaunchTimeout,
-        this.k8sjobLaunchTimeout
-    );
-    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
-        taskJoinTimeout,
-        this.taskJoinTimeout
-    );
-    this.peonMonitors = ObjectUtils.defaultIfNull(
-        peonMonitors,
-        this.peonMonitors
-    );
-    this.javaOptsArray = ObjectUtils.defaultIfNull(
-        javaOptsArray,
-        this.javaOptsArray
-    );
-    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
-        cpuCoreInMicro,
-        this.cpuCoreInMicro
-    );
-    this.labels = ObjectUtils.defaultIfNull(
-        labels,
-        this.labels
-    );
-    this.annotations = ObjectUtils.defaultIfNull(
-        annotations,
-        this.annotations
-    );
-    this.capacity = ObjectUtils.defaultIfNull(
-        capacity,
-        this.capacity
-    );
-  }
-
-  public String getNamespace()
-  {
-    return namespace;
-  }
-
-  public String getOverlordNamespace()
-  {
-    return overlordNamespace;
-  }
-
-  public String getK8sTaskPodNamePrefix()
-  {
-    return k8sTaskPodNamePrefix;
-  }
-
-  public boolean isDebugJobs()
-  {
-    return debugJobs;
-  }
-
-  @Deprecated
-  public boolean isSidecarSupport()
-  {
-    return sidecarSupport;
-  }
-
-  public String getPrimaryContainerName()
-  {
-    return primaryContainerName;
-  }
-
-  public String getKubexitImage()
-  {
-    return kubexitImage;
-  }
-
-  public Long getGraceTerminationPeriodSeconds()
-  {
-    return graceTerminationPeriodSeconds;
-  }
-
-  public boolean isDisableClientProxy()
-  {
-    return disableClientProxy;
-  }
-
-  public Period getTaskTimeout()
-  {
-    return maxTaskDuration;
-  }
-
-  public Period getTaskJoinTimeout()
-  {
-    return taskJoinTimeout;
-  }
-
-
-  public Period getTaskCleanupDelay()
-  {
-    return taskCleanupDelay;
-  }
-
-  public Period getTaskCleanupInterval()
-  {
-    return taskCleanupInterval;
-  }
-
-  public Period getTaskLaunchTimeout()
-  {
-    return k8sjobLaunchTimeout;
-  }
-
-  public List<String> getPeonMonitors()
-  {
-    return peonMonitors;
-  }
-
-  public List<String> getJavaOptsArray()
-  {
-    return javaOptsArray;
-  }
-
-  public int getCpuCoreInMicro()
-  {
-    return cpuCoreInMicro;
-  }
-
-  public Map<String, String> getLabels()
-  {
-    return labels;
-  }
-
-  public Map<String, String> getAnnotations()
-  {
-    return annotations;
-  }
-
-  public Integer getCapacity()
-  {
-    return capacity;
-  }
-
-  public static Builder builder()
+  static Builder builder()
   {
     return new Builder();
   }
@@ -363,6 +118,9 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
+    private Period logSaveTimeout;
+    private boolean useK8sSharedInformers;
+    private Period k8sSharedInformerResyncPeriod;
 
     public Builder()
     {
@@ -489,9 +247,27 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public KubernetesTaskRunnerConfig build()
+    public Builder withLogSaveTimeout(Period logSaveTimeout)
     {
-      return new KubernetesTaskRunnerConfig(
+      this.logSaveTimeout = logSaveTimeout;
+      return this;
+    }
+
+    public Builder withUseK8sSharedInformers(boolean useK8sSharedInformers)
+    {
+      this.useK8sSharedInformers = useK8sSharedInformers;
+      return this;
+    }
+
+    public Builder withK8sSharedInformerResyncPeriod(Period k8sSharedInformerResyncPeriod)
+    {
+      this.k8sSharedInformerResyncPeriod = k8sSharedInformerResyncPeriod;
+      return this;
+    }
+
+    public KubernetesTaskRunnerStaticConfig build()
+    {
+      return new KubernetesTaskRunnerStaticConfig(
           this.namespace,
           this.overlordNamespace,
           this.k8sTaskPodNamePrefix,
@@ -505,13 +281,16 @@ public class KubernetesTaskRunnerConfig
           this.taskCleanupDelay,
           this.taskCleanupInterval,
           this.k8sjobLaunchTimeout,
+          this.logSaveTimeout,
           this.peonMonitors,
           this.javaOptsArray,
           this.cpuCoreInMicro,
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout
+          this.taskJoinTimeout,
+          this.useK8sSharedInformers,
+          this.k8sSharedInformerResyncPeriod
       );
     }
   }

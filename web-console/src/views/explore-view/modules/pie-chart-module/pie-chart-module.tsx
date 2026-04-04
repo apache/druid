@@ -129,11 +129,8 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQueries,
-      processQuery: async (
-        { mainQuery, limit, splitExpression, othersPartialQuery },
-        cancelToken,
-      ) => {
-        const result = await runSqlQuery({ query: mainQuery }, cancelToken);
+      processQuery: async ({ mainQuery, limit, splitExpression, othersPartialQuery }, signal) => {
+        const result = await runSqlQuery({ query: mainQuery }, signal);
         const data = result.toObjectArray();
 
         if (splitExpression && othersPartialQuery) {

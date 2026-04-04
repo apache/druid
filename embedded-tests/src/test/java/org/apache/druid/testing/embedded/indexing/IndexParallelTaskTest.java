@@ -129,33 +129,10 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   {
     final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
 
-    final TaskBuilder.IndexParallel indexTask =
-        TaskBuilder.ofTypeIndexParallel()
-                   .dataSource(dataSource)
-                   .timestampColumn("timestamp")
-                   .jsonInputFormat()
-                   .localInputSourceWithFiles(
-                       Resources.DataFile.tinyWiki1Json(),
-                       Resources.DataFile.tinyWiki2Json(),
-                       Resources.DataFile.tinyWiki3Json()
-                   )
-                   .segmentGranularity("DAY")
-                   .dimensions("namespace", "page", "language")
-                   .metricAggregates(
-                       new DoubleSumAggregatorFactory("added", "added"),
-                       new DoubleSumAggregatorFactory("deleted", "deleted"),
-                       new DoubleSumAggregatorFactory("delta", "delta"),
-                       new CountAggregatorFactory("count")
-                   )
-                   .tuningConfig(
-                       t -> t.withPartitionsSpec(partitionsSpec)
-                             .withForceGuaranteedRollup(isRollup)
-                             .withMaxNumConcurrentSubTasks(10)
-                             .withSplitHintSpec(new MaxSizeSplitHintSpec(1, null))
-                   );
+    final TaskBuilder.IndexParallel indexTask = buildIndexParallelTask(partitionsSpec, false);
 
     runTask(indexTask, dataSource);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     runQueries(dataSource);
 
     // Re-index into a different datasource, indexing 1 segment per sub-task
@@ -181,7 +158,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    );
 
     runTask(reindexTaskSplitBySegment, dataSource2);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator, broker);
     runQueries(dataSource2);
 
     // Re-index into a different datasource, indexing 1 file per sub-task
@@ -207,8 +184,62 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    );
 
     runTask(reindexTaskSplitByFile, dataSource3);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator, broker);
     runQueries(dataSource3);
+  }
+
+  @MethodSource("getTestParamPartitionsSpec")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_runIndexTask_andAppendData(PartitionsSpec partitionsSpec)
+  {
+    final TaskBuilder.IndexParallel initialTask = buildIndexParallelTask(partitionsSpec, false);
+    runTask(initialTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "10");
+    runGroupByQuery("Crimson Typhoon,1,905.0,9050.0");
+
+    final TaskBuilder.IndexParallel appendTask
+        = buildIndexParallelTask(new DynamicPartitionsSpec(null, null), true);
+    runTask(appendTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "20");
+    runGroupByQuery("Crimson Typhoon,2,1810.0,18100.0");
+  }
+
+  /**
+   * Creates a builder for an "index_parallel" task to ingest into {@link #dataSource}.
+   */
+  private TaskBuilder.IndexParallel buildIndexParallelTask(
+      PartitionsSpec partitionsSpec,
+      boolean appendToExisting
+  )
+  {
+    final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
+
+    return TaskBuilder.ofTypeIndexParallel()
+                      .dataSource(dataSource)
+                      .timestampColumn("timestamp")
+                      .jsonInputFormat()
+                      .localInputSourceWithFiles(
+                          Resources.DataFile.tinyWiki1Json(),
+                          Resources.DataFile.tinyWiki2Json(),
+                          Resources.DataFile.tinyWiki3Json()
+                      )
+                      .segmentGranularity("DAY")
+                      .dimensions("namespace", "page", "language")
+                      .metricAggregates(
+                          new DoubleSumAggregatorFactory("added", "added"),
+                          new DoubleSumAggregatorFactory("deleted", "deleted"),
+                          new DoubleSumAggregatorFactory("delta", "delta"),
+                          new CountAggregatorFactory("count")
+                      )
+                      .appendToExisting(appendToExisting)
+                      .tuningConfig(
+                          t -> t.withPartitionsSpec(partitionsSpec)
+                                .withForceGuaranteedRollup(isRollup)
+                                .withMaxNumConcurrentSubTasks(10)
+                                .withSplitHintSpec(new MaxSizeSplitHintSpec(1, null))
+                      );
   }
 
   private String runTask(TaskBuilder.IndexParallel taskBuilder, String dataSource)
@@ -224,8 +255,13 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
         "10,2013-09-01T12:41:27.000Z,2013-08-31T01:02:33.000Z",
         cluster.runSql("SELECT COUNT(*), MAX(__time), MIN(__time) FROM %s", dataSource)
     );
+    runGroupByQuery("Crimson Typhoon,1,905.0,9050.0");
+  }
+
+  private void runGroupByQuery(String expectedResult)
+  {
     Assertions.assertEquals(
-        "Crimson Typhoon,1,905.0,9050.0",
+        expectedResult,
         cluster.runSql(
             "SELECT \"page\", COUNT(*) AS \"rows\", SUM(\"added\"), 10 * SUM(\"added\") AS added_times_ten"
             + " FROM %s"

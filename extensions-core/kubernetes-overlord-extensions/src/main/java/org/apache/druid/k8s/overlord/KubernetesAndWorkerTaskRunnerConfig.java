@@ -48,8 +48,8 @@ public class KubernetesAndWorkerTaskRunnerConfig
       @JsonProperty(RUNNER_STRATEGY_WORKER_TYPE) @Nullable String workerType
   )
   {
-    this.runnerStrategy = ObjectUtils.defaultIfNull(runnerStrategy, KubernetesTaskRunnerFactory.TYPE_NAME);
-    this.workerType = ObjectUtils.defaultIfNull(workerType, HttpRemoteTaskRunnerFactory.TYPE_NAME);
+    this.runnerStrategy = ObjectUtils.getIfNull(runnerStrategy, KubernetesTaskRunnerFactory.TYPE_NAME);
+    this.workerType = ObjectUtils.getIfNull(workerType, HttpRemoteTaskRunnerFactory.TYPE_NAME);
     Preconditions.checkArgument(
         this.workerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME) ||
         this.workerType.equals(RemoteTaskRunnerFactory.TYPE_NAME),

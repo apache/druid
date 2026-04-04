@@ -61,7 +61,7 @@ See [Setting up a manual compaction task](./manual-compaction.md#setting-up-manu
 
 ## Data handling with compaction
 
-During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
+During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](../ingestion/native-batch.md#implementation-considerations) for an example.
 :::info

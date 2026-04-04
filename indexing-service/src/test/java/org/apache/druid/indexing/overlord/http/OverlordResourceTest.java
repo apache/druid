@@ -52,7 +52,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
-import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -109,7 +108,6 @@ public class OverlordResourceTest
   private TaskStorage taskStorage;
   private GlobalTaskLockbox taskLockbox;
   private JacksonConfigManager configManager;
-  private ProvisioningStrategy provisioningStrategy;
   private AuthConfig authConfig;
   private TaskQueryTool taskQueryTool;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -128,7 +126,6 @@ public class OverlordResourceTest
     taskRunner = EasyMock.createMock(TaskRunner.class);
     taskQueue = EasyMock.createStrictMock(TaskQueue.class);
     configManager = EasyMock.createMock(JacksonConfigManager.class);
-    provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
@@ -138,7 +135,6 @@ public class OverlordResourceTest
         taskStorage,
         taskLockbox,
         taskMaster,
-        provisioningStrategy,
         () -> configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class).get()
     );
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
@@ -226,8 +222,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter,
         authConfig,
         configManager,
-        auditManager,
-        provisioningStrategy
+        auditManager
     );
   }
 
@@ -351,6 +346,26 @@ public class OverlordResourceTest
 
     Assert.assertEquals(1, responseObjects.size());
     Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+  }
+
+  @Test
+  public void test_getAllActiveTasks_withTaskQueryTool_returnsRunningTasksOnly()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.expect(taskQueue.getTaskInfos()).andReturn(
+        List.of(
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("s"), new NoopTask("s", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.failure("f", ""), new NoopTask("f", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r1"), new NoopTask("r1", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r2"), new NoopTask("r2", null, null, 1L, 0L, null))
+        )
+    );
+
+    replayAll();
+
+    final List<TaskStatusPlus> activeTasks = taskQueryTool.getAllActiveTasks();
+    Assert.assertEquals(2, activeTasks.size());
+    Assert.assertTrue(activeTasks.stream().allMatch(status -> status.getStatusCode().equals(TaskState.RUNNING)));
   }
 
   @Test
@@ -999,21 +1014,26 @@ public class OverlordResourceTest
     final Task task = NoopTask.create();
     final String taskId = task.getId();
     final TaskStatus status = TaskStatus.running(taskId);
+    final TaskInfo taskInfo = new TaskInfo(
+        DateTimes.of("2018-01-01"),
+        status,
+        task
+    );
 
-    EasyMock.expect(taskQueryTool.getTaskInfo(taskId))
-            .andReturn(new TaskInfo(
-                task.getId(),
-                DateTimes.of("2018-01-01"),
-                status,
-                task.getDataSource(),
-                task
-            ));
+    // For noop, simulate in-memory hit
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo)).once();
 
-    EasyMock.expect(taskQueryTool.getTaskInfo("othertask"))
-            .andReturn(null);
-
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
-        .andReturn(ImmutableList.of());
+            .andReturn(ImmutableList.of(new MockTaskRunnerWorkItem(taskId))).anyTimes();
+    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING).once();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
+
+    // For "othertask", simulate in-memory miss, then task storage read
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent()).once();
+    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null).once();
 
     replayAll();
 
@@ -1187,19 +1207,15 @@ public class OverlordResourceTest
     EasyMock.expect(
         taskStorage.getTaskInfos(TaskLookup.activeTasksOnly(), "datasource")
     ).andStubReturn(ImmutableList.of(
-        new TaskInfo<>(
-            "id_1",
+        new TaskInfo(
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_1"),
-            "datasource",
-            NoopTask.create()
+            new NoopTask("id_1", null, "datasource", 1L, 0L, null)
         ),
-        new TaskInfo<>(
-            "id_2",
+        new TaskInfo(
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_2"),
-            "datasource",
-            NoopTask.create()
+            new NoopTask("id_2", null, "datasource", 1L, 0L, null)
         )
     ));
     mockQueue.shutdown("id_1", "Shutdown request from user");
@@ -1210,7 +1226,7 @@ public class OverlordResourceTest
     replayAll();
     EasyMock.replay(mockQueue);
 
-    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
+    final Map<String, String> response = (Map<String, String>) overlordResource
         .shutdownTasksForDataSource("datasource")
         .getEntity();
     Assert.assertEquals("datasource", response.get("dataSource"));

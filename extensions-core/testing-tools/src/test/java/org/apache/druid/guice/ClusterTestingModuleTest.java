@@ -22,12 +22,14 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.cli.CliIndexer;
 import org.apache.druid.cli.CliOverlord;
 import org.apache.druid.cli.CliPeon;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -128,9 +130,6 @@ public class ClusterTestingModuleTest
       CoordinatorClient coordinatorClient = peonInjector.getInstance(CoordinatorClient.class);
       Assert.assertTrue(coordinatorClient instanceof FaultyCoordinatorClient);
 
-      OverlordClient overlordClient = peonInjector.getInstance(OverlordClient.class);
-      Assert.assertTrue(overlordClient instanceof FaultyOverlordClient);
-
       TaskActionClientFactory taskActionClientFactory = peonInjector.getInstance(TaskActionClientFactory.class);
       Assert.assertTrue(taskActionClientFactory instanceof FaultyRemoteTaskActionClientFactory);
     }
@@ -206,7 +205,7 @@ public class ClusterTestingModuleTest
           null,
           null,
           new ParallelIndexIngestionSpec(
-              DataSchema.builder().withDataSource("test").build(),
+              DataSchema.builder().withDataSource("test").withTimestamp(TimestampSpec.DEFAULT).build(),
               ioConfig,
               ParallelIndexTuningConfig.defaultConfig()
           ),
@@ -246,6 +245,26 @@ public class ClusterTestingModuleTest
 
       GlobalTaskLockbox taskLockbox = overlordInjector.getInstance(GlobalTaskLockbox.class);
       Assert.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
+    }
+    finally {
+      System.clearProperty("druid.unsafe.cluster.testing");
+    }
+  }
+
+  @Test
+  public void test_indexerService_hasFaultyOverlordClient_ifTestingIsEnabled()
+  {
+    try {
+      final CliIndexer indexer = new CliIndexer();
+      System.setProperty("druid.unsafe.cluster.testing", "true");
+
+      final Injector baseInjector = new StartupInjectorBuilder().forServer().build();
+      baseInjector.injectMembers(indexer);
+
+      final Injector indexerInjector = indexer.makeInjector(Set.of(NodeRole.INDEXER));
+
+      OverlordClient overlordClient = indexerInjector.getInstance(OverlordClient.class);
+      Assert.assertTrue(overlordClient instanceof FaultyOverlordClient);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");

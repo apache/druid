@@ -41,6 +41,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -293,7 +294,7 @@ public class KafkaEmitter implements Emitter
   public void close()
   {
     scheduler.shutdownNow();
-    producer.close();
+    producer.close(Duration.ofMillis(config.getShutdownTimeout()));
   }
 
   public long getMetricLostCount()

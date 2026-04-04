@@ -90,7 +90,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     InputFormat,
     Execution
   >({
-    processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
+    processQuery: async ({ inputSource, suggestedInputFormat }, signal) => {
       const fixedFormat = FIXED_FORMAT_FOR_SOURCE[inputSource.type];
 
       const sampleSpec: SampleSpec = {
@@ -123,7 +123,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         },
       };
 
-      const sampleResponse = await postToSampler(sampleSpec, 'input-source-step', cancelToken);
+      const sampleResponse = await postToSampler(sampleSpec, 'input-source-step', signal);
       const sampleLines = filterMap(
         sampleResponse.data,
         fixedFormat ? l => l.input : l => (l.input ? l.input.raw : undefined),
@@ -151,8 +151,8 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
 
       return guessedInputFormat;
     },
-    backgroundStatusCheck: async (execution, query, cancelToken) => {
-      const result = await executionBackgroundResultStatusCheck(execution, query, cancelToken);
+    backgroundStatusCheck: async (execution, query, signal) => {
+      const result = await executionBackgroundResultStatusCheck(execution, query, signal);
       if (result instanceof IntermediateQueryState) return result;
       return resultToInputFormat(result);
     },

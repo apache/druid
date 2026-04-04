@@ -109,7 +109,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
     if (virtualColumns.exists(dimensionSpec.getDimension())) {
-      return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+      return virtualColumns.makeDimensionSelector(dimensionSpec, this, null, null);
     }
 
     return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
@@ -151,7 +151,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeColumnValueSelector(columnName, this);
+      return virtualColumns.makeColumnValueSelector(columnName, this, null, null);
     }
     if (isTimeColumn(columnName)) {
       return rowHolder;

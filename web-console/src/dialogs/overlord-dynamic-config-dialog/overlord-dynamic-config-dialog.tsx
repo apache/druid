@@ -48,16 +48,16 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      return await getApiArray(`/druid/indexer/v1/worker/history?count=100`, cancelToken);
+    processQuery: async (_, signal) => {
+      return await getApiArray(`/druid/indexer/v1/worker/history?count=100`, signal);
     },
   });
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       try {
-        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`, { cancelToken });
+        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`, { signal });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({

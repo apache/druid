@@ -403,11 +403,11 @@ public class EqualityFilterTests
       }
 
       // array_offset behaves same on both mvds and arrays
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null),
           ImmutableList.of("0")
       );
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           NotDimFilter.of(new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null)),
           ImmutableList.of()
       );
@@ -1624,7 +1624,7 @@ public class EqualityFilterTests
                         "optimizedFilterNoIncludeUnknown"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
-                    .withPrefabValues(ExprEval.class, ExprEval.of("hello"), ExprEval.of(1.0))
+                    .withPrefabValues(ExprEval.class, ExprEval.ofString("hello"), ExprEval.of(1.0))
                     .withIgnoredFields(
                         "predicateFactory",
                         "optimizedFilterIncludeUnknown",

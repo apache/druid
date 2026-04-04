@@ -1,0 +1,113 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query;
+
+import org.apache.druid.error.DruidException;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class DruidMetricsTest
+{
+  @Test
+  public void testComputeStatusCode_nullError()
+  {
+    Assert.assertEquals(200, DruidMetrics.computeStatusCode(null));
+  }
+
+  @Test
+  public void testComputeStatusCode_allDruidExceptionCategories()
+  {
+    for (DruidException.Category cat : DruidException.Category.values()) {
+      Assert.assertEquals(
+          cat.getExpectedStatus(), DruidMetrics.computeStatusCode(
+              DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(cat)
+                            .build("test")
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testComputeStatusCode_queryExceptionCategories()
+  {
+    Assert.assertEquals(
+        500,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_CANCELED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        504,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_TIMEOUT_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        429,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        401,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.UNAUTHORIZED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        400,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.BAD_QUERY_CONTEXT_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        501,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+  }
+}
+

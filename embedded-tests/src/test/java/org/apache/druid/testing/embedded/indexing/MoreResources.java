@@ -19,12 +19,17 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.joda.time.Period;
 
 import java.util.function.Supplier;
 
@@ -79,5 +84,104 @@ public class MoreResources
             .dynamicPartitionWithMaxRows(3)
             .granularitySpec("DAY", "SECOND", true)
             .appendToExisting(false);
+  }
+
+  public static class MSQ
+  {
+    /**
+     * SQL to INSERT any of the tiny wiki JSON data files into a new datasource
+     * with DAY granularity. e.g. {@link Resources.DataFile#tinyWiki1Json()}.
+     */
+    public static final String INSERT_TINY_WIKI_JSON =
+        "INSERT INTO %s\n"
+        + "SELECT\n"
+        + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+        + "  isRobot,\n"
+        + "  diffUrl,\n"
+        + "  added,\n"
+        + "  countryIsoCode,\n"
+        + "  regionName,\n"
+        + "  channel,\n"
+        + "  flags,\n"
+        + "  delta,\n"
+        + "  isUnpatrolled,\n"
+        + "  isNew,\n"
+        + "  deltaBucket,\n"
+        + "  isMinor,\n"
+        + "  isAnonymous,\n"
+        + "  deleted,\n"
+        + "  cityName,\n"
+        + "  metroCode,\n"
+        + "  namespace,\n"
+        + "  comment,\n"
+        + "  page,\n"
+        + "  commentLength,\n"
+        + "  countryName,\n"
+        + "  user,\n"
+        + "  regionIsoCode\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
+        + "    '{\"type\":\"json\"}',\n"
+        + "    "
+        + "'[{\"type\":\"string\",\"name\":\"timestamp\"},"
+        + "{\"type\":\"string\",\"name\":\"isRobot\"},"
+        + "{\"type\":\"string\",\"name\":\"diffUrl\"},"
+        + "{\"type\":\"long\",\"name\":\"added\"},"
+        + "{\"type\":\"string\",\"name\":\"countryIsoCode\"},"
+        + "{\"type\":\"string\",\"name\":\"regionName\"},"
+        + "{\"type\":\"string\",\"name\":\"channel\"},"
+        + "{\"type\":\"string\",\"name\":\"flags\"},"
+        + "{\"type\":\"long\",\"name\":\"delta\"},"
+        + "{\"type\":\"string\",\"name\":\"isUnpatrolled\"},"
+        + "{\"type\":\"string\",\"name\":\"isNew\"},"
+        + "{\"type\":\"double\",\"name\":\"deltaBucket\"},"
+        + "{\"type\":\"string\",\"name\":\"isMinor\"},"
+        + "{\"type\":\"string\",\"name\":\"isAnonymous\"},"
+        + "{\"type\":\"long\",\"name\":\"deleted\"},"
+        + "{\"type\":\"string\",\"name\":\"cityName\"},"
+        + "{\"type\":\"long\",\"name\":\"metroCode\"},"
+        + "{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},"
+        + "{\"type\":\"string\",\"name\":\"page\"},"
+        + "{\"type\":\"long\",\"name\":\"commentLength\"},"
+        + "{\"type\":\"string\",\"name\":\"countryName\"},"
+        + "{\"type\":\"string\",\"name\":\"user\"},"
+        + "{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY\n";
+  }
+
+  /**
+   * Supervisor spec builder.
+   */
+  public static class Supervisor
+  {
+    /**
+     * A minimal Kafka supervisor spec that auto-discovers dimensions, has a task
+     * duration of 500ms and creates HOUR-ly segments.
+     */
+    public static Supplier<KafkaSupervisorSpecBuilder> KAFKA_JSON = () ->
+        new KafkaSupervisorSpecBuilder()
+            .withDataSchema(
+                schema -> schema
+                    .withDimensions(DimensionsSpec.EMPTY)
+                    .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
+            )
+            .withIoConfig(
+                ioConfig -> ioConfig
+                    .withJsonInputFormat()
+                    .withTaskDuration(Period.millis(500))
+                    .withStartDelay(Period.millis(10))
+                    .withSupervisorRunPeriod(Period.millis(500))
+                    .withUseEarliestSequenceNumber(true)
+                    .withCompletionTimeout(Period.seconds(5))
+            );
+  }
+
+  public static class ProbufData
+  {
+    public static final String WIKI_PROTOBUF_BYTES_DECODER_RESOURCE = "data/protobuf/wikipedia.desc";
+    public static final String WIKI_PROTO_MESSAGE_TYPE = "Wikipedia";
   }
 }

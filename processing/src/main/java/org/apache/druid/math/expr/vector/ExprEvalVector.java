@@ -40,4 +40,6 @@ public interface ExprEvalVector<T>
   long[] getLongVector();
   double[] getDoubleVector();
   Object[] getObjectVector();
+
+  boolean elementAsBoolean(int index);
 }

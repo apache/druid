@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -31,6 +32,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 
 public abstract class SeekableStreamSupervisorIOConfig
@@ -51,8 +53,10 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final AutoScalerConfig autoScalerConfig;
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
+  @Nullable private final Map<Integer, Integer> serverPriorityToReplicas;
 
   private final LagAggregator lagAggregator;
+  private final boolean autoScalerEnabled;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -70,12 +74,12 @@ public abstract class SeekableStreamSupervisorIOConfig
       LagAggregator lagAggregator,
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
-      @Nullable Integer stopTaskCount
+      @Nullable Integer stopTaskCount,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.inputFormat = inputFormat;
-    this.replicas = replicas != null ? replicas : 1;
 
     InvalidInput.conditionalException(
         lagAggregator != null,
@@ -84,10 +88,13 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
-    // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
-    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
-      final Integer startTaskCount = autoScalerConfig.getTaskCountStart();
-      this.taskCount = startTaskCount != null ? startTaskCount : autoScalerConfig.getTaskCountMin();
+    this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+    if (autoScalerEnabled) {
+      // Priority: taskCountStart > taskCount > taskCountMin
+      this.taskCount = Configs.valueOrDefault(
+          autoScalerConfig.getTaskCountStart(),
+          Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
+      );
     } else {
       this.taskCount = taskCount != null ? taskCount : 1;
     }
@@ -117,6 +124,36 @@ public abstract class SeekableStreamSupervisorIOConfig
     }
 
     this.idleConfig = idleConfig;
+    this.serverPriorityToReplicas = serverPriorityToReplicas;
+
+    if (this.serverPriorityToReplicas != null) {
+      int serverPriorityReplicas = 0;
+      for (Map.Entry<Integer, Integer> entry : this.serverPriorityToReplicas.entrySet()) {
+        final Integer serverReplica = entry.getValue();
+
+        if (serverReplica == null || serverReplica < 0) {
+          throw InvalidInput.exception(
+              "Found invalid server replica[%d] for priority[%d] in serverPriorityToReplicas[%s]. Replicas must be >= 0.",
+              serverReplica, entry.getKey(), serverPriorityToReplicas
+          );
+        }
+
+        serverPriorityReplicas += serverReplica;
+      }
+
+      if (replicas != null && replicas != serverPriorityReplicas) {
+        throw InvalidInput.exception(
+            "Configured replicas[%d] does not match the sum of replicas[%d] specified in serverPriorityToReplicas[%s]."
+            + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
+            replicas, serverPriorityReplicas, serverPriorityToReplicas
+        );
+      }
+
+      // We also explicitly set replicas since the supervisor logic for replicas is already implemented.
+      this.replicas = serverPriorityReplicas;
+    } else {
+      this.replicas = replicas != null ? replicas : 1;
+    }
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -141,6 +178,13 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Integer getReplicas()
   {
     return replicas;
+  }
+
+  @Nullable
+  @JsonProperty
+  public Map<Integer, Integer> getServerPriorityToReplicas()
+  {
+    return serverPriorityToReplicas;
   }
 
   @Nullable
@@ -231,6 +275,9 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   public int getMaxAllowedStops()
   {
+    if (autoScalerEnabled && autoScalerConfig.getStopTaskCountRatio() != null) {
+      return (int) Math.max(1, Math.floor(taskCount * autoScalerConfig.getStopTaskCountRatio()));
+    }
     return stopTaskCount == null ? taskCount : stopTaskCount;
   }
 }

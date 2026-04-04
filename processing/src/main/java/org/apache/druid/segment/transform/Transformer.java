@@ -56,7 +56,6 @@ public class Transformer
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
                                           RowSignature.empty(), // sad
-                                          false,
                                           false
                                       )
                                   );

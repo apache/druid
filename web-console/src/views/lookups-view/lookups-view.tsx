@@ -19,7 +19,6 @@
 import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
-import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -51,6 +50,7 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilters } from '../../utils/table-filters';
 
 import './lookups-view.scss';
 
@@ -89,8 +89,8 @@ export interface LookupEditInfo {
 }
 
 export interface LookupsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
 }
 
 export interface LookupsViewState {
@@ -124,16 +124,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async (_, cancelToken) => {
+      processQuery: async (_, signal) => {
         const tiersResp = await getApiArray(
           '/druid/coordinator/v1/lookups/config?discover=true',
-          cancelToken,
+          signal,
         );
         const tiers =
           tiersResp.length > 0 ? tiersResp.sort(tierNameCompare) : [DEFAULT_LOOKUP_TIER];
 
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
-          cancelToken,
+          signal,
         });
         const lookupData = lookupResp.data;
 
@@ -370,8 +370,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         loading={lookupEntriesAndTiersState.loading}
         noDataText={lookupEntriesAndTiersState.getErrorMessage() || 'No lookups'}
         filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
         defaultSorted={[{ id: 'lookup_name', desc: false }]}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}

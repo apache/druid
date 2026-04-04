@@ -33,6 +33,7 @@ fi
 
 DRUID_ROOT=$1
 
+mkdir -p ${DRUID_ROOT}/.git/hooks
 cp_if_not_exist ${DRUID_ROOT}/hooks/run-all-in-dir.py ${DRUID_ROOT}/.git/hooks/run-all-in-dir.py
 cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commit ${DRUID_ROOT}/.git/hooks/pre-commit
 cp_if_not_exist ${DRUID_ROOT}/hooks/pre-push ${DRUID_ROOT}/.git/hooks/pre-push

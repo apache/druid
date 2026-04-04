@@ -46,7 +46,7 @@ The `druid-iceberg-extensions` extension relies on the existing input source con
 For Druid to seamlessly talk to the Hive metastore, ensure that the Hive configuration files such as `hive-site.xml` and `core-site.xml` are available in the Druid classpath for peon processes.  
 You can also specify Hive properties under the `catalogProperties` object in the ingestion spec. 
 
-The `druid-iceberg-extensions` extension presently only supports HDFS, S3 and local warehouse directories.
+The `druid-iceberg-extensions` extension presently supports HDFS, S3, GCS, and local warehouse directories.
 
 ### Read from HDFS warehouse 
 
@@ -79,7 +79,7 @@ Set the `type` property of the `warehouseSource` object to `s3` in the ingestion
     "protocol": "http",
     "disableChunkedEncoding": true,
     "enablePathStyleAccess": true,
-    "forceGlobalBucketAccessEnabled": false
+    "crossRegionAccessEnabled": false
   },
   "properties": {
     "accessKeyId": {
@@ -106,6 +106,33 @@ The following properties are required in the `catalogProperties`:
 ```
 Since the Hadoop AWS connector uses the `s3a` filesystem client, specify the warehouse path with the `s3a://` protocol instead of `s3://`.
 
+### Read from GCS warehouse
+
+To read from a GCS warehouse, load the `druid-google-extensions` extension. Druid extracts the
+data file paths from the catalog and uses `GoogleCloudStorageInputSource` to ingest these files.
+Set the `type` property of the `warehouseSource` object to `google` in the ingestion spec:
+
+```json
+"warehouseSource": {
+  "type": "google"
+}
+```
+
+For the Iceberg catalog to read its own metadata files from GCS, set `io-impl` to
+`org.apache.iceberg.gcp.gcs.GCSFileIO` in `catalogProperties`:
+
+```json
+"catalogProperties": {
+  "io-impl": "org.apache.iceberg.gcp.gcs.GCSFileIO",
+  "gcs.project-id": "my-gcp-project",
+  "warehouse": "gs://my-bucket/warehouse"
+}
+```
+
+Authentication uses Application Default Credentials (ADC). Ensure that the Druid processes
+have access to valid GCP credentials (e.g., via a service account key file, workload identity,
+or metadata server).
+
 ## Local catalog
 
 The local catalog type can be used for catalogs configured on the local filesystem. Set the `icebergCatalog` type to `local`. You can use this catalog for demos or localized tests. It is not recommended for production use cases.
@@ -119,7 +146,7 @@ Security credentials may be provided in the `catalogProperties` object.
 ## Glue catalog
 
 Configure the `icebergCatalog` type as `glue`.`warehousePath` and properties must be provided in `catalogProperties` object.
-Refer [Iceberg Glue Catalog documentation](https://iceberg.apache.org/docs/1.6.0/aws/#glue-catalog) for setting properties. 
+Refer [Iceberg Glue Catalog documentation](https://iceberg.apache.org/docs/1.7.2/aws/#glue-catalog) for setting properties. 
 
 
 ## Downloading Iceberg extension
@@ -131,13 +158,41 @@ Druid version:
 java \
   -cp "lib/*" \
   -Ddruid.extensions.directory="extensions" \
-  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
   org.apache.druid.cli.Main tools pull-deps \
-  --no-default-hadoop \
   -c "org.apache.druid.extensions.contrib:druid-iceberg-extensions:<VERSION>"
 ```
 
 See [Loading community extensions](../../configuration/extensions.md#loading-community-extensions) for more information.
+
+## Residual filter handling
+
+When an Iceberg filter is applied on a non-partition column, the filtering happens at the file metadata level only (using column statistics). Files that might contain matching rows are returned, but these files may include "residual" rows that don't actually match the filter. These residual rows would be ingested unless filtered by a `transformSpec` filter on the Druid side.
+
+To control this behavior, you can set the `residualFilterMode` property on the Iceberg input source:
+
+| Mode | Description |
+|------|-------------|
+| `ignore` | Default. Residual rows are ingested with a warning log unless filtered by `transformSpec`. |
+| `fail` | Fail the ingestion job when residual filters are detected. Use this to ensure that filters only target partition columns. |
+
+Example:
+```json
+{
+  "type": "iceberg",
+  "tableName": "events",
+  "namespace": "analytics",
+  "icebergCatalog": { ... },
+  "icebergFilter": {
+    "type": "timeWindow",
+    "filterColumn": "event_time",
+    "lookbackDuration": "P1D"
+  },
+  "residualFilterMode": "fail",
+  "warehouseSource": { ... }
+}
+```
+
+When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
 
 ## Known limitations
 

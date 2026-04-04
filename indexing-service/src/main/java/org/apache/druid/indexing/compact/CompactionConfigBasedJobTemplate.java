@@ -1,0 +1,201 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexing.compact;
+
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
+import org.apache.druid.server.compaction.Eligibility;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.CompactionState;
+import org.apache.druid.timeline.SegmentTimeline;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate}.
+ * It is just a delegating template that uses a {@link DataSourceCompactionConfig}
+ * to create compaction jobs.
+ */
+public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
+{
+  private final DataSourceCompactionConfig config;
+  private final ReindexingConfigOptimizer configOptimizer;
+
+  public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
+  {
+    this(config, ReindexingConfigOptimizer.IDENTITY);
+  }
+
+  public CompactionConfigBasedJobTemplate(
+      DataSourceCompactionConfig config,
+      ReindexingConfigOptimizer configOptimizer
+  )
+  {
+    this.config = config;
+    this.configOptimizer = configOptimizer;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    return config.getSegmentGranularity();
+  }
+
+  @Override
+  public List<CompactionJob> createCompactionJobs(
+      DruidInputSource source,
+      CompactionJobParams params
+  )
+  {
+    final DataSourceCompactibleSegmentIterator segmentIterator = getCompactibleCandidates(source, params);
+
+    final List<CompactionJob> jobs = new ArrayList<>();
+
+    CompactionState compactionState = config.toCompactionState();
+
+    String indexingStateFingerprint = params.getFingerprintMapper().generateFingerprint(
+        config.getDataSource(),
+        compactionState
+    );
+
+    // Create a job for each CompactionCandidate
+    while (segmentIterator.hasNext()) {
+      final CompactionCandidate candidate = segmentIterator.next();
+      final Eligibility eligibility =
+          params.getClusterCompactionConfig()
+                .getCompactionPolicy()
+                .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
+      if (!eligibility.isEligible()) {
+        continue;
+      }
+      final CompactionCandidate finalCandidate;
+      switch (eligibility.getMode()) {
+        case ALL_SEGMENTS:
+          finalCandidate = candidate;
+          break;
+        case UNCOMPACTED_SEGMENTS_ONLY:
+          finalCandidate = CompactionCandidate.from(
+              candidate.getUncompactedSegments(),
+              null,
+              candidate.getCurrentStatus()
+          );
+          break;
+        default:
+          throw DruidException.defensive("unexpected compaction mode[%s]", eligibility.getMode());
+      }
+
+      // Allow template-specific customization of the config per candidate
+      DataSourceCompactionConfig finalConfig = configOptimizer.optimizeConfig(config, candidate, params);
+
+      final CompactionEngine engine = Configs.valueOrDefault(
+          finalConfig.getEngine(),
+          params.getClusterCompactionConfig().getEngine()
+      );
+      ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
+          finalCandidate,
+          eligibility,
+          finalConfig,
+          engine,
+          indexingStateFingerprint,
+          params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
+      );
+      jobs.add(
+          new CompactionJob(
+              taskPayload,
+              finalCandidate,
+              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
+              indexingStateFingerprint,
+              compactionState,
+              eligibility
+          )
+      );
+    }
+
+    return jobs;
+  }
+
+  @Override
+  public String getType()
+  {
+    throw DruidException.defensive(
+        "This template cannot be serialized. It is an adapter used to create jobs"
+        + " using a legacy DataSourceCompactionConfig. Do not use this template"
+        + " in a supervisor spec directly. Use types [compactCatalog], [compactMsq]"
+        + " or [compactInline] instead."
+    );
+  }
+
+  /**
+   * Creates an iterator over the compactible candidate segments for the given
+   * params. Adds stats for segments that are already compacted to the
+   * {@link CompactionJobParams#getSnapshotBuilder()}.
+   */
+  DataSourceCompactibleSegmentIterator getCompactibleCandidates(
+      DruidInputSource source,
+      CompactionJobParams params
+  )
+  {
+    validateInput(source);
+
+    final Interval searchInterval = Objects.requireNonNull(source.getInterval());
+
+    final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
+    final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
+        config,
+        timeline,
+        Intervals.complementOf(searchInterval),
+        // This policy is used only while creating jobs
+        // The actual order of jobs is determined by the policy used in CompactionJobQueue
+        new NewestSegmentFirstPolicy(null),
+        params.getFingerprintMapper()
+    );
+
+    // Collect stats for segments that are already compacted
+    iterator.getCompactedSegments().forEach(entry -> params.getSnapshotBuilder().addToComplete(entry));
+
+    return iterator;
+  }
+
+  private void validateInput(DruidInputSource druidInputSource)
+  {
+    if (!druidInputSource.getDataSource().equals(config.getDataSource())) {
+      throw InvalidInput.exception(
+          "Datasource[%s] in compaction config does not match datasource[%s] in input source",
+          config.getDataSource(), druidInputSource.getDataSource()
+      );
+    }
+  }
+}

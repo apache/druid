@@ -157,7 +157,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       if (start == 0 && end == s.length()) {
         return stringEval;
       } else {
-        return ExprEval.of(s.substring(start, end));
+        return ExprEval.ofString(s.substring(start, end));
       }
     }
 
@@ -232,7 +232,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       if (start == 0 && end == s.length()) {
         return stringEval;
       } else {
-        return ExprEval.of(s.substring(start, end));
+        return ExprEval.ofString(s.substring(start, end));
       }
     }
 

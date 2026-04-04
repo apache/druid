@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -65,23 +64,14 @@ public class SysMonitor extends FeedDefiningMonitor
 
   private final List<Stats> statsList;
 
-  private Map<String, String[]> dimensions;
-
   public SysMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
-  public SysMonitor(Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
-  }
-
-  public SysMonitor(Map<String, String[]> dimensions, String feed)
+  public SysMonitor(String feed)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
 
     sigar.enableLogging(true);
 
@@ -142,7 +132,6 @@ public class SysMonitor extends FeedDefiningMonitor
             "sys/mem/actual/free", mem.getActualFree()
         );
         final ServiceMetricEvent.Builder builder = builder();
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
@@ -193,7 +182,6 @@ public class SysMonitor extends FeedDefiningMonitor
         );
 
         final ServiceMetricEvent.Builder builder = builder();
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
@@ -233,7 +221,6 @@ public class SysMonitor extends FeedDefiningMonitor
           );
           final ServiceMetricEvent.Builder builder = builder()
               .setDimension("fsDirName", dir); // fsDirName because FsStats uses fsDirName
-          MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
             emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
@@ -279,7 +266,6 @@ public class SysMonitor extends FeedDefiningMonitor
                   .setDimension("fsTypeName", fs.getTypeName())
                   .setDimension("fsSysTypeName", fs.getSysTypeName())
                   .setDimension("fsOptions", fs.getOptions().split(","));
-              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
                 emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
               }
@@ -340,7 +326,6 @@ public class SysMonitor extends FeedDefiningMonitor
                     .setDimension("fsTypeName", fs.getTypeName())
                     .setDimension("fsSysTypeName", fs.getSysTypeName())
                     .setDimension("fsOptions", fs.getOptions().split(","));
-                MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                 for (Map.Entry<String, Long> entry : stats.entrySet()) {
                   emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
                 }
@@ -410,7 +395,6 @@ public class SysMonitor extends FeedDefiningMonitor
                       .setDimension("netName", netconf.getName())
                       .setDimension("netAddress", netconf.getAddress())
                       .setDimension("netHwaddr", netconf.getHwaddr());
-                  MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                   for (Map.Entry<String, Long> entry : stats.entrySet()) {
                     emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
                   }
@@ -463,7 +447,6 @@ public class SysMonitor extends FeedDefiningMonitor
               final ServiceMetricEvent.Builder builder = builder()
                   .setDimension("cpuName", name)
                   .setDimension("cpuTime", entry.getKey());
-              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               emitter.emit(builder.setMetric("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
@@ -478,7 +461,6 @@ public class SysMonitor extends FeedDefiningMonitor
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       Uptime uptime = null;
       try {
@@ -526,7 +508,6 @@ public class SysMonitor extends FeedDefiningMonitor
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       Tcp tcp = null;
       try {

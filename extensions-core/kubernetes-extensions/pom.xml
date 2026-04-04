@@ -30,26 +30,9 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-
-  <properties>
-    <kubernetes.client.version>19.0.0</kubernetes.client.version>
-  </properties>
-
-
-  <dependencyManagement>
-    <dependencies>
-      <!-- This is an indirect dependency of io.kubernetes.client-java
-      update to address vulnerability in transitive dependency okio used by okhttp -->
-      <dependency>
-          <groupId>com.squareup.okhttp3</groupId>
-          <artifactId>okhttp</artifactId>
-          <version>4.12.0</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -68,23 +51,59 @@
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java</artifactId>
-      <version>${kubernetes.client.version}</version>
+      <exclusions>
+        <!-- client-java-proto brings in protobuf-java 4.x which Druid does not yet support project-wide.
+             The Kubernetes API supports multiple wire formats (JSON, YAML, Protobuf, etc.) but this extension
+             is not currently using the proto client so exclusion is safe -->
+        <exclusion>
+          <groupId>io.kubernetes</groupId>
+          <artifactId>client-java-proto</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+        <!-- Azure AD auth library and its transitive OIDC/JWT stack — only needed for AKS token-based
+             authentication which this extension does not use -->
+        <exclusion>
+          <groupId>com.microsoft.azure</groupId>
+          <artifactId>adal4j</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java-extended</artifactId>
-      <version>${kubernetes.client.version}</version>
+      <exclusions>
+        <!-- client-java-proto brings in protobuf-java 4.x which Druid does not yet support project-wide.
+             The Kubernetes API supports multiple wire formats (JSON, YAML, Protobuf, etc.) but this extension
+             is not currently using the proto client so exclusion is safe -->
+        <exclusion>
+          <groupId>io.kubernetes</groupId>
+          <artifactId>client-java-proto</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.kubernetes</groupId>
       <artifactId>client-java-api</artifactId>
-      <version>${kubernetes.client.version}</version>
+      <exclusions>
+        <!-- jakarta.ws.rs-api 4.0 conflicts with the javax.ws.rs 1.x used elsewhere in Druid -->
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp-jvm</artifactId>
     </dependency>
 
     <!-- Tests -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -140,7 +159,7 @@
               <artifactId>maven-dependency-plugin</artifactId>
               <configuration>
               <!-- analyze incorrectly flags this dependency as missing when omitted, and unused when declared -->
-                <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:19.0.0</ignoredDependencies>
+                <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:${kubernetes.client.version}</ignoredDependencies>
               </configuration>
           </plugin>
         </plugins>

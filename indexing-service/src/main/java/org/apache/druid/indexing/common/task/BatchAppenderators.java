@@ -79,7 +79,7 @@ public final class BatchAppenderators
         segmentPusher,
         toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9(),
+        toolbox.getIndexMerger(),
         rowIngestionMeters,
         parseExceptionHandler,
         toolbox.getCentralizedTableSchemaConfig()

@@ -19,6 +19,7 @@
 
 package org.apache.druid.compressedbigdecimal.aggregator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalSqlAggregatorTestBase.CompressedBigDecimalComponentSupplier;
@@ -82,10 +83,13 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(

@@ -36,9 +36,9 @@ public class IterableRowsCursorHelperTest
 {
 
   List<Object[]> rows = ImmutableList.of(
-      new Object[]{1, "a"},
-      new Object[]{3, "b"},
-      new Object[]{2, "b"}
+      new Object[]{1L, "a"},
+      new Object[]{3L, "b"},
+      new Object[]{2L, "b"}
   );
 
   RowSignature rowSignature = RowSignature.builder()

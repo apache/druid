@@ -1,0 +1,32 @@
+[
+  {
+    "query": {
+      "query": "SELECT count(*) FROM sys.segments WHERE datasource LIKE '%%DATASOURCE%%'"
+    },
+    "expectedResults": [
+      {
+        "EXPR$0": 4
+      }
+    ]
+  },
+  {
+    "query": {
+      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL AND server_type <> 'indexer'"
+    },
+    "expectedResults": [
+      {
+        "server_type":"historical"
+      }
+    ]
+  },
+  {
+    "query": {
+      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE '%%DATASOURCE%%' GROUP BY 1"
+    },
+    "expectedResults": [
+      {
+        "status": "SUCCESS"
+      }
+    ]
+  }
+]

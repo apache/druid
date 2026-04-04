@@ -65,40 +65,6 @@ import java.util.function.Function;
 @SuppressWarnings({"NotNullFieldNotInitialized", "FieldMayBeFinal", "ConstantConditions", "NullableProblems"})
 public class IndexBuilder
 {
-  private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
-  private static final int DEFAULT_MAX_ROWS = Integer.MAX_VALUE;
-
-  private final ObjectMapper jsonMapper;
-  private final IndexIO indexIO;
-  private final List<InputRow> rows = new ArrayList<>();
-
-  private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
-  private IndexMerger indexMerger;
-  private File tmpDir;
-  private IndexSpec indexSpec = IndexSpec.DEFAULT;
-  private int maxRows = DEFAULT_MAX_ROWS;
-  private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
-  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-      .withMetrics(new CountAggregatorFactory("count"))
-      .build();
-  @Nullable
-  private InputSource inputSource = null;
-  @Nullable
-  private InputFormat inputFormat = null;
-  @Nullable
-  private TransformSpec transformSpec = null;
-  @Nullable
-  private File inputSourceTmpDir = null;
-
-  private boolean writeNullColumns = false;
-
-  private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
-  {
-    this.jsonMapper = jsonMapper;
-    this.indexIO = new IndexIO(jsonMapper, columnConfig);
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory);
-  }
-
   public static IndexBuilder create()
   {
     return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.DEFAULT);
@@ -119,6 +85,50 @@ public class IndexBuilder
     return new IndexBuilder(jsonMapper, columnConfig);
   }
 
+  private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
+  private static final int DEFAULT_MAX_ROWS = Integer.MAX_VALUE;
+
+  private final ObjectMapper jsonMapper;
+  private final IndexIO indexIO;
+  private final List<InputRow> rows = new ArrayList<>();
+
+  private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
+  private IndexMerger indexMerger;
+  private File tmpDir;
+  private IndexSpec indexSpec = IndexSpec.getDefault();
+  private int maxRows = DEFAULT_MAX_ROWS;
+  private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
+  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+      .withMetrics(new CountAggregatorFactory("count"))
+      .build();
+  @Nullable
+  private InputSource inputSource = null;
+  @Nullable
+  private InputFormat inputFormat = null;
+  @Nullable
+  private TransformSpec transformSpec = null;
+  @Nullable
+  private File inputSourceTmpDir = null;
+
+  private boolean writeNullColumns = false;
+  private boolean buildV10 = false;
+
+  private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
+  {
+    this.jsonMapper = jsonMapper;
+    this.indexIO = new IndexIO(jsonMapper, columnConfig);
+    this.indexMerger = makeIndexMerger();
+  }
+
+  private IndexMerger makeIndexMerger()
+  {
+    if (buildV10) {
+      return new IndexMergerV10(jsonMapper, indexIO, segmentWriteOutMediumFactory);
+    } else {
+      return new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, writeNullColumns);
+    }
+  }
+
   public IndexIO getIndexIO()
   {
     return indexIO;
@@ -133,14 +143,21 @@ public class IndexBuilder
   public IndexBuilder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, writeNullColumns);
+    this.indexMerger = makeIndexMerger();
     return this;
   }
 
   public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
   {
     this.writeNullColumns = shouldWriteNullColumns;
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
+    this.indexMerger = makeIndexMerger();
+    return this;
+  }
+
+  public IndexBuilder useV10()
+  {
+    this.buildV10 = true;
+    this.indexMerger = makeIndexMerger();
     return this;
   }
 
@@ -465,10 +482,10 @@ public class IndexBuilder
     Preconditions.checkNotNull(inputSource, "inputSource");
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
-    TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+    TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
     InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
     InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
-    InputSourceReader transformingReader = tranformer.decorate(reader);
+    InputSourceReader transformingReader = transformer.decorate(reader);
     return transformingReader;
   }
 

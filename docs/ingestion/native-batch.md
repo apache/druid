@@ -24,7 +24,7 @@ sidebar_label: JSON-based batch
   -->
 
 :::info
- This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) extension, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+ This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) engine, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 :::
 
 Apache Druid supports the following types of JSON-based batch indexing tasks:
@@ -50,7 +50,7 @@ To run either kind of JSON-based batch indexing task, you can:
 
 ## Parallel task indexing
 
-The parallel task type `index_parallel` is a task for multi-threaded batch indexing. Parallel task indexing only relies on Druid resources. It doesn't depend on other external systems like Hadoop.
+The parallel task type `index_parallel` is a task for multi-threaded batch indexing.
 
 The `index_parallel` task is a supervisor task that orchestrates
 the whole indexing process. The supervisor task splits the input data and creates worker tasks to process the individual portions of data.
@@ -100,10 +100,6 @@ By default, JSON-based batch ingestion replaces all data in the intervals in you
 You can also perform concurrent append and replace tasks. For more information, see [Concurrent append and replace](./concurrent-append-replace.md)
 
 #### Fully replacing existing segments using tombstones
-
-:::info
-This feature is still experimental.
-:::
 
 You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to replace all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the `granularitySpec` contains an `interval`.
 
@@ -247,7 +243,7 @@ The following table lists the properties of a `ioConfig` object:
 |`type`|The task type. Set to the value to `index_parallel`.|none|yes|
 |`inputFormat`|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |`appendToExisting`|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|`dropExisting`|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid doesn't change any existing segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` isn't specified in `granularitySpec`, Druid doesn't replace any segments even if `dropExisting` is `true`. WARNING: this feature is still experimental.|false|no|
+|`dropExisting`|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid doesn't change any existing segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` isn't specified in `granularitySpec`, Druid doesn't replace any segments even if `dropExisting` is `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -333,8 +329,8 @@ The `partitionsSpec` types have different characteristics.
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |`type`|Set the value to `dynamic`.|none|yes|
-|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment. Value must be greater than 0.|5000000|no|
+|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur. Value must be greater than 0.|20000000|no|
 
 With the dynamic partitioning, the parallel index task runs in a single phase spawning multiple worker tasks (type `single_phase_sub_task`), each of which creates segments.
 
@@ -458,7 +454,7 @@ Range partitioning is not possible on multi-value dimensions. If one of the prov
 |`type`|Set the value to `range`.|none|yes|
 |`partitionDimensions`|An array of dimensions to partition on. Order the dimensions from most frequently queried to least frequently queried. For best results, limit your number of dimensions to between three and five dimensions.|none|yes|
 |`targetRowsPerSegment`|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
-|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|`maxRowsPerSegment`|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |`assumeGrouped`|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
 #### Benefits of range partitioning

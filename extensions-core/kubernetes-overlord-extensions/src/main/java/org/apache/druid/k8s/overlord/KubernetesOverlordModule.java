@@ -39,6 +39,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
@@ -53,8 +54,15 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
-import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
@@ -67,6 +75,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -79,13 +88,17 @@ public class KubernetesOverlordModule implements DruidModule
                                                                + ".k8sAndWorker";
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
                                                                         + ".runnerStrategy.%s";
-  private static final String HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String HTTPCLIENT_TYPE_PROPERTY = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".httpClientType";
+  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesVertxHttpClientFactory.TYPE_NAME;
+  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME;
+  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesJdkHttpClientFactory.TYPE_NAME;
 
   @Override
   public void configure(Binder binder)
   {
     // druid.indexer.runner.type=k8s
-    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerStaticConfig.class);
     JsonConfigProvider.bind(binder, K8SANDWORKER_PROPERTIES_PREFIX, KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
     JacksonConfigProvider.bind(binder, KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class, null);
@@ -114,18 +127,54 @@ public class KubernetesOverlordModule implements DruidModule
 
     Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
 
-    JsonConfigProvider.bind(binder, HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesHttpClientConfig.class);
+    PolyBind.createChoiceWithDefault(
+        binder,
+        HTTPCLIENT_TYPE_PROPERTY,
+        Key.get(DruidKubernetesHttpClientFactory.class),
+        DruidKubernetesVertxHttpClientFactory.TYPE_NAME
+    );
+
+    final MapBinder<String, DruidKubernetesHttpClientFactory> factoryBinder =
+        PolyBind.optionBinder(binder, Key.get(DruidKubernetesHttpClientFactory.class));
+
+    factoryBinder.addBinding(DruidKubernetesVertxHttpClientFactory.TYPE_NAME)
+                 .toProvider(VertxHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+
+    factoryBinder.addBinding(DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME)
+                 .toProvider(OkHttpHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+    factoryBinder.addBinding(DruidKubernetesJdkHttpClientFactory.TYPE_NAME)
+                 .toProvider(JdkHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, VERTX_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesVertxHttpClientConfig.class);
+    JsonConfigProvider.bind(binder, OKHTTP_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesOkHttpHttpClientConfig.class);
+    JsonConfigProvider.bind(binder, JDK_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesJdkHttpClientConfig.class);
   }
 
   @Provides
   @LazySingleton
+  public KubernetesTaskRunnerEffectiveConfig provideEffectiveConfig(
+      KubernetesTaskRunnerStaticConfig staticConfig,
+      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier
+  )
+  {
+    return new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigSupplier);
+  }
+
+  /**
+   * Provides the base Kubernetes client for direct API operations.
+   * This is always created regardless of caching configuration.
+   */
+  @Provides
+  @LazySingleton
   public DruidKubernetesClient makeKubernetesClient(
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
-      DruidKubernetesHttpClientConfig httpClientConfig,
+      KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerConfig,
+      DruidKubernetesHttpClientFactory httpClientFactory,
       Lifecycle lifecycle
   )
   {
-    final DruidKubernetesClient client;
     final Config config = new ConfigBuilder().build();
 
     if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
@@ -133,7 +182,9 @@ public class KubernetesOverlordModule implements DruidModule
       config.setHttpProxy(null);
     }
 
-    client = new DruidKubernetesClient(httpClientConfig, config);
+    config.setNamespace(kubernetesTaskRunnerConfig.getNamespace());
+
+    final DruidKubernetesClient client = new DruidKubernetesClient(httpClientFactory, config);
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -154,6 +205,58 @@ public class KubernetesOverlordModule implements DruidModule
     );
 
     return client;
+  }
+
+  /**
+   * Provides the caching Kubernetes client that uses informers for efficient resource watching.
+   * Only created when caching is enabled via configuration.
+   */
+  @Provides
+  @LazySingleton
+  @Nullable
+  public DruidKubernetesCachingClient makeCachingKubernetesClient(
+      KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerConfig,
+      DruidKubernetesClient baseClient,
+      Lifecycle lifecycle
+  )
+  {
+    if (!kubernetesTaskRunnerConfig.isUseK8sSharedInformers()) {
+      log.info("Kubernetes shared informers disabled, caching client will not be created");
+      return null;
+    }
+
+    String namespace = kubernetesTaskRunnerConfig.getNamespace();
+    long resyncPeriodMillis = kubernetesTaskRunnerConfig
+        .getK8sSharedInformerResyncPeriod()
+        .toStandardDuration()
+        .getMillis();
+
+    log.info("Creating Kubernetes caching client with informer resync period: %d ms", resyncPeriodMillis);
+    final DruidKubernetesCachingClient cachingClient = new DruidKubernetesCachingClient(
+        baseClient,
+        namespace,
+        resyncPeriodMillis
+    );
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start()
+          {
+
+          }
+
+          @Override
+          public void stop()
+          {
+            log.info("Stopping Kubernetes caching client");
+            cachingClient.stop();
+          }
+        }
+    );
+
+    return cachingClient;
   }
 
   /**
@@ -184,7 +287,7 @@ public class KubernetesOverlordModule implements DruidModule
   TaskAdapter provideTaskAdapter(
       DruidKubernetesClient client,
       Properties properties,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig,
       TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       @Self DruidNode druidNode,
@@ -227,7 +330,7 @@ public class KubernetesOverlordModule implements DruidModule
           druidNode,
           smileMapper,
           taskLogs,
-          new DynamicConfigPodTemplateSelector(properties, dynamicConfigRef)
+          new DynamicConfigPodTemplateSelector(properties, kubernetesTaskRunnerConfig)
       );
     } else {
       return new SingleContainerTaskAdapter(
@@ -278,6 +381,59 @@ public class KubernetesOverlordModule implements DruidModule
       provider.inject(props, configurator);
 
       return provider.get();
+    }
+  }
+
+  private static class VertxHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesVertxHttpClientConfig config;
+    private ObjectMapper jsonMapper;
+
+    @Inject
+    public void inject(DruidKubernetesVertxHttpClientConfig config, @Json ObjectMapper jsonMapper)
+    {
+      this.config = config;
+      this.jsonMapper = jsonMapper;
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesVertxHttpClientFactory(config, jsonMapper);
+    }
+  }
+
+  private static class OkHttpHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesOkHttpHttpClientConfig config;
+
+    @Inject
+    public void inject(DruidKubernetesOkHttpHttpClientConfig config)
+    {
+      this.config = config;  // Guice injects the OkHttp-specific config
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesOkHttpHttpClientFactory(config);
+    }
+  }
+
+  private static class JdkHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesJdkHttpClientConfig config;
+
+    @Inject
+    public void inject(DruidKubernetesJdkHttpClientConfig config)
+    {
+      this.config = config;
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesJdkHttpClientFactory(config);
     }
   }
 }

@@ -45,6 +45,7 @@ import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.MatcherAssert;
@@ -67,31 +68,31 @@ public class SegmentMetadataQueryQueryToolChestTest
   private static final SegmentId TEST_SEGMENT_ID1 = SegmentId.of(TEST_DATASOURCE.toString(), INTERVAL_2020, "test", 0);
   private static final SegmentId TEST_SEGMENT_ID2 = SegmentId.of(TEST_DATASOURCE.toString(), INTERVAL_2021, "test", 0);
 
-  private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_HOURLY =
-      AggregateProjectionMetadata.schemaBuilder("name1-does-not-matter")
-                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-                                 .virtualColumns(
+  private static final AggregateProjectionSchema PROJECTION_CHANNEL_ADDED_HOURLY =
+      AggregateProjectionSchema.schemaBuilder("name1-does-not-matter")
+                               .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                               .virtualColumns(
                                      Granularities.toVirtualColumn(
                                          Granularities.HOUR,
                                          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
                                      )
                                  )
-                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
-                                 .aggregators(new LongSumAggregatorFactory("channel_sum", "channel"))
-                                 .build();
+                               .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                               .aggregators(new LongSumAggregatorFactory("channel_sum", "channel"))
+                               .build();
 
-  private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_DAILY =
-      AggregateProjectionMetadata.schemaBuilder("name2-does-not-matter")
-                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-                                 .virtualColumns(
+  private static final AggregateProjectionSchema PROJECTION_CHANNEL_ADDED_DAILY =
+      AggregateProjectionSchema.schemaBuilder("name2-does-not-matter")
+                               .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                               .virtualColumns(
                                      Granularities.toVirtualColumn(
                                          Granularities.DAY,
                                          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
                                      )
                                  )
-                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
-                                 .aggregators(new LongSumAggregatorFactory("channel_sum", "channel"))
-                                 .build();
+                               .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                               .aggregators(new LongSumAggregatorFactory("channel_sum", "channel"))
+                               .build();
 
   @Test
   public void testCacheStrategy() throws Exception

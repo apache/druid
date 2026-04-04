@@ -181,7 +181,7 @@ public class BuiltInExprMacros
       {
         ExprEval<?> toDecode = arg.eval(bindings);
         if (toDecode.value() == null) {
-          return ExprEval.of(null);
+          return ExprEval.ofString(null);
         }
         return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
       }

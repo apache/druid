@@ -41,7 +41,7 @@ public class DoubleSumAveragerTest
     avg.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
     Assert.assertEquals(6.0, avg.computeResult(), 0.0);
 
-    avg.addElement(Collections.singletonMap("field", new Integer(0)), new HashMap<>());
+    avg.addElement(Collections.singletonMap("field", 0), new HashMap<>());
     Assert.assertEquals(6.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 2.5), new HashMap<>());

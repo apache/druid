@@ -108,7 +108,7 @@ public class SubstringDimExtractionFnTest
     SubstringDimExtractionFn extractionFnNoLength = (SubstringDimExtractionFn) objectMapper.readValue(jsonNoLength, ExtractionFn.class);
 
     Assert.assertEquals(1, extractionFn.getIndex());
-    Assert.assertEquals(new Integer(3), extractionFn.getLength());
+    Assert.assertEquals(Integer.valueOf(3), extractionFn.getLength());
     Assert.assertEquals(1, extractionFnNoLength.getIndex());
     Assert.assertEquals(null, extractionFnNoLength.getLength());
 

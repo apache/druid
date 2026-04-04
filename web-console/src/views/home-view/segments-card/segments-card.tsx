@@ -40,7 +40,7 @@ export interface SegmentsCardProps {
 export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCardProps) {
   const [segmentCountState] = useQueryManager<Capabilities, SegmentCounts>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         const segments = await queryDruidSql(
           {
@@ -51,20 +51,21 @@ export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCard
   COUNT(*) FILTER (WHERE is_realtime = 1) AS "realtime"
 FROM sys.segments
 WHERE is_active = 1`,
+            context: { engine: 'native' },
           },
-          cancelToken,
+          signal,
         );
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
         const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
-          cancelToken,
+          signal,
         });
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
         const datasourcesMeta = await getApiArray(
           '/druid/coordinator/v1/datasources?simple',
-          cancelToken,
+          signal,
         );
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
           deepGet(curr, 'properties.segments.count'),

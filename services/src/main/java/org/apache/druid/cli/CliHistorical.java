@@ -45,13 +45,18 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordination.SegmentBootstrapper;
-import org.apache.druid.server.coordination.ServerManager;
+import org.apache.druid.server.ServerManager;
+import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
@@ -129,7 +134,7 @@ public class CliHistorical extends ServerRunnable
           if (isZkEnabled) {
             LifecycleModule.register(binder, ZkCoordinator.class);
           }
-          LifecycleModule.register(binder, SegmentBootstrapper.class);
+          LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
@@ -146,12 +151,17 @@ public class CliHistorical extends ServerRunnable
                 .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("historical"))
                 .in(LazySingleton.class);
         },
-        new LookupModule()
+        new LookupModule(),
+        new MSQIndexingModule(),
+        new MSQDurableStorageModule(),
+        new MSQExternalDataSourceModule(),
+        new DartWorkerModule(),
+        new DartWorkerMemoryManagementModule()
     );
   }
 
   /**
-   * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryErrorTest}.
+   * This method is visible for testing query retry on missing segments.
    */
   @VisibleForTesting
   public void bindQuerySegmentWalker(Binder binder)

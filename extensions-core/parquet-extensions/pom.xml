@@ -27,14 +27,11 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <properties>
-    <parquet.version>1.15.2</parquet.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -45,12 +42,6 @@
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-avro-extensions</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -79,25 +70,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.parquet</groupId>
-      <artifactId>parquet-avro</artifactId>
-      <version>${parquet.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-pool</groupId>
-          <artifactId>commons-pool</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>it.unimi.dsi</groupId>
-          <artifactId>fastutil</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-hadoop</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -110,12 +82,6 @@
           <artifactId>audience-annotations</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-indexing-hadoop</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
@@ -156,11 +122,6 @@
       <groupId>org.apache.directory.api</groupId>
       <artifactId>api-util</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>com.github.rvesse</groupId>

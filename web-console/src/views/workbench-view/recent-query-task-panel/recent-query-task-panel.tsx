@@ -90,7 +90,7 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqTaskVersion),
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       return await queryDruidSql<RecentQueryEntry>(
         {
           query: `SELECT
@@ -104,8 +104,9 @@ FROM sys.tasks
 WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
+          context: { engine: 'native' },
         },
-        cancelToken,
+        signal,
       );
     },
   });

@@ -96,7 +96,7 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
       final String patternString = (String) patternExpr.getLiteralValue();
 
       this.arg = args.get(0);
-      this.pattern = patternString != null ? Pattern.compile(patternString) : null;
+      this.pattern = patternString != null ? RegexpExprUtils.compilePattern(patternString, FN_NAME) : null;
       this.replacement = (String) replacementExpr.getLiteralValue();
     }
 
@@ -105,17 +105,17 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
     public ExprEval<?> eval(final ObjectBinding bindings)
     {
       if (pattern == null || replacement == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
 
       final String s = arg.eval(bindings).asString();
 
       if (s == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       } else {
         final Matcher matcher = pattern.matcher(s);
         final String retVal = matcher.replaceAll(replacement);
-        return ExprEval.of(retVal);
+        return ExprEval.ofString(retVal);
       }
     }
   }
@@ -139,11 +139,11 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
       final String replacement = args.get(2).eval(bindings).asString();
 
       if (s == null || pattern == null || replacement == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       } else {
         final Matcher matcher = Pattern.compile(pattern).matcher(s);
         final String retVal = matcher.replaceAll(replacement);
-        return ExprEval.of(retVal);
+        return ExprEval.ofString(retVal);
       }
     }
   }

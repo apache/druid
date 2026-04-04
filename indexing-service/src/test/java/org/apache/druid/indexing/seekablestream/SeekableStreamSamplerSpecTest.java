@@ -26,12 +26,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
@@ -48,7 +46,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScaler
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -60,15 +57,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public class SeekableStreamSamplerSpecTest extends EasyMockSupport
 {
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String STREAM = "sampling";
   private static final String SHARD_ID = "1";
 
@@ -103,39 +97,32 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   {
     DataSchema dataSchema = DataSchema.builder()
                                       .withDataSource("test_ds")
-                                      .withParserMap(
-                                          OBJECT_MAPPER.convertValue(
-                                              new StringInputRowParser(
-                                                  new JSONParseSpec(
-                                                      new TimestampSpec("timestamp", "iso", null),
-                                                      new DimensionsSpec(
-                                                          Arrays.asList(
-                                                              new StringDimensionSchema("dim1"),
-                                                              new StringDimensionSchema("dim1t"),
-                                                              new StringDimensionSchema("dim2"),
-                                                              new LongDimensionSchema("dimLong"),
-                                                              new FloatDimensionSchema("dimFloat")
-                                                          )
-                                                      ),
-                                                      new JSONPathSpec(true, ImmutableList.of()),
-                                                      ImmutableMap.of(),
-                                                      false
-                                                  )
-                                              ),
-                                              Map.class
+                                      .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                                      .withDimensions(
+                                          List.of(
+                                              new StringDimensionSchema("dim1"),
+                                              new StringDimensionSchema("dim1t"),
+                                              new StringDimensionSchema("dim2"),
+                                              new LongDimensionSchema("dimLong"),
+                                              new FloatDimensionSchema("dimFloat")
                                           )
                                       )
                                       .withAggregators(
                                           new DoubleSumAggregatorFactory("met1sum", "met1"),
                                           new CountAggregatorFactory("rows")
                                       )
-                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                                      .withObjectMapper(OBJECT_MAPPER)
+                                      .withGranularity(
+                                          new UniformGranularitySpec(
+                                              Granularities.DAY,
+                                              Granularities.NONE,
+                                              null
+                                          )
+                                      )
                                       .build();
 
     final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
         STREAM,
-        null,
+        new JsonInputFormat(null, null, null, null, null),
         null,
         null,
         null,
@@ -267,7 +254,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         null,
         null,
         true,
-        "Unable to parse row [unparseable]"
+        "Unable to parse row [unparseable] into JSON"
     ), it.next());
 
     Assert.assertFalse(it.hasNext());
@@ -345,6 +332,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           LagAggregator.DEFAULT,
           lateMessageRejectionStartDateTime,
           idleConfig,
+          null,
           null
       );
     }

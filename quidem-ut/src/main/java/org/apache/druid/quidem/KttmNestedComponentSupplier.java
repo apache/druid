@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -57,9 +58,12 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
+  )
   {
-    walker = super.addSegmentsToWalker(walker);
+    walker = super.addSegmentsToWalker(walker, jsonMapper);
     QueryableIndex idx = makeKttmIndex(tempDirProducer.newTempFolder());
 
     walker.add(
@@ -80,7 +84,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       final File directory = new File(tmpDir, StringUtils.format("kttm-index-%s", UUID.randomUUID()));
       final IncrementalIndex index = makeKttmNestedIndex();
-      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.getDefault(), null);
       return TestIndex.INDEX_IO.loadIndex(directory);
     }
     catch (IOException e) {
@@ -93,8 +97,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("session"),
         new StringDimensionSchema("number"),
-        new AutoTypeColumnSchema("event", null),
-        new AutoTypeColumnSchema("agent", null),
+        AutoTypeColumnSchema.of("event"),
+        AutoTypeColumnSchema.of("agent"),
         new StringDimensionSchema("client_ip"),
         new StringDimensionSchema("geo_ip"),
         new StringDimensionSchema("language"),
@@ -126,7 +130,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .schema(
                 new IncrementalIndexSchema.Builder()
                     .withRollup(false)
-                    .withTimestampSpec(new TimestampSpec("timestamp", null, null))
+                    .withTimestampSpec(TimestampSpec.DEFAULT)
                     .withDimensionsSpec(new DimensionsSpec(dimensions))
                     .build()
             )

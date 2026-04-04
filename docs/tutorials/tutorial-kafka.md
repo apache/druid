@@ -114,7 +114,7 @@ To use the console data loader:
 
    ![Data loader parse data](../assets/tutorial-kafka-data-loader-03.png "Data loader parse data")
 
-   The data loader automatically tries to determine the correct parser for the data. For the sample data, it selects input format `json`. You can play around with the different options to get a preview of how Druid parses your data.
+   The data loader automatically tries to determine the correct input format for the data. For the sample data, it selects input format `json`. You can play around with the different options to get a preview of how Druid parses your data.
 
 5. With the `json` input format selected, click **Next: Parse time**. You may need to click **Apply** first.
 

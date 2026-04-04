@@ -19,21 +19,36 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -84,6 +99,17 @@ public class EmbeddedMSQApis
    */
   public SqlTaskStatus submitTaskSql(String sql, Object... args)
   {
+    return submitTaskSql(null, sql, args);
+  }
+
+  /**
+   * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
+   * of the cluster, checks that the task has started and returns the {@link SqlTaskStatus}.
+   *
+   * @return The result of the SQL as a single CSV string.
+   */
+  public SqlTaskStatus submitTaskSql(Map<String, Object> queryContext, String sql, Object... args)
+  {
     final SqlTaskStatus taskStatus =
         cluster.callApi().onAnyBroker(
             b -> b.submitSqlTask(
@@ -93,7 +119,7 @@ public class EmbeddedMSQApis
                     false,
                     false,
                     false,
-                    null,
+                    queryContext,
                     null
                 )
             )
@@ -138,5 +164,137 @@ public class EmbeddedMSQApis
     }
 
     return taskReportPayload;
+  }
+
+  /**
+   * Gets the query report for a Dart query by its SQL query ID, fetching from a specific broker.
+   * Returns null if the query is not found.
+   *
+   * @param sqlQueryId   the SQL query ID
+   * @param targetBroker the broker to fetch the report from
+   */
+  @Nullable
+  public GetQueryReportResponse getDartQueryReport(String sqlQueryId, EmbeddedBroker targetBroker)
+  {
+    try {
+      final String responseJson = cluster.callApi().onTargetBroker(
+          targetBroker,
+          b -> b.getQueryReport(sqlQueryId, false /* allow cross-broker forwarding */)
+      );
+      return parseReportResponse(responseJson, targetBroker.bindings().jsonMapper());
+    }
+    catch (RuntimeException e) {
+      // Check if this is a 404 Not Found response
+      final Throwable cause = e.getCause();
+      if (cause instanceof HttpResponseException) {
+        if (((HttpResponseException) cause).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+          return null;
+        }
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Submits a Dart SQL query asynchronously to a specific broker.
+   *
+   * @param sql          the SQL query
+   * @param context      additional context parameters
+   * @param targetBroker the broker to submit the query to
+   *
+   * @return a future that resolves when the query completes
+   */
+  public ListenableFuture<String> submitDartSqlAsync(
+      String sql,
+      Map<String, Object> context,
+      EmbeddedBroker targetBroker
+  )
+  {
+    final Map<String, Object> fullContext = new HashMap<>(context);
+    fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+
+    return cluster.callApi().onTargetBrokerAsync(
+        targetBroker,
+        b -> b.submitSqlQuery(
+            new ClientSqlQuery(
+                sql,
+                ResultFormat.CSV.name(),
+                false,
+                false,
+                false,
+                fullContext,
+                null
+            )
+        )
+    );
+  }
+
+  /**
+   * Cancels a Dart SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId   the SQL query ID to cancel
+   * @param targetBroker the broker where the query is running
+   *
+   * @return true if the cancellation was accepted
+   */
+  public boolean cancelDartQuery(String sqlQueryId, EmbeddedBroker targetBroker)
+  {
+    return cluster.callApi().onTargetBroker(targetBroker, b -> b.cancelSqlQuery(sqlQueryId));
+  }
+
+  /**
+   * Returns the sum of completed queries across all input channel snapshots from all stages and workers.
+   */
+  public long getQueriesSum(final MSQTaskReportPayload payload)
+  {
+    return getAllInputChannelCounters(payload)
+        .stream()
+        .filter(snapshot -> snapshot.getQueries() != null)
+        .mapToLong(snapshot -> Arrays.stream(snapshot.getQueries()).sum())
+        .sum();
+  }
+
+  /**
+   * Returns the sum of files read across all input channel snapshots from all stages and workers.
+   */
+  public long getFilesSum(final MSQTaskReportPayload payload)
+  {
+    return getAllInputChannelCounters(payload)
+        .stream()
+        .filter(snapshot -> snapshot.getFiles() != null)
+        .mapToLong(snapshot -> Arrays.stream(snapshot.getFiles()).sum())
+        .sum();
+  }
+
+  /**
+   * Returns all {@link ChannelCounters.Snapshot} from input channels across all stages and workers.
+   */
+  private List<ChannelCounters.Snapshot> getAllInputChannelCounters(final MSQTaskReportPayload payload)
+  {
+    final Map<Integer, Map<Integer, CounterSnapshots>> countersMap = payload.getCounters().copyMap();
+    final List<ChannelCounters.Snapshot> snapshots = new ArrayList<>();
+
+    for (final Map.Entry<Integer, Map<Integer, CounterSnapshots>> stageEntry : countersMap.entrySet()) {
+      for (final Map.Entry<Integer, CounterSnapshots> workerEntry : stageEntry.getValue().entrySet()) {
+        for (final Map.Entry<String, QueryCounterSnapshot> counterEntry : workerEntry.getValue().getMap().entrySet()) {
+          if (counterEntry.getKey().startsWith("input")
+              && counterEntry.getValue() instanceof ChannelCounters.Snapshot) {
+            snapshots.add((ChannelCounters.Snapshot) counterEntry.getValue());
+          }
+        }
+      }
+    }
+
+    return snapshots;
+  }
+
+  private static GetQueryReportResponse parseReportResponse(String responseJson, ObjectMapper jsonMapper)
+  {
+    try {
+      return jsonMapper.readValue(responseJson, GetQueryReportResponse.class);
+    }
+    catch (JsonProcessingException e) {
+      throw DruidException.defensive(e, "Failed to parse query report response[%s]", responseJson);
+    }
   }
 }

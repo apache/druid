@@ -72,10 +72,12 @@ class LocalOverlordClient extends NoopOverlordClient
   @Override
   public ListenableFuture<Void> runTask(String taskId, Object clientTaskQuery)
   {
+    final CompactionTask task =
+        clientTaskQuery instanceof CompactionTask
+        ? (CompactionTask) clientTaskQuery
+        : convertTask(clientTaskQuery, ClientCompactionTaskQuery.class, CompactionTask.class);
     return futureOf(() -> {
-      getValidTaskQueue().add(
-          convertTask(clientTaskQuery, ClientCompactionTaskQuery.class, CompactionTask.class)
-      );
+      getValidTaskQueue().add(task);
       return null;
     });
   }

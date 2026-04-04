@@ -29,7 +29,6 @@ import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { DartDetailsDialog } from '../dart-details-dialog/dart-details-dialog';
 import { getMsqDartVersion, WORK_STATE_STORE } from '../work-state-store';
 
 import './current-dart-panel.scss';
@@ -39,7 +38,11 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
     case 'ACCEPTED':
-      return [IconNames.CIRCLE, '#8d8d8d'];
+      return [IconNames.CIRCLE, '#d5631a'];
+    case 'SUCCESS':
+      return [IconNames.TICK_CIRCLE, '#57d500'];
+    case 'FAILED':
+      return [IconNames.DELETE, '#9f0d0a'];
     case 'CANCELED':
       return [IconNames.DISABLE, '#8d8d8d'];
     default:
@@ -48,24 +51,23 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
 }
 
 export interface CurrentViberPanelProps {
+  onExecutionDetails(id: string): void;
   onClose(): void;
 }
 
 export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   props: CurrentViberPanelProps,
 ) {
-  const { onClose } = props;
+  const { onExecutionDetails, onClose } = props;
 
-  const [showSql, setShowSql] = useState<string | undefined>();
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       return (
-        (await Api.instance.get('/druid/v2/sql/queries', { cancelToken })).data
-          .queries as DartQueryEntry[]
-      ).filter(q => q.engine === 'msq-dart');
+        await Api.instance.get('/druid/v2/sql/queries?includeComplete', { signal })
+      ).data.queries.reverse() as DartQueryEntry[];
     },
   });
 
@@ -89,9 +91,9 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
               <Menu>
                 <MenuItem
                   icon={IconNames.EYE_OPEN}
-                  text="Show SQL"
+                  text="Show details"
                   onClick={() => {
-                    setShowSql(w.sql);
+                    onExecutionDetails(w.sqlQueryId);
                   }}
                 />
                 <MenuItem
@@ -116,13 +118,28 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                     });
                   }}
                 />
-                <MenuDivider />
                 <MenuItem
-                  icon={IconNames.CROSS}
-                  text="Cancel query"
-                  intent={Intent.DANGER}
-                  onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                  icon={IconNames.DUPLICATE}
+                  text="Copy Identity"
+                  onClick={() => {
+                    copy(w.identity, { format: 'text/plain' });
+                    AppToaster.show({
+                      message: `${w.identity} copied to clipboard`,
+                      intent: Intent.SUCCESS,
+                    });
+                  }}
                 />
+                {(w.state === 'ACCEPTED' || w.state === 'RUNNING') && (
+                  <>
+                    <MenuDivider />
+                    <MenuItem
+                      icon={IconNames.CROSS}
+                      text="Cancel query"
+                      intent={Intent.DANGER}
+                      onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                    />
+                  </>
+                )}
               </Menu>
             );
 
@@ -132,10 +149,13 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
-                <div onDoubleClick={() => setShowSql(w.sql)}>
-                  <div className="line1">
+                <div onDoubleClick={() => onExecutionDetails(w.sqlQueryId)}>
+                  <div
+                    className="line1"
+                    data-tooltip={`Engine: ${w.engine}\nSQL ID: ${w.sqlQueryId}`}
+                  >
                     <Icon
-                      className={'status-icon ' + w.state.toLowerCase()}
+                      className={`status-icon ${w.state.toLowerCase()}`}
                       icon={icon}
                       style={{ color }}
                       data-tooltip={`State: ${w.state}`}
@@ -171,23 +191,26 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             if (!confirmCancelId) return;
             try {
               await Api.instance.delete(`/druid/v2/sql/${Api.encodePath(confirmCancelId)}`);
-
-              AppToaster.show({
-                message: 'Query canceled',
-                intent: Intent.SUCCESS,
-              });
-              queryManager.rerunLastQuery();
-            } catch {
-              AppToaster.show({
-                message: 'Could not cancel query',
-                intent: Intent.DANGER,
-              });
+            } catch (e: any) {
+              if (e.response?.status === 404) {
+                // Query may have already completed or been canceled, which is fine.
+              } else {
+                AppToaster.show({
+                  message: 'Could not cancel query',
+                  intent: Intent.DANGER,
+                });
+                return;
+              }
             }
+            AppToaster.show({
+              message: 'Query canceled or no longer running',
+              intent: Intent.SUCCESS,
+            });
+            queryManager.rerunLastQuery();
           }}
           onDismiss={() => setConfirmCancelId(undefined)}
         />
       )}
-      {showSql && <DartDetailsDialog sql={showSql} onClose={() => setShowSql(undefined)} />}
     </div>
   );
 });

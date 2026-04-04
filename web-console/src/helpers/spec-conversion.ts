@@ -51,6 +51,10 @@ export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string | un
   return deepGet(spec, 'spec.dataSchema.dataSource');
 }
 
+export function getSpecSupervisorId(spec: Partial<IngestionSpec>): string | undefined {
+  return typeof spec.id === 'string' ? spec.id : getSpecDatasourceName(spec);
+}
+
 function convertFilter(filter: any): SqlExpression {
   switch (filter.type) {
     case 'selector':

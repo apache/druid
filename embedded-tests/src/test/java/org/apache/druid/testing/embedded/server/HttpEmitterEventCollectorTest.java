@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.server;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -42,6 +43,7 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedEventCollector eventCollector = new EmbeddedEventCollector()
       .addProperty("druid.emitter", "latching");
 
@@ -59,8 +61,8 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(eventCollector)
         .addServer(coordinator)
+        .addServer(broker)
         .addServer(new EmbeddedHistorical())
-        .addServer(new EmbeddedBroker())
         .addServer(new EmbeddedIndexer());
   }
 
@@ -87,6 +89,11 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker"),
         agg -> agg.hasSumAtLeast(10)
+    );
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasService("druid/broker")
     );
 
     cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, Resources.InlineData.CSV_10_DAYS);
