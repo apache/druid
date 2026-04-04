@@ -28,25 +28,25 @@ public class K8sTaskIdTest
   @Test
   public void testModifyingTaskIDToBeK8sCompliant()
   {
-    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
+    String original = "auto_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
     String result = new K8sTaskId(null, original).getK8sJobName();
-    Assertions.assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
+    Assertions.assertEquals("autocompactk8smetricsaeifmefd2-4b1aea2eb0593c194d7b4046df1bdd22", result);
   }
 
   @Test
   public void testModifyingTaskIDWithEmptyK8sTaskPrefixToBeK8sCompliant()
   {
-    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
+    String original = "auto_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
     String result = new K8sTaskId("", original).getK8sJobName();
-    Assertions.assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
+    Assertions.assertEquals("autocompactk8smetricsaeifmefd2-4b1aea2eb0593c194d7b4046df1bdd22", result);
   }
 
   @Test
   public void testModifyingTaskIDWithLongK8sTaskPrefixToBeK8sCompliant()
   {
-    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
+    String original = "auto_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
     String result = new K8sTaskId("this-is_a:VERY-very-long-task-name-prefix", original).getK8sJobName();
-    Assertions.assertEquals("thisisaveryverylongtasknamepre-2e2c1862cb7ad1d01f4794b27a4438b0", result);
+    Assertions.assertEquals("thisisaveryverylongtasknamepre-4b1aea2eb0593c194d7b4046df1bdd22", result);
   }
 
   @Test

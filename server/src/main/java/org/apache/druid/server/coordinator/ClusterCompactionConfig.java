@@ -60,8 +60,8 @@ public class ClusterCompactionConfig
     this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
     this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
     this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
-    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
-    this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+    this.engine = Configs.valueOrDefault(engine, CompactionEngine.MSQ);
+    this.useSupervisors = Configs.valueOrDefault(useSupervisors, true);
     this.storeCompactionStatePerSegment = Configs.valueOrDefault(
         storeCompactionStatePerSegment,
         true

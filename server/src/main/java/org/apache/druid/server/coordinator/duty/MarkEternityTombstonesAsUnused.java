@@ -26,8 +26,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -98,7 +98,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
               datasourceToNonOvershadowedEternityTombstones.size(), datasourceToNonOvershadowedEternityTombstones
     );
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
     datasourceToNonOvershadowedEternityTombstones.forEach((datasource, nonOvershadowedEternityTombstones) -> {
       final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
       stats.add(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, datasourceKey, nonOvershadowedEternityTombstones.size());

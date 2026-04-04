@@ -26,9 +26,9 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -57,7 +57,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 {
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
-  private final CoordinatorRunStats stats;
+  private final DruidRunStats stats;
   private final SegmentReplicaCountMap replicaCountMap;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
@@ -76,7 +76,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DruidCluster cluster,
       BalancerStrategy strategy,
       SegmentLoadingConfig loadingConfig,
-      CoordinatorRunStats stats
+      DruidRunStats stats
   )
   {
     this.stats = stats;

@@ -87,7 +87,7 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -189,7 +189,7 @@ public class TaskQueueTest extends IngestionTestBase
     verifySuccessfulTaskCount(taskQueue, 2);
     verifyFailedTaskCount(taskQueue, 0);
 
-    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    final DruidRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
     Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
@@ -438,7 +438,7 @@ public class TaskQueueTest extends IngestionTestBase
     verifySuccessfulTaskCount(taskQueue, 0);
     verifyFailedTaskCount(taskQueue, 1);
 
-    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    final DruidRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
     Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
@@ -500,7 +500,7 @@ public class TaskQueueTest extends IngestionTestBase
     verifySuccessfulTaskCount(taskQueue, 0);
     verifyFailedTaskCount(taskQueue, 1);
 
-    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    final DruidRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
     Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }

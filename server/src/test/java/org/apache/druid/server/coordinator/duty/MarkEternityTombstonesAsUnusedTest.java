@@ -34,8 +34,8 @@ import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -495,7 +495,7 @@ public class MarkEternityTombstonesAsUnusedTest
     Assert.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
     Assert.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));
 
-    final CoordinatorRunStats runStats = params.getCoordinatorStats();
+    final DruidRunStats runStats = params.getDruidRunStats();
     Assert.assertEquals(
         allUsedSegments.size() - expectedUsedSegments.size(),
         runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +

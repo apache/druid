@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -44,13 +44,13 @@ public class KillSupervisorsTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   private KillSupervisors killSupervisors;
-  private CoordinatorRunStats runStats;
+  private DruidRunStats runStats;
 
   @Before
   public void setup()
   {
-    runStats = new CoordinatorRunStats();
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+    runStats = new DruidRunStats();
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getDruidRunStats()).thenReturn(runStats);
   }
 
   @Test

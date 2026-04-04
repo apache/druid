@@ -71,8 +71,8 @@ public class KubernetesOverlordUtilsTest
   @Test
   public void test_stripJobName_avoidDuplicatesWithLongDataSourceName()
   {
-    String jobName1 = KubernetesOverlordUtils.convertTaskIdToJobName("coordinator-issued_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_116_pcgkebcl_2023-07-19T16:53:11.416Z");
-    String jobName2 = KubernetesOverlordUtils.convertTaskIdToJobName("coordinator-issued_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_117_pcgkebcl_2023-07-19T16:53:11.416Z");
+    String jobName1 = KubernetesOverlordUtils.convertTaskIdToJobName("auto_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_116_pcgkebcl_2023-07-19T16:53:11.416Z");
+    String jobName2 = KubernetesOverlordUtils.convertTaskIdToJobName("auto_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_117_pcgkebcl_2023-07-19T16:53:11.416Z");
     Assertions.assertNotEquals(jobName1, jobName2);
   }
 

@@ -33,8 +33,8 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -115,7 +115,7 @@ public class KillStalePendingSegmentsTest
     Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
     Assert.assertEquals(startOfLatestCompletedTask.minusDays(1), observedKillInterval.getEnd());
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
     Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
   }
 
@@ -165,7 +165,7 @@ public class KillStalePendingSegmentsTest
     killDuty.run(params);
 
     // Verify that stale pending segments are killed in "wiki" but not in "koala"
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
     Assert.assertTrue(overlordClient.observedKillIntervals.containsKey(TestDataSource.WIKI));
     Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
 

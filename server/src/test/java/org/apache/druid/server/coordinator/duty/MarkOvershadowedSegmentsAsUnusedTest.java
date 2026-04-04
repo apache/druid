@@ -34,8 +34,8 @@ import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -121,7 +121,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     Assert.assertEquals(1, updatedUsedSegments.size());
     Assert.assertTrue(updatedUsedSegments.contains(segmentV2));
 
-    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    DruidRunStats runStats = params.getDruidRunStats();
     Assert.assertEquals(
         2L,
         runStats.get(Stats.Segments.OVERSHADOWED, RowKey.of(Dimension.DATASOURCE, "test"))

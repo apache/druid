@@ -27,7 +27,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 
@@ -55,7 +55,7 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final int maxSegmentsToMove = getMaxSegmentsToMove(params);
-    params.getCoordinatorStats().add(Stats.Balancer.MAX_TO_MOVE, maxSegmentsToMove);
+    params.getDruidRunStats().add(Stats.Balancer.MAX_TO_MOVE, maxSegmentsToMove);
     if (maxSegmentsToMove <= 0) {
       return params;
     }
@@ -64,7 +64,7 @@ public class BalanceSegments implements CoordinatorDuty
         (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
 
-    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    DruidRunStats runStats = params.getDruidRunStats();
     params.getBalancerStrategy()
           .getStats()
           .forEachStat(runStats::add);

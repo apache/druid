@@ -29,8 +29,8 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -109,7 +109,7 @@ public class RunRules implements CoordinatorDuty
       }
     }
 
-    processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
+    processSegmentDeletes(segmentAssigner, params.getDruidRunStats());
     alertForSegmentsWithNoRules(datasourceToSegmentsWithNoRule);
     alertForInvalidRules(segmentAssigner);
 
@@ -120,7 +120,7 @@ public class RunRules implements CoordinatorDuty
 
   private void processSegmentDeletes(
       StrategicSegmentAssigner segmentAssigner,
-      CoordinatorRunStats runStats
+      DruidRunStats runStats
   )
   {
     segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {

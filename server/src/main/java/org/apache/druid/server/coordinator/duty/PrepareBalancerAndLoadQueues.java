@@ -32,8 +32,8 @@ import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -91,7 +91,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
     cancelLoadsOnDecommissioningServers(cluster);
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getDruidRunStats();
     collectHistoricalStats(cluster, stats);
     collectUsedSegmentStats(params, stats);
     collectDebugStats(segmentLoadingConfig, stats);
@@ -170,7 +170,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     return cluster.build();
   }
 
-  private void collectHistoricalStats(DruidCluster cluster, CoordinatorRunStats stats)
+  private void collectHistoricalStats(DruidCluster cluster, DruidRunStats stats)
   {
     cluster.getHistoricals().forEach((tier, historicals) -> {
       RowKey rowKey = RowKey.of(Dimension.TIER, tier);
@@ -193,7 +193,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     });
   }
 
-  private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
+  private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, DruidRunStats stats)
   {
     params.getUsedSegmentsTimelinesPerDataSource().forEach((dataSource, timeline) -> {
       long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
@@ -205,7 +205,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     });
   }
 
-  private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)
+  private void collectDebugStats(SegmentLoadingConfig config, DruidRunStats stats)
   {
     stats.add(Stats.Balancer.COMPUTE_THREADS, config.getBalancerComputeThreads());
     stats.add(Stats.Segments.REPLICATION_THROTTLE_LIMIT, config.getReplicationThrottleLimit());

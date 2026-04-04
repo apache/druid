@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -56,8 +56,8 @@ public class KillSupervisorsCustomDutyTest
   @Test
   public void testRun()
   {
-    final CoordinatorRunStats runStats = new CoordinatorRunStats();
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+    final DruidRunStats runStats = new DruidRunStats();
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getDruidRunStats()).thenReturn(runStats);
     killSupervisors = new KillSupervisorsCustomDuty(
         new Duration("PT1S"),
         mockMetadataSupervisorManager
