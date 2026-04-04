@@ -49,10 +49,19 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Duration;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Builds a view of used segment metadata currently present on the Coordinator
@@ -63,6 +72,8 @@ import java.util.concurrent.TimeUnit;
 public class MetadataSegmentView
 {
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
+  private static final String NEW_SEGMENTS_DETECTED_METRIC_NAME = "metadataSegmentView/segments/added";
+  private static final String REMOVED_SEGMENTS_DETECTED_METRIC_NAME = "metadataSegmentView/segments/removed";
 
   private final CoordinatorClient coordinatorClient;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
@@ -71,14 +82,24 @@ public class MetadataSegmentView
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
    * sys.segments queries return the segments in sorted order based on segmentId.
-   *
+   * <p>
    * Volatile since this reference is reassigned in {@code poll()} and then read in {@code getPublishedSegments()}
    * from other threads.
    */
   @MonotonicNonNull
   private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = null;
+
   /**
-   * Caches the replication factor for segment IDs. In case of coordinator restarts or leadership re-elections, the coordinator API returns `null` replication factor until load rules are evaluated.
+   * Collection of callbacks watching on segments changes.
+   */
+  private final ConcurrentMap<MetadataSegmentViewCallback, Executor> segmentViewCallbacks;
+  /**
+   * A set containing the identifiers of the segments currently being managed or tracked by this view.
+   */
+  private final Set<SegmentId> currentSegmentIds;
+  /**
+   * Caches the replication factor for segment IDs. In case of coordinator restarts or leadership re-elections,
+   * the coordinator API returns `null` replication factor until load rules are evaluated.
    * The cache can be used during these periods to continue serving the previously fetched values.
    */
   private final Cache<SegmentId, Integer> segmentIdToReplicationFactor;
@@ -86,6 +107,10 @@ public class MetadataSegmentView
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
+  /**
+   * True until the first call to {@link #poll()} completes. Written and read only on the poll thread.
+   */
+  private boolean firstPoll = true;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -99,6 +124,8 @@ public class MetadataSegmentView
     Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
     this.coordinatorClient = coordinatorClient;
     this.segmentWatcherConfig = segmentWatcherConfig;
+    this.segmentViewCallbacks = new ConcurrentHashMap<>();
+    this.currentSegmentIds = new HashSet<>();
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
@@ -146,6 +173,14 @@ public class MetadataSegmentView
     log.info("MetadataSegmentView is stopped.");
   }
 
+  /**
+   * Register a callback to watch for the segments managed by this view.
+   */
+  public void registerSegmentViewCallback(Executor exec, MetadataSegmentViewCallback callback)
+  {
+    segmentViewCallbacks.put(callback, exec);
+  }
+
   private void poll()
   {
     log.info("Polling segments from coordinator");
@@ -153,6 +188,9 @@ public class MetadataSegmentView
     final CloseableIterator<SegmentStatusInCluster> metadataSegments = fetchSegmentMetadataFromCoordinator();
 
     final ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
+    final Set<SegmentId> newSegmentIds = new HashSet<>();
+    final List<DataSegment> addedSegments = new ArrayList<>();
+
     while (metadataSegments.hasNext()) {
       final SegmentStatusInCluster segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
@@ -170,12 +208,45 @@ public class MetadataSegmentView
           segment.isRealtime()
       );
       builder.add(segmentStatusInCluster);
+
+      final SegmentId id = interned.getId();
+      newSegmentIds.add(id);
+      if (!currentSegmentIds.contains(id)) {
+        addedSegments.add(interned);
+      }
     }
+
+    // Detect removed segments for `segmentsRemoved` callback.
+    final Set<SegmentId> removedIds = new HashSet<>(currentSegmentIds);
+    removedIds.removeAll(newSegmentIds);
+
     publishedSegments = builder.build();
     cachePopulated.countDown();
-    emitter.emit(
-        ServiceMetricEvent.builder().setMetric(Metric.SYNC_DURATION_MILLIS, syncTime.millisElapsed())
-    );
+    currentSegmentIds.clear();
+    currentSegmentIds.addAll(newSegmentIds);
+
+    // Fire callbacks on the poll thread, which holds no lock.
+    if (!addedSegments.isEmpty()) {
+      runSegmentViewCallbacks(cb -> cb.segmentsAdded(addedSegments));
+      emitter.emit(ServiceMetricEvent.builder().setMetric(NEW_SEGMENTS_DETECTED_METRIC_NAME, addedSegments.size()));
+    }
+    if (!removedIds.isEmpty()) {
+      runSegmentViewCallbacks(cb -> cb.segmentsRemoved(removedIds));
+      emitter.emit(ServiceMetricEvent.builder().setMetric(REMOVED_SEGMENTS_DETECTED_METRIC_NAME, removedIds.size()));
+    }
+    if (firstPoll) {
+      firstPoll = false;
+      runSegmentViewCallbacks(MetadataSegmentViewCallback::timelineInitialized);
+    }
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric(Metric.SYNC_DURATION_MILLIS, syncTime.millisElapsed()));
+  }
+
+  private void runSegmentViewCallbacks(Consumer<MetadataSegmentViewCallback> action)
+  {
+    for (Map.Entry<MetadataSegmentViewCallback, Executor> entry : segmentViewCallbacks.entrySet()) {
+      entry.getValue().execute(() -> action.accept(entry.getKey()));
+    }
   }
 
   /**

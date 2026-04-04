@@ -90,6 +90,7 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.sql.calcite.schema.BrokerServerViewOfLatestUsedSegments;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
@@ -153,6 +154,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);
           LifecycleModule.register(binder, MetadataSegmentView.class);
+          LifecycleModule.register(binder, BrokerServerViewOfLatestUsedSegments.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
           binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
 
