@@ -85,7 +85,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  @Nullable
   private final IndexSpec indexSpec;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
 
@@ -145,7 +144,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
-    this.indexSpec = indexSpec;
+    this.indexSpec = (indexSpec != null ? indexSpec : IndexSpec.getDefault()).getEffectiveSpec();
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -315,6 +314,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    // Resolve effective dimension schemas up front because column indexers need the fully resolved
+    // StringColumnFormatSpec at construction time.
     final DimensionsSpec dimensionsSpec = resolveEffectiveDimensionsSpec(schema.getDimensionsSpec());
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
@@ -398,9 +399,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   private DimensionsSpec resolveEffectiveDimensionsSpec(DimensionsSpec dimensionsSpec)
   {
-    if (indexSpec == null) {
-      return dimensionsSpec;
-    }
     final List<DimensionSchema> effectiveDimensions = dimensionsSpec.getDimensions()
         .stream()
         .map(dim -> dim.getEffectiveSchema(indexSpec))

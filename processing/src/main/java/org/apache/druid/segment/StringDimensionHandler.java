@@ -115,7 +115,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       boolean hasSpatialIndexes
   )
   {
-    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, null);
   }
 
   public StringDimensionHandler(

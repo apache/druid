@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.StringColumnFormatSpec;
@@ -37,26 +35,6 @@ import java.util.Objects;
 public class StringDimensionSchema extends DimensionSchema
 {
   private static final boolean DEFAULT_CREATE_BITMAP_INDEX = true;
-
-  @Nullable
-  public static Integer getDefaultMaxStringLength()
-  {
-    return BuiltInTypesModule.getMaxStringLength();
-  }
-
-  @Nullable
-  private static Integer validateMaxStringLength(String name, @Nullable Integer maxStringLength)
-  {
-    if (maxStringLength != null && maxStringLength < 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("maxStringLength for column [%s] must be >= 0, got [%s]", name, maxStringLength);
-    }
-    return maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
-  }
-
-  @Nullable
-  private final Integer maxStringLength;
 
   @Nullable
   private final StringColumnFormatSpec columnFormatSpec;
@@ -72,23 +50,11 @@ public class StringDimensionSchema extends DimensionSchema
       @JsonProperty("name") String name,
       @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling,
       @JsonProperty("createBitmapIndex") Boolean createBitmapIndex,
-      @JsonProperty("maxStringLength") @Nullable Integer maxStringLength,
       @JsonProperty("columnFormatSpec") @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
-    this.maxStringLength = validateMaxStringLength(name, maxStringLength);
     this.columnFormatSpec = columnFormatSpec;
-  }
-
-  public StringDimensionSchema(
-      String name,
-      MultiValueHandling multiValueHandling,
-      Boolean createBitmapIndex,
-      @Nullable Integer maxStringLength
-  )
-  {
-    this(name, multiValueHandling, createBitmapIndex, maxStringLength, null);
   }
 
   public StringDimensionSchema(
@@ -97,20 +63,12 @@ public class StringDimensionSchema extends DimensionSchema
       Boolean createBitmapIndex
   )
   {
-    this(name, multiValueHandling, createBitmapIndex, null, null);
+    this(name, multiValueHandling, createBitmapIndex, null);
   }
 
   public StringDimensionSchema(String name)
   {
-    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null, null);
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
-  public Integer getMaxStringLength()
-  {
-    return maxStringLength;
+    this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null);
   }
 
   @Nullable
@@ -134,7 +92,6 @@ public class StringDimensionSchema extends DimensionSchema
         getName(),
         getMultiValueHandling(),
         hasBitmapIndex(),
-        maxStringLength != null ? maxStringLength : effective.getMaxStringLength(),
         effective
     );
   }
@@ -161,6 +118,7 @@ public class StringDimensionSchema extends DimensionSchema
   @Override
   public DimensionHandler getDimensionHandler()
   {
+    Integer maxStringLength = columnFormatSpec != null ? columnFormatSpec.getMaxStringLength() : null;
     return new StringDimensionHandler(getName(), getMultiValueHandling(), hasBitmapIndex(), false, maxStringLength);
   }
 
@@ -177,13 +135,12 @@ public class StringDimensionSchema extends DimensionSchema
       return false;
     }
     StringDimensionSchema that = (StringDimensionSchema) o;
-    return Objects.equals(maxStringLength, that.maxStringLength)
-           && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+    return Objects.equals(columnFormatSpec, that.columnFormatSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), maxStringLength, columnFormatSpec);
+    return Objects.hash(super.hashCode(), columnFormatSpec);
   }
 }

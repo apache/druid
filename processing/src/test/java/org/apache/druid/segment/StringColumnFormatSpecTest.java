@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.segment.column.StringBitmapIndexType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +32,7 @@ public class StringColumnFormatSpecTest
   public void testSerde() throws JsonProcessingException
   {
     StringColumnFormatSpec spec = StringColumnFormatSpec.builder()
-        .setCreateBitmapIndex(false)
+        .setIndexType(StringBitmapIndexType.NoIndex.INSTANCE)
         .setMultiValueHandling(MultiValueHandling.SORTED_SET)
         .setMaxStringLength(100)
         .build();
@@ -63,7 +64,7 @@ public class StringColumnFormatSpecTest
         IndexSpec.builder().build()
     );
 
-    Assert.assertEquals(Boolean.TRUE, effective.getCreateBitmapIndex());
+    Assert.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
     Assert.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
     Assert.assertNull(effective.getMaxStringLength());
   }
@@ -81,7 +82,7 @@ public class StringColumnFormatSpecTest
 
     StringColumnFormatSpec effective = StringColumnFormatSpec.getEffectiveFormatSpec(null, indexSpec);
 
-    Assert.assertEquals(Boolean.TRUE, effective.getCreateBitmapIndex());
+    Assert.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
     Assert.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
     Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
   }
@@ -110,7 +111,7 @@ public class StringColumnFormatSpecTest
   public void testGetEffectiveFormatSpecColumnFallsBackToJobLevel()
   {
     StringColumnFormatSpec columnSpec = StringColumnFormatSpec.builder()
-        .setCreateBitmapIndex(false)
+        .setIndexType(StringBitmapIndexType.NoIndex.INSTANCE)
         .build();
 
     IndexSpec indexSpec = IndexSpec.builder()
@@ -124,14 +125,31 @@ public class StringColumnFormatSpecTest
 
     StringColumnFormatSpec effective = StringColumnFormatSpec.getEffectiveFormatSpec(columnSpec, indexSpec);
 
-    Assert.assertEquals(Boolean.FALSE, effective.getCreateBitmapIndex());
+    Assert.assertEquals(StringBitmapIndexType.NoIndex.INSTANCE, effective.getIndexType());
     Assert.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
     Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
   }
 
   @Test
+  public void testInvalidMaxStringLength()
+  {
+    final Exception exception = Assert.assertThrows(
+        Exception.class,
+        () -> StringColumnFormatSpec.builder().setMaxStringLength(-1).build()
+    );
+    Assert.assertTrue(exception.getMessage().contains("maxStringLength must be >= 0"));
+  }
+
+  @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(StringColumnFormatSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(StringColumnFormatSpec.class)
+                  .usingGetClass()
+                  .withPrefabValues(
+                      StringBitmapIndexType.class,
+                      StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE,
+                      StringBitmapIndexType.NoIndex.INSTANCE
+                  )
+                  .verify();
   }
 }

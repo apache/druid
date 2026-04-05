@@ -23,11 +23,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.StringColumnFormatSpec;
+import org.apache.druid.segment.column.StringBitmapIndexType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,22 +57,30 @@ public class StringDimensionSchemaTest
     final String json = "{\n"
                         + "  \"name\" : \"dim\",\n"
                         + "  \"multiValueHandling\" : \"SORTED_SET\",\n"
-                        + "  \"createBitmapIndex\" : false,\n"
-                        + "  \"maxStringLength\" : 200\n"
+                        + "  \"createBitmapIndex\" : false\n"
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, 200), schema);
-    Assert.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
+    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
   }
 
   @Test
-  public void testInvalidMaxStringLength()
+  public void testDeserializeFromJsonWithColumnFormatSpec() throws JsonProcessingException
   {
-    final Exception exception = Assert.assertThrows(
-        DruidException.class,
-        () -> new StringDimensionSchema("dim", null, true, -1)
+    final String json = "{\n"
+                        + "  \"name\" : \"dim\",\n"
+                        + "  \"multiValueHandling\" : \"SORTED_SET\",\n"
+                        + "  \"createBitmapIndex\" : false,\n"
+                        + "  \"columnFormatSpec\" : { \"maxStringLength\" : 200 }\n"
+                        + "}";
+    final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
+    final StringColumnFormatSpec expectedSpec = StringColumnFormatSpec.builder()
+        .setMaxStringLength(200)
+        .build();
+    Assert.assertEquals(
+        new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, expectedSpec),
+        schema
     );
-    Assert.assertTrue(exception.getMessage().contains("maxStringLength for column [dim] must be >= 0"));
+    Assert.assertEquals(Integer.valueOf(200), schema.getColumnFormatSpec().getMaxStringLength());
   }
 
   @Test
@@ -87,14 +95,17 @@ public class StringDimensionSchemaTest
 
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
-    Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
+    Assert.assertEquals(Integer.valueOf(50), effective.getColumnFormatSpec().getMaxStringLength());
     Assert.assertEquals("dim", effective.getName());
   }
 
   @Test
   public void testGetEffectiveSchemaPreservesPerColumnMaxStringLength()
   {
-    final StringDimensionSchema schema = new StringDimensionSchema("dim", null, true, 20);
+    final StringColumnFormatSpec columnSpec = StringColumnFormatSpec.builder()
+        .setMaxStringLength(20)
+        .build();
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", null, true, columnSpec);
     final IndexSpec indexSpec = IndexSpec.builder()
         .withStringColumnFormatSpec(
             StringColumnFormatSpec.builder().setMaxStringLength(50).build()
@@ -104,7 +115,7 @@ public class StringDimensionSchemaTest
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
     // Per-column maxStringLength=20 should not be overridden by job level 50
-    Assert.assertEquals(Integer.valueOf(20), effective.getMaxStringLength());
+    Assert.assertEquals(Integer.valueOf(20), effective.getColumnFormatSpec().getMaxStringLength());
   }
 
   @Test
@@ -138,9 +149,29 @@ public class StringDimensionSchemaTest
 
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
-    // With no stringColumnFormatSpec, maxStringLength should remain unchanged
-    Assert.assertEquals(schema.getMaxStringLength(), effective.getMaxStringLength());
+    // With no stringColumnFormatSpec, should return same object
+    Assert.assertSame(schema, effective);
     Assert.assertEquals(schema.hasBitmapIndex(), effective.hasBitmapIndex());
     Assert.assertEquals(schema.getMultiValueHandling(), effective.getMultiValueHandling());
+  }
+
+  @Test
+  public void testGetEffectiveSchemaResolvesIndexTypeFromIndexSpec()
+  {
+    final StringDimensionSchema schema = new StringDimensionSchema("dim");
+    final IndexSpec indexSpec = IndexSpec.builder()
+        .withStringColumnFormatSpec(
+            StringColumnFormatSpec.builder()
+                .setIndexType(StringBitmapIndexType.NoIndex.INSTANCE)
+                .build()
+        )
+        .build();
+
+    final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
+
+    Assert.assertEquals(
+        StringBitmapIndexType.NoIndex.INSTANCE,
+        effective.getColumnFormatSpec().getIndexType()
+    );
   }
 }

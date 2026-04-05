@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.column.StringBitmapIndexType;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -87,6 +88,11 @@ public class IndexSpecTest
   {
     EqualsVerifier.forClass(IndexSpec.class)
                   .usingGetClass()
+                  .withPrefabValues(
+                      StringBitmapIndexType.class,
+                      StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE,
+                      StringBitmapIndexType.NoIndex.INSTANCE
+                  )
                   .verify();
   }
 }

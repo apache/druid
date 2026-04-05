@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.column.StringBitmapIndexType;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -31,7 +33,7 @@ public class StringColumnFormatSpec
 {
   private static final StringColumnFormatSpec DEFAULT =
       builder()
-          .setCreateBitmapIndex(true)
+          .setIndexType(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE)
           .setMultiValueHandling(DimensionSchema.MultiValueHandling.SORTED_ARRAY)
           .build();
 
@@ -59,11 +61,11 @@ public class StringColumnFormatSpec
       defaultSpec = DEFAULT;
     }
 
-    if (builder.createBitmapIndex == null) {
-      if (defaultSpec.getCreateBitmapIndex() != null) {
-        builder.setCreateBitmapIndex(defaultSpec.getCreateBitmapIndex());
+    if (builder.indexType == null) {
+      if (defaultSpec.getIndexType() != null) {
+        builder.setIndexType(defaultSpec.getIndexType());
       } else {
-        builder.setCreateBitmapIndex(DEFAULT.getCreateBitmapIndex());
+        builder.setIndexType(DEFAULT.getIndexType());
       }
     }
 
@@ -84,7 +86,7 @@ public class StringColumnFormatSpec
   }
 
   @Nullable
-  private final Boolean createBitmapIndex;
+  private final StringBitmapIndexType indexType;
 
   @Nullable
   private final DimensionSchema.MultiValueHandling multiValueHandling;
@@ -94,12 +96,17 @@ public class StringColumnFormatSpec
 
   @JsonCreator
   public StringColumnFormatSpec(
-      @JsonProperty("createBitmapIndex") @Nullable Boolean createBitmapIndex,
+      @JsonProperty("indexType") @Nullable StringBitmapIndexType indexType,
       @JsonProperty("multiValueHandling") @Nullable DimensionSchema.MultiValueHandling multiValueHandling,
       @JsonProperty("maxStringLength") @Nullable Integer maxStringLength
   )
   {
-    this.createBitmapIndex = createBitmapIndex;
+    if (maxStringLength != null && maxStringLength < 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("maxStringLength must be >= 0, got [%s]", maxStringLength);
+    }
+    this.indexType = indexType;
     this.multiValueHandling = multiValueHandling;
     this.maxStringLength = maxStringLength;
   }
@@ -107,9 +114,9 @@ public class StringColumnFormatSpec
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Boolean getCreateBitmapIndex()
+  public StringBitmapIndexType getIndexType()
   {
-    return createBitmapIndex;
+    return indexType;
   }
 
   @Nullable
@@ -138,7 +145,7 @@ public class StringColumnFormatSpec
       return false;
     }
     StringColumnFormatSpec that = (StringColumnFormatSpec) o;
-    return Objects.equals(createBitmapIndex, that.createBitmapIndex)
+    return Objects.equals(indexType, that.indexType)
            && multiValueHandling == that.multiValueHandling
            && Objects.equals(maxStringLength, that.maxStringLength);
   }
@@ -146,14 +153,14 @@ public class StringColumnFormatSpec
   @Override
   public int hashCode()
   {
-    return Objects.hash(createBitmapIndex, multiValueHandling, maxStringLength);
+    return Objects.hash(indexType, multiValueHandling, maxStringLength);
   }
 
   @Override
   public String toString()
   {
     return "StringColumnFormatSpec{" +
-           "createBitmapIndex=" + createBitmapIndex +
+           "indexType=" + indexType +
            ", multiValueHandling=" + multiValueHandling +
            ", maxStringLength=" + maxStringLength +
            '}';
@@ -162,7 +169,7 @@ public class StringColumnFormatSpec
   public static class Builder
   {
     @Nullable
-    private Boolean createBitmapIndex;
+    private StringBitmapIndexType indexType;
     @Nullable
     private DimensionSchema.MultiValueHandling multiValueHandling;
     @Nullable
@@ -174,14 +181,14 @@ public class StringColumnFormatSpec
 
     public Builder(StringColumnFormatSpec spec)
     {
-      this.createBitmapIndex = spec.createBitmapIndex;
+      this.indexType = spec.indexType;
       this.multiValueHandling = spec.multiValueHandling;
       this.maxStringLength = spec.maxStringLength;
     }
 
-    public Builder setCreateBitmapIndex(@Nullable Boolean createBitmapIndex)
+    public Builder setIndexType(@Nullable StringBitmapIndexType indexType)
     {
-      this.createBitmapIndex = createBitmapIndex;
+      this.indexType = indexType;
       return this;
     }
 
@@ -199,7 +206,7 @@ public class StringColumnFormatSpec
 
     public StringColumnFormatSpec build()
     {
-      return new StringColumnFormatSpec(createBitmapIndex, multiValueHandling, maxStringLength);
+      return new StringColumnFormatSpec(indexType, multiValueHandling, maxStringLength);
     }
   }
 }
