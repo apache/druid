@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -68,7 +67,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       boolean hasSpatialIndexes
   )
   {
-    this(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+    this(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, null);
   }
 
   public StringDimensionIndexer(

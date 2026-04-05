@@ -26,12 +26,15 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -64,6 +67,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
@@ -81,6 +85,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final IndexSpec indexSpec;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
 
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
@@ -115,6 +120,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        null,
         Collections.emptyList()
     );
   }
@@ -127,6 +133,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
+      @Nullable IndexSpec indexSpec,
       List<FireHydrant> hydrants
   )
   {
@@ -137,6 +144,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
+    this.indexSpec = (indexSpec != null ? indexSpec : IndexSpec.getDefault()).getEffectiveSpec();
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -306,11 +314,14 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    // Resolve effective dimension schemas up front because column indexers need the fully resolved
+    // StringColumnFormatSpec at construction time.
+    final DimensionsSpec dimensionsSpec = resolveEffectiveDimensionsSpec(schema.getDimensionsSpec());
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
         .withTimestampSpec(schema.getTimestampSpec())
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-        .withDimensionsSpec(schema.getDimensionsSpec())
+        .withDimensionsSpec(dimensionsSpec)
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .withProjections(schema.getProjections())
@@ -384,6 +395,17 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     }
 
     return old;
+  }
+
+  private DimensionsSpec resolveEffectiveDimensionsSpec(DimensionsSpec dimensionsSpec)
+  {
+    final List<DimensionSchema> effectiveDimensions = dimensionsSpec.getDimensions()
+        .stream()
+        .map(dim -> dim.getEffectiveSchema(indexSpec))
+        .collect(Collectors.toList());
+    return DimensionsSpec.builder(dimensionsSpec)
+                         .setDimensions(effectiveDimensions)
+                         .build();
   }
 
   /**
