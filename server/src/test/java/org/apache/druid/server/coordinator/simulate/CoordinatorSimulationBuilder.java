@@ -522,11 +522,10 @@ public class CoordinatorSimulationBuilder
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
       this.brokerConfigSyncer = EasyMock.niceMock(BrokerDynamicConfigSyncer.class);
-      this.cloneStatusManager = EasyMock.niceMock(CloneStatusManager.class);
+      this.cloneStatusManager = new CloneStatusManager();
 
       mocks.add(configSyncer);
       mocks.add(brokerConfigSyncer);
-      mocks.add(cloneStatusManager);
     }
 
     private void setUp() throws Exception

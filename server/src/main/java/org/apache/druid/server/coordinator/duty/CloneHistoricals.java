@@ -68,7 +68,10 @@ public class CloneHistoricals implements CoordinatorDuty
     final DruidCluster cluster = params.getDruidCluster();
 
     if (cloneServers.isEmpty()) {
-      // No servers to be cloned.
+      if (!cloneStatusManager.getStatusForAllServers().isEmpty()) {
+        // Clear the status manager if the dynamic config no longer has mappings to avoid showing stale clone statuses.
+        cloneStatusManager.updateStatus(Map.of());
+      }
       return params;
     }
 
