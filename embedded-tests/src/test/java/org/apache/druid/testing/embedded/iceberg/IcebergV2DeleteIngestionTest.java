@@ -308,7 +308,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     try (EqualityDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
                                                             .forTable(table)
                                                             .rowSchema(deleteSchema)
-                                                            .createWriterFunc(GenericParquetWriter::create)
+                                                            .createWriterFunc(GenericParquetWriter::buildWriter)
                                                             .overwrite()
                                                             .equalityFieldIds(equalityFieldId)
                                                             .buildEqualityWriter()) {
@@ -330,7 +330,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     try (PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
                                                             .forTable(table)
-                                                            .createWriterFunc(GenericParquetWriter::create)
+                                                            .createWriterFunc(GenericParquetWriter::buildWriter)
                                                             .rowSchema(TABLE_SCHEMA)
                                                             .overwrite()
                                                             .buildPositionWriter()) {
@@ -384,7 +384,8 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     cluster.callApi().waitForAllSegmentsToBeAvailable(druidDataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
-        StringUtils.format(verifyQueryTemplate, druidDataSource),
+        verifyQueryTemplate,
+        druidDataSource,
         expectedCsv
     );
   }
