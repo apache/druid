@@ -82,7 +82,6 @@ public class DartSqlEngine implements SqlEngine
 {
   public static final String NAME = "msq-dart";
   private static final Logger log = new Logger(DartSqlEngine.class);
-
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
@@ -256,7 +255,7 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public GetQueriesResponse getRunningQueries(
+  public GetQueriesResponse getQueries(
       boolean selfOnly,
       boolean includeComplete,
       AuthenticationResult authenticationResult,
@@ -276,7 +275,7 @@ public class DartSqlEngine implements SqlEngine
           Futures.successfulAsList(
               Iterables.transform(
                   sqlClients.getAllClients(),
-                  client -> client.getRunningQueries(true, includeComplete)
+                  client -> client.getQueries(true, includeComplete)
               )
           ),
           true

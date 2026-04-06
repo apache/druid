@@ -2628,6 +2628,7 @@ TableSpec
 
 - ../docs/development/extensions-contrib/prometheus.md
 TTL
+
 - ../docs/development/extensions-contrib/consul.md
 minimum
 than
@@ -2635,3 +2636,6 @@ than
 maxWatchRetries
 cleartext
 nginx
+
+- ../docs/development/extensions-core/s3.md
+NIO
