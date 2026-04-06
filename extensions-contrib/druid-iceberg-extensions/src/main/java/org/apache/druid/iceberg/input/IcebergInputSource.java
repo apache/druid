@@ -368,7 +368,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           closeCurrent();
         }

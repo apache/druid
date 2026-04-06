@@ -20,6 +20,7 @@
 package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
@@ -248,9 +249,7 @@ public class V2DeleteHandlingTest
         tableId,
         tableSchema,
         PartitionSpec.unpartitioned(),
-        new HashMap<String, String>() {{
-          put("format-version", "2");
-        }}
+        ImmutableMap.of("format-version", "2")
     );
 
     final IcebergInputSource inputSource = new IcebergInputSource(
@@ -288,9 +287,7 @@ public class V2DeleteHandlingTest
         tableId,
         tableSchema,
         PartitionSpec.unpartitioned(),
-        new HashMap<String, String>() {{
-          put("format-version", "2");
-        }}
+        ImmutableMap.of("format-version", "2")
     );
   }
 
