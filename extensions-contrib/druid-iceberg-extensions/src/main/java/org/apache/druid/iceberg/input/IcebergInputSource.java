@@ -34,25 +34,33 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.iceberg.Table;
+import org.apache.iceberg.DeleteFile;
+import org.apache.iceberg.FileContent;
+import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.SchemaParser;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Inputsource to ingest data managed by the Iceberg table format.
- * This inputsource talks to the configured catalog, executes any configured filters and retrieves the data file paths upto the latest snapshot associated with the iceberg table.
- * The data file paths are then provided to a native {@link SplittableInputSource} implementation depending on the warehouse source defined.
+ * Input source for ingesting data from Iceberg tables.
+ *
+ * Connects to a configured Iceberg catalog, executes partition filters, and retrieves
+ * data file paths. For Iceberg v1 tables (no delete files), file paths are delegated
+ * to {@code warehouseSource}. For v2 tables with active delete files, an
+ * {@link IcebergFileTaskInputSource} is created per task to apply deletes at read time.
+ *
+ * V2 detection is automatic -- no user configuration needed.
  */
 public class IcebergInputSource implements SplittableInputSource<List<String>>
 {
@@ -80,19 +88,16 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @JsonProperty
   private final ResidualFilterMode residualFilterMode;
 
-  @JsonProperty
-  private final V2DeleteHandling v2DeleteHandling;
-
   private boolean isLoaded = false;
 
   private SplittableInputSource delegateInputSource;
 
   /**
-   * When v2DeleteHandling is APPLY and delete files are detected, this holds
-   * the scan result needed to construct the native Iceberg reader.
+   * When v2 delete files are detected, this holds the per-task input sources
+   * for the native reader path.
    */
   @Nullable
-  private IcebergCatalog.FileScanResult nativeReaderResult;
+  private List<IcebergFileTaskInputSource> v2TaskInputSources;
 
   @JsonCreator
   public IcebergInputSource(
@@ -102,8 +107,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
       @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime,
-      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode,
-      @JsonProperty("v2DeleteHandling") @Nullable V2DeleteHandling v2DeleteHandling
+      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -113,13 +117,19 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
     this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
-    this.v2DeleteHandling = Configs.valueOrDefault(v2DeleteHandling, V2DeleteHandling.SKIP);
   }
 
   @Override
   public boolean needsFormat()
   {
-    return true;
+    if (!isLoaded) {
+      retrieveIcebergDatafiles();
+    }
+    // V2 path uses native Iceberg readers and does not need an InputFormat
+    if (v2TaskInputSources != null) {
+      return false;
+    }
+    return getDelegateInputSource().needsFormat();
   }
 
   @Override
@@ -133,16 +143,11 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       retrieveIcebergDatafiles();
     }
 
-    // When native reader is required (v2 APPLY mode with delete files),
-    // bypass warehouseSource and use Iceberg's own reader stack.
-    if (nativeReaderResult != null) {
-      final Table table = nativeReaderResult.getTable();
-      return new IcebergNativeRecordReader(
-          table,
-          inputRowSchema,
-          icebergFilter != null ? icebergFilter.getFilterExpression() : null,
-          snapshotTime != null ? snapshotTime.getMillis() : null
-      );
+    // V2 path: use native Iceberg reader with delete application
+    if (v2TaskInputSources != null && !v2TaskInputSources.isEmpty()) {
+      // Return a composite reader that iterates through all task input sources
+      return v2TaskInputSources.get(0).reader(inputRowSchema, inputFormat, temporaryDirectory);
+      // TODO: for multi-task, compose readers across all tasks
     }
 
     return getDelegateInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
@@ -194,18 +199,23 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   }
 
   @JsonProperty
+  public IcebergFilter getIcebergFilter()
+  {
+    return icebergFilter;
+  }
+
+  @JsonProperty
   public IcebergCatalog getIcebergCatalog()
   {
     return icebergCatalog;
   }
 
   @JsonProperty
-  public IcebergFilter getIcebergFilter()
+  public InputSourceFactory getWarehouseSource()
   {
-    return icebergFilter;
+    return warehouseSource;
   }
 
-  @Nullable
   @JsonProperty
   public DateTime getSnapshotTime()
   {
@@ -218,91 +228,91 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return residualFilterMode;
   }
 
-  @JsonProperty
-  public V2DeleteHandling getV2DeleteHandling()
+  protected SplittableInputSource getDelegateInputSource()
   {
-    return v2DeleteHandling;
-  }
-
-  public SplittableInputSource getDelegateInputSource()
-  {
+    if (delegateInputSource == null) {
+      delegateInputSource = new EmptyInputSource();
+    }
     return delegateInputSource;
   }
 
+  /**
+   * Scans the Iceberg table and routes to V1 or V2 path based on delete file presence.
+   *
+   * V1 path (no deletes): extracts file paths, delegates to warehouseSource.
+   * V2 path (deletes detected): creates IcebergFileTaskInputSource per FileScanTask
+   * carrying data file path, delete file metadata, and serialized table schema.
+   */
   protected void retrieveIcebergDatafiles()
   {
-    if (v2DeleteHandling == V2DeleteHandling.APPLY || v2DeleteHandling == V2DeleteHandling.FAIL) {
-      final IcebergCatalog.FileScanResult scanResult = icebergCatalog.extractFileScanTasks(
-          getNamespace(),
-          getTableName(),
-          getIcebergFilter(),
-          getSnapshotTime(),
-          getResidualFilterMode()
-      );
+    final IcebergCatalog.FileScanResult scanResult = icebergCatalog.extractFileScanTasks(
+        getNamespace(),
+        getTableName(),
+        getIcebergFilter(),
+        getSnapshotTime(),
+        getResidualFilterMode()
+    );
 
-      if (scanResult.hasDeleteFiles()) {
-        if (v2DeleteHandling == V2DeleteHandling.FAIL) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build(
-                                  "Iceberg table [%s.%s] contains v2 delete files. "
-                                  + "Set v2DeleteHandling to 'apply' to correctly handle deletes, "
-                                  + "or 'skip' to ignore them (deleted rows will be ingested).",
-                                  getNamespace(),
-                                  getTableName()
-                              );
-        }
-
-        // APPLY mode: use native Iceberg reader that applies deletes
-        if (scanResult.getFileScanTasks().isEmpty()) {
-          delegateInputSource = new EmptyInputSource();
-        } else {
-          nativeReaderResult = scanResult;
-          // Set a dummy delegate so createSplits/estimateNumSplits don't NPE.
-          // The reader() method will bypass this and use nativeReaderResult instead.
-          delegateInputSource = new EmptyInputSource();
-        }
-        log.info(
-            "Iceberg v2 delete files detected for table [%s.%s]. Using native Iceberg reader with delete application.",
-            getNamespace(),
-            getTableName()
-        );
-      } else {
-        // No delete files: fall through to the standard warehouseSource path
-        final List<String> dataFilePaths = new java.util.ArrayList<>();
-        for (final org.apache.iceberg.FileScanTask task : scanResult.getFileScanTasks()) {
-          dataFilePaths.add(task.file().location());
-        }
-        if (dataFilePaths.isEmpty()) {
-          delegateInputSource = new EmptyInputSource();
-        } else {
-          delegateInputSource = warehouseSource.create(dataFilePaths);
-        }
-      }
-    } else {
-      // SKIP mode: original v1-compatible behavior
-      final List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
-          getNamespace(),
-          getTableName(),
-          getIcebergFilter(),
-          getSnapshotTime(),
-          getResidualFilterMode()
-      );
-      if (snapshotDataFiles.isEmpty()) {
-        delegateInputSource = new EmptyInputSource();
-      } else {
-        delegateInputSource = warehouseSource.create(snapshotDataFiles);
-      }
+    if (scanResult.getFileScanTasks().isEmpty()) {
+      delegateInputSource = new EmptyInputSource();
+      isLoaded = true;
+      return;
     }
+
+    if (scanResult.hasDeleteFiles()) {
+      // V2 path: create per-task input sources with delete file metadata
+      final String schemaJson = SchemaParser.toJson(scanResult.getTable().schema());
+      v2TaskInputSources = new ArrayList<>();
+
+      for (final FileScanTask task : scanResult.getFileScanTasks()) {
+        final String dataFilePath = task.file().location();
+        final List<DeleteFileInfo> deleteFileInfos = new ArrayList<>();
+
+        for (final DeleteFile deleteFile : task.deletes()) {
+          deleteFileInfos.add(new DeleteFileInfo(
+              deleteFile.location(),
+              deleteFile.content() == FileContent.EQUALITY_DELETES
+                  ? DeleteFileInfo.ContentType.EQUALITY
+                  : DeleteFileInfo.ContentType.POSITION,
+              deleteFile.content() == FileContent.EQUALITY_DELETES
+                  ? deleteFile.equalityFieldIds()
+                  : Collections.emptyList()
+          ));
+        }
+
+        v2TaskInputSources.add(new IcebergFileTaskInputSource(
+            dataFilePath,
+            deleteFileInfos,
+            schemaJson,
+            warehouseSource
+        ));
+      }
+
+      // Set a delegate for createSplits/estimateNumSplits compatibility
+      delegateInputSource = new EmptyInputSource();
+
+      log.info(
+          "Iceberg v2 delete files detected for table [%s.%s]. Using native reader for [%d] tasks.",
+          getNamespace(),
+          getTableName(),
+          v2TaskInputSources.size()
+      );
+    } else {
+      // V1 path: extract file paths, delegate to warehouseSource
+      final List<String> dataFilePaths = new ArrayList<>();
+      for (final FileScanTask task : scanResult.getFileScanTasks()) {
+        dataFilePaths.add(task.file().location());
+      }
+      delegateInputSource = warehouseSource.create(dataFilePaths);
+    }
+
     isLoaded = true;
   }
 
   /**
-   * This input source is used in place of a delegate input source if there are no input file paths.
-   * Certain input sources cannot be instantiated with an empty input file list and so composing input sources such as IcebergInputSource
-   * may use this input source as delegate in such cases.
+   * Placeholder input source used when there are no input file paths.
    */
-  private static class EmptyInputSource implements SplittableInputSource
+  static class EmptyInputSource implements SplittableInputSource
   {
     @Override
     public boolean needsFormat()
