@@ -1,0 +1,123 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.iceberg.input;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceFactory;
+import org.apache.druid.data.input.InputSourceReader;
+
+import javax.annotation.Nullable;
+import java.io.File;
+import java.util.List;
+
+/**
+ * A non-splittable {@link InputSource} representing a single Iceberg v2 data file
+ * with its associated delete files. Created internally by {@link IcebergInputSource}
+ * when v2 delete files are detected.
+ *
+ * This input source is JSON-serializable, carrying all metadata needed for a worker
+ * to read a data file and apply deletes without catalog access:
+ * <ul>
+ *   <li>Data file path</li>
+ *   <li>Delete file metadata (paths, types, equality field IDs)</li>
+ *   <li>Serialized Iceberg table schema (JSON)</li>
+ *   <li>warehouseSource for file I/O</li>
+ * </ul>
+ */
+public class IcebergFileTaskInputSource implements InputSource
+{
+  public static final String TYPE_KEY = "icebergFileTask";
+
+  private final String dataFilePath;
+  private final List<DeleteFileInfo> deleteFiles;
+  private final String tableSchemaJson;
+  private final InputSourceFactory warehouseSource;
+
+  @JsonCreator
+  public IcebergFileTaskInputSource(
+      @JsonProperty("dataFilePath") final String dataFilePath,
+      @JsonProperty("deleteFiles") final List<DeleteFileInfo> deleteFiles,
+      @JsonProperty("tableSchemaJson") final String tableSchemaJson,
+      @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource
+  )
+  {
+    this.dataFilePath = dataFilePath;
+    this.deleteFiles = deleteFiles;
+    this.tableSchemaJson = tableSchemaJson;
+    this.warehouseSource = warehouseSource;
+  }
+
+  @JsonProperty
+  public String getDataFilePath()
+  {
+    return dataFilePath;
+  }
+
+  @JsonProperty
+  public List<DeleteFileInfo> getDeleteFiles()
+  {
+    return deleteFiles;
+  }
+
+  @JsonProperty
+  public String getTableSchemaJson()
+  {
+    return tableSchemaJson;
+  }
+
+  @JsonProperty
+  public InputSourceFactory getWarehouseSource()
+  {
+    return warehouseSource;
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean needsFormat()
+  {
+    // Native Iceberg reader handles format internally
+    return false;
+  }
+
+  @Override
+  public InputSourceReader reader(
+      final InputRowSchema inputRowSchema,
+      @Nullable final InputFormat inputFormat,
+      final File temporaryDirectory
+  )
+  {
+    return new IcebergNativeRecordReader(
+        dataFilePath,
+        deleteFiles,
+        tableSchemaJson,
+        warehouseSource,
+        inputRowSchema
+    );
+  }
+}
