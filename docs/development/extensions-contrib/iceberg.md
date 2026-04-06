@@ -194,6 +194,62 @@ Example:
 
 When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
 
+## Iceberg v2 delete file support
+
+Iceberg v2 tables support row-level deletes through two types of delete files:
+
+| File type | Content | Purpose |
+|-----------|---------|---------|
+| Positional delete file | `(file_path, row_position)` pairs | Deletes the row at a specific position in a data file |
+| Equality delete file | Column value sets | Deletes any row where the specified column values match |
+
+The Iceberg extension automatically detects v2 delete files during table scan. No configuration changes are required to existing ingestion specs.
+
+### How it works
+
+When `IcebergInputSource` scans the Iceberg table, it inspects each `FileScanTask` for associated delete files:
+
+- **No delete files (v1 path)**: Data file paths are extracted and delegated to `warehouseSource` for reading. This is the existing behavior and remains unchanged.
+- **Delete files detected (v2 path)**: Each task is wrapped in an `IcebergFileTaskInputSource` that carries the data file path, delete file metadata (paths, types, equality field IDs), and the serialized table schema. The `IcebergNativeRecordReader` then applies deletes at read time:
+  1. Reads positional delete files and builds a set of deleted row positions for the current data file.
+  2. Reads equality delete files and builds sets of deleted key tuples.
+  3. Streams the data file and skips any row that is position-deleted or equality-deleted.
+  4. Converts surviving Iceberg records to Druid `InputRow` objects.
+
+### Example
+
+Given an Iceberg v2 table with the following snapshots:
+
+```
+Snapshot 1 (append):  data-001.parquet -> rows: order_id=1, order_id=2, order_id=3
+Snapshot 2 (delete):  eq-delete-001.parquet -> "delete where order_id = 2"
+```
+
+Druid ingests only `order_id=1` and `order_id=3`. The deleted row (`order_id=2`) is excluded automatically.
+
+The ingestion spec is identical to a v1 table -- no additional fields are needed:
+
+```json
+{
+  "type": "iceberg",
+  "tableName": "orders",
+  "namespace": "analytics",
+  "icebergCatalog": {
+    "type": "rest",
+    "catalogUri": "http://localhost:8181"
+  },
+  "warehouseSource": {
+    "type": "s3"
+  }
+}
+```
+
+### Performance considerations
+
+- Positional delete files are read into an in-memory `Set<Long>` per data file. Memory usage is proportional to the number of deleted positions, not the data file size.
+- Equality delete files are read into an in-memory `Set` of key tuples. For tables with very large equality delete files, this may increase memory usage on the ingestion worker.
+- A v2-format table that has never had any rows deleted (no delete files) automatically goes through the v1 path with no overhead.
+
 ## Known limitations
 
 This section lists the known limitations that apply to the Iceberg extension.
