@@ -145,9 +145,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
 
     // V2 path: use native Iceberg reader with delete application
     if (v2TaskInputSources != null && !v2TaskInputSources.isEmpty()) {
-      // Return a composite reader that iterates through all task input sources
-      return v2TaskInputSources.get(0).reader(inputRowSchema, inputFormat, temporaryDirectory);
-      // TODO: for multi-task, compose readers across all tasks
+      return new CompositeInputSourceReader(v2TaskInputSources, inputRowSchema, inputFormat, temporaryDirectory);
     }
 
     return getDelegateInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
@@ -307,6 +305,114 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     }
 
     isLoaded = true;
+  }
+
+  /**
+   * Composes readers from multiple {@link IcebergFileTaskInputSource} instances,
+   * iterating through tasks sequentially. Each task's reader is opened lazily
+   * and closed before opening the next.
+   */
+  private static class CompositeInputSourceReader implements InputSourceReader
+  {
+    private final List<IcebergFileTaskInputSource> taskSources;
+    private final InputRowSchema inputRowSchema;
+    private final InputFormat inputFormat;
+    private final File temporaryDirectory;
+
+    CompositeInputSourceReader(
+        final List<IcebergFileTaskInputSource> taskSources,
+        final InputRowSchema inputRowSchema,
+        final InputFormat inputFormat,
+        final File temporaryDirectory
+    )
+    {
+      this.taskSources = taskSources;
+      this.inputRowSchema = inputRowSchema;
+      this.inputFormat = inputFormat;
+      this.temporaryDirectory = temporaryDirectory;
+    }
+
+    @Override
+    public CloseableIterator<InputRow> read(final InputStats inputStats) throws IOException
+    {
+      final Iterator<IcebergFileTaskInputSource> taskIterator = taskSources.iterator();
+      return new CloseableIterator<InputRow>()
+      {
+        private CloseableIterator<InputRow> current = null;
+
+        @Override
+        public boolean hasNext()
+        {
+          while ((current == null || !current.hasNext()) && taskIterator.hasNext()) {
+            closeCurrent();
+            try {
+              current = taskIterator.next()
+                                    .reader(inputRowSchema, inputFormat, temporaryDirectory)
+                                    .read(inputStats);
+            }
+            catch (IOException e) {
+              throw new RuntimeException("Failed to open Iceberg task reader", e);
+            }
+          }
+          return current != null && current.hasNext();
+        }
+
+        @Override
+        public InputRow next()
+        {
+          if (!hasNext()) {
+            throw new java.util.NoSuchElementException();
+          }
+          return current.next();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          closeCurrent();
+        }
+
+        private void closeCurrent()
+        {
+          if (current != null) {
+            try {
+              current.close();
+            }
+            catch (IOException e) {
+              throw new RuntimeException("Failed to close Iceberg task reader", e);
+            }
+            current = null;
+          }
+        }
+      };
+    }
+
+    @Override
+    public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+    {
+      final CloseableIterator<InputRow> reader = read(null);
+      return new CloseableIterator<InputRowListPlusRawValues>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return reader.hasNext();
+        }
+
+        @Override
+        public InputRowListPlusRawValues next()
+        {
+          final InputRow row = reader.next();
+          return InputRowListPlusRawValues.of(row, Collections.emptyMap());
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          reader.close();
+        }
+      };
+    }
   }
 
   /**
