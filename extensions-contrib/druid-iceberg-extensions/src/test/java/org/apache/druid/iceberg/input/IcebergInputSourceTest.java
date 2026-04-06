@@ -100,7 +100,6 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        null,
         null);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
@@ -136,7 +135,6 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        null,
         null);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(0, splits.count());
@@ -151,7 +149,6 @@ public class IcebergInputSourceTest
         new IcebergEqualsFilter("id", "123988"),
         testCatalog,
         new LocalInputSourceFactory(),
-        null,
         null,
         null);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
@@ -188,7 +185,6 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         DateTimes.nowUtc(),
-        null,
         null);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(1, splits.count());
@@ -207,7 +203,6 @@ public class IcebergInputSourceTest
         new IcebergEqualsFilter("name", "Foo"),
         caseInsensitiveCatalog,
         new LocalInputSourceFactory(),
-        null,
         null,
         null);
 
@@ -233,8 +228,7 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        ResidualFilterMode.IGNORE,
-        null);
+        ResidualFilterMode.IGNORE);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(1, splits.count());
   }
@@ -250,8 +244,7 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        ResidualFilterMode.FAIL,
-        null);
+        ResidualFilterMode.FAIL);
     DruidException exception = Assert.assertThrows(
         DruidException.class,
         () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
@@ -278,8 +271,7 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        ResidualFilterMode.FAIL,
-        null);
+        ResidualFilterMode.FAIL);
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(1, splits.count());
   }
@@ -301,8 +293,7 @@ public class IcebergInputSourceTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        ResidualFilterMode.FAIL,
-        null);
+        ResidualFilterMode.FAIL);
     DruidException exception = Assert.assertThrows(
         DruidException.class,
         () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
