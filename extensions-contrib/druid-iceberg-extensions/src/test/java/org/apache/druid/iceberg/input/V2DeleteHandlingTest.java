@@ -19,7 +19,6 @@
 
 package org.apache.druid.iceberg.input;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.ColumnsFilter;
@@ -29,12 +28,10 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DeleteFile;
-import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -63,12 +60,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Tests for automatic Iceberg v2 delete file detection and application.
+ * Verifies that IcebergInputSource transparently handles positional and
+ * equality deletes without any user configuration.
+ */
 public class V2DeleteHandlingTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private IcebergCatalog testCatalog;
+  private LocalCatalog testCatalog;
   private File warehouseDir;
 
   private static final String NAMESPACE = "default";
@@ -102,32 +104,12 @@ public class V2DeleteHandlingTest
       testCatalog.retrieveCatalog().dropTable(tableId);
     }
     catch (Exception e) {
-      // ignore if table doesn't exist
+      // ignore
     }
   }
 
   @Test
-  public void testSkipModeUsesFilePathExtractionOnly() throws IOException
-  {
-    // Create a v2 table with equality deletes
-    createTableWithEqualityDelete();
-
-    // SKIP mode uses extractSnapshotDataFiles (file paths only), ignoring delete files.
-    // Verify the catalog returns the raw data file paths without considering deletes.
-    final List<String> dataFiles = testCatalog.extractSnapshotDataFiles(
-        NAMESPACE,
-        TABLE_NAME,
-        null,
-        null,
-        ResidualFilterMode.IGNORE
-    );
-
-    // Should return 1 data file (the delete file is ignored since it's not a data file)
-    Assert.assertEquals(1, dataFiles.size());
-  }
-
-  @Test
-  public void testFailModeThrowsWhenDeletesPresent() throws IOException
+  public void testAutoDetectWithEqualityDelete() throws IOException
   {
     createTableWithEqualityDelete();
 
@@ -138,49 +120,7 @@ public class V2DeleteHandlingTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        null,
-        V2DeleteHandling.FAIL
-    );
-
-    Assert.assertThrows(
-        DruidException.class,
-        () -> inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder())
-    );
-  }
-
-  @Test
-  public void testFailModeDoesNotThrowWhenNoDeletes() throws IOException
-  {
-    createTableWithoutDeletes();
-
-    // When no delete files exist, FAIL mode should not throw.
-    // Verify via extractFileScanTasks that no deletes are detected.
-    final IcebergCatalog.FileScanResult result = testCatalog.extractFileScanTasks(
-        NAMESPACE,
-        TABLE_NAME,
-        null,
-        null,
-        ResidualFilterMode.IGNORE
-    );
-
-    Assert.assertFalse("Table without deletes should have hasDeleteFiles=false", result.hasDeleteFiles());
-    Assert.assertEquals(1, result.getFileScanTasks().size());
-  }
-
-  @Test
-  public void testApplyModeWithEqualityDelete() throws IOException
-  {
-    createTableWithEqualityDelete();
-
-    final IcebergInputSource inputSource = new IcebergInputSource(
-        TABLE_NAME,
-        NAMESPACE,
-        null,
-        testCatalog,
-        new LocalInputSourceFactory(),
-        null,
-        null,
-        V2DeleteHandling.APPLY
+        null
     );
 
     final InputSourceReader reader = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder());
@@ -189,7 +129,7 @@ public class V2DeleteHandlingTest
     // Equality delete removed order_id=2, so only 2 rows remain
     Assert.assertEquals(2, rows.size());
 
-    final List<Object> orderIds = new ArrayList<>();
+    final List<String> orderIds = new ArrayList<>();
     for (final InputRow row : rows) {
       orderIds.add(row.getDimension("order_id").get(0));
     }
@@ -199,28 +139,7 @@ public class V2DeleteHandlingTest
   }
 
   @Test
-  public void testApplyModeWithNoDeletesFallsBackToFilePaths() throws IOException
-  {
-    createTableWithoutDeletes();
-
-    // When APPLY mode is used but no delete files exist, the code falls through
-    // to the warehouseSource path (extracting file paths only). Verify the scan
-    // result correctly detects no deletes.
-    final IcebergCatalog.FileScanResult result = testCatalog.extractFileScanTasks(
-        NAMESPACE,
-        TABLE_NAME,
-        null,
-        null,
-        ResidualFilterMode.IGNORE
-    );
-
-    Assert.assertFalse("Table without deletes should have hasDeleteFiles=false", result.hasDeleteFiles());
-    Assert.assertEquals(1, result.getFileScanTasks().size());
-    Assert.assertNotNull(result.getTable());
-  }
-
-  @Test
-  public void testApplyModeWithPositionalDelete() throws IOException
+  public void testAutoDetectWithPositionalDelete() throws IOException
   {
     createTableWithPositionalDelete();
 
@@ -231,8 +150,7 @@ public class V2DeleteHandlingTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        null,
-        V2DeleteHandling.APPLY
+        null
     );
 
     final InputSourceReader reader = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder());
@@ -243,8 +161,98 @@ public class V2DeleteHandlingTest
   }
 
   @Test
-  public void testDefaultV2DeleteHandlingIsSkip()
+  public void testV1TableWithNoDeletesUsesFilePaths() throws IOException
   {
+    createTableWithoutDeletes();
+
+    // Verify scan detects no deletes
+    final IcebergCatalog.FileScanResult result = testCatalog.extractFileScanTasks(
+        NAMESPACE,
+        TABLE_NAME,
+        null,
+        null,
+        ResidualFilterMode.IGNORE
+    );
+
+    Assert.assertFalse("V1 table should have no delete files", result.hasDeleteFiles());
+    Assert.assertEquals(1, result.getFileScanTasks().size());
+  }
+
+  @Test
+  public void testV2TableDeleteDetection() throws IOException
+  {
+    createTableWithEqualityDelete();
+
+    final IcebergCatalog.FileScanResult result = testCatalog.extractFileScanTasks(
+        NAMESPACE,
+        TABLE_NAME,
+        null,
+        null,
+        ResidualFilterMode.IGNORE
+    );
+
+    Assert.assertTrue("V2 table with deletes should have hasDeleteFiles=true", result.hasDeleteFiles());
+    Assert.assertEquals(1, result.getFileScanTasks().size());
+    Assert.assertFalse("Should have delete files", result.getFileScanTasks().get(0).deletes().isEmpty());
+  }
+
+  @Test
+  public void testDeleteFileInfoSerialization()
+  {
+    final DeleteFileInfo posDelete = new DeleteFileInfo(
+        "s3://bucket/data/pos-del.parquet",
+        DeleteFileInfo.ContentType.POSITION,
+        null
+    );
+    Assert.assertEquals("s3://bucket/data/pos-del.parquet", posDelete.getPath());
+    Assert.assertEquals(DeleteFileInfo.ContentType.POSITION, posDelete.getContentType());
+    Assert.assertTrue(posDelete.getEqualityFieldIds().isEmpty());
+
+    final DeleteFileInfo eqDelete = new DeleteFileInfo(
+        "s3://bucket/data/eq-del.parquet",
+        DeleteFileInfo.ContentType.EQUALITY,
+        ImmutableList.of(1, 2)
+    );
+    Assert.assertEquals(DeleteFileInfo.ContentType.EQUALITY, eqDelete.getContentType());
+    Assert.assertEquals(ImmutableList.of(1, 2), eqDelete.getEqualityFieldIds());
+  }
+
+  @Test
+  public void testIcebergFileTaskInputSourceCreation() throws IOException
+  {
+    createTableWithEqualityDelete();
+
+    final IcebergCatalog.FileScanResult result = testCatalog.extractFileScanTasks(
+        NAMESPACE,
+        TABLE_NAME,
+        null,
+        null,
+        ResidualFilterMode.IGNORE
+    );
+
+    final String schemaJson = org.apache.iceberg.SchemaParser.toJson(result.getTable().schema());
+    Assert.assertNotNull(schemaJson);
+    Assert.assertFalse(schemaJson.isEmpty());
+
+    // Verify schema round-trip
+    final Schema roundTripped = org.apache.iceberg.SchemaParser.fromJson(schemaJson);
+    Assert.assertEquals(tableSchema.columns().size(), roundTripped.columns().size());
+  }
+
+  @Test
+  public void testEmptyTableReturnsNoRows() throws IOException
+  {
+    // Create table with no data
+    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(NAMESPACE), TABLE_NAME);
+    testCatalog.retrieveCatalog().createTable(
+        tableId,
+        tableSchema,
+        PartitionSpec.unpartitioned(),
+        new HashMap<String, String>() {{
+          put("format-version", "2");
+        }}
+    );
+
     final IcebergInputSource inputSource = new IcebergInputSource(
         TABLE_NAME,
         NAMESPACE,
@@ -252,10 +260,12 @@ public class V2DeleteHandlingTest
         testCatalog,
         new LocalInputSourceFactory(),
         null,
-        null,
         null
     );
-    Assert.assertEquals(V2DeleteHandling.SKIP, inputSource.getV2DeleteHandling());
+
+    final InputSourceReader reader = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder());
+    final List<InputRow> rows = readAll(reader);
+    Assert.assertEquals(0, rows.size());
   }
 
   // --- Helper methods ---
@@ -286,8 +296,6 @@ public class V2DeleteHandlingTest
 
   private DataFile writeDataFile(final Table table) throws IOException
   {
-    final GenericRecord template = GenericRecord.create(tableSchema);
-
     final GenericRecord r1 = GenericRecord.create(tableSchema);
     r1.setField("order_id", 1);
     r1.setField("product", "Widget");
@@ -338,7 +346,6 @@ public class V2DeleteHandlingTest
     final DataFile dataFile = writeDataFile(table);
     table.newAppend().appendFile(dataFile).commit();
 
-    // Write an equality delete file that deletes where order_id = 2
     final Schema deleteSchema = new Schema(
         Types.NestedField.required(1, "order_id", Types.IntegerType.get())
     );
@@ -371,7 +378,6 @@ public class V2DeleteHandlingTest
     final DataFile dataFile = writeDataFile(table);
     table.newAppend().appendFile(dataFile).commit();
 
-    // Write a positional delete file that deletes row at position 1 (order_id=2)
     final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-pos-delete.parquet";
     final OutputFile deleteOutputFile = table.io().newOutputFile(deletePath);
 
