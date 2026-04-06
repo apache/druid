@@ -762,15 +762,18 @@
 
     <dependency>
       <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-data</artifactId>
+      <version>${iceberg.core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-parquet</artifactId>
       <version>${iceberg.core.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-column</artifactId>
       <version>${parquet.version}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
