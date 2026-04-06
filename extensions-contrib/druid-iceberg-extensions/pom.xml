@@ -764,6 +764,7 @@
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-data</artifactId>
       <version>${iceberg.core.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
@@ -813,6 +814,7 @@
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:sts</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:kms</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-gcp</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-data</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-storage</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
