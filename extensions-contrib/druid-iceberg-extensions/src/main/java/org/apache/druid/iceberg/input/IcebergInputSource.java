@@ -34,9 +34,12 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.iceberg.Table;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -54,6 +57,7 @@ import java.util.stream.Stream;
 public class IcebergInputSource implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "iceberg";
+  private static final Logger log = new Logger(IcebergInputSource.class);
 
   @JsonProperty
   private final String tableName;
@@ -76,9 +80,19 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @JsonProperty
   private final ResidualFilterMode residualFilterMode;
 
+  @JsonProperty
+  private final V2DeleteHandling v2DeleteHandling;
+
   private boolean isLoaded = false;
 
   private SplittableInputSource delegateInputSource;
+
+  /**
+   * When v2DeleteHandling is APPLY and delete files are detected, this holds
+   * the scan result needed to construct the native Iceberg reader.
+   */
+  @Nullable
+  private IcebergCatalog.FileScanResult nativeReaderResult;
 
   @JsonCreator
   public IcebergInputSource(
@@ -88,7 +102,8 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
       @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime,
-      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode
+      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode,
+      @JsonProperty("v2DeleteHandling") @Nullable V2DeleteHandling v2DeleteHandling
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -98,6 +113,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
     this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
+    this.v2DeleteHandling = Configs.valueOrDefault(v2DeleteHandling, V2DeleteHandling.SKIP);
   }
 
   @Override
@@ -116,6 +132,20 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
+
+    // When native reader is required (v2 APPLY mode with delete files),
+    // bypass warehouseSource and use Iceberg's own reader stack.
+    if (nativeReaderResult != null) {
+      final Table table = nativeReaderResult.getTable();
+      return new IcebergNativeRecordReader(
+          table.io(),
+          table.schema(),
+          table.schema(),
+          nativeReaderResult.getFileScanTasks(),
+          inputRowSchema
+      );
+    }
+
     return getDelegateInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
   }
 
@@ -189,6 +219,12 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return residualFilterMode;
   }
 
+  @JsonProperty
+  public V2DeleteHandling getV2DeleteHandling()
+  {
+    return v2DeleteHandling;
+  }
+
   public SplittableInputSource getDelegateInputSource()
   {
     return delegateInputSource;
@@ -196,17 +232,68 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
 
   protected void retrieveIcebergDatafiles()
   {
-    List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
-        getNamespace(),
-        getTableName(),
-        getIcebergFilter(),
-        getSnapshotTime(),
-        getResidualFilterMode()
-    );
-    if (snapshotDataFiles.isEmpty()) {
-      delegateInputSource = new EmptyInputSource();
+    if (v2DeleteHandling == V2DeleteHandling.APPLY || v2DeleteHandling == V2DeleteHandling.FAIL) {
+      final IcebergCatalog.FileScanResult scanResult = icebergCatalog.extractFileScanTasks(
+          getNamespace(),
+          getTableName(),
+          getIcebergFilter(),
+          getSnapshotTime(),
+          getResidualFilterMode()
+      );
+
+      if (scanResult.hasDeleteFiles()) {
+        if (v2DeleteHandling == V2DeleteHandling.FAIL) {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.INVALID_VALUE)
+                              .build(
+                                  "Iceberg table [%s.%s] contains v2 delete files. "
+                                  + "Set v2DeleteHandling to 'apply' to correctly handle deletes, "
+                                  + "or 'skip' to ignore them (deleted rows will be ingested).",
+                                  getNamespace(),
+                                  getTableName()
+                              );
+        }
+
+        // APPLY mode: use native Iceberg reader that applies deletes
+        if (scanResult.getFileScanTasks().isEmpty()) {
+          delegateInputSource = new EmptyInputSource();
+        } else {
+          nativeReaderResult = scanResult;
+          // Set a dummy delegate so createSplits/estimateNumSplits don't NPE.
+          // The reader() method will bypass this and use nativeReaderResult instead.
+          delegateInputSource = new EmptyInputSource();
+        }
+        log.info(
+            "Iceberg v2 delete files detected for table [%s.%s]. Using native Iceberg reader with delete application.",
+            getNamespace(),
+            getTableName()
+        );
+      } else {
+        // No delete files: fall through to the standard warehouseSource path
+        final List<String> dataFilePaths = new java.util.ArrayList<>();
+        for (final org.apache.iceberg.FileScanTask task : scanResult.getFileScanTasks()) {
+          dataFilePaths.add(task.file().location());
+        }
+        if (dataFilePaths.isEmpty()) {
+          delegateInputSource = new EmptyInputSource();
+        } else {
+          delegateInputSource = warehouseSource.create(dataFilePaths);
+        }
+      }
     } else {
-      delegateInputSource = warehouseSource.create(snapshotDataFiles);
+      // SKIP mode: original v1-compatible behavior
+      final List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
+          getNamespace(),
+          getTableName(),
+          getIcebergFilter(),
+          getSnapshotTime(),
+          getResidualFilterMode()
+      );
+      if (snapshotDataFiles.isEmpty()) {
+        delegateInputSource = new EmptyInputSource();
+      } else {
+        delegateInputSource = warehouseSource.create(snapshotDataFiles);
+      }
     }
     isLoaded = true;
   }
