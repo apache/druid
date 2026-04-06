@@ -138,11 +138,10 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (nativeReaderResult != null) {
       final Table table = nativeReaderResult.getTable();
       return new IcebergNativeRecordReader(
-          table.io(),
-          table.schema(),
-          table.schema(),
-          nativeReaderResult.getFileScanTasks(),
-          inputRowSchema
+          table,
+          inputRowSchema,
+          icebergFilter != null ? icebergFilter.getFilterExpression() : null,
+          snapshotTime != null ? snapshotTime.getMillis() : null
       );
     }
 
@@ -244,7 +243,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       if (scanResult.hasDeleteFiles()) {
         if (v2DeleteHandling == V2DeleteHandling.FAIL) {
           throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.INVALID_VALUE)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
                               .build(
                                   "Iceberg table [%s.%s] contains v2 delete files. "
                                   + "Set v2DeleteHandling to 'apply' to correctly handle deletes, "
