@@ -212,7 +212,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
    * @param lags the lag metrics of Stream (Kafka/Kinesis)
    * @return Integer, target number of tasksCount. -1 means skip scale action.
    */
-  private int computeDesiredTaskCount(List<Long> lags)
+  int computeDesiredTaskCount(List<Long> lags)
   {
     // if the supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
@@ -239,7 +239,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         withinProportion, spec.getId()
     );
 
-    int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
+    int currentActiveTaskCount = supervisor.getIoConfig().getTaskCount();
     int desiredActiveTaskCount;
     int partitionCount = supervisor.getPartitionCount();
     if (partitionCount <= 0) {
