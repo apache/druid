@@ -132,7 +132,7 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
    * Inserts a bare-bones compaction config directly into the druid_config
    * metadata table.
    */
-  private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector) throws Exception
+  private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector)
   {
     DataSourceCompactionConfig dataSourceCompactionConfig =
         new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null);
