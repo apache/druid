@@ -226,7 +226,14 @@ class FilterSegmentPrunerTest
         new ExpressionVirtualColumn("e1", "lower(\"n1\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
     );
 
+    VirtualColumns shardVirtualColumnsDifferent = VirtualColumns.create(
+        new NestedFieldVirtualColumn("obj", "$.b", "n0", ColumnType.STRING),
+        new ExpressionVirtualColumn("e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
     String interval1 = "2026-02-18T00:00:00Z/2026-02-19T00:00:00Z";
+    String interval2 = "2026-02-19T00:00:00Z/2026-02-20T00:00:00Z";
+    String interval3 = "2026-02-20T00:00:00Z/2026-02-21T00:00:00Z";
     DataSegment seg1 = makeDataSegment(
         interval1,
         makeRange(List.of("e0"), shardVirtualColumns, 0, null, StringTuple.create("f"))
@@ -237,15 +244,23 @@ class FilterSegmentPrunerTest
     );
     // same partitioning but different names in these segments
     DataSegment seg3 = makeDataSegment(
-        interval1,
-        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 2, null, StringTuple.create("f"))
+        interval2,
+        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 0, null, StringTuple.create("f"))
     );
     DataSegment seg4 = makeDataSegment(
-        interval1,
-        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 3, StringTuple.create("f"), null)
+        interval2,
+        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 1, StringTuple.create("f"), null)
+    );
+    DataSegment seg5 = makeDataSegment(
+        interval3,
+        makeRange(List.of("e0"), shardVirtualColumnsDifferent, 0, null, StringTuple.create("f"))
+    );
+    DataSegment seg6 = makeDataSegment(
+        interval3,
+        makeRange(List.of("e0"), shardVirtualColumnsDifferent, 1, StringTuple.create("f"), null)
     );
 
-    List<DataSegment> segs = List.of(seg1, seg2, seg3, seg4);
+    List<DataSegment> segs = List.of(seg1, seg2, seg3, seg4, seg5, seg6);
 
     // query uses its own names
     VirtualColumns queryVirtualColumns = VirtualColumns.create(
@@ -257,8 +272,9 @@ class FilterSegmentPrunerTest
     FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, queryVirtualColumns);
 
     // prune twice to exercise cache
-    Assertions.assertEquals(Set.of(seg1, seg3), pruner.prune(segs, Function.identity()));
-    Assertions.assertEquals(Set.of(seg1, seg3), pruner.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1, seg3, seg5, seg6), pruner.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1, seg3, seg5, seg6), pruner.prune(segs, Function.identity()));
+
   }
 
   @Test

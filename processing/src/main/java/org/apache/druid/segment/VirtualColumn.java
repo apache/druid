@@ -473,7 +473,9 @@ public interface VirtualColumn extends Cacheable
    */
   List<String> requiredColumns();
 
-
+  /**
+   * Returns true if the virtual column supports {@link #rewriteRequiredColumns(Map)}
+   */
   default boolean supportsRequiredRewrite()
   {
     return false;
@@ -481,7 +483,8 @@ public interface VirtualColumn extends Cacheable
 
   /**
    * Return a copy of this virtual column that is identical to this virtual column except that it operates on different
-   * columns, based on a renaming map where the key is the column to be renamed and the value is the new column.
+   * columns, based on a renaming map where the key is the column to be renamed and the value is the new column. Callers
+   * should check {@link #supportsRequiredRewrite()} first to ensure that this method is supported.
    *
    * @param columnRewrites Column rewrite map
    * @return Copy of this virtual column that operates on new columns based on the rewrite map

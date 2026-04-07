@@ -47,7 +47,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
-  private final Map<VirtualColumn, Optional<VirtualColumn>> shardEquivalenceCache;
+  private final Map<ShardVirtualColumnCacheEntry, Optional<VirtualColumn>> shardEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -171,9 +171,48 @@ public class FilterSegmentPruner implements SegmentPruner
   private VirtualColumn getQueryEquivalent(VirtualColumns shardVirtualColumns, VirtualColumn shardVirtualColumn)
   {
     final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
-        shardVirtualColumn,
-        virtualColumn -> Optional.ofNullable(virtualColumns.findEquivalent(shardVirtualColumns, virtualColumn))
+        new ShardVirtualColumnCacheEntry(shardVirtualColumn, shardVirtualColumns),
+        virtualColumn -> Optional.ofNullable(virtualColumns.findEquivalent(shardVirtualColumns, virtualColumn.shardVirtualColumn))
     );
     return cached.orElse(null);
+  }
+
+  /**
+   * Structure to preserve the VirtualColumn 'tree' to use as a cache key so that we can distinguish otherwise
+   * identical {@link VirtualColumn} that depend on other virtual columns that have the same name but are different
+   */
+  private static final class ShardVirtualColumnCacheEntry
+  {
+    private final VirtualColumn shardVirtualColumn;
+    private final List<ShardVirtualColumnCacheEntry> dependents;
+
+    public ShardVirtualColumnCacheEntry(VirtualColumn shardVirtualColumn, VirtualColumns shardVirtualColumns)
+    {
+      this.shardVirtualColumn = shardVirtualColumn;
+      this.dependents = new ArrayList<>();
+      for (String required : shardVirtualColumn.requiredColumns()) {
+        final VirtualColumn dependent = shardVirtualColumns.getVirtualColumn(required);
+        if (dependent != null) {
+          dependents.add(new ShardVirtualColumnCacheEntry(dependent, shardVirtualColumns));
+        }
+      }
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ShardVirtualColumnCacheEntry that = (ShardVirtualColumnCacheEntry) o;
+      return Objects.equals(shardVirtualColumn, that.shardVirtualColumn) &&
+             Objects.equals(dependents, that.dependents);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(shardVirtualColumn, dependents);
+    }
   }
 }
