@@ -70,7 +70,7 @@
     </scm>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
@@ -116,7 +116,7 @@
         <slf4j.version>2.0.17</slf4j.version>
         <jna.version>5.18.1</jna.version>
         <jna-platform.version>5.18.1</jna-platform.version>
-        <hadoop.compile.version>3.3.6</hadoop.compile.version>
+        <hadoop.compile.version>3.5.0</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
@@ -352,7 +352,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.13.1</version>
+                <version>1.14.0</version>
             </dependency>
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
@@ -454,7 +454,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.82</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
@@ -740,7 +740,7 @@
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
                 <artifactId>jaxb-runtime</artifactId>
-                <version>2.3.3</version>
+                <version>2.3.9</version>
             </dependency>
             <dependency>
                 <groupId>org.graalvm.js</groupId>
@@ -1463,6 +1463,16 @@
             <scope>provided</scope>
           </dependency>
           <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client-api</artifactId>
+            <version>${hadoop.compile.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client-runtime</artifactId>
+            <version>${hadoop.compile.version}</version>
+          </dependency>
+          <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value-annotations</artifactId>
             <version>2.10.1</version>
@@ -1704,7 +1714,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.5.1</version>
+                <version>3.7</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -2046,7 +2056,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.6.1</version>
                     <configuration>
                         <ignoredNonTestScopedDependencies>
                             <ignoredNonTestScopedDependency>*</ignoredNonTestScopedDependency>

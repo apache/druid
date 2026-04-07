@@ -718,19 +718,23 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
 
       obj = field.get(encodedColumn);
     }
-    // CompressedVSizeColumnarIntsSupplier$CompressedByteSizeColumnarInts
-    // CompressedVSizeColumnarMultiIntsSupplier$CompressedVSizeColumnarMultiInts
-    Field compressedSupplierField = obj.getClass().getDeclaredField("this$0");
-    compressedSupplierField.setAccessible(true);
-
-    Object supplier = compressedSupplierField.get(obj);
-
-    Field compressionField = supplier.getClass().getDeclaredField("compression");
-    compressionField.setAccessible(true);
-
-    Object strategy = compressionField.get(supplier);
-
-    Assert.assertEquals(expectedStrategy, strategy);
+    // CompressedByteSizeColumnarInts and similar subclasses inherit this$0 from the parent
+    // CompressedVSizeColumnarInts, so getDeclaredField("this$0") on the subclass fails.
+    // Use getCompressionStrategy() instead, traversing the hierarchy to find the method.
+    Class<?> cls = obj.getClass();
+    while (cls != null) {
+      try {
+        java.lang.reflect.Method method = cls.getDeclaredMethod("getCompressionStrategy");
+        method.setAccessible(true);
+        Object strategy = method.invoke(obj);
+        Assert.assertEquals(expectedStrategy, strategy);
+        return;
+      }
+      catch (NoSuchMethodException e) {
+        cls = cls.getSuperclass();
+      }
+    }
+    Assert.fail("Could not find getCompressionStrategy() on " + obj.getClass());
   }
 
 
