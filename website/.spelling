@@ -874,6 +874,7 @@ LeaderLatch
 3.4.x
 3.5.x.
 AllowAll
+ReadOnly
 AuthenticationResult
 AuthorizationLoadingLookupTest
 booleans
@@ -884,6 +885,7 @@ HttpClient
 JsonConfigurator
 KIP-297
 allowAll
+readonly
 authenticatorChain
 defaultUser
 inputSegmentSizeBytes
