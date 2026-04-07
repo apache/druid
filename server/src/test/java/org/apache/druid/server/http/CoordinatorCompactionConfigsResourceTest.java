@@ -106,7 +106,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
     Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
     Assert.assertTrue(defaultConfig.isUseSupervisors());
-    Assert.assertEquals(CompactionEngine.MSQ, defaultConfig.getEngine());
+    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test

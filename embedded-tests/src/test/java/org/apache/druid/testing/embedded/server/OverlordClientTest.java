@@ -275,7 +275,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_isCompactionSupervisorEnabled()
   {
     Boolean result = cluster.callApi().onLeaderOverlord(OverlordClient::isCompactionSupervisorEnabled);
-    Assertions.assertFalse(result);
+    Assertions.assertTrue(result);
   }
 
   @Test
