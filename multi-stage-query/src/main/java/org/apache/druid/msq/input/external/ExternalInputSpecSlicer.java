@@ -20,11 +20,13 @@
 package org.apache.druid.msq.input.external;
 
 import com.google.common.collect.Iterators;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.TaskAuthContextAware;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
@@ -47,6 +49,19 @@ import java.util.stream.Collectors;
  */
 public class ExternalInputSpecSlicer implements InputSpecSlicer
 {
+  @Nullable
+  private final TaskAuthContext taskAuthContext;
+
+  public ExternalInputSpecSlicer()
+  {
+    this(null);
+  }
+
+  public ExternalInputSpecSlicer(@Nullable TaskAuthContext taskAuthContext)
+  {
+    this.taskAuthContext = taskAuthContext;
+  }
+
   @Override
   public boolean canSliceDynamic(InputSpec inputSpec)
   {
@@ -108,7 +123,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   /**
    * Slice a {@link SplittableInputSource} using a {@link SplitHintSpec}.
    */
-  private static List<InputSlice> sliceSplittableInputSource(
+  private List<InputSlice> sliceSplittableInputSource(
       final ExternalInputSpec inputSpec,
       final SplitHintSpec splitHintSpec,
       final int maxNumSlices
@@ -116,6 +131,11 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   {
     final SplittableInputSource<Object> splittableInputSource =
         (SplittableInputSource<Object>) inputSpec.getInputSource();
+
+    // Inject auth context if the input source supports it
+    if (splittableInputSource instanceof TaskAuthContextAware) {
+      ((TaskAuthContextAware) splittableInputSource).setTaskAuthContext(taskAuthContext);
+    }
 
     try {
       final List<InputSplit<Object>> splitList =

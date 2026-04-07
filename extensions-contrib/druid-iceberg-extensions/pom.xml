@@ -280,7 +280,7 @@
       <artifactId>iceberg-aws</artifactId>
       <version>${iceberg.core.version}</version>
     </dependency>
-   <!--  GlueCatalog needs AWS SDK STS module compile time  -->
+    <!--  GlueCatalog needs AWS SDK STS module compile time  -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
@@ -644,6 +644,7 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>runtime</scope>
+      <version>${hadoop.compile.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>

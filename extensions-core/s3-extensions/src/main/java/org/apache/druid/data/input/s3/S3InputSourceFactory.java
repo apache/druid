@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class S3InputSourceFactory implements InputSourceFactory
@@ -76,6 +78,15 @@ public class S3InputSourceFactory implements InputSourceFactory
   @Override
   public SplittableInputSource create(List<String> inputFilePaths)
   {
+    return create(inputFilePaths, null);
+  }
+
+  @Override
+  public SplittableInputSource create(List<String> inputFilePaths, @Nullable Map<String, String> vendedCredentials)
+  {
+    // Use vended credentials if provided, otherwise fall back to configured credentials
+    S3InputSourceConfig effectiveConfig = buildConfigWithVendedCredentials(vendedCredentials);
+
     return new S3InputSource(
         s3Client,
         s3ClientBuilder,
@@ -94,11 +105,44 @@ public class S3InputSourceFactory implements InputSourceFactory
         null,
         null,
         SystemFields.none(),
-        s3InputSourceConfig,
+        effectiveConfig,
         awsProxyConfig,
         awsEndpointConfig,
         awsClientConfig
     );
+  }
+
+  /**
+   * Builds an S3InputSourceConfig using vended credentials from the catalog.
+   * Falls back to the configured s3InputSourceConfig if no credentials are vended.
+   *
+   * @param vendedCredentials credential map from Iceberg catalog, may be null
+   * @return S3InputSourceConfig with vended credentials or the original config
+   */
+  @Nullable
+  private S3InputSourceConfig buildConfigWithVendedCredentials(@Nullable Map<String, String> vendedCredentials)
+  {
+    if (vendedCredentials == null || vendedCredentials.isEmpty()) {
+      return s3InputSourceConfig;
+    }
+
+    // Iceberg REST catalog credential keys (from REST spec)
+    String accessKeyId = vendedCredentials.get("s3.access-key-id");
+    String secretAccessKey = vendedCredentials.get("s3.secret-access-key");
+    String sessionToken = vendedCredentials.get("s3.session-token");
+
+    if (accessKeyId != null && secretAccessKey != null) {
+      return new S3InputSourceConfig(
+          new DefaultPasswordProvider(accessKeyId),
+          new DefaultPasswordProvider(secretAccessKey),
+          null, // assumeRoleArn - not needed with vended credentials
+          null, // assumeRoleExternalId
+          sessionToken != null ? new DefaultPasswordProvider(sessionToken) : null
+      );
+    }
+
+    // No S3 credentials in the vended map, fall back to configured config
+    return s3InputSourceConfig;
   }
 
   @Nullable
