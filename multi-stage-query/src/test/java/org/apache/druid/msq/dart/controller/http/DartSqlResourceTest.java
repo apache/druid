@@ -271,7 +271,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 )
             )
         ),
-        new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
+        new DartQueryKitSpecFactory(),
         injector.getInstance(MultiQueryKit.class),
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),

@@ -100,6 +100,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   private final String controllerTaskId;
   private final String dataSource;
   private final OverlordClient overlordClient;
+  private final int maxWorkerCount;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
   private final MSQWorkerTaskLauncherConfig config;
@@ -165,6 +166,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final WorkerFailureListener workerFailureListener,
       final Map<String, Object> taskContextOverrides,
       final long maxTaskStartDelayMillis,
+      final int maxWorkerCount,
       final MSQWorkerTaskLauncherConfig config
   )
   {
@@ -175,6 +177,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         workerFailureListener,
         taskContextOverrides,
         maxTaskStartDelayMillis,
+        maxWorkerCount,
         config,
         TimeUnit.SECONDS.toMillis(60)
     );
@@ -188,6 +191,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final WorkerFailureListener workerFailureListener,
       final Map<String, Object> taskContextOverrides,
       final long maxTaskStartDelayMillis,
+      final int maxWorkerCount,
       final MSQWorkerTaskLauncherConfig config,
       final long taskIdsLockTimeout
   )
@@ -195,6 +199,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     this.controllerTaskId = controllerTaskId;
     this.dataSource = dataSource;
     this.overlordClient = overlordClient;
+    this.maxWorkerCount = maxWorkerCount;
     this.workerFailureListener = workerFailureListener;
     this.taskContextOverrides = taskContextOverrides;
     this.exec = Execs.singleThreaded(
@@ -551,6 +556,12 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         taskIds.notifyAll();
       }
     }
+  }
+
+  @Override
+  public int getMaxWorkerCount()
+  {
+    return maxWorkerCount;
   }
 
   /**
