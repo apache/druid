@@ -2242,7 +2242,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.1.0
+version: 4.0.3
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2264,7 +2264,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.0.30
+version: 12.1.8
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -3502,7 +3502,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: "2.0.2"
+version: "2.0.3"
 libraries:
   - io.airlift: aircompressor
 
@@ -4150,7 +4150,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: "2.0.2"
+version: "2.0.3"
 libraries:
   - io.airlift: aircompressor
 
@@ -4885,7 +4885,7 @@ notice: |
 
 name: org.apache.ranger ranger-plugins-audit-dest-es
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4895,7 +4895,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-audit-dest-hdfs
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4905,7 +4905,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-common
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5660,7 +5660,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.12.2
+version: 1.14.0
 license_file_path: licenses/bin/axios.MIT
 
 ---
