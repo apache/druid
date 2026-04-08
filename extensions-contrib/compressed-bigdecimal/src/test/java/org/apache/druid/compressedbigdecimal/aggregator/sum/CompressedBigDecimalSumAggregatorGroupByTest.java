@@ -21,6 +21,8 @@ package org.apache.druid.compressedbigdecimal.aggregator.sum;
 
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalGroupByQueryConfig;
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorGroupByTestBase;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.junit.runners.Parameterized;
@@ -50,8 +52,17 @@ public class CompressedBigDecimalSumAggregatorGroupByTest extends CompressedBigD
   {
     List<Object[]> constructors = new ArrayList<>();
     CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig = new CompressedBigDecimalGroupByQueryConfig(
-        "bd_sum_test_groupby_query.json",
-        "bd_sum_test_aggregators.json",
+        List.of(new CompressedBigDecimalSumAggregatorFactory("bigDecimalRevenue", "revenue", 3, 9, null)),
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2017-01-01T00:00:00.000Z/P1D")
+                    .setAggregatorSpecs(
+                        new CompressedBigDecimalSumAggregatorFactory("cbdRevenueFromString", "revenue", 3, 9, null),
+                        new CompressedBigDecimalSumAggregatorFactory("cbdRevenueFromLong", "longRevenue", 3, 9, null),
+                        new CompressedBigDecimalSumAggregatorFactory("cbdRevenueFromDouble", "doubleRevenue", 3, 9, null)
+                    )
+                    .build(),
         "15000000010.000000005",
         "10000000010.000000000",
         "15000000010.500000000"
