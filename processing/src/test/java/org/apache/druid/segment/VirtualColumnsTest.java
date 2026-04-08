@@ -494,11 +494,46 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         ColumnType.DOUBLE,
         TestExprMacroTable.INSTANCE
     );
+    VirtualColumns otherVirtualColumns = VirtualColumns.create(v1, v2, v3);
 
-    Assert.assertEquals(v0, virtualColumns.findEquivalent(v0));
-    Assert.assertEquals(v0, virtualColumns.findEquivalent(v1));
-    Assert.assertNull(virtualColumns.findEquivalent(v2));
-    Assert.assertNull(virtualColumns.findEquivalent(v3));
+    Assert.assertEquals(v0, virtualColumns.findEquivalent(VirtualColumns.EMPTY, v0));
+    Assert.assertEquals(v0, virtualColumns.findEquivalent(otherVirtualColumns, v1));
+    Assert.assertNull(virtualColumns.findEquivalent(otherVirtualColumns, v2));
+    Assert.assertNull(virtualColumns.findEquivalent(otherVirtualColumns, v3));
+  }
+
+  @Test
+  public void testFindEquivalentWithDependentVirtualColumn()
+  {
+    final NestedFieldVirtualColumn n0 = new NestedFieldVirtualColumn("obj", "$.a", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0 = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns virtualColumns = VirtualColumns.create(n0, e0);
+
+    final NestedFieldVirtualColumn n1 = new NestedFieldVirtualColumn("obj", "$.a", "n1", ColumnType.STRING);
+    final ExpressionVirtualColumn e1 = new ExpressionVirtualColumn(
+        "e1",
+        "lower(\"n1\")",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns otherVirtualColumns = VirtualColumns.create(n1, e1);
+
+    Assert.assertEquals(n0, virtualColumns.findEquivalent(otherVirtualColumns, n1));
+
+    Assert.assertEquals(e0, virtualColumns.findEquivalent(otherVirtualColumns, e1));
+
+    // a different nested field path produces no equivalence, even if it has the same name
+    final NestedFieldVirtualColumn n0different = new NestedFieldVirtualColumn("obj", "$.b", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0different = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns notEquivalent = VirtualColumns.create(n0different, e0different);
+    Assert.assertNull(virtualColumns.findEquivalent(notEquivalent, n0different));
+    Assert.assertNull(virtualColumns.findEquivalent(notEquivalent, e0different));
   }
 
   @Test

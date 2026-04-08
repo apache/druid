@@ -405,7 +405,10 @@ public class Projections
   )
   {
     // check to see if we have an equivalent virtual column defined in the projection, if so we can
-    final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(queryVirtualColumn);
+    final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(
+        queryCursorBuildSpec.getVirtualColumns(),
+        queryVirtualColumn
+    );
     if (projectionEquivalent != null) {
       final String remapColumnName;
       if (Objects.equals(projectionEquivalent.getOutputName(), projection.getTimeColumnName())) {
