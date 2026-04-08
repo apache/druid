@@ -149,8 +149,8 @@ public interface ShardSpec
 
   /**
    * If any of the columns in {@link #getDomainDimensions()} was computed with an expression and was not stored, the
-   * {@link org.apache.druid.segment.VirtualColumn} which computes it is stored here. This allows matching ranges even
-   * when the value is not stored in the shard so long as {@link VirtualColumns#findEquivalent(VirtualColumn)} exists.
+   * {@link VirtualColumn} which computes it is stored here. This allows matching ranges even when the value is not
+   * stored in the shard so long as {@link VirtualColumns#findEquivalent(VirtualColumns, VirtualColumn)} exists.
    *
    * @return {@link VirtualColumns} associated with columns listed in {@link #getDomainDimensions()}.
    */
