@@ -174,11 +174,26 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
-    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
+    int currentTaskCount = supervisor.getIoConfig().getTaskCount();
+
+    // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
+    // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
+    final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
+                                     || currentTaskCount > config.getTaskCountMax();
+    if (isTaskCountOutOfBounds) {
+      currentTaskCount = Math.min(config.getTaskCountMax(),
+                                   Math.max(config.getTaskCountMin(), supervisor.getIoConfig().getTaskCount()));
+    }
 
     // Perform scale-up actions; scale-down actions only if configured.
     final int taskCount;
-    if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
+
+    // If task count is out of bounds, scale to the configured boundary
+    // regardless of optimal task count, to get back to a safe state.
+    if (isScaleActionAllowed() && isTaskCountOutOfBounds) {
+      taskCount = currentTaskCount;
+      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], scaling.", supervisorId, config.getTaskCountMin(), config.getTaskCountMax());
+    } else if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
       log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);

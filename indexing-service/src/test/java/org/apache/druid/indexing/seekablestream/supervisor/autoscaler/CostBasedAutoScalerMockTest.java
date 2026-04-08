@@ -233,6 +233,56 @@ public class CostBasedAutoScalerMockTest
   }
 
   @Test
+  public void testReturnsTaskCountMinWhenConfiguredTaskCountIsBelowMin()
+  {
+    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(50)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
+
+    final int configuredTaskCount = 1;
+    final int expectedTaskCount = 50;
+
+    doReturn(expectedTaskCount).when(autoScaler).computeOptimalTaskCount(any());
+    setupMocksForMetricsCollection(autoScaler, configuredTaskCount, 1000.0, 0.2);
+
+    final int result = autoScaler.computeTaskCountForScaleAction();
+
+    Assert.assertEquals(
+        "Should scale to taskCountMin when the configured task count is below the minimum boundary",
+        expectedTaskCount,
+        result
+    );
+  }
+
+  @Test
+  public void testReturnsTaskCountMaxWhenConfiguredTaskCountIsAboveMax()
+  {
+    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(50)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
+
+    final int configuredTaskCount = 100;
+    final int expectedTaskCount = 50;
+
+    doReturn(expectedTaskCount).when(autoScaler).computeOptimalTaskCount(any());
+    setupMocksForMetricsCollection(autoScaler, configuredTaskCount, 10.0, 0.8);
+
+    final int result = autoScaler.computeTaskCountForScaleAction();
+
+    Assert.assertEquals(
+        "Should scale to taskCountMax when the configured task count is above the maximum boundary",
+        expectedTaskCount,
+        result
+    );
+  }
+
+  @Test
   public void testScaleUpToMaximumTasks()
   {
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, config, mockSpec, mockEmitter));

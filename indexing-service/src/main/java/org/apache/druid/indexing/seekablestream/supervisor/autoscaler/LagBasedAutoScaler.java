@@ -241,17 +241,28 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
     int currentActiveTaskCount = supervisor.getIoConfig().getTaskCount();
     int desiredActiveTaskCount;
-    int partitionCount = supervisor.getPartitionCount();
+    final int partitionCount = supervisor.getPartitionCount();
     if (partitionCount <= 0) {
       log.warn("Partition number for supervisor[%s] <= 0 ? how can it be?", spec.getId());
       return -1;
     }
 
+    final int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
+    final int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
+
+    // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
+    // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
+    // If that is happening, take the bound and return early.
+    final boolean isTaskCountOutOfBounds = currentActiveTaskCount < actualTaskCountMin
+                                           || currentActiveTaskCount > actualTaskCountMax;
+    if (isTaskCountOutOfBounds) {
+      currentActiveTaskCount = Math.min(actualTaskCountMax, Math.max(actualTaskCountMin, currentActiveTaskCount));
+      return currentActiveTaskCount;
+    }
+
     if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
       // Do Scale out
-      int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
-
-      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
+      final int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
       if (currentActiveTaskCount == actualTaskCountMax) {
         log.debug(
             "CurrentActiveTaskCount reached task count Max limit, skipping scale out action for supervisor[%s].",
@@ -272,8 +283,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
     if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
       // Do Scale in
-      int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
-      int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
+      final int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
       if (currentActiveTaskCount == actualTaskCountMin) {
         log.debug(
             "CurrentActiveTaskCount reached task count Min limit[%d], skipping scale in action for supervisor[%s].",
