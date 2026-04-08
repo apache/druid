@@ -23,7 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -102,9 +108,16 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     ) {
 
       s1 = tempFolder.newFolder();
+      final InputRowSchema schema = new InputRowSchema(
+          new TimestampSpec("timestamp", "yyyyMMddHH", null),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+          ColumnsFilter.all()
+      );
+      final InputFormat format = DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country"));
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+          schema,
+          format,
           readFileFromClasspathAsString("simple_test_data_aggregators.json"),
           s1,
           0,
@@ -115,7 +128,8 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
       s2 = tempFolder.newFolder();
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+          schema,
+          format,
           readFileFromClasspathAsString("simple_test_data_aggregators.json"),
           s2,
           0,

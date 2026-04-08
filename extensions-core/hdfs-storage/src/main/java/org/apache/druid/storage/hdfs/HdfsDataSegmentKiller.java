@@ -148,4 +148,59 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
       log.makeAlert(e, "uncaught exception during segment killer").emit();
     }
   }
+
+  @Override
+  public void killRecursively(String relativePath) throws IOException
+  {
+    final Path dirToDelete = constructHdfsDeletePath(relativePath);
+    if (dirToDelete == null) {
+      return;
+    }
+
+    final FileSystem fs = dirToDelete.getFileSystem(config);
+    if (!fs.exists(dirToDelete)) {
+      return;
+    }
+    log.info("Deleting deep storage directory[%s]", dirToDelete);
+    if (!fs.delete(dirToDelete, true)) {
+      throw new IOException("Failed to delete deep storage directory[" + dirToDelete + "].");
+    }
+  }
+
+  /**
+   * Construct a path to delete from HDFS. Returns null if the path is invalid.
+   * Replicates how {@link HdfsDataSegmentPusher#pushToPath} handles ':', by replacing that with '_'.
+   */
+  @Nullable
+  private Path constructHdfsDeletePath(String relativePath)
+  {
+    if (Strings.isNullOrEmpty(relativePath)) {
+      log.warn("Skipping deep storage directory kill: relative path is empty");
+      return null;
+    }
+    if (relativePath.charAt(0) == '/') {
+      log.warn("Skipping deep storage directory kill: relative path must not be absolute, got [%s]", relativePath);
+      return null;
+    }
+    if (relativePath.indexOf('\\') >= 0) {
+      log.warn("Skipping deep storage directory kill: backslash not allowed in path [%s]", relativePath);
+      return null;
+    }
+    for (String segment : StringUtils.splitPreserveAllTokens(relativePath, '/')) {
+      if (segment.isEmpty() || "..".equals(segment)) {
+        log.warn("Skipping deep storage directory kill: invalid path[%s]", relativePath);
+        return null;
+      }
+    }
+
+    if (storageDirectory == null) {
+      log.warn("Skipping deep storage directory kill: storage directory not configured");
+      return null;
+    }
+
+    final String hdfsRelativePath = relativePath.replace(':', '_');
+    final String storageDirectoryString = storageDirectory.toString();
+    final String sep = storageDirectoryString.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR;
+    return new Path(storageDirectoryString + sep + hdfsRelativePath);
+  }
 }

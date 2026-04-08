@@ -19,13 +19,12 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -46,7 +45,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
@@ -61,7 +60,7 @@ public class QueryLifecycleFactory
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<DefaultQueryConfig> queryConfigSupplier,
+      final QueryConfigProvider queryConfigProvider,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -71,7 +70,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = queryConfigSupplier.get();
+    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -79,13 +78,10 @@ public class QueryLifecycleFactory
 
   public QueryLifecycle factorize()
   {
-    // Extract query blocklist from broker config, or use empty list if not on broker
-    final List<QueryBlocklistRule> queryBlocklist;
-    if (brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null) {
-      queryBlocklist = brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist();
-    } else {
-      queryBlocklist = Collections.emptyList();
-    }
+    final List<QueryBlocklistRule> queryBlocklist =
+        brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null
+        ? brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist()
+        : Collections.emptyList();
 
     return new QueryLifecycle(
         conglomerate,
@@ -94,7 +90,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
-        defaultQueryConfig,
+        queryConfigProvider,
         authConfig,
         policyEnforcer,
         queryBlocklist,

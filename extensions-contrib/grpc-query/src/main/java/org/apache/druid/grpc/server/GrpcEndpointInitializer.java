@@ -27,14 +27,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.inject.Inject;
-
 import java.io.IOException;
 
 /**
@@ -66,7 +65,7 @@ public class GrpcEndpointInitializer
       final @Json ObjectMapper jsonMapper,
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
       final QueryLifecycleFactory queryLifecycleFactory,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AuthenticatorMapper authMapper,
       final QueryScheduler queryScheduler
   )
@@ -76,7 +75,7 @@ public class GrpcEndpointInitializer
     this.driver = new QueryDriver(
         jsonMapper,
         sqlStatementFactory,
-        defaultQueryConfig.getContext(),
+        queryConfigProvider,
         queryLifecycleFactory,
         queryScheduler
     );

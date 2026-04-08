@@ -20,14 +20,13 @@
 package org.apache.druid.spectator.histogram.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
@@ -63,35 +62,35 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @SqlTestFrameworkConfig.ComponentSupplier(SpectatorHistogramSqlAggregatorTest.SpectatorHistogramComponentSupplier.class)
 public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
-      ImmutableMap.of("t", "2000-01-01", "dim1", "a", "metric", 100L),
-      ImmutableMap.of("t", "2000-01-02", "dim1", "b", "metric", 200L),
-      ImmutableMap.of("t", "2000-01-03", "dim1", "c", "metric", 300L),
-      ImmutableMap.of("t", "2000-01-04", "dim1", "d", "metric", 400L),
-      ImmutableMap.of("t", "2000-01-05", "dim1", "e", "metric", 500L),
-      ImmutableMap.of("t", "2000-01-06", "dim1", "f", "metric", 600L)
+  private static final List<Map<String, Object>> RAW_ROWS = List.of(
+      Map.of("t", "2000-01-01", "dim1", "a", "metric", 100L),
+      Map.of("t", "2000-01-02", "dim1", "b", "metric", 200L),
+      Map.of("t", "2000-01-03", "dim1", "c", "metric", 300L),
+      Map.of("t", "2000-01-04", "dim1", "d", "metric", 400L),
+      Map.of("t", "2000-01-05", "dim1", "e", "metric", 500L),
+      Map.of("t", "2000-01-06", "dim1", "f", "metric", 600L)
   );
 
-  private static final MapInputRowParser PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "auto", null),
-          DimensionsSpec.builder()
-                        .setDimensions(ImmutableList.of(
-                            new StringDimensionSchema("dim1"),
-                            new LongDimensionSchema("metric")
-                        ))
-                        .setDimensionExclusions(ImmutableList.of("t"))
-                        .build()
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec("t", "auto", null),
+      DimensionsSpec.builder()
+                    .setDimensions(List.of(
+                        new StringDimensionSchema("dim1"),
+                        new LongDimensionSchema("metric")
+                    ))
+                    .setDimensionExclusions(List.of("t"))
+                    .build(),
+      ColumnsFilter.all()
   );
 
   private static final List<InputRow> ROWS = RAW_ROWS.stream()
-                                                     .map(raw -> PARSER.parseBatch(raw).get(0))
+                                                     .map(raw -> MapInputRowParser.parse(SCHEMA, raw))
                                                      .collect(Collectors.toList());
 
   protected static class SpectatorHistogramComponentSupplier extends StandardComponentSupplier
@@ -123,7 +122,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                           new IncrementalIndexSchema.Builder()
                               .withDimensionsSpec(
                                   DimensionsSpec.builder()
-                                                .setDimensions(ImmutableList.of(
+                                                .setDimensions(List.of(
                                                     new StringDimensionSchema("dim1"),
                                                     new LongDimensionSchema("metric")
                                                 ))
@@ -163,9 +162,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
                   ))
                   .postAggregators(
@@ -178,7 +177,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
+        List.<Object[]>of(
             // Histogram bucket approximation for p50 of [100, 200, 300, 400, 500, 600]
             new Object[]{341.0}
         )
@@ -193,9 +192,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
                   ))
                   .postAggregators(
@@ -207,7 +206,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{6L})
+        List.<Object[]>of(new Object[]{6L})
     );
   }
 
@@ -220,9 +219,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "metric")
                   ))
                   .postAggregators(
@@ -235,7 +234,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
+        List.<Object[]>of(
             // Histogram bucket approximation for p50 of [100, 200, 300, 400, 500, 600]
             new Object[]{341.0}
         )
@@ -251,9 +250,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "metric")
                   ))
                   .postAggregators(
@@ -265,7 +264,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{6L})
+        List.<Object[]>of(new Object[]{6L})
     );
   }
 
@@ -292,7 +291,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        List.of(
             new Object[]{"a", 1L},
             new Object[]{"b", 1L},
             new Object[]{"c", 1L},
@@ -326,7 +325,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        List.of(
             new Object[]{"a", 1L},
             new Object[]{"b", 1L},
             new Object[]{"c", 1L},
@@ -347,9 +346,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
                   ))
                   .postAggregators(
@@ -371,7 +370,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
+        List.<Object[]>of(
             // p50 = 341.0, p99.99 = 680.949 (interpolated value near max)
             new Object[]{6L, 341.0, 680.949}
         )
@@ -402,7 +401,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        List.of(
             // Each row has a single value, so p50 returns the middle of that bucket
             // Values depend on Spectator histogram bucket boundaries
             new Object[]{"a", 95.5},
@@ -423,9 +422,9 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
                   ))
                   .postAggregators(
@@ -438,7 +437,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
+        List.<Object[]>of(
             // Returns an array of percentile values
             new Object[]{"[200.5,341.0,468.5,675.9]"}
         )
@@ -469,7 +468,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        List.of(
             // Returns array of [p50, p99] for each group
             new Object[]{"a", "[95.5,105.78999999999999]"},
             new Object[]{"b", "[200.5,210.79]"},
@@ -492,10 +491,10 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .filters(equality("dim1", "nonexistent", ColumnType.STRING))
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
                   ))
                   .postAggregators(
@@ -512,7 +511,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{null, null})
+        List.<Object[]>of(new Object[]{null, null})
     );
   }
 
@@ -525,10 +524,10 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .intervals(new MultipleIntervalSegmentSpec(List.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .virtualColumns(expressionVirtualColumn("v0", "null", ColumnType.DOUBLE))
-                  .aggregators(ImmutableList.of(
+                  .aggregators(List.of(
                       new SpectatorHistogramAggregatorFactory("a0:agg", "v0")
                   ))
                   .postAggregators(
@@ -550,7 +549,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{null, null, null})
+        List.<Object[]>of(new Object[]{null, null, null})
     );
   }
 
@@ -561,7 +560,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
     final String query = "SELECT SPECTATOR_PERCENTILE(histogram_metric, '99.99') FROM foo";
 
     try {
-      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      testQuery(query, List.of(), List.of());
       Assert.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {

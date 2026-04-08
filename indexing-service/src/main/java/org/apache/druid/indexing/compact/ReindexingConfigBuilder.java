@@ -20,20 +20,25 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.server.compaction.IntervalGranularityInfo;
+import org.apache.druid.server.compaction.IntervalPartitioningInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIndexSpecRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -56,7 +61,9 @@ class ReindexingConfigBuilder
   private final ReindexingRuleProvider provider;
   private final Interval interval;
   private final DateTime referenceTime;
-  private final List<IntervalGranularityInfo> syntheticTimeline;
+  private final List<IntervalPartitioningInfo> syntheticTimeline;
+  @Nullable
+  private final UserCompactionTaskQueryTuningConfig baseTuningConfig;
 
   /**
    * Result of applying reindexing rules to a config builder.
@@ -98,13 +105,15 @@ class ReindexingConfigBuilder
       ReindexingRuleProvider provider,
       Interval interval,
       DateTime referenceTime,
-      List<IntervalGranularityInfo> syntheticTimeline
+      List<IntervalPartitioningInfo> syntheticTimeline,
+      @Nullable UserCompactionTaskQueryTuningConfig baseTuningConfig
   )
   {
     this.provider = provider;
     this.interval = interval;
     this.referenceTime = referenceTime;
     this.syntheticTimeline = syntheticTimeline;
+    this.baseTuningConfig = baseTuningConfig;
   }
 
   /**
@@ -128,15 +137,34 @@ class ReindexingConfigBuilder
     int count = 0;
     List<ReindexingRule> appliedRules = new ArrayList<>();
 
-    // Apply tuning config rule
-    ReindexingTuningConfigRule tuningRule = provider.getTuningConfigRule(interval, referenceTime);
-    if (tuningRule != null) {
-      builder.withTuningConfig(tuningRule.getTuningConfig());
-      appliedRules.add(tuningRule);
+    IntervalPartitioningInfo partitioningInfo = findMatchingInterval(interval);
+
+    if (!partitioningInfo.isRuleSynthetic()) {
+      appliedRules.add(partitioningInfo.getSourceRule());
+      count++;
+    }
+    builder.withSegmentGranularity(partitioningInfo.getGranularity());
+    PartitionsSpec partitionsSpec = partitioningInfo.getPartitionsSpec();
+
+    IndexSpec indexSpec = null;
+    ReindexingIndexSpecRule indexSpecRule = provider.getIndexSpecRule(interval, referenceTime);
+    if (indexSpecRule != null) {
+      indexSpec = indexSpecRule.getIndexSpec();
+      appliedRules.add(indexSpecRule);
       count++;
     }
 
-    // Apply data schema rules
+    // Build tuning config: start from the template's static tuning config (if any),
+    // then overlay rule-derived partitionsSpec and indexSpec
+    UserCompactionTaskQueryTuningConfig.Builder tuningBuilder =
+        baseTuningConfig != null ? baseTuningConfig.toBuilder() : UserCompactionTaskQueryTuningConfig.builder();
+    tuningBuilder.partitionsSpec(partitionsSpec);
+    // Having no index spec from a rule means we should use the default in the base tuning config (if any)
+    if (indexSpec != null) {
+      tuningBuilder.indexSpec(indexSpec);
+    }
+    builder.withTuningConfig(tuningBuilder.build());
+
     ReindexingDataSchemaRule dataSchemaRule = provider.getDataSchemaRule(interval, referenceTime);
     if (dataSchemaRule != null) {
       applyDataSchemaRule(builder, dataSchemaRule);
@@ -144,29 +172,35 @@ class ReindexingConfigBuilder
       count++;
     }
 
-    // Apply deletion rules (additive)
     List<ReindexingDeletionRule> deletionRules = provider.getDeletionRules(interval, referenceTime);
+    DimFilter deletionFilter = null;
+    List<VirtualColumn> deletionVCs = new ArrayList<>();
+
     if (!deletionRules.isEmpty()) {
-      applyDeletionRulesList(builder, deletionRules);
+      List<DimFilter> removeConditions = new ArrayList<>();
+
+      for (ReindexingDeletionRule rule : deletionRules) {
+        removeConditions.add(rule.getDeleteWhere());
+        if (rule.getVirtualColumns() != null) {
+          deletionVCs.addAll(Arrays.asList(rule.getVirtualColumns().getVirtualColumns()));
+        }
+      }
+
+      DimFilter removeFilter = removeConditions.size() == 1
+                               ? removeConditions.get(0)
+                               : new OrDimFilter(removeConditions);
+      deletionFilter = new NotDimFilter(removeFilter);
+
       appliedRules.addAll(deletionRules);
       count += deletionRules.size();
     }
 
-    // Apply segment granularity rule
-    // Use granularity from synthetic timeline
-    IntervalGranularityInfo granularityInfo = findMatchingInterval(interval);
-    if (granularityInfo == null) {
-      throw DruidException.defensive(
-          "No matching interval found in synthetic timeline for interval[%s]. This should never happen.",
-          interval
-      );
-    }
+    // Merge partitioning VCs with deletion VCs and set transform spec
+    VirtualColumns mergedVCs = mergeVirtualColumns(partitioningInfo.getVirtualColumns(), deletionVCs);
 
-    builder.withSegmentGranularity(granularityInfo.getGranularity());
-    if (granularityInfo.getSourceRule() != null) {
-      // Only count and track the rule if it came from an actual rule (not default)
-      appliedRules.add(granularityInfo.getSourceRule());
-      count++;
+    if (deletionFilter != null || mergedVCs != null) {
+      builder.withTransformSpec(new CompactionTransformSpec(deletionFilter, mergedVCs));
+      LOG.debug("Applied [%d] filter rules for interval %s", deletionRules.size(), interval);
     }
 
     return new BuildResult(count, count == 0 ? List.of() : appliedRules);
@@ -174,18 +208,54 @@ class ReindexingConfigBuilder
 
   /**
    * Finds the matching interval granularity info from the synthetic timeline.
-   * Returns null if no synthetic timeline was provided or no match is found.
+   * <p>
+   * Throws a defensive exception if no match is found, but this should never happen
    */
-  @Nullable
-  private IntervalGranularityInfo findMatchingInterval(Interval interval)
+  private IntervalPartitioningInfo findMatchingInterval(Interval interval)
   {
-    for (IntervalGranularityInfo candidate : syntheticTimeline) {
+    for (IntervalPartitioningInfo candidate : syntheticTimeline) {
       if (candidate.getInterval().equals(interval)) {
         return candidate;
       }
     }
 
-    return null;
+    throw DruidException.defensive(
+        "No matching interval found in synthetic timeline for interval[%s]. This should never happen.",
+        interval
+    );
+  }
+
+  /**
+   * Merge partitioning virtual columns with deletion virtual columns, ensuring there are no name collisions.
+   * <p>
+   * Partitioning VCs and Deletion VCs coexist in the underlying @{link CompactionTransformSpec} so they must be merged safely
+   */
+  @Nullable
+  private static VirtualColumns mergeVirtualColumns(
+      @Nullable VirtualColumns partitioningVCs,
+      List<VirtualColumn> deletionVCs
+  )
+  {
+    List<VirtualColumn> allVCs = new ArrayList<>(deletionVCs);
+
+    if (partitioningVCs != null && !partitioningVCs.isEmpty()) {
+      allVCs.addAll(Arrays.asList(partitioningVCs.getVirtualColumns()));
+    }
+
+    if (allVCs.isEmpty()) {
+      return null;
+    }
+
+    try {
+      return VirtualColumns.create(allVCs);
+    }
+    catch (IAE e) {
+      throw InvalidInput.exception(
+          e,
+          "Partitioning virtual column name collides with a deletion virtual column name. "
+          + "Please rename the partitioning virtual column or the deletion virtual column to avoid this collision."
+      );
+    }
   }
 
   private void applyDataSchemaRule(
@@ -211,61 +281,5 @@ class ReindexingConfigBuilder
           dataSchemaRule.getRollup()
       );
     }
-  }
-
-  /**
-   * Applies deletion rules by combining their filters into a single transform filter.
-   * <p>
-   * Each deletion rule specifies rows that should be deleted. To implement deletion during
-   * compaction, we need to keep only rows that do NOT match any deletion rule.
-   * <p>
-   * Filter construction logic:
-   * <ul>
-   *   <li>Collect all deletion filters (one per rule)</li>
-   *   <li>OR them together: (filter1 OR filter2 OR ...)</li>
-   *   <li>Wrap in NOT: NOT(filter1 OR filter2 OR ...)</li>
-   * </ul>
-   * <p>
-   * Result: Rows matching ANY deletion rule are filtered out, all other rows are kept.
-   * <p>
-   * Example: With rules "delete country=US" and "delete device=mobile":
-   * Final filter: NOT((country=US) OR (device=mobile))
-   * This keeps all rows except those where country=US OR device=mobile.
-   *
-   * @param builder the config builder to apply the deletion filter to
-   * @param rules the deletion rules to combine
-   */
-  private void applyDeletionRulesList(
-      InlineSchemaDataSourceCompactionConfig.Builder builder,
-      List<ReindexingDeletionRule> rules
-  )
-  {
-
-    // Collect filters and virtual columns in a single pass
-    List<DimFilter> removeConditions = new ArrayList<>();
-    List<VirtualColumn> allVirtualColumns = new ArrayList<>();
-
-    for (ReindexingDeletionRule rule : rules) {
-      removeConditions.add(rule.getDeleteWhere());
-
-      if (rule.getVirtualColumns() != null) {
-        allVirtualColumns.addAll(Arrays.asList(rule.getVirtualColumns().getVirtualColumns()));
-      }
-    }
-
-    // Combine filters: OR all filters together, wrap in NOT
-    DimFilter removeFilter = removeConditions.size() == 1
-                             ? removeConditions.get(0)
-                             : new OrDimFilter(removeConditions);
-    DimFilter finalFilter = new NotDimFilter(removeFilter);
-
-    // Create VirtualColumns if any exist
-    VirtualColumns virtualColumns = allVirtualColumns.isEmpty()
-                                    ? null
-                                    : VirtualColumns.create(allVirtualColumns);
-
-    builder.withTransformSpec(new CompactionTransformSpec(finalFilter, virtualColumns));
-
-    LOG.debug("Applied [%d] filter rules for interval %s", rules.size(), interval);
   }
 }

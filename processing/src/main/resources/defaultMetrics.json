@@ -37,6 +37,7 @@
     "ingest/persists/time": [],
     "ingest/rows/output": [],
     "ingest/segments/count": [],
+    "ingest/rows/published": [],
     "ingest/sink/count": [],
     "ingest/tombstones/count": [],
     "interval/compacted/count": [],

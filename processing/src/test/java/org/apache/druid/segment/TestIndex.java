@@ -23,26 +23,29 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharSource;
-import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DelimitedParseSpec;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -74,7 +77,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static org.apache.druid.query.QueryRunnerTestHelper.QUALITY_CARDINALITY;
@@ -576,58 +578,37 @@ public class TestIndex
       final CharSource source
   ) throws IOException
   {
-    final StringInputRowParser parser = new StringInputRowParser(
-        new DelimitedParseSpec(
+    return loadIncrementalIndexFromCharSource(
+        () -> retVal,
+        source,
+        new InputRowSchema(
             new TimestampSpec("ts", "iso", null),
             DIMENSIONS_SPEC,
-            "\t",
-            "\u0001",
-            Arrays.asList(COLUMNS),
-            false,
-            0
+            ColumnsFilter.all()
         ),
-        "utf8"
+        new DelimitedInputFormat(Arrays.asList(COLUMNS), "\u0001", null, null, null, 0, null)
     );
-    return loadIncrementalIndexFromCharSource(() -> retVal, source, parser);
   }
 
   public static IncrementalIndex loadIncrementalIndexFromCharSource(
       final Supplier<IncrementalIndex> indexSupplier,
       final CharSource source,
-      final StringInputRowParser parser
+      final InputRowSchema schema,
+      final InputFormat format
   ) throws IOException
   {
     final IncrementalIndex retVal = indexSupplier.get();
-    final AtomicLong startTime = new AtomicLong();
-    int lineCount = source.readLines(
-        new LineProcessor<>()
-        {
-          boolean runOnce = false;
-          int lineCount = 0;
-
-          @Override
-          public boolean processLine(String line)
-          {
-            if (!runOnce) {
-              startTime.set(System.currentTimeMillis());
-              runOnce = true;
-            }
-            retVal.add(parser.parse(line));
-
-            ++lineCount;
-            return true;
-          }
-
-          @Override
-          public Integer getResult()
-          {
-            return lineCount;
-          }
-        }
-    );
-
-    log.info("Loaded %,d lines in %,d millis.", lineCount, System.currentTimeMillis() - startTime.get());
-
+    final long startTime = System.currentTimeMillis();
+    int lineCount = 0;
+    try (CloseableIterator<InputRow> iter = new InlineInputSource(source.read())
+        .reader(schema, format, null)
+        .read()) {
+      while (iter.hasNext()) {
+        retVal.add(iter.next());
+        lineCount++;
+      }
+    }
+    log.info("Loaded %,d lines in %,d millis.", lineCount, System.currentTimeMillis() - startTime);
     return retVal;
   }
 }

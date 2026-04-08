@@ -23,7 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Key;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -216,26 +221,16 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   {
     String metricSpec = "[{ \"type\": \"count\", \"name\": \"count\"}]";
 
-    String parseSpec = "{"
-                       + "\"type\" : \"string\","
-                       + "\"parseSpec\" : {"
-                       + "    \"format\" : \"tsv\","
-                       + "    \"timestampSpec\" : {"
-                       + "        \"column\" : \"timestamp\","
-                       + "        \"format\" : \"auto\""
-                       + "},"
-                       + "    \"dimensionsSpec\" : {"
-                       + "        \"dimensions\": [],"
-                       + "        \"dimensionExclusions\" : [],"
-                       + "        \"spatialDimensions\" : []"
-                       + "    },"
-                       + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                       + "  }"
-                       + "}";
-
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
-        parseSpec,
+        new InputRowSchema(
+            TimestampSpec.DEFAULT,
+            DimensionsSpec.EMPTY,
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+        ),
         metricSpec,
         0,
         Granularities.NONE,
@@ -243,6 +238,7 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
         query
     );
 
-    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
+    List<ResultRow> results = seq.toList();
+    return results.get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }

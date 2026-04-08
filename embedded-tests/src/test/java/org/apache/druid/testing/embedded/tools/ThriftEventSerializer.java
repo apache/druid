@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.tools;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testing.tools.EventSerializer;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TCompactProtocol;

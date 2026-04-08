@@ -228,7 +228,11 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 }
 ```
 
-## Auto-compaction using compaction supervisors  
+## Auto-compaction using compaction supervisors
+
+:::info
+For advanced time-based data lifecycle management — such as coarsening segment granularity, deleting old rows, or changing compression as data ages — see [Cascading reindexing](cascading-reindexing.md).
+:::
 
 You can run automatic compaction using compaction supervisors on the Overlord rather than Coordinator duties. Compaction supervisors provide the following benefits over Coordinator duties:
 

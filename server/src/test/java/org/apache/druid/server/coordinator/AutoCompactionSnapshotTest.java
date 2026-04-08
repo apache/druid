@@ -34,9 +34,9 @@ public class AutoCompactionSnapshotTest
 
     // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
-      builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
-      builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementSkippedStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementWaitingStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementCompactedStats(CompactionStatistics.create(13, null, 13, 13));
     }
 
     final AutoCompactionSnapshot actual = builder.withMessage(expectedMessage).build();

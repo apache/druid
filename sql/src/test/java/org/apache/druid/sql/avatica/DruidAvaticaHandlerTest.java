@@ -56,6 +56,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -286,6 +287,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                     .toInstance(AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build());
               binder.bind(DefaultQueryConfig.class)
                     .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
+              binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {

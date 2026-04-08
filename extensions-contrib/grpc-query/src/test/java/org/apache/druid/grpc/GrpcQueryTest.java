@@ -34,6 +34,7 @@ import org.apache.druid.grpc.proto.TestResults.QueryResult;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
@@ -77,7 +78,7 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
-        Map.of(),
+        new DefaultQueryConfig(Map.of()),
         sqlTestFramework.queryLifecycleFactory(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
@@ -292,7 +291,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        Suppliers.ofInstance(new DefaultQueryConfig(Map.of())),
+        new DefaultQueryConfig(Map.of()),
         null
     );
   }

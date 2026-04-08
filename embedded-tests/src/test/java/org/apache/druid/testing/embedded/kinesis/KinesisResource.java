@@ -25,7 +25,7 @@ import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;

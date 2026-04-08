@@ -147,7 +147,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         ),
         Arguments.of(
             CompactionEngine.MSQ,
-            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, 80, null)
+            new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, null, 80, null)
         )
     );
   }

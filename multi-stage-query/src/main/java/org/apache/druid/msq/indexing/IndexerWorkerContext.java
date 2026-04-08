@@ -49,7 +49,6 @@ import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -170,7 +169,6 @@ public class IndexerWorkerContext implements WorkerContext
         injector.getInstance(OverlordClient.class).withRetryPolicy(StandardRetryPolicy.unlimited());
     final ProcessingBuffersProvider processingBuffersProvider = injector.getInstance(ProcessingBuffersProvider.class);
     final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
-    final QueryToolChestWarehouse warehouse = injector.getInstance(QueryToolChestWarehouse.class);
 
     return new IndexerWorkerContext(
         task,
@@ -188,8 +186,7 @@ public class IndexerWorkerContext implements WorkerContext
         new IndexerDataServerQueryHandlerFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
-            smileMapper,
-            warehouse
+            smileMapper
         )
     );
   }

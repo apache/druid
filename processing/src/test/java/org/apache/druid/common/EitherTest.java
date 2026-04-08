@@ -20,6 +20,7 @@
 package org.apache.druid.common;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.CoreMatchers;
@@ -102,6 +103,34 @@ public class EitherTest
 
     // Test toString.
     Assert.assertEquals("Error[java.lang.AssertionError: oh no]", either.toString());
+  }
+
+  @Test
+  public void testErrorDruidExceptionUserPersona()
+  {
+    final DruidException original = DruidException.forPersona(DruidException.Persona.USER)
+                                                  .ofCategory(DruidException.Category.INVALID_INPUT)
+                                                  .build("bad input");
+    final Either<DruidException, Object> either = Either.error(original);
+
+    // Non-DEVELOPER DruidExceptions are re-thrown as-is by valueOrThrow.
+    final DruidException e = Assert.assertThrows(DruidException.class, either::valueOrThrow);
+    Assert.assertSame(original, e);
+  }
+
+  @Test
+  public void testErrorDruidExceptionDeveloperPersona()
+  {
+    final DruidException original = DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                                                  .ofCategory(DruidException.Category.UNCATEGORIZED)
+                                                  .build("internal error");
+    final Either<DruidException, Object> either = Either.error(original);
+
+    // DEVELOPER DruidExceptions are wrapped to capture the current stack trace.
+    final DruidException e = Assert.assertThrows(DruidException.class, either::valueOrThrow);
+    Assert.assertNotSame(original, e);
+    Assert.assertSame(original, e.getCause());
+    Assert.assertEquals(DruidException.Persona.DEVELOPER, e.getTargetPersona());
   }
 
   @Test

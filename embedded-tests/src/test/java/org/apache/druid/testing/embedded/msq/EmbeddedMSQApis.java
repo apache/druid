@@ -26,6 +26,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -42,7 +45,10 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -234,6 +240,52 @@ public class EmbeddedMSQApis
   public boolean cancelDartQuery(String sqlQueryId, EmbeddedBroker targetBroker)
   {
     return cluster.callApi().onTargetBroker(targetBroker, b -> b.cancelSqlQuery(sqlQueryId));
+  }
+
+  /**
+   * Returns the sum of completed queries across all input channel snapshots from all stages and workers.
+   */
+  public long getQueriesSum(final MSQTaskReportPayload payload)
+  {
+    return getAllInputChannelCounters(payload)
+        .stream()
+        .filter(snapshot -> snapshot.getQueries() != null)
+        .mapToLong(snapshot -> Arrays.stream(snapshot.getQueries()).sum())
+        .sum();
+  }
+
+  /**
+   * Returns the sum of files read across all input channel snapshots from all stages and workers.
+   */
+  public long getFilesSum(final MSQTaskReportPayload payload)
+  {
+    return getAllInputChannelCounters(payload)
+        .stream()
+        .filter(snapshot -> snapshot.getFiles() != null)
+        .mapToLong(snapshot -> Arrays.stream(snapshot.getFiles()).sum())
+        .sum();
+  }
+
+  /**
+   * Returns all {@link ChannelCounters.Snapshot} from input channels across all stages and workers.
+   */
+  private List<ChannelCounters.Snapshot> getAllInputChannelCounters(final MSQTaskReportPayload payload)
+  {
+    final Map<Integer, Map<Integer, CounterSnapshots>> countersMap = payload.getCounters().copyMap();
+    final List<ChannelCounters.Snapshot> snapshots = new ArrayList<>();
+
+    for (final Map.Entry<Integer, Map<Integer, CounterSnapshots>> stageEntry : countersMap.entrySet()) {
+      for (final Map.Entry<Integer, CounterSnapshots> workerEntry : stageEntry.getValue().entrySet()) {
+        for (final Map.Entry<String, QueryCounterSnapshot> counterEntry : workerEntry.getValue().getMap().entrySet()) {
+          if (counterEntry.getKey().startsWith("input")
+              && counterEntry.getValue() instanceof ChannelCounters.Snapshot) {
+            snapshots.add((ChannelCounters.Snapshot) counterEntry.getValue());
+          }
+        }
+      }
+    }
+
+    return snapshots;
   }
 
   private static GetQueryReportResponse parseReportResponse(String responseJson, ObjectMapper jsonMapper)

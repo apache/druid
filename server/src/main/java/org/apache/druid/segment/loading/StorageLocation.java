@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -119,6 +120,8 @@ public class StorageLocation
   private final AtomicLong currSizeBytes = new AtomicLong(0);
   private final AtomicLong currStaticSizeBytes = new AtomicLong(0);
   private final AtomicLong currWeakSizeBytes = new AtomicLong(0);
+  private final AtomicLong currHoldCount = new AtomicLong(0);
+  private final AtomicLong currHoldBytes = new AtomicLong(0);
 
   private final AtomicReference<StaticStats> staticStats = new AtomicReference<>();
   private final AtomicReference<WeakStats> weakStats = new AtomicReference<>();
@@ -272,9 +275,7 @@ public class StorageLocation
       unmountReclaimed(reclaimResult);
       if (reclaimResult.isSuccess()) {
         staticCacheEntries.put(entry.getId(), entry);
-        currSizeBytes.getAndAdd(entry.getSize());
-        currStaticSizeBytes.getAndAdd(entry.getSize());
-        staticStats.getAndUpdate(s -> s.load(entry.getSize()));
+        trackLoad(entry);
       }
       return reclaimResult.isSuccess();
     }
@@ -351,6 +352,7 @@ public class StorageLocation
       WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
       if (existingEntry != null && existingEntry.hold()) {
         existingEntry.visited = true;
+        trackWeakHold(existingEntry);
         weakStats.getAndUpdate(s -> s.hit(existingEntry.cacheEntry.getSize()));
         return new ReservationHold<>(
             (T) existingEntry.cacheEntry,
@@ -388,6 +390,7 @@ public class StorageLocation
       WeakCacheEntry retryExistingEntry = weakCacheEntries.get(entryId);
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
+        trackWeakHold(retryExistingEntry);
         weakStats.getAndUpdate(s -> s.hit(retryExistingEntry.cacheEntry.getSize()));
         return new ReservationHold<>(
             (T) retryExistingEntry.cacheEntry,
@@ -403,6 +406,7 @@ public class StorageLocation
         newWeakEntry.hold();
         linkNewWeakEntry(newWeakEntry);
         weakCacheEntries.put(newEntry.getId(), newWeakEntry);
+        trackWeakHold(newWeakEntry);
         weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
@@ -431,9 +435,7 @@ public class StorageLocation
       if (staticCacheEntries.containsKey(entry.getId())) {
         final CacheEntry toRemove = staticCacheEntries.remove(entry.getId());
         toRemove.unmount();
-        currSizeBytes.getAndAdd(-entry.getSize());
-        currStaticSizeBytes.getAndAdd(-entry.getSize());
-        staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
+        trackDrop(entry);
       }
     }
     finally {
@@ -443,7 +445,7 @@ public class StorageLocation
 
   /**
    * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
-   * If {@link #evictImmediately} is true and there are no more holds after releasing, the entry is immediately
+   * If {@link #areWeakEntriesEphemeral} is true and there are no more holds after releasing, the entry is immediately
    * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.
    */
   private Runnable createWeakEntryReleaseRunnable(
@@ -453,6 +455,7 @@ public class StorageLocation
   {
     return () -> {
       weakEntry.release();
+      trackWeakRelease(weakEntry);
 
       if (!isNewEntry && !areWeakEntriesEphemeral) {
         // No need to consider removal from weakCacheEntries on hold release.
@@ -503,8 +506,7 @@ public class StorageLocation
       hand = newWeakEntry;
     }
     head = newWeakEntry;
-    currWeakSizeBytes.getAndAdd(newWeakEntry.cacheEntry.getSize());
-    currSizeBytes.getAndAdd(newWeakEntry.cacheEntry.getSize());
+    trackWeakLoad(newWeakEntry);
   }
 
   /**
@@ -530,8 +532,7 @@ public class StorageLocation
     }
     toRemove.prev = null;
     toRemove.next = null;
-    currSizeBytes.getAndAdd(-toRemove.cacheEntry.getSize());
-    currWeakSizeBytes.getAndAdd(-toRemove.cacheEntry.getSize());
+    trackWeakEvict(toRemove);
   }
 
   /**
@@ -564,11 +565,26 @@ public class StorageLocation
   {
     List<WeakCacheEntry> evicted = new ArrayList<>();
     long bytesReclaimed = 0;
+    long sizeToReclaim = 0;
+    long currFreeSpace = 0;
+    boolean freeSpaceConstrained = false;
     if (availableSizeBytes() < entry.getSize()) {
-      long sizeToReclaim = entry.getSize() - availableSizeBytes();
+      sizeToReclaim = entry.getSize() - availableSizeBytes();
+    }
+
+    if (freeSpaceToKeep > 0) {
+      currFreeSpace = path.getFreeSpace();
+      long diskNeed = (freeSpaceToKeep + entry.getSize()) - currFreeSpace;
+      if (diskNeed > sizeToReclaim) {
+        sizeToReclaim = diskNeed;
+        freeSpaceConstrained = true;
+      }
+    }
+
+    if (sizeToReclaim > 0) {
       final ReclaimResult result = reclaim(sizeToReclaim);
       if (!result.isSuccess()) {
-        final String msg = StringUtils.format(
+        String msg = StringUtils.format(
             "Cache entry[%s:%,d] too large for storage[%s:%,d/%,d]",
             entry.getId(),
             entry.getSize(),
@@ -576,45 +592,33 @@ public class StorageLocation
             availableSizeBytes(),
             maxSizeBytes
         );
+        if (freeSpaceConstrained) {
+          // append additional information if constrained by free space
+          msg = StringUtils.format(
+              "%s to maintain suggested freeSpace[%d], current freeSpace is [%d].",
+              msg,
+              freeSpaceToKeep,
+              currFreeSpace
+          );
+        }
+
+        // only warn when this is false for static entries
         if (weak) {
           log.debug(msg);
         } else {
           log.warn(msg);
         }
+
+        // make a new failed result with the total size we were trying to free, since the size on
+        // reclaim result returned from reclaim method is the 'size left' it needed to reclaim when
+        // it failed. Note result.getEvictions() will always be empty for a failed result
         return ReclaimResult.failed(sizeToReclaim);
       }
       bytesReclaimed += result.bytesReclaimed;
       evicted.addAll(result.getEvictions());
     }
 
-    if (freeSpaceToKeep > 0) {
-      long currFreeSpace = path.getFreeSpace();
-      if ((freeSpaceToKeep + entry.getSize()) > currFreeSpace) {
-        final ReclaimResult result = reclaim(freeSpaceToKeep + entry.getSize());
-        if (!result.isSuccess()) {
-          final String msg = StringUtils.format(
-              "Cache entry[%s:%,d] too large for storage[%s:%,d/%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
-              entry.getId(),
-              entry.getSize(),
-              getPath(),
-              availableSizeBytes(),
-              maxSizeBytes,
-              freeSpaceToKeep,
-              currFreeSpace
-          );
-          if (weak) {
-            log.debug(msg);
-          } else {
-            log.warn(msg);
-          }
-          return ReclaimResult.failed(freeSpaceToKeep + entry.getSize());
-        }
-        bytesReclaimed += result.bytesReclaimed;
-        evicted.addAll(result.getEvictions());
-      }
-    }
-
-    return new ReclaimResult(true, entry.getSize(), bytesReclaimed, evicted);
+    return ReclaimResult.success(entry.getSize(), bytesReclaimed, evicted);
   }
 
   @GuardedBy("lock")
@@ -625,6 +629,9 @@ public class StorageLocation
         weakCacheEntries.computeIfAbsent(
             removed.cacheEntry.getId(),
             cacheEntryIdentifier -> {
+              // we evicted this entry from the weak cache no matter what if it was here
+              weakStats.getAndUpdate(s -> s.evict(removed.cacheEntry.getSize()));
+              // .. but make sure the same identifier wasn't moved to a static load before we actually unmount it
               if (!staticCacheEntries.containsKey(cacheEntryIdentifier)) {
                 removed.unmount();
                 weakStats.getAndUpdate(WeakStats::unmount);
@@ -636,23 +643,50 @@ public class StorageLocation
     }
   }
 
+  private void trackLoad(CacheEntry entry)
+  {
+    currSizeBytes.getAndAdd(entry.getSize());
+    currStaticSizeBytes.getAndAdd(entry.getSize());
+    staticStats.getAndUpdate(s -> s.load(entry.getSize()));
+  }
+
+  private void trackDrop(CacheEntry entry)
+  {
+    currSizeBytes.getAndAdd(-entry.getSize());
+    currStaticSizeBytes.getAndAdd(-entry.getSize());
+    staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
+  }
+
+  private void trackWeakLoad(WeakCacheEntry entry)
+  {
+    currSizeBytes.getAndAdd(entry.cacheEntry.getSize());
+    currWeakSizeBytes.getAndAdd(entry.cacheEntry.getSize());
+  }
+
+  private void trackWeakEvict(WeakCacheEntry entry)
+  {
+    currSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
+    currWeakSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
+  }
+
+  private void trackWeakHold(WeakCacheEntry entry)
+  {
+    currHoldCount.getAndIncrement();
+    currHoldBytes.getAndAdd(entry.cacheEntry.getSize());
+  }
+
+  private void trackWeakRelease(WeakCacheEntry entry)
+  {
+    currHoldCount.getAndDecrement();
+    currHoldBytes.getAndAdd(-entry.cacheEntry.getSize());
+  }
+
+  @VisibleForTesting
   public int getWeakEntryCount()
   {
     lock.readLock().lock();
     try {
       return weakCacheEntries.size();
-    }
-    finally {
-      lock.readLock().unlock();
-    }
-  }
-
-  @VisibleForTesting
-  public long getActiveWeakHolds()
-  {
-    lock.readLock().lock();
-    try {
-      return weakCacheEntries.values().stream().filter(WeakCacheEntry::isHeld).count();
     }
     finally {
       lock.readLock().unlock();
@@ -683,6 +717,8 @@ public class StorageLocation
     currSizeBytes.set(0);
     currWeakSizeBytes.set(0);
     currStaticSizeBytes.set(0);
+    currHoldCount.set(0);
+    currHoldBytes.set(0);
     resetStaticStats();
     resetWeakStats();
   }
@@ -699,7 +735,7 @@ public class StorageLocation
 
   public WeakStats resetWeakStats()
   {
-    return weakStats.getAndSet(new WeakStats(currWeakSizeBytes));
+    return weakStats.getAndSet(new WeakStats(currWeakSizeBytes, currHoldCount, currHoldBytes));
   }
 
   /**
@@ -724,6 +760,9 @@ public class StorageLocation
   private ReclaimResult reclaimHelper(long sizeToReclaim, List<WeakCacheEntry> droppedEntries)
   {
     if (head == null) {
+      // unlikely for droppedEntries to be anything other than empty in practice since this would mean we removed
+      // everything and still didn't free enough space, but better safe than sorry
+      restorePartialReclaimedEntries(droppedEntries);
       return ReclaimResult.failed(sizeToReclaim);
     }
     long sizeFreed = 0;
@@ -757,7 +796,6 @@ public class StorageLocation
           );
         }
         unlinkWeakEntry(removed);
-        weakStats.getAndUpdate(s -> s.evict(removed.cacheEntry.getSize()));
         removed.next = null;
         removed.prev = null;
         droppedEntries.add(removed);
@@ -775,14 +813,20 @@ public class StorageLocation
       return reclaimHelper(sizeToReclaim - sizeFreed, droppedEntries);
     }
     if (sizeFreed >= sizeToReclaim) {
-      return new ReclaimResult(true, sizeToReclaim, sizeFreed, droppedEntries);
+      return ReclaimResult.success(sizeToReclaim, sizeFreed, droppedEntries);
     }
+    restorePartialReclaimedEntries(droppedEntries);
+    return ReclaimResult.failed(sizeToReclaim);
+  }
+
+  @GuardedBy("lock")
+  private void restorePartialReclaimedEntries(List<WeakCacheEntry> droppedEntries)
+  {
     // if we didn't free up enough space, return everything we removed to the cache
     for (WeakCacheEntry entry : droppedEntries) {
       linkNewWeakEntry(entry);
       weakCacheEntries.put(entry.cacheEntry.getId(), entry);
     }
-    return ReclaimResult.failed(sizeToReclaim);
   }
 
   public long availableSizeBytes()
@@ -802,6 +846,11 @@ public class StorageLocation
 
   public static final class ReclaimResult
   {
+    public static ReclaimResult success(long spaceRequired, long bytesReclaimed, List<WeakCacheEntry> evictions)
+    {
+      return new ReclaimResult(true, spaceRequired, bytesReclaimed, evictions);
+    }
+
     public static ReclaimResult failed(long spaceRequired)
     {
       return new ReclaimResult(false, spaceRequired, 0, List.of());
@@ -812,7 +861,7 @@ public class StorageLocation
     private final long bytesReclaimed;
     private final List<WeakCacheEntry> evictions;
 
-    ReclaimResult(
+    private ReclaimResult(
         boolean success,
         long spaceRequired,
         long bytesReclaimed,
@@ -934,6 +983,7 @@ public class StorageLocation
   {
     private final TEntry entry;
     private final Runnable releaseHold;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public ReservationHold(TEntry entry, Runnable releaseHold)
     {
@@ -949,7 +999,9 @@ public class StorageLocation
     @Override
     public void close()
     {
-      releaseHold.run();
+      if (closed.compareAndSet(false, true)) {
+        releaseHold.run();
+      }
     }
   }
 
@@ -1014,6 +1066,8 @@ public class StorageLocation
   public static final class WeakStats implements VirtualStorageLocationStats
   {
     private final AtomicLong sizeUsed;
+    private final AtomicLong holdCount;
+    private final AtomicLong holdBytes;
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
@@ -1023,9 +1077,11 @@ public class StorageLocation
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
 
-    public WeakStats(AtomicLong sizeUsed)
+    public WeakStats(AtomicLong sizeUsed, AtomicLong holdCount, AtomicLong holdBytes)
     {
       this.sizeUsed = sizeUsed;
+      this.holdCount = holdCount;
+      this.holdBytes = holdBytes;
     }
 
     public WeakStats hit(long size)
@@ -1065,6 +1121,18 @@ public class StorageLocation
     public long getUsedBytes()
     {
       return sizeUsed.get();
+    }
+
+    @Override
+    public long getHoldCount()
+    {
+      return holdCount.get();
+    }
+
+    @Override
+    public long getHoldBytes()
+    {
+      return holdBytes.get();
     }
 
     @Override

@@ -20,6 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -82,22 +89,12 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
         ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
         String.join(
             "\n",
             "[",
@@ -190,21 +187,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
                      .getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "sketch")
         ),
         String.join(
             "\n",
@@ -291,21 +280,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value")
         ),
         String.join(
             "\n",
@@ -378,21 +359,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(
             this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data_two_values.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "value1", "value2")
         ),
         String.join(
             "\n",
@@ -481,21 +454,18 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         new File(
             this.getClass().getClassLoader().getResource(
                 "tuple/array_of_doubles_build_data_two_values_and_key_as_number.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", {\"type\": \"long\", \"name\": \"key_num\"}],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value1\", \"value2\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("product"),
+                    new LongDimensionSchema("key_num")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value1", "value2")
         ),
         String.join(
             "\n",
@@ -586,21 +556,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
                 .getClassLoader()
                 .getResource("tuple/array_of_doubles_build_data_three_values_and_nulls.tsv")
                 .getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\", \"value3\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "value1", "value2", "value3")
         ),
         String.join(
             "\n",
@@ -696,21 +658,19 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", \"key\", {\"type\": \"long\", \"name\": \"key_num\"}],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("product"),
+                    new StringDimensionSchema("key"),
+                    new LongDimensionSchema("key_num")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value")
         ),
         String.join(
             "\n",
@@ -784,21 +744,19 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", \"key\", {\"type\": \"long\", \"name\": \"key_num\"}],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("product"),
+                    new StringDimensionSchema("key"),
+                    new LongDimensionSchema("key_num")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value")
         ),
         String.join(
             "\n",
@@ -872,21 +830,19 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<Result<TimeseriesResultValue>> seq = tsHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", \"key\", {\"type\": \"long\", \"name\": \"key_num\"}],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("product"),
+                    new StringDimensionSchema("key"),
+                    new LongDimensionSchema("key_num")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value")
         ),
         String.join(
             "\n",
@@ -959,21 +915,19 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<Result<TimeseriesResultValue>> seq = tsHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", \"key\", {\"type\": \"long\", \"name\": \"key_num\"}],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("product"),
+                    new StringDimensionSchema("key"),
+                    new LongDimensionSchema("key_num")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "key_num", "value")
         ),
         String.join(
             "\n",
@@ -1048,19 +1002,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/bucket_test_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMdd\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"label\", \"userid\"]",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"label\", \"userid\", \"parameter\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMdd", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("label", "userid"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "label", "userid", "parameter")
         ),
         String.join(
             "\n",
@@ -1124,21 +1072,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
                      .getClassLoader()
                      .getResource("tuple/array_of_doubles_build_data_three_values_and_nulls.tsv")
                      .getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\", \"key\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\", \"value3\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product", "key"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "key", "value1", "value2", "value3")
         ),
         String.join(
             "\n",
@@ -1253,21 +1193,13 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
             .getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "sketch")
         ),
         String.join(
             "\n",

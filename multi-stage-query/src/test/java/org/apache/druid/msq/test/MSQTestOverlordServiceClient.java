@@ -150,7 +150,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     TestQueryListener queryListener = null;
     ControllerImpl controller = null;
-    MSQTestControllerContext msqTestControllerContext;
+    MSQTestControllerContext msqTestControllerContext = null;
     MSQTestTaskDetails testTaskDetails = registerTestTask(taskId);
     try {
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
@@ -204,6 +204,9 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     finally {
       if (queryListener != null && queryListener.reportMap != null) {
         testTaskDetails.report = queryListener.getReportMap();
+      }
+      if (msqTestControllerContext != null) {
+        msqTestControllerContext.close();
       }
     }
   }

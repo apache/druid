@@ -80,6 +80,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +101,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   public static final ExecutorService POOL = Execs.multiThreaded(NUM_WORKERS, "MSQTestControllerContext-worker-%d");
   public static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(POOL);
-  private final File tempDir = FileUtils.createTempDir();
+  private final File tempDir;
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -134,6 +135,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   )
   {
     this.queryId = queryId;
+    this.tempDir = FileUtils.createTempDir("msq-controller-" + queryId);
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
@@ -250,20 +252,18 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         workerStorageParameters = WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE);
       }
 
-      Worker worker = new WorkerImpl(
-          task,
-          new MSQTestWorkerContext(
-              task.getId(),
-              inMemoryWorkers,
-              controller,
-              mapper,
-              injector,
-              workerMemoryParameters,
-              workerStorageParameters,
-              serviceEmitter,
-              coordinatorClient
-          )
+      final MSQTestWorkerContext workerContext = new MSQTestWorkerContext(
+          task.getId(),
+          inMemoryWorkers,
+          controller,
+          mapper,
+          injector,
+          workerMemoryParameters,
+          workerStorageParameters,
+          serviceEmitter,
+          coordinatorClient
       );
+      Worker worker = new WorkerImpl(task, workerContext);
       final WorkerRunRef workerRunRef = new WorkerRunRef();
       inMemoryWorkers.put(task.getId(), workerRunRef);
       ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
@@ -275,6 +275,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         public void onSuccess(@Nullable Object result)
         {
           statusMap.put(task.getId(), TaskStatus.success(task.getId()));
+          workerContext.close();
         }
 
         @Override
@@ -282,6 +283,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         {
           log.error(t, "error running worker task %s", task.getId());
           statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
+          workerContext.close();
         }
       }, MoreExecutors.directExecutor());
 
@@ -475,5 +477,15 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   {
     this.queryContext = this.queryContext.override(context);
     return this;
+  }
+
+  public void close()
+  {
+    try {
+      FileUtils.deleteDirectory(tempDir);
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to delete temp dir[%s] for controller[%s]", tempDir, queryId);
+    }
   }
 }

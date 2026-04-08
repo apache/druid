@@ -20,13 +20,10 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -69,20 +66,19 @@ public class TimeFilteringTest extends BaseFilterTest
   private static final String TIMESTAMP_COLUMN = "ts";
   private static final int NUM_FILTER_VALUES = 32;
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")))
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2", "dim3"))),
+      ColumnsFilter.all()
   );
 
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("ts", 0L, "dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 1L, "dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 2L, "dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 3L, "dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 4L, "dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 5L, "dim0", "5", "dim1", "abc")).get(0)
+  private static final List<InputRow> ROWS = List.of(
+      makeMapRow(SCHEMA, Map.of("ts", 0L, "dim0", "0", "dim1", "", "dim2", List.of("a", "b"))),
+      makeMapRow(SCHEMA, Map.of("ts", 1L, "dim0", "1", "dim1", "10", "dim2", List.of())),
+      makeMapRow(SCHEMA, Map.of("ts", 2L, "dim0", "2", "dim1", "2", "dim2", List.of(""))),
+      makeMapRow(SCHEMA, Map.of("ts", 3L, "dim0", "3", "dim1", "1", "dim2", List.of("a"))),
+      makeMapRow(SCHEMA, Map.of("ts", 4L, "dim0", "4", "dim1", "def", "dim2", List.of("c"))),
+      makeMapRow(SCHEMA, Map.of("ts", 5L, "dim0", "5", "dim1", "abc"))
   );
 
   public TimeFilteringTest(
@@ -107,25 +103,25 @@ public class TimeFilteringTest extends BaseFilterTest
   {
     assertFilterMatches(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", null),
-        ImmutableList.of("0")
+        List.of("0")
     );
     assertFilterMatches(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "9000", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", "4", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("0", "1", "2", "3", "4")
+        List.of("0", "1", "2", "3", "4")
     );
     assertFilterMatches(
         new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", "4", true, true, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("1", "2", "3")
+        List.of("1", "2", "3")
     );
 
     assertFilterMatches(
         new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, Arrays.asList("2", "4", "8"), null),
-        ImmutableList.of("2", "4")
+        List.of("2", "4")
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
@@ -135,23 +131,23 @@ public class TimeFilteringTest extends BaseFilterTest
     }
     assertFilterMatches(
         new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, infilterValues, null),
-        ImmutableList.of("0", "2", "4")
+        List.of("0", "2", "4")
     );
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(ColumnHolder.TIME_COLUMN_NAME, jsFn, null, JavaScriptConfig.getEnabledInstance()),
-        ImmutableList.of("3", "5")
+        List.of("3", "5")
     );
 
     assertFilterMatches(
         new RegexDimFilter(ColumnHolder.TIME_COLUMN_NAME, "4", null),
-        ImmutableList.of("4")
+        List.of("4")
     );
 
     assertFilterMatches(
         new SearchQueryDimFilter(ColumnHolder.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("2", true), null),
-        ImmutableList.of("2")
+        List.of("2")
     );
   }
 
@@ -170,25 +166,25 @@ public class TimeFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Monday", exfn),
-        ImmutableList.of("0")
+        List.of("0")
     );
     assertFilterMatches(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Notaday", exfn),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
-        ImmutableList.of("4")
+        List.of("4")
     );
     assertFilterMatches(
         new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
-        ImmutableList.of("1", "5")
+        List.of("1", "5")
     );
 
     // test InFilter HashSet implementation
@@ -199,23 +195,23 @@ public class TimeFilteringTest extends BaseFilterTest
     );
     assertFilterMatches(
         new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, bigList, exfn),
-        ImmutableList.of("1", "5")
+        List.of("1", "5")
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(ColumnHolder.TIME_COLUMN_NAME, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
-        ImmutableList.of("2", "3")
+        List.of("2", "3")
     );
 
     assertFilterMatches(
         new RegexDimFilter(ColumnHolder.TIME_COLUMN_NAME, ".*day", exfn),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
+        List.of("0", "1", "2", "3", "4", "5")
     );
 
     assertFilterMatches(
         new SearchQueryDimFilter(ColumnHolder.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("s", true), exfn),
-        ImmutableList.of("1", "2", "3")
+        List.of("1", "2", "3")
     );
   }
 
@@ -231,7 +227,7 @@ public class TimeFilteringTest extends BaseFilterTest
     );
     assertFilterMatches(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Wednesday", exfn),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
+        List.of("0", "1", "2", "3", "4", "5")
     );
   }
 
@@ -244,7 +240,7 @@ public class TimeFilteringTest extends BaseFilterTest
             Collections.singletonList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
-        ImmutableList.of("1", "2", "3", "4")
+        List.of("1", "2", "3", "4")
     );
 
     assertFilterMatches(
@@ -256,7 +252,7 @@ public class TimeFilteringTest extends BaseFilterTest
             ),
             null
         ),
-        ImmutableList.of("0", "1", "2", "4", "5")
+        List.of("0", "1", "2", "4", "5")
     );
 
     assertFilterMatches(
@@ -269,7 +265,7 @@ public class TimeFilteringTest extends BaseFilterTest
             ),
             null
         ),
-        ImmutableList.of("0", "2", "3", "4", "5")
+        List.of("0", "2", "3", "4", "5")
     );
 
     // increment timestamp by 2 hours
@@ -281,7 +277,7 @@ public class TimeFilteringTest extends BaseFilterTest
             Collections.singletonList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
-        ImmutableList.of("1", "2", "3", "4")
+        List.of("1", "2", "3", "4")
     );
   }
 
@@ -294,7 +290,7 @@ public class TimeFilteringTest extends BaseFilterTest
             Collections.singletonList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
-        ImmutableList.of("1", "2", "3", "4")
+        List.of("1", "2", "3", "4")
     );
 
     assertFilterMatches(
@@ -306,7 +302,7 @@ public class TimeFilteringTest extends BaseFilterTest
             ),
             null
         ),
-        ImmutableList.of("0", "1", "2", "4", "5")
+        List.of("0", "1", "2", "4", "5")
     );
 
     assertFilterMatches(
@@ -319,7 +315,7 @@ public class TimeFilteringTest extends BaseFilterTest
             ),
             null
         ),
-        ImmutableList.of("0", "2", "3", "4", "5")
+        List.of("0", "2", "3", "4", "5")
     );
 
     assertFilterMatches(
@@ -328,19 +324,19 @@ public class TimeFilteringTest extends BaseFilterTest
             Collections.singletonList(Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
             null
         ),
-        ImmutableList.of("1", "2")
+        List.of("1", "2")
     );
 
     // increment timestamp by 2 hours
     String timeBoosterJsFn = "function(x) { return(Number(x) + 7200000) }";
     ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getEnabledInstance());
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
             Collections.singletonList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
-        ImmutableList.of("1", "2", "3", "4")
+        List.of("1", "2", "3", "4")
     );
   }
 }

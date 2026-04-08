@@ -243,6 +243,7 @@ Dimension objects can have the following components:
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
 | multiValueHandling | For `string` typed dimensions, specifies the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `array` (ingest string arrays as-is), `sorted_array` (sort string arrays during ingestion), and `sorted_set` (sort and de-duplicate string arrays during ingestion). This parameter is ignored for types other than `string`. | `sorted_array` |
+| maxStringLength | For `string` typed dimensions, the maximum number of characters to store per value. Longer values are truncated during ingestion. Does not apply to multi-value string dimensions. Overrides the global [`druid.indexing.formats.maxStringLength`](../configuration/index.md#additional-peon-configuration) property. Value must be >= 0. | `null` (no truncation) |
 
 #### Inclusions and exclusions
 
@@ -435,58 +436,6 @@ Projections you define become a dimension for your datasource. To remove a proje
   ]
 }
 ```
-
-### Legacy `dataSchema` spec
-
-The legacy `dataSchema` spec has below two more components in addition to the ones listed in the [`dataSchema`](#dataschema) section above.
-
-- [input row parser](#parser-deprecated), [flattening of nested data](#flattenspec) (if needed)
-
-#### `parser` (Deprecated)
-
-In legacy `dataSchema`, the `parser` is located in the `dataSchema` → `parser` and is responsible for configuring a wide variety of
-items related to parsing input records. The `parser` is only supported by Hadoop ingestion, and is deprecated.
-For details about supported `parser` types, see the ["Data formats" page](data-formats.md).
-
-For details about major components of the `parseSpec`, refer to their subsections:
-
-- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](./schema-model.md#primary-timestamp).
-- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](./schema-model.md#dimensions).
-- [`flattenSpec`](#flattenspec), responsible for flattening nested data formats.
-
-An example `parser` is:
-
-```
-"parser": {
-  "type": "string",
-  "parseSpec": {
-    "format": "json",
-    "flattenSpec": {
-      "useFieldDiscovery": true,
-      "fields": [
-        { "type": "path", "name": "userId", "expr": "$.user.id" }
-      ]
-    },
-    "timestampSpec": {
-      "column": "timestamp",
-      "format": "auto"
-    },
-    "dimensionsSpec": {
-      "dimensions": [
-        "page",
-        "language",
-        { "type": "long", "name": "userId" }
-      ]
-    }
-  }
-}
-```
-
-#### `flattenSpec`
-
-In the legacy `dataSchema`, the `flattenSpec` is located in `dataSchema` → `parser` → `parseSpec` → `flattenSpec` and is responsible for
-bridging the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model.
-See [Flatten spec](./data-formats.md#flattenspec) for more details.
 
 ## `ioConfig`
 

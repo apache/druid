@@ -19,6 +19,11 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -79,23 +84,6 @@ public class HyperUniquesAggregationTest
                           + "\"fieldName\": \"market\""
                           + "}]";
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                         + "  }"
-                         + "}";
-
       String query = "{"
                      + "\"queryType\": \"groupBy\","
                      + "\"dataSource\": \"test_datasource\","
@@ -112,7 +100,14 @@ public class HyperUniquesAggregationTest
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+          ),
           metricSpec,
           0,
           Granularities.NONE,
@@ -144,23 +139,6 @@ public class HyperUniquesAggregationTest
                           + "\"isInputHyperUnique\": true"
                           + "}]";
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"preComputedHll\"]"
-                         + "  }"
-                         + "}";
-
       String query = "{"
                      + "\"queryType\": \"groupBy\","
                      + "\"dataSource\": \"test_datasource\","
@@ -177,7 +155,14 @@ public class HyperUniquesAggregationTest
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "preComputedHll")
+          ),
           metricSpec,
           0,
           Granularities.DAY,

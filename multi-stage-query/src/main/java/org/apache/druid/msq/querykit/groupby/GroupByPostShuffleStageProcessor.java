@@ -36,14 +36,18 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -96,11 +100,23 @@ public class GroupByPostShuffleStageProcessor extends BasicStageProcessor
       );
     }
 
-    final Sequence<ReadableInput> readableInputs = QueryKitUtils.readPartitions(context, slice.getPartitions());
+    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
+    if (MultiStageQueryContext.isUseCombiner(context.workOrder().getWorkerContext())) {
+      final RowSignature inputSignature = partitionReader.frameReader(slice.getStageNumber()).signature();
+      final List<AggregatorFactory> aggregatorFactories = query.getAggregatorSpecs();
+      final int aggregatorStart = query.getResultRowAggregatorStart();
+      partitionReader.setCombiner(
+          () -> new GroupByFrameCombiner(inputSignature, aggregatorFactories, aggregatorStart)
+      );
+    }
+
+    final Sequence<ReadableInput> readableInputs =
+        QueryKitUtils.readPartitions(partitionReader, slice.getPartitions());
+
     final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
-              outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
+              outputChannels.get(readableInput.getPartitionNumber());
 
           return new GroupByPostShuffleFrameProcessor(
               query,

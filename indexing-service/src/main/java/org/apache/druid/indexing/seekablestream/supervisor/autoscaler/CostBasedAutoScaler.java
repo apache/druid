@@ -400,12 +400,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * This metric indicates how much time the consumer spends idle waiting for data.
    *
    * @param taskStats the stats map from supervisor.getStats()
-   * @return the average poll-idle-ratio across all tasks, or 0 if no valid metrics are available
+   * @return the average poll-idle-ratio across all tasks, or -1 if no valid metrics are available
    */
   static double extractPollIdleRatio(Map<String, Map<String, Object>> taskStats)
   {
     if (taskStats == null || taskStats.isEmpty()) {
-      return 0.;
+      return -1.;
     }
 
     double sum = 0;
@@ -425,7 +425,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    return count > 0 ? sum / count : 0.;
+    return count > 0 ? sum / count : -1.;
   }
 
   /**
@@ -543,7 +543,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     if (metrics == null) {
       return Either.error("No metrics collected");
-    } else if (metrics.getAvgProcessingRate() < 0 || metrics.getPollIdleRatio() < 0) {
+    } else if (metrics.getAvgProcessingRate() < 0) {
       return Either.error("Task metrics not available");
     } else if (metrics.getCurrentTaskCount() <= 0 || metrics.getPartitionCount() <= 0) {
       return Either.error("Supervisor metrics not available");

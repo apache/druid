@@ -30,7 +30,12 @@ import org.apache.datasketches.theta.Sketch;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.theta.UpdateSketch;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -115,7 +120,12 @@ public class SketchAggregationTest
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
@@ -175,7 +185,12 @@ public class SketchAggregationTest
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("empty_sketch_data.tsv").getFile()),
-        readFileFromClasspathAsString("empty_sketch_data_record_parser.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product", "product_code"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "product_code", "product_sketch")),
         readFileFromClasspathAsString("empty_sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
@@ -209,7 +224,12 @@ public class SketchAggregationTest
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser2.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product", "pty_country"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
         "["
         + "  {"
         + "    \"type\": \"count\","
@@ -435,7 +455,12 @@ public class SketchAggregationTest
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
         0,
         Granularities.NONE,

@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -99,21 +100,21 @@ public class QueryDriver
 
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
-  private final Map<String, Object> defaultContext;
+  private final QueryConfigProvider queryConfigProvider;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final QueryScheduler queryScheduler;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
       final SqlStatementFactory sqlStatementFactory,
-      final Map<String, Object> defaultContext,
+      final QueryConfigProvider queryConfigProvider,
       final QueryLifecycleFactory queryLifecycleFactory,
       final QueryScheduler queryScheduler
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
-    this.defaultContext = defaultContext;
+    this.queryConfigProvider = queryConfigProvider;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.queryScheduler = queryScheduler;
   }
@@ -314,7 +315,7 @@ public class QueryDriver
   {
     return SqlQueryPlus.builder()
                        .sql(request.getQuery())
-                       .systemDefaultContext(defaultContext)
+                       .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
                        .sqlParameters(translateParameters(request))
                        .auth(authResult)

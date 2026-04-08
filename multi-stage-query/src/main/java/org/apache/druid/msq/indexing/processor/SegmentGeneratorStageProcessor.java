@@ -45,10 +45,10 @@ import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.IndexSpec;
@@ -157,7 +157,7 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
     // Expect a single input slice.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(context.workOrder().getInputs());
     final Sequence<Pair<Integer, ReadableInput>> inputSequence =
-        QueryKitUtils.readPartitions(context, slice.getPartitions())
+        QueryKitUtils.readPartitions(new StandardPartitionReader(context), slice.getPartitions())
                      .map(
                          new Function<>()
                          {
@@ -177,9 +177,15 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
-          final StagePartition stagePartition = Preconditions.checkNotNull(readableInputPair.rhs.getStagePartition());
+          final ReadableInput readableInput = readableInputPair.rhs;
           final SegmentIdWithShardSpec segmentIdWithShardSpec = extra.get(readableInputPair.lhs);
-          final String idString = StringUtils.format("%s:%s", stagePartition, context.workOrder().getWorkerNumber());
+          final String idString = StringUtils.format(
+              "%s_%s_%s:%s",
+              context.workOrder().getStageDefinition().getId().getQueryId(),
+              readableInput.getStageNumber(),
+              readableInput.getPartitionNumber(),
+              context.workOrder().getWorkerNumber()
+          );
           final File persistDirectory = new File(
               frameContext.persistDir(),
               segmentIdWithShardSpec.asSegmentId().toString()

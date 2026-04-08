@@ -51,11 +51,12 @@ import java.util.Objects;
  *   "providers": [
  *     {
  *       "type": "inline",
- *       "segmentGranularityRules": [
+ *       "partitioningRules": [
  *         {
- *           "id": "recent-data-granularity",
+ *           "id": "recent-data-partitioning",
  *           "olderThan": "P7D",
- *           "segmentGranularity": "HOUR"
+ *           "segmentGranularity": "HOUR",
+ *           "partitionsSpec": { "type": "dynamic", "maxRowsPerSegment": 5000000 }
  *         }
  *       ]
  *     }
@@ -148,30 +149,30 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
 
   @Override
   @Nullable
-  public ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime)
+  public ReindexingPartitioningRule getPartitioningRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getSegmentGranularityRule(interval, referenceTime))
+                    .map(p -> p.getPartitioningRule(interval, referenceTime))
                     .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(null);
   }
 
   @Override
-  public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
+  public List<ReindexingPartitioningRule> getPartitioningRules()
   {
     return providers.stream()
-                    .map(ReindexingRuleProvider::getSegmentGranularityRules)
+                    .map(ReindexingRuleProvider::getPartitioningRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<ReindexingTuningConfigRule> getTuningConfigRules()
+  public List<ReindexingIndexSpecRule> getIndexSpecRules()
   {
     return providers.stream()
-                    .map(ReindexingRuleProvider::getTuningConfigRules)
+                    .map(ReindexingRuleProvider::getIndexSpecRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
@@ -179,10 +180,10 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
 
   @Override
   @Nullable
-  public ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime)
+  public ReindexingIndexSpecRule getIndexSpecRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getTuningConfigRule(interval, referenceTime))
+                    .map(p -> p.getIndexSpecRule(interval, referenceTime))
                     .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(null);

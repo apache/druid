@@ -21,6 +21,11 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -126,31 +131,6 @@ public class TimestampGroupByAggregationTest
   @Test
   public void testSimpleDataIngestionAndGroupByTest() throws Exception
   {
-    String recordParser = "{\n" +
-        "  \"type\": \"string\",\n" +
-        "  \"parseSpec\": {\n" +
-        "    \"format\": \"tsv\",\n" +
-        "    \"timestampSpec\": {\n" +
-        "      \"column\": \"timestamp\",\n" +
-        "      \"format\": \"auto\"\n" +
-        "    },\n" +
-        "    \"dimensionsSpec\": {\n" +
-        "      \"dimensions\": [\n" +
-        "        \"product\"\n" +
-        "      ],\n" +
-        "      \"dimensionExclusions\": [],\n" +
-        "      \"spatialDimensions\": []\n" +
-        "    },\n" +
-        "    \"columns\": [\n" +
-        "      \"timestamp\",\n" +
-        "      \"cat\",\n" +
-        "      \"product\",\n" +
-        "      \"prefer\",\n" +
-        "      \"prefer2\",\n" +
-        "      \"pty_country\"\n" +
-        "    ]\n" +
-        "  }\n" +
-        "}";
     String aggregator = "[\n" +
         "  {\n" +
         "    \"type\": \"" + aggType + "\",\n" +
@@ -177,7 +157,14 @@ public class TimestampGroupByAggregationTest
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
-        recordParser,
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "cat", "product", "prefer", "prefer2", "pty_country")
+        ),
         aggregator,
         0,
         Granularities.MONTH,

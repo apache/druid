@@ -29,6 +29,32 @@ export const BROKER_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         documentation:
           'List of rules to block queries on brokers. Each rule can match by datasource, query type, and/or context parameters.',
       },
+      {
+        value: 'queryContext',
+        documentation:
+          'Default query context values applied to all queries on this broker. These override static defaults from runtime properties but are overridden by per-query context values. Useful for setting cluster-wide defaults like priority or timeout without restarting.',
+      },
+    ],
+  },
+  // Query context key suggestions
+  {
+    path: '$.queryContext',
+    isObject: true,
+    completions: [
+      { value: 'priority', documentation: 'Query scheduling priority' },
+      { value: 'timeout', documentation: 'Query timeout in milliseconds' },
+      { value: 'useCache', documentation: 'Whether to use the query cache' },
+      { value: 'populateCache', documentation: 'Whether to populate the query cache' },
+      { value: 'useResultLevelCache', documentation: 'Whether to use result-level caching' },
+      {
+        value: 'populateResultLevelCache',
+        documentation: 'Whether to populate the result-level cache',
+      },
+      { value: 'maxScatterGatherBytes', documentation: 'Max bytes to gather across segments' },
+      {
+        value: 'maxQueuedBytes',
+        documentation: 'Max bytes queued before backpressure kicks in',
+      },
     ],
   },
   // Query blocklist rule properties

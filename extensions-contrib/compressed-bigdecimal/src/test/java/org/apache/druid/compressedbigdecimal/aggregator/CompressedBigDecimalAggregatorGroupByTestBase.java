@@ -107,11 +107,8 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        Resources.asCharSource(
-            this.getClass().getResource(
-                "/" + "bd_test_data_parser.json"),
-            StandardCharsets.UTF_8
-        ).read(),
+        CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
+        CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
         Resources.asCharSource(
             this.getClass().getResource("/" + cbdGroupByQueryConfig.getJsonAggregatorsFile()),
             StandardCharsets.UTF_8

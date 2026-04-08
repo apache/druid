@@ -20,9 +20,9 @@
 package org.apache.druid.server.broker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryBlocklistRule;
 
 import javax.annotation.Nullable;
@@ -46,19 +46,32 @@ public class BrokerDynamicConfig
    */
   private final List<QueryBlocklistRule> queryBlocklist;
 
+  /**
+   * Default query context values set dynamically by operators. These override static defaults from
+   * {@link org.apache.druid.query.DefaultQueryConfig} but are overridden by per-query context.
+   */
+  private final QueryContext queryContext;
+
   @JsonCreator
   public BrokerDynamicConfig(
-      @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
+      @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
+      @JsonProperty("queryContext") @Nullable QueryContext queryContext
   )
   {
     this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Collections.emptyList());
+    this.queryContext = Configs.valueOrDefault(queryContext, QueryContext.empty());
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<QueryBlocklistRule> getQueryBlocklist()
   {
     return queryBlocklist;
+  }
+
+  @JsonProperty
+  public QueryContext getQueryContext()
+  {
+    return queryContext;
   }
 
   @Override
@@ -71,13 +84,14 @@ public class BrokerDynamicConfig
       return false;
     }
     BrokerDynamicConfig that = (BrokerDynamicConfig) o;
-    return Objects.equals(queryBlocklist, that.queryBlocklist);
+    return Objects.equals(queryBlocklist, that.queryBlocklist)
+           && Objects.equals(queryContext, that.queryContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryBlocklist);
+    return Objects.hash(queryBlocklist, queryContext);
   }
 
   @Override
@@ -85,6 +99,7 @@ public class BrokerDynamicConfig
   {
     return "BrokerDynamicConfig{" +
            "queryBlocklist=" + queryBlocklist +
+           ", queryContext=" + queryContext +
            '}';
   }
 
@@ -96,6 +111,7 @@ public class BrokerDynamicConfig
   public static class Builder
   {
     private List<QueryBlocklistRule> queryBlocklist;
+    private QueryContext queryContext;
 
     public Builder()
     {
@@ -103,10 +119,12 @@ public class BrokerDynamicConfig
 
     @JsonCreator
     public Builder(
-        @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist
+        @JsonProperty("queryBlocklist") @Nullable List<QueryBlocklistRule> queryBlocklist,
+        @JsonProperty("queryContext") @Nullable QueryContext queryContext
     )
     {
       this.queryBlocklist = queryBlocklist;
+      this.queryContext = queryContext;
     }
 
     public Builder withQueryBlocklist(List<QueryBlocklistRule> queryBlocklist)
@@ -115,9 +133,15 @@ public class BrokerDynamicConfig
       return this;
     }
 
+    public Builder withQueryContext(QueryContext queryContext)
+    {
+      this.queryContext = queryContext;
+      return this;
+    }
+
     public BrokerDynamicConfig build()
     {
-      return new BrokerDynamicConfig(queryBlocklist);
+      return new BrokerDynamicConfig(queryBlocklist, queryContext);
     }
 
     /**
@@ -127,7 +151,8 @@ public class BrokerDynamicConfig
     public BrokerDynamicConfig build(@Nullable BrokerDynamicConfig defaults)
     {
       return new BrokerDynamicConfig(
-        Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null)
+          Configs.valueOrDefault(queryBlocklist, defaults != null ? defaults.getQueryBlocklist() : null),
+          Configs.valueOrDefault(queryContext, defaults != null ? defaults.getQueryContext() : null)
       );
     }
   }

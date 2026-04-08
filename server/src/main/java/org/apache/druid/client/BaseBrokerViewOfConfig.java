@@ -71,7 +71,7 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
   public synchronized void setDynamicConfig(@NotNull DynamicConfig updatedConfig)
   {
     config = updatedConfig;
-    log.info("Updated %s to [%s]", getConfigTypeName(), updatedConfig);
+    log.info("Updated [%s] dynamic config to [%s]", getConfigTypeName(), updatedConfig);
   }
 
   /**

@@ -223,6 +223,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
+
+    if (ioConfig != null && ioConfig.getInputSpec() != null && ioConfig.getInputSpec() instanceof MinorCompactionInputSpec) {
+      if (computeCompactionIngestionMode(ioConfig) != IngestionMode.REPLACE) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[isDropExisting] to true.");
+      }
+
+      boolean usingConcurrentLocks = this.getContextValue(Tasks.USE_CONCURRENT_LOCKS, Tasks.DEFAULT_USE_CONCURRENT_LOCKS);
+
+      if (!usingConcurrentLocks) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Minor compaction is only used with REPLACE ingestion mode. Please set ioconfig[%s] to true.", Tasks.USE_CONCURRENT_LOCKS);
+      }
+    }
+
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
     this.metricsSpec = metricsSpec;
@@ -1284,6 +1301,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
+  /**
+   * Provides segment discovery and validation for compaction.
+   * For minor compaction (MinorCompactionInputSpec), finds all segments
+   * in the interval and partitions them into 'compact and upgrade metadata' vs 'upgrade metadata only' via {@link #shouldUpgradeSegment}.
+   */
   @VisibleForTesting
   static class SegmentProvider
   {
@@ -1292,7 +1314,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final Interval interval;
 
     private final boolean minorCompaction;
-    private final Set<SegmentDescriptor> uncompactedSegments;
+    private final Set<SegmentDescriptor> segmentsToCompact;
 
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
@@ -1301,17 +1323,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.interval = inputSpec.findInterval(dataSource);
       if (inputSpec instanceof MinorCompactionInputSpec) {
         minorCompaction = true;
-        uncompactedSegments = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getUncompactedSegments());
+        segmentsToCompact = Set.copyOf(((MinorCompactionInputSpec) inputSpec).getSegments());
       } else {
         minorCompaction = false;
-        uncompactedSegments = null;
+        segmentsToCompact = null;
       }
     }
 
     private boolean shouldUpgradeSegment(DataSegment s)
     {
       if (minorCompaction) {
-        return !uncompactedSegments.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
+        return !segmentsToCompact.contains(s.toDescriptor()) && this.interval.contains(s.getInterval());
       } else {
         return false;
       }

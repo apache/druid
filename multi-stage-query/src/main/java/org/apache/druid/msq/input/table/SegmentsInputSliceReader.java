@@ -93,6 +93,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
     }
 
     if (segmentsInputSlice.getQueryableServers() != null) {
+      inputCounters.addTotalQueries(segmentsInputSlice.getQueryableServers().size());
       for (final DataServerRequestDescriptor queryableServer : segmentsInputSlice.getQueryableServers()) {
         queryableServers.add(
             dataServerQueryHandlerFactory.createDataServerQueryHandler(

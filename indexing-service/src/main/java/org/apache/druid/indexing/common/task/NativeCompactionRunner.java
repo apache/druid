@@ -35,20 +35,24 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,9 +103,14 @@ public class NativeCompactionRunner implements CompactionRunner
           "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead."
       );
     }
+
     if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
-      return CompactionConfigValidationResult.failure(
-          "Minor compaction is not supported by Native  compaction engine. Use MSQ compaction engine instead.");
+      boolean usingConcurrentLocks = compactionTask.getContextValue(Tasks.USE_CONCURRENT_LOCKS, Tasks.DEFAULT_USE_CONCURRENT_LOCKS);
+      if (!usingConcurrentLocks) {
+        return CompactionConfigValidationResult.failure(
+            "Task context[%s] must be true when using native minor compaction", Tasks.USE_CONCURRENT_LOCKS
+        );
+      }
     }
     return CompactionConfigValidationResult.success();
   }
@@ -154,18 +163,31 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionIOConfig compactionIOConfig
   )
   {
+    return (compactionIOConfig.getInputSpec() instanceof MinorCompactionInputSpec)
+           ? createMinorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig)
+           : createMajorCompactionIoConfig(toolbox, dataSchema, interval, coordinatorClient, segmentCacheManagerFactory, compactionIOConfig);
+  }
+
+  private static ParallelIndexIOConfig createMajorCompactionIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval inputInterval,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      CompactionIOConfig compactionIOConfig
+  )
+  {
     if (!compactionIOConfig.isAllowNonAlignedInterval()) {
-      // Validate interval alignment.
       final Granularity segmentGranularity = dataSchema.getGranularitySpec().getSegmentGranularity();
       final Interval widenedInterval = Intervals.utc(
-          segmentGranularity.bucketStart(interval.getStart()).getMillis(),
-          segmentGranularity.bucketEnd(interval.getEnd().minus(1)).getMillis()
+          segmentGranularity.bucketStart(inputInterval.getStart()).getMillis(),
+          segmentGranularity.bucketEnd(inputInterval.getEnd().minus(1)).getMillis()
       );
 
-      if (!interval.equals(widenedInterval)) {
+      if (!inputInterval.equals(widenedInterval)) {
         throw new IAE(
             "Interval[%s] to compact is not aligned with segmentGranularity[%s]",
-            interval,
+            inputInterval,
             segmentGranularity
         );
       }
@@ -174,7 +196,7 @@ public class NativeCompactionRunner implements CompactionRunner
     return new ParallelIndexIOConfig(
         new DruidInputSource(
             dataSchema.getDataSource(),
-            interval,
+            inputInterval,
             null,
             null,
             null,
@@ -188,6 +210,67 @@ public class NativeCompactionRunner implements CompactionRunner
         false,
         compactionIOConfig.isDropExisting()
     );
+  }
+
+  private static ParallelIndexIOConfig createMinorCompactionIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval interval,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      CompactionIOConfig compactionIOConfig
+  )
+  {
+    final List<WindowedSegmentId> segmentIds = resolveSegmentIdsForMinorCompaction(
+        (MinorCompactionInputSpec) compactionIOConfig.getInputSpec(),
+        dataSchema.getDataSource(),
+        interval
+    );
+
+    return new ParallelIndexIOConfig(
+        new DruidInputSource(
+            dataSchema.getDataSource(),
+            null,
+            segmentIds,
+            null,
+            null,
+            null,
+            toolbox.getIndexIO(),
+            coordinatorClient,
+            segmentCacheManagerFactory,
+            toolbox.getConfig()
+        ).withTaskToolbox(toolbox),
+        null,
+        false,
+        compactionIOConfig.isDropExisting()
+    );
+  }
+
+  /**
+   * When using {@link MinorCompactionInputSpec}, resolves segment descriptors to compact that belong
+   * to the given interval and returns them as {@link WindowedSegmentId} objects.
+   */
+  private static List<WindowedSegmentId> resolveSegmentIdsForMinorCompaction(
+      MinorCompactionInputSpec inputSpec,
+      String dataSource,
+      Interval interval
+  )
+  {
+    final List<WindowedSegmentId> segmentIds = new ArrayList<>();
+    for (SegmentDescriptor desc : inputSpec.getSegments()) {
+      if (interval.contains(desc.getInterval())) {
+        final SegmentId segmentId = SegmentId.of(
+            dataSource,
+            desc.getInterval(),
+            desc.getVersion(),
+            desc.getPartitionNumber()
+        );
+        segmentIds.add(
+            new WindowedSegmentId(segmentId.toString(), List.of(desc.getInterval()))
+        );
+      }
+    }
+    return segmentIds;
   }
 
   @Override
@@ -318,6 +401,10 @@ public class NativeCompactionRunner implements CompactionRunner
     newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
+    // Native minor compaction uses REPLACE ingestion mode, which uses time chunk lock.
+    if (compactionTask.getIoConfig().getInputSpec() instanceof MinorCompactionInputSpec) {
+      newContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
     return newContext;
   }
 

@@ -35,7 +35,9 @@ async function getDartExecution(sqlQueryId: string, signal: AbortSignal): Promis
 
   if (!data.report) throw new Error('Query not started yet');
 
-  return Execution.fromDartReport(data.report).changeSqlQuery(data.query.sql);
+  return Execution.fromDartReport(data.report)
+    .changeSqlQuery(data.query.sql)
+    .changeSqlQueryId(data.query.sqlQueryId);
 }
 
 export interface ExecutionDetailsPaneLoaderProps {

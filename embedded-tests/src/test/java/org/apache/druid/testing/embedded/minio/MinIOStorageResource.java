@@ -101,6 +101,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     cluster.addCommonProperty("druid.s3.secretKey", getSecretKey());
     cluster.addCommonProperty("druid.s3.enablePathStyleAccess", "true");
     cluster.addCommonProperty("druid.s3.protocol", "http");
+    cluster.addCommonProperty("druid.s3.maxConnections", "150");
   }
 
   public String getBucket()

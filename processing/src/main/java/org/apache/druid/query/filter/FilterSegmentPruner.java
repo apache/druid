@@ -27,7 +27,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
   * Uses a {@link DimFilter} to check the {@link DimFilter#getDimensionRangeSet(String)} against
@@ -61,70 +60,78 @@ public class FilterSegmentPruner implements SegmentPruner
     this.rangeCache = new HashMap<>();
   }
 
-   /**
-    * Filter the given iterable of objects by removing any object whose {@link DataSegment}, obtained from the converter
-    * function, does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The
-    * returned set contains the filtered objects in the same order as they appear in input.
-    *
-    * {@link #rangeCache} stores the RangeSets of different dimensions for the filter, so it can be re-used between
-    * calls to save redundant evaluation of {@link DimFilter#getDimensionRangeSet(String)} on the same columns.
-    *
-    * @param input      The iterable of objects to be filtered
-    * @param converter  The function to convert T to {@link DataSegment} that can be filtered by
-    * @param <T>        This can be any type, as long as transform function is provided to extract a {@link DataSegment}
-    *
-    * @return The set of pruned object, in the same order as input
-    */
+
+  /**
+   * Returns false if the {@link DataSegment} does not fit in {@link DimFilter#getDimensionRangeSet(String)}.
+   * <p>
+   * {@link #rangeCache} stores the RangeSets of different dimensions for the filter, so it can be re-used between
+   * calls to save redundant evaluation of {@link DimFilter#getDimensionRangeSet(String)} on the same columns.
+   */
   @Override
-  public <T> Collection<T> prune(Iterable<T> input, Function<T, DataSegment> converter)
+  public boolean include(DataSegment segment)
   {
-    // LinkedHashSet retains order from "input".
-    final Set<T> retSet = new LinkedHashSet<>();
+    final ShardSpec shard = segment.getShardSpec();
+    boolean include = true;
 
-    for (T obj : input) {
-      final DataSegment segment = converter.apply(obj);
-      if (segment == null) {
-        continue;
-      }
-      final ShardSpec shard = segment.getShardSpec();
-      boolean include = true;
-
-      if (shard != null) {
-        Map<String, RangeSet<String>> filterDomain = new HashMap<>();
-        List<String> dimensions = shard.getDomainDimensions();
-        for (String dimension : dimensions) {
-          final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
-          if (shardVirtualColumn != null) {
-            final VirtualColumn queryEquivalent = virtualColumns.findEquivalent(shardVirtualColumn);
-            if (queryEquivalent != null) {
-              if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
-                Optional<RangeSet<String>> optFilterRangeSet = rangeCache
-                    .computeIfAbsent(
-                        queryEquivalent.getOutputName(),
-                        d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
-                    );
-                optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                    shardVirtualColumn.getOutputName(),
-                    stringRangeSet
-                ));
-              }
+    if (shard != null) {
+      final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
+      final List<String> dimensions = shard.getDomainDimensions();
+      for (String dimension : dimensions) {
+        final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
+        if (shardVirtualColumn != null) {
+          final VirtualColumn queryEquivalent = virtualColumns.findEquivalent(shardVirtualColumn);
+          if (queryEquivalent != null) {
+            if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
+              final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
+                  .computeIfAbsent(
+                      queryEquivalent.getOutputName(),
+                      d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
+                  );
+              optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
+                  shardVirtualColumn.getOutputName(),
+                  stringRangeSet
+              ));
             }
-          } else if (filterFields == null || filterFields.contains(dimension)) {
-            Optional<RangeSet<String>> optFilterRangeSet =
-                rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
-            optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
           }
-        }
-        if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
-          include = false;
+        } else if (filterFields == null || filterFields.contains(dimension)) {
+          final Optional<RangeSet<String>> optFilterRangeSet =
+              rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
+          optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
         }
       }
-
-      if (include) {
-        retSet.add(obj);
+      if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
+        include = false;
       }
     }
-    return retSet;
+    return include;
+  }
+
+  @Override
+  public SegmentPruner combine(SegmentPruner other)
+  {
+    if (other instanceof FilterSegmentPruner pruner) {
+      final List<VirtualColumn> combinedVirtualColumns = new ArrayList<>();
+      combinedVirtualColumns.addAll(List.of(virtualColumns.getVirtualColumns()));
+      combinedVirtualColumns.addAll(List.of(pruner.virtualColumns.getVirtualColumns()));
+
+      final Set<String> combinedFields = new LinkedHashSet<>();
+      combinedFields.addAll(filterFields);
+      combinedFields.addAll(pruner.filterFields);
+
+      final DimFilter combinedFilter = new AndDimFilter(filter, pruner.filter);
+
+      return new FilterSegmentPruner(
+          combinedFilter,
+          combinedFields,
+          VirtualColumns.create(combinedVirtualColumns)
+      );
+    } else if (other instanceof CompositeSegmentPruner composite) {
+      // composite pruner can combine a filter pruner with any filter pruners it already has, so call it
+      return composite.combine(this);
+    }
+    return new CompositeSegmentPruner(
+        Set.of(this, other)
+    );
   }
 
   @Override

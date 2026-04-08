@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -211,23 +216,6 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
       String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
                           + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                         + "  }"
-                         + "}";
-
       String query = "{"
                      + "\"queryType\": \"groupBy\","
                      + "\"dataSource\": \"test_datasource\","
@@ -248,7 +236,14 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+          ),
           metricSpec,
           0,
           Granularities.NONE,
