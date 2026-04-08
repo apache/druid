@@ -1,0 +1,167 @@
+name: Deploy Release
+run-name: "Deploy ${{ inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      change_request_id:
+        description: 'Change Request ID (optional, long URL number, e.g. "...?CHANGEID=12345")'
+        required: false
+        type: string
+      deploy_stable:
+        description: 'Deploy to Stable environment'
+        required: false
+        type: boolean
+        default: false
+      deploy_live:
+        description: 'Deploy to LIVE environment'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  deploy-live-druid-broker:
+    name: 'Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: euw2-li-beunity
+      unity_namespace: sadruid
+      unity_deployment_name: druid-broker-gcp-live
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namspace/gcp/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+      should_update_release_notes: true
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: ${{ secrets.GCP_LI_CLUSTER_CA }}
+      UNITY_CLUSTER_SERVER: ${{ secrets.GKE_LI_CLUSTER_SERVER }}
+      UNITY_DEPLOY_TOKEN: ${{ secrets.GCP_LI_DEPLOY_TOKEN }}
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}
+
+  deploy-live-druid-coordinator:
+    name: 'Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: euw2-li-beunity
+      unity_namespace: sadruid
+      unity_deployment_name: druid-coordinator-gcp-live
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namspace/gcp/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+      should_update_release_notes: true
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: ${{ secrets.GCP_LI_CLUSTER_CA }}
+      UNITY_CLUSTER_SERVER: ${{ secrets.GKE_LI_CLUSTER_SERVER }}
+      UNITY_DEPLOY_TOKEN: ${{ secrets.GCP_LI_DEPLOY_TOKEN }}
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}
+
+  deploy-live-druid-router:
+    name: 'Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: euw2-li-beunity
+      unity_namespace: sadruid
+      unity_deployment_name: druid-router-gcp-live
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namspace/gcp/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+      should_update_release_notes: true
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: ${{ secrets.GCP_LI_CLUSTER_CA }}
+      UNITY_CLUSTER_SERVER: ${{ secrets.GKE_LI_CLUSTER_SERVER }}
+      UNITY_DEPLOY_TOKEN: ${{ secrets.GCP_LI_DEPLOY_TOKEN }}
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}
+
+  deploy-gb1-live-druid-broker:
+    name: 'GB1 Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: gb1-live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: gb1-li-beunityv3
+      unity_namespace: sadruid
+      unity_deployment_name: druid-broker-gb1
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namespace/gb1/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: TBC
+      UNITY_CLUSTER_SERVER: TBC
+      UNITY_DEPLOY_TOKEN: TBC
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}
+
+  deploy-gb1-live-druid-coordinator:
+    name: 'GB1 Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: gb1-live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: gb1-li-beunityv3
+      unity_namespace: sadruid
+      unity_deployment_name: druid-coordinator-gb1
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namespace/gb1/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: TBC
+      UNITY_CLUSTER_SERVER: TBC
+      UNITY_DEPLOY_TOKEN: TBC
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}
+
+  deploy-gb1-live-druid-router:
+    name: 'GB1 Live: Deploy'
+    if: inputs.deploy_live == true
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-deploy-unity.yml@rowan-changes
+    with:
+      version: ${{ inputs.version }}
+      change_request_id: ${{ inputs.change_request_id }}
+      environment_name: gb1-live
+      deploy_runner: stock-gcp-runner
+      unity_cluster: gb1-li-beunityv3
+      unity_namespace: sadruid
+      unity_deployment_name: druid-router-gb1
+      unity_chart_repo: THG-Stock-Availability/druid-helm-template
+      unity_helm_values_file: namespace/gb1/values-live.yaml
+      unity_helm_base_values_file: namespace/values.yaml
+    secrets:
+      TEAMS_WEBHOOK_URI_PROD: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+      UNITY_CLUSTER_CA: TBC
+      UNITY_CLUSTER_SERVER: TBC
+      UNITY_DEPLOY_TOKEN: TBC
+      UNITY_CHART_TOKEN: ${{ secrets.GRGIT_PASS }}

@@ -1,0 +1,27 @@
+name: Scheduled Maintenance
+
+on:
+  schedule:
+    - cron: '0 */1 * * *'
+  workflow_dispatch:
+    inputs:
+      max_wait_minutes:
+        type: number
+        description: 'Cancel runs waiting for approval longer than this (minutes)'
+        required: false
+        default: 120
+      dry_run:
+        type: boolean
+        description: 'Dry Run - show what would be cancelled without actually cancelling'
+        required: false
+        default: false
+
+permissions:
+  actions: write
+
+jobs:
+  maintenance:
+    uses: THG-Fulfil/shared-workflows/.github/workflows/scheduled-maintenance.yml@rowan-changes
+    with:
+      max_wait_minutes: ${{ inputs.max_wait_minutes || 120 }}
+      dry_run: ${{ inputs.dry_run || false }}
