@@ -26,10 +26,14 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -44,6 +48,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -104,29 +109,24 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "sequenceNumber", "product", "value")
         ),
-        "[{\"type\": \"ddSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"relativeError\": 0.01}]",
+        List.of(new DDSketchAggregatorFactory("sketch", "value", 0.01, 1000)),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"ddSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
-            + "\"relativeError\": "
-            + "0.01, \"numBins\": 10000}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesFromDDSketch\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], "
-            + "\"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"merged_sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(new DDSketchAggregatorFactory("merged_sketch", "sketch", 0.01, 10000))
+                    .setPostAggregatorSpecs(
+                        new DDSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("merged_sketch", "merged_sketch"),
+                            new double[]{0, 0.5, 1}
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -136,7 +136,7 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
     Object quantilesObject = row.get(1); // "quantiles"
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
-    
+
     Assert.assertEquals(0.001, quantiles[0], 0.0006); // min value
     Assert.assertEquals(0.5, quantiles[1], 0.05); // median value
     Assert.assertEquals(1, quantiles[2], 0.05); // max value
@@ -155,26 +155,24 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "sequenceNumber", "product", "value")
         ),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        List.of(new DoubleSumAggregatorFactory("value", "value")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"ddSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"relativeError\": 0.005, \"numBins\": 2000}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesFromDDSketch\", \"name\": \"quantiles\", \"fractions\": [0.99, 0.995, 0.999, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(new DDSketchAggregatorFactory("sketch", "value", 0.005, 2000))
+                    .setPostAggregatorSpecs(
+                        new DDSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            new double[]{0.99, 0.995, 0.999, 1}
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());

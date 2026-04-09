@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -111,33 +112,29 @@ public class ApproximateHistogramAggregationTest extends InitializedNullHandling
 
   private MapBasedRow ingestAndQuery(boolean ignoreNulls) throws Exception
   {
-    String ingestionAgg = ignoreNulls ? "approxHistogramFold" : "approxHistogram";
+    AggregatorFactory ingestionAgg = ignoreNulls
+        ? new ApproximateHistogramFoldingAggregatorFactory("index_ah", "index", null, null, null, null, null)
+        : new ApproximateHistogramAggregatorFactory("index_ah", "index", null, null, null, null, null);
 
-    String metricSpec = "[{"
-                        + "\"type\": \"" + ingestionAgg + "\","
-                        + "\"name\": \"index_ah\","
-                        + "\"fieldName\": \"index\""
-                        + "}]";
+    List<AggregatorFactory> metricSpec = List.of(ingestionAgg);
 
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"approxHistogramFold\", \"name\": \"index_ah\", \"fieldName\": \"index_ah\" }"
-                   + "],"
-                   + "\"postAggregations\": ["
-                   + "  { \"type\": \"min\", \"name\": \"index_min\", \"fieldName\": \"index_ah\"},"
-                   + "  { \"type\": \"max\", \"name\": \"index_max\", \"fieldName\": \"index_ah\"},"
-                   + "  { \"type\": \"quantile\", \"name\": \"index_quantile\", \"fieldName\": \"index_ah\", \"probability\" : 0.99 },"
-                   + "  { \"type\": \"quantiles\", \"name\": \"index_quantiles\", \"fieldName\": \"index_ah\", \"probabilities\" : [0.2, 0.7] },"
-                   + "  { \"type\": \"buckets\", \"name\": \"index_buckets\", \"fieldName\": \"index_ah\", \"bucketSize\" : 2.0, \"offset\": 4.0 },"
-                   + "  { \"type\": \"customBuckets\", \"name\": \"index_custom\", \"fieldName\": \"index_ah\", \"breaks\" : [50.0, 100.0] },"
-                   + "  { \"type\": \"equalBuckets\", \"name\": \"index_equal\", \"fieldName\": \"index_ah\", \"numBuckets\" : 3 }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource("test_datasource")
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setAggregatorSpecs(
+                                         new ApproximateHistogramFoldingAggregatorFactory("index_ah", "index_ah", null, null, null, null, null)
+                                     )
+                                     .setPostAggregatorSpecs(
+                                         new MinPostAggregator("index_min", "index_ah"),
+                                         new MaxPostAggregator("index_max", "index_ah"),
+                                         new QuantilePostAggregator("index_quantile", "index_ah", 0.99f),
+                                         new QuantilesPostAggregator("index_quantiles", "index_ah", new float[]{0.2f, 0.7f}),
+                                         new BucketsPostAggregator("index_buckets", "index_ah", 2.0f, 4.0f),
+                                         new CustomBucketsPostAggregator("index_custom", "index_ah", new float[]{50.0f, 100.0f}),
+                                         new EqualBucketsPostAggregator("index_equal", "index_ah", 3)
+                                     )
+                                     .build();
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
@@ -156,6 +153,6 @@ public class ApproximateHistogramAggregationTest extends InitializedNullHandling
         query
     );
 
-    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
+    return seq.toList().get(0).toMapBasedRow(query);
   }
 }
