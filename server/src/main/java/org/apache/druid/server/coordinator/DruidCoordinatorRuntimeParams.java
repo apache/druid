@@ -203,6 +203,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
+    private double defaultServerFillThreshold = 1.0;
 
     private Builder()
     {
@@ -288,7 +289,9 @@ public class DruidCoordinatorRuntimeParams
           druidCluster,
           balancerStrategy,
           segmentLoadingConfig,
-          stats
+          stats,
+          coordinatorDynamicConfig,
+          defaultServerFillThreshold
       );
     }
 
@@ -337,6 +340,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withDynamicConfigs(CoordinatorDynamicConfig configs)
     {
       this.coordinatorDynamicConfig = configs;
+      return this;
+    }
+
+    public Builder withDefaultServerFillThreshold(double defaultServerFillThreshold)
+    {
+      this.defaultServerFillThreshold = defaultServerFillThreshold;
       return this;
     }
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
@@ -48,9 +49,13 @@ import java.util.Set;
 public class RoundRobinServerSelector
 {
   private final Map<String, CircularServerList> tierToServers = new HashMap<>();
+  private final CoordinatorDynamicConfig dynamicConfig;
+  private final double defaultServerFillThreshold;
 
-  public RoundRobinServerSelector(DruidCluster cluster)
+  public RoundRobinServerSelector(DruidCluster cluster, CoordinatorDynamicConfig dynamicConfig, double defaultServerFillThreshold)
   {
+    this.dynamicConfig = dynamicConfig;
+    this.defaultServerFillThreshold = defaultServerFillThreshold;
     cluster.getManagedHistoricals().forEach(
         (tier, servers) -> tierToServers.put(tier, new CircularServerList(servers))
     );
@@ -67,25 +72,46 @@ public class RoundRobinServerSelector
       return Collections.emptyIterator();
     }
 
-    return new EligibleServerIterator(segment, iterator);
+    return new EligibleServerIterator(
+        segment,
+        iterator,
+        dynamicConfig.getTierServerFillThreshold().getOrDefault(tier, defaultServerFillThreshold)
+    );
   }
 
   /**
    * Iterator over servers in a tier that are eligible to load a given segment.
+   * <p>
+   * Applies a fill-threshold preference: at construction time, scans all servers
+   * to determine if any eligible server is below the threshold. If so, only
+   * below-threshold servers are returned. If none qualify, the threshold is
+   * relaxed so all eligible servers are returned (fallback to original behavior).
+   * <p>
+   * The cursor advances through the circular list across calls so that
+   * subsequent invocations pick up where the last iterator left off.
    */
   private static class EligibleServerIterator implements Iterator<ServerHolder>
   {
     final CircularServerList delegate;
     final DataSegment segment;
+    final double effectiveFillThreshold;
 
     ServerHolder nextEligible;
     int remainingIterations;
 
-    EligibleServerIterator(DataSegment segment, CircularServerList delegate)
+    EligibleServerIterator(DataSegment segment, CircularServerList delegate, double fillThreshold)
     {
       this.delegate = delegate;
       this.segment = segment;
       this.remainingIterations = delegate.servers.size();
+
+      // Apply the threshold only if at least one eligible server is below it.
+      // Otherwise fall back: allow any eligible server (preference-with-fallback).
+      final boolean anyBelowThreshold = delegate.servers.stream()
+                                                        .anyMatch(s -> s.canLoadSegment(segment)
+                                                                       && s.getFillFraction() <= fillThreshold);
+      this.effectiveFillThreshold = anyBelowThreshold ? fillThreshold : Double.POSITIVE_INFINITY;
+
       nextEligible = search();
     }
 
@@ -112,7 +138,7 @@ public class RoundRobinServerSelector
     {
       while (remainingIterations-- > 0) {
         ServerHolder nextServer = delegate.peekNext();
-        if (nextServer.canLoadSegment(segment)) {
+        if (nextServer.canLoadSegment(segment) && nextServer.getFillFraction() <= effectiveFillThreshold) {
           return nextServer;
         } else {
           delegate.advanceCursor();

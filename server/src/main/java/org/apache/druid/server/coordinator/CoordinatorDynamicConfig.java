@@ -75,6 +75,7 @@ public class CoordinatorDynamicConfig
 
   private final Set<String> turboLoadingNodes;
   private final Map<String, String> cloneServers;
+  private final Map<String, Double> tierServerFillThreshold;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -126,7 +127,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+      @JsonProperty("tierServerFillThreshold") @Nullable Map<String, Double> tierServerFillThreshold
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -172,6 +174,7 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
+    this.tierServerFillThreshold = Configs.valueOrDefault(tierServerFillThreshold, Map.of());
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -338,6 +341,12 @@ public class CoordinatorDynamicConfig
     return cloneServers;
   }
 
+  @JsonProperty
+  public Map<String, Double> getTierServerFillThreshold()
+  {
+    return tierServerFillThreshold;
+  }
+
   /**
    * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
    * segments. This causes decreases the average time taken to load segments. However, this also means less resources
@@ -371,6 +380,7 @@ public class CoordinatorDynamicConfig
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
+           ", tierServerFillThreshold=" + tierServerFillThreshold +
            '}';
   }
 
@@ -407,7 +417,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
-           && Objects.equals(cloneServers, that.cloneServers);
+           && Objects.equals(cloneServers, that.cloneServers)
+           && Objects.equals(tierServerFillThreshold, that.tierServerFillThreshold);
   }
 
   @Override
@@ -431,7 +442,8 @@ public class CoordinatorDynamicConfig
         pauseCoordination,
         debugDimensions,
         turboLoadingNodes,
-        cloneServers
+        cloneServers,
+        tierServerFillThreshold
     );
   }
 
@@ -488,6 +500,7 @@ public class CoordinatorDynamicConfig
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
     private Map<String, String> cloneServers;
+    private Map<String, Double> tierServerFillThreshold;
 
     public Builder()
     {
@@ -512,7 +525,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
+        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+        @JsonProperty("tierServerFillThreshold") @Nullable Map<String, Double> tierServerFillThreshold
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -533,6 +547,7 @@ public class CoordinatorDynamicConfig
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
       this.cloneServers = cloneServers;
+      this.tierServerFillThreshold = tierServerFillThreshold;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -631,6 +646,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withTierServerFillThreshold(Map<String, Double> tierServerFillThreshold)
+    {
+      this.tierServerFillThreshold = tierServerFillThreshold;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -658,7 +679,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
           turboLoadingNodes,
-          cloneServers
+          cloneServers,
+          tierServerFillThreshold
       );
     }
 
@@ -690,7 +712,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
-          valueOrDefault(cloneServers, defaults.getCloneServers())
+          valueOrDefault(cloneServers, defaults.getCloneServers()),
+          valueOrDefault(tierServerFillThreshold, defaults.getTierServerFillThreshold())
       );
     }
   }

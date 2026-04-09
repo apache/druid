@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -58,6 +59,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats;
+  private final CoordinatorDynamicConfig dynamicConfig;
+  private final double defaultServerFillThreshold;
   private final SegmentReplicaCountMap replicaCountMap;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
@@ -76,17 +79,23 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DruidCluster cluster,
       BalancerStrategy strategy,
       SegmentLoadingConfig loadingConfig,
-      CoordinatorRunStats stats
+      CoordinatorRunStats stats,
+      CoordinatorDynamicConfig dynamicConfig,
+      double defaultServerFillThreshold
   )
   {
     this.stats = stats;
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
+    this.dynamicConfig = dynamicConfig;
+    this.defaultServerFillThreshold = defaultServerFillThreshold;
     this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
-    this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
+    this.serverSelector = useRoundRobinAssignment
+                          ? new RoundRobinServerSelector(cluster, dynamicConfig, defaultServerFillThreshold)
+                          : null;
 
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
@@ -150,14 +159,24 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     }
 
-    // If the source server is not decommissioning, move can be skipped if the
-    // segment is already optimally placed
-    if (!sourceServer.isDecommissioning()) {
-      eligibleDestinationServers.add(sourceServer);
+    // Prefer servers below the fill threshold. Fall back to all eligible servers if none qualify.
+    final double fillThreshold = dynamicConfig.getTierServerFillThreshold()
+                                              .getOrDefault(tier, defaultServerFillThreshold);
+    List<ServerHolder> candidates = eligibleDestinationServers.stream()
+                                                              .filter(s -> s.getFillFraction() <= fillThreshold)
+                                                              .collect(Collectors.toList());
+    if (candidates.isEmpty()) {
+      candidates = eligibleDestinationServers;
+    }
+
+    // Allow "already optimally placed" only if the source is not above the fill threshold.
+    // If the source is over-threshold, force the move to drain it — do not add it to candidates.
+    if (!sourceServer.isDecommissioning() && sourceServer.getFillFraction() <= fillThreshold) {
+      candidates.add(sourceServer);
     }
 
     final ServerHolder destination =
-        strategy.findDestinationServerToMoveSegment(segment, sourceServer, eligibleDestinationServers);
+        strategy.findDestinationServerToMoveSegment(segment, sourceServer, candidates);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
       incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Optimally placed", segment, sourceServer);
@@ -276,7 +295,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     final SegmentStatusInTier segmentStatus =
-        new SegmentStatusInTier(segment, cluster.getManagedHistoricalsByTier(tier));
+        new SegmentStatusInTier(
+            segment,
+            cluster.getManagedHistoricalsByTier(tier),
+            dynamicConfig.getTierServerFillThreshold().getOrDefault(tier, defaultServerFillThreshold)
+        );
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {

@@ -58,6 +58,7 @@ import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactor
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorSegmentLoadConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
@@ -487,7 +488,8 @@ public class CoordinatorSimulationBuilder
           new CoordinatorPeriodConfig(null, null),
           CoordinatorKillConfigs.DEFAULT,
           createBalancerStrategy(balancerStrategy),
-          new HttpLoadQueuePeonConfig(null, null, null)
+          new HttpLoadQueuePeonConfig(null, null, null),
+          new CoordinatorSegmentLoadConfigs(null)
       );
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();

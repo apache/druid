@@ -54,6 +54,7 @@ import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorSegmentLoadConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
@@ -146,7 +147,8 @@ public class DruidCoordinatorTest
         new CoordinatorPeriodConfig(null, null),
         CoordinatorKillConfigs.DEFAULT,
         new CostBalancerStrategyFactory(),
-        null
+        null,
+        new CoordinatorSegmentLoadConfigs(null)
     );
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     scheduledExecutorFactory = ScheduledExecutors::fixed;

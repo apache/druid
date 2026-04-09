@@ -750,6 +750,7 @@ public class DruidCoordinator
               .withDataSourcesSnapshot(dataSourcesSnapshot)
               .withDynamicConfigs(metadataManager.configs().getCurrentDynamicConfig())
               .withCompactionConfig(metadataManager.configs().getCurrentCompactionConfig())
+              .withDefaultServerFillThreshold(config.getDefaultServerFillThreshold())
               .build();
           dutyGroup.run(params);
         } else {

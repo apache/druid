@@ -35,21 +35,28 @@ import java.util.NavigableSet;
 public class SegmentStatusInTier
 {
   private final DataSegment segment;
+  private final double fillThreshold;
 
   private final List<ServerHolder> eligibleLoadServers = new ArrayList<>();
+  private final List<ServerHolder> aboveThresholdLoadServers = new ArrayList<>();
   private final List<ServerHolder> eligibleDropServers = new ArrayList<>();
 
   private final Map<SegmentAction, List<ServerHolder>> serversWithQueuedActions = new HashMap<>();
 
-  public SegmentStatusInTier(DataSegment segment, NavigableSet<ServerHolder> historicals)
+  public SegmentStatusInTier(DataSegment segment, NavigableSet<ServerHolder> historicals, double fillThreshold)
   {
     this.segment = segment;
+    this.fillThreshold = fillThreshold;
     historicals.forEach(this::handleServer);
   }
 
+  /**
+   * Returns servers eligible to load the segment, preferring those below the
+   * fill threshold. Falls back to above-threshold servers if none qualify.
+   */
   public List<ServerHolder> getServersEligibleToLoad()
   {
-    return eligibleLoadServers;
+    return eligibleLoadServers.isEmpty() ? aboveThresholdLoadServers : eligibleLoadServers;
   }
 
   public List<ServerHolder> getServersEligibleToDrop()
@@ -68,7 +75,11 @@ public class SegmentStatusInTier
     if (server.isServingSegment(segment)) {
       eligibleDropServers.add(server);
     } else if (server.canLoadSegment(segment)) {
-      eligibleLoadServers.add(server);
+      if (server.getFillFraction() <= fillThreshold) {
+        eligibleLoadServers.add(server);
+      } else {
+        aboveThresholdLoadServers.add(server);
+      }
     } else if (action != null) {
       serversWithQueuedActions.computeIfAbsent(action, a -> new ArrayList<>())
                               .add(server);

@@ -34,6 +34,7 @@ public class DruidCoordinatorConfig
   private final CoordinatorKillConfigs killConfigs;
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final HttpLoadQueuePeonConfig httpLoadQueuePeonConfig;
+  private final CoordinatorSegmentLoadConfigs coordinatorSegmentLoadConfigs;
 
   @Inject
   public DruidCoordinatorConfig(
@@ -41,7 +42,8 @@ public class DruidCoordinatorConfig
       CoordinatorPeriodConfig periodConfig,
       CoordinatorKillConfigs killConfigs,
       BalancerStrategyFactory balancerStrategyFactory,
-      HttpLoadQueuePeonConfig httpLoadQueuePeonConfig
+      HttpLoadQueuePeonConfig httpLoadQueuePeonConfig,
+      CoordinatorSegmentLoadConfigs coordinatorSegmentLoadConfigs
   )
   {
     this.killConfigs = killConfigs;
@@ -49,6 +51,7 @@ public class DruidCoordinatorConfig
     this.periodConfig = periodConfig;
     this.balancerStrategyFactory = balancerStrategyFactory;
     this.httpLoadQueuePeonConfig = httpLoadQueuePeonConfig;
+    this.coordinatorSegmentLoadConfigs = coordinatorSegmentLoadConfigs;
 
     validateKillConfigs();
   }
@@ -86,6 +89,11 @@ public class DruidCoordinatorConfig
   public HttpLoadQueuePeonConfig getHttpLoadQueuePeonConfig()
   {
     return httpLoadQueuePeonConfig;
+  }
+
+  public double getDefaultServerFillThreshold()
+  {
+    return coordinatorSegmentLoadConfigs.getDefaultServerFillThreshold();
   }
 
   private void validateKillConfigs()

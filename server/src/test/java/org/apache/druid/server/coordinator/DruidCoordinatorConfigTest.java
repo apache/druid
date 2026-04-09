@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorSegmentLoadConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
@@ -443,7 +444,8 @@ public class DruidCoordinatorConfigTest
             periodConfig,
             killConfig,
             null,
-            null
+            null,
+            new CoordinatorSegmentLoadConfigs(null)
         )
     );
 

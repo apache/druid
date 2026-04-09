@@ -254,6 +254,12 @@ public class ServerHolder implements Comparable<ServerHolder>
     return getMaxSize() - getSizeUsed();
   }
 
+  public double getFillFraction()
+  {
+    final long maxSize = getMaxSize();
+    return maxSize > 0 ? (double) getSizeUsed() / maxSize : 0.0;
+  }
+
   /**
    * Checks if the server can load the given segment.
    * <p>
