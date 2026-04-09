@@ -21,7 +21,7 @@ on:
       jdk:
         required: false
         type: string
-        default: '21'
+        default: '25'
       script:
         required: true
         type: string
