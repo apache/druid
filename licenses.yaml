@@ -2242,7 +2242,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.0.3
+version: 3.6.1
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2275,6 +2275,8 @@ libraries:
   - org.eclipse.jetty: jetty-server
   - org.eclipse.jetty: jetty-session
   - org.eclipse.jetty: jetty-util
+  - org.eclipse.jetty.compression: jetty-compression-common
+  - org.eclipse.jetty.compression: jetty-compression-gzip
   - org.eclipse.jetty.ee8: jetty-ee8-nested
   - org.eclipse.jetty.ee8: jetty-ee8-proxy
   - org.eclipse.jetty.ee8: jetty-ee8-security
