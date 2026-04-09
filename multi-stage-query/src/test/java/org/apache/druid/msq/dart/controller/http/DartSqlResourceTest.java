@@ -83,7 +83,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
-import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.EngineInfo;

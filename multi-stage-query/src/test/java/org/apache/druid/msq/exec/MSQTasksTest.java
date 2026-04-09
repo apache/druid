@@ -34,7 +34,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
