@@ -118,13 +118,18 @@ public class StringDimensionSchema extends DimensionSchema
   @Override
   public DimensionHandler getDimensionHandler()
   {
-    MultiValueHandling mvh = columnFormatSpec != null && columnFormatSpec.getMultiValueHandling() != null
-        ? columnFormatSpec.getMultiValueHandling()
-        : getMultiValueHandling();
-    boolean bitmap = columnFormatSpec != null && columnFormatSpec.getIndexType() != null
-        ? columnFormatSpec.getIndexType().hasBitmapIndex()
-        : hasBitmapIndex();
-    Integer maxStringLength = columnFormatSpec != null ? columnFormatSpec.getMaxStringLength() : null;
+    MultiValueHandling mvh = getMultiValueHandling();
+    boolean bitmap = hasBitmapIndex();
+    Integer maxStringLength = null;
+    if (columnFormatSpec != null) {
+      if (columnFormatSpec.getMultiValueHandling() != null) {
+        mvh = columnFormatSpec.getMultiValueHandling();
+      }
+      if (columnFormatSpec.getIndexType() != null) {
+        bitmap = columnFormatSpec.getIndexType().hasBitmapIndex();
+      }
+      maxStringLength = columnFormatSpec.getMaxStringLength();
+    }
     return new StringDimensionHandler(getName(), mvh, bitmap, false, maxStringLength);
   }
 
