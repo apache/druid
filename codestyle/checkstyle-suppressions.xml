@@ -26,9 +26,6 @@
 <suppressions>
   <!-- See https://checkstyle.org/filters/suppressionfilter.html for examples -->
 
-  <!-- Code copied from TestNG to apply a bugfix -->
-  <suppress checks="AvoidStaticImport" files="[\\/]org[\\/]testng[\\/]" />
-
   <suppress checks=".*" files="[\\/]target[\\/]generated-sources[\\/]" />
   <suppress checks=".*" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 

@@ -111,7 +111,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
   public MultiPhaseParallelIndexingWithNullColumnTest(PartitionsSpec partitionsSpec)
   {
-    super(LockGranularity.TIME_CHUNK, true, 0., 0.);
+    super(LockGranularity.TIME_CHUNK, 0., 0.);
     this.partitionsSpec = partitionsSpec;
     getObjectMapper().registerSubtypes(SplittableInlineDataSource.class);
   }

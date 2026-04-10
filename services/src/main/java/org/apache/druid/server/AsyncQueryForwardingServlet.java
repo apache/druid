@@ -762,7 +762,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      final boolean success = result.isSucceeded() && result.getResponse().getStatus() == Status.OK.getStatusCode();
+      final boolean success = result.isSucceeded() && isStatusCodeSuccess(result.getResponse().getStatus());
       final int statusCode = determineStatusCode(success, result.getResponse().getStatus());
       if (success) {
         successfulQueryCount.incrementAndGet();
@@ -984,5 +984,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
     }
     return statusCode;
+  }
+
+  /** Is status code in the 2xx range?
+   */
+  private static boolean isStatusCodeSuccess(int statusCode)
+  {
+    return statusCode >= 200 && statusCode < 300;
   }
 }

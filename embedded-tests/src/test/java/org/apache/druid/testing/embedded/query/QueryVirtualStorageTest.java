@@ -123,10 +123,6 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         .addCommonProperty("druid.storage.zip", "false")
         .addCommonProperty("druid.indexer.task.buildV10", "true")
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
-        .addCommonProperty(
-            "druid.monitoring.monitors",
-            "[\"org.apache.druid.server.metrics.StorageMonitor\"]"
-        )
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(indexer)

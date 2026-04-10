@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -412,7 +413,8 @@ public class CalciteTests
         new MetadataSegmentView(
             coordinatorClient,
             new BrokerSegmentWatcherConfig(),
-            BrokerSegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create(),
+            new StubServiceEmitter()
         ),
         timelineServerView,
         new FakeServerInventoryView(),

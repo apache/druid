@@ -80,7 +80,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
 
   public HashPartitionAdjustingCorePartitionSizeTest(LockGranularity lockGranularity, int maxNumConcurrentSubTasks)
   {
-    super(lockGranularity, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(lockGranularity, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
   }
 
@@ -104,7 +104,6 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
             TIMESTAMP_SPEC,
             DIMENSIONS_SPEC,
             INPUT_FORMAT,
-            null,
             INTERVAL_TO_INDEX,
             inputDir,
             "test_*",
@@ -146,7 +145,6 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
         TIMESTAMP_SPEC,
         DIMENSIONS_SPEC,
         INPUT_FORMAT,
-        null,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",

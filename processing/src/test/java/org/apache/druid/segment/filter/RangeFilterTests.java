@@ -29,6 +29,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Mode;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -2061,6 +2062,7 @@ public class RangeFilterTests
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                     .usingGetClass()
+                    .set(Mode.skipMockito())
                     .verify();
     }
   }

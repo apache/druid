@@ -27,11 +27,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -41,6 +43,7 @@ public class RequestLogLine
 
   private final Query<?> query;
   private final String sql;
+  private final List<ClientSqlParameter> sqlParameters;
   private final Map<String, Object> sqlQueryContext;
   private final DateTime timestamp;
   private final String remoteAddr;
@@ -49,6 +52,7 @@ public class RequestLogLine
   private RequestLogLine(
       @Nullable Query<?> query,
       @Nullable String sql,
+      @Nullable List<ClientSqlParameter> sqlParameters,
       @Nullable Map<String, Object> sqlQueryContext,
       DateTime timestamp,
       @Nullable String remoteAddr,
@@ -57,6 +61,7 @@ public class RequestLogLine
   {
     this.query = query;
     this.sql = sql;
+    this.sqlParameters = sqlParameters;
     this.sqlQueryContext = sqlQueryContext != null ? sqlQueryContext : ImmutableMap.of();
     this.timestamp = Preconditions.checkNotNull(timestamp, "timestamp");
     this.remoteAddr = StringUtils.nullToEmptyNonDruidDataString(remoteAddr);
@@ -65,7 +70,7 @@ public class RequestLogLine
 
   public static RequestLogLine forNative(Query<?> query, DateTime timestamp, String remoteAddr, QueryStats queryStats)
   {
-    return new RequestLogLine(query, null, null, timestamp, remoteAddr, queryStats);
+    return new RequestLogLine(query, null, null, null, timestamp, remoteAddr, queryStats);
   }
 
   public static RequestLogLine forSql(
@@ -76,7 +81,19 @@ public class RequestLogLine
       QueryStats queryStats
   )
   {
-    return new RequestLogLine(null, sql, sqlQueryContext, timestamp, remoteAddr, queryStats);
+    return forSql(sql, null, sqlQueryContext, timestamp, remoteAddr, queryStats);
+  }
+
+  public static RequestLogLine forSql(
+      String sql,
+      List<ClientSqlParameter> parameters,
+      Map<String, Object> sqlQueryContext,
+      DateTime timestamp,
+      String remoteAddr,
+      QueryStats queryStats
+  )
+  {
+    return new RequestLogLine(null, sql, parameters, sqlQueryContext, timestamp, remoteAddr, queryStats);
   }
 
   public String getNativeQueryLine(ObjectMapper objectMapper) throws JsonProcessingException
@@ -96,6 +113,9 @@ public class RequestLogLine
     final Map<String, Object> queryMap = new LinkedHashMap<>();
     queryMap.put("context", sqlQueryContext);
     queryMap.put("query", sql == null ? "<unavailable>" : sql);
+    if (sqlParameters != null) {
+      queryMap.put("parameters", sqlParameters);
+    }
 
     return JOINER.join(
         Arrays.asList(
@@ -120,6 +140,13 @@ public class RequestLogLine
   public String getSql()
   {
     return sql;
+  }
+
+  @Nullable
+  @JsonProperty("sqlParameters")
+  public List<ClientSqlParameter> getSqlParameters()
+  {
+    return sqlParameters;
   }
 
   @Nullable
@@ -160,6 +187,7 @@ public class RequestLogLine
     RequestLogLine that = (RequestLogLine) o;
     return Objects.equals(query, that.query) &&
            Objects.equals(sql, that.sql) &&
+           Objects.equals(sqlParameters, that.sqlParameters) &&
            Objects.equals(sqlQueryContext, that.sqlQueryContext) &&
            Objects.equals(timestamp, that.timestamp) &&
            Objects.equals(remoteAddr, that.remoteAddr) &&
@@ -169,7 +197,7 @@ public class RequestLogLine
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, sql, sqlQueryContext, timestamp, remoteAddr, queryStats);
+    return Objects.hash(query, sql, sqlParameters, sqlQueryContext, timestamp, remoteAddr, queryStats);
   }
 
   @Override

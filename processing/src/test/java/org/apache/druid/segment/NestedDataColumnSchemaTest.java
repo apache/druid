@@ -33,7 +33,7 @@ import org.junit.Test;
 
 public class NestedDataColumnSchemaTest
 {
-  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null, null, null);
+  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null, null, null, null);
   private static final NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_SPEC =
       NestedCommonFormatColumnFormatSpec.builder()
                                         .setObjectFieldsDictionaryEncoding(
@@ -47,7 +47,8 @@ public class NestedDataColumnSchemaTest
   private static final DefaultColumnFormatConfig DEFAULT_NESTED_SPEC_CONFIG = new DefaultColumnFormatConfig(
       null,
       null,
-      IndexSpec.builder().withAutoColumnFormatSpec(DEFAULT_NESTED_SPEC).build()
+      IndexSpec.builder().withAutoColumnFormatSpec(DEFAULT_NESTED_SPEC).build(),
+      null
   );
 
   private static final ObjectMapper MAPPER;

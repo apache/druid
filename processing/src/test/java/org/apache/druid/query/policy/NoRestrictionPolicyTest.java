@@ -57,4 +57,10 @@ public class NoRestrictionPolicyTest
     final NoRestrictionPolicy policy = NoRestrictionPolicy.instance();
     Assert.assertEquals(CursorBuildSpec.FULL_SCAN, policy.visit(CursorBuildSpec.FULL_SCAN));
   }
+
+  @Test
+  public void testCreateSegmentPruner_noRestriction()
+  {
+    Assert.assertNull(NoRestrictionPolicy.instance().createSegmentPruner());
+  }
 }

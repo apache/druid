@@ -264,17 +264,30 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             className: goToTask ? undefined : 'padded',
             width: 95,
             Cell({ value }) {
-              if (!goToTask) return `Worker${value}`;
-              const taskId = `${execution.id}-worker${value}_0`;
-              return (
-                <TableClickableCell
-                  hoverIcon={IconNames.SHARE}
-                  tooltip={`Go to task: ${taskId}`}
-                  onClick={() => {
-                    goToTask(taskId);
-                  }}
-                >{`Worker${value}`}</TableClickableCell>
-              );
+              const workerStates = execution.workers?.[String(value)];
+              const workerState = workerStates?.[workerStates.length - 1];
+              const label = `Worker${value}`;
+
+              const workerRef = workerState?.workerDesc || workerState?.workerId;
+              if (goToTask && workerRef && !/:\d+$/.test(workerRef)) {
+                return (
+                  <TableClickableCell
+                    hoverIcon={IconNames.SHARE}
+                    tooltip={`Go to task: ${workerRef}`}
+                    onClick={() => {
+                      goToTask(workerRef);
+                    }}
+                  >
+                    {label}
+                  </TableClickableCell>
+                );
+              }
+
+              if (workerRef) {
+                return <span data-tooltip={workerRef}>{label}</span>;
+              }
+
+              return label;
             },
           } as Column<SimpleWideCounter>,
           {
@@ -366,6 +379,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                             c.loadTime,
                             c.loadWait,
                           )}
+                        />
+                      </>
+                    )}
+                    {Boolean(c.queries || c.totalQueries) && (
+                      <>
+                        {' '}
+                        &nbsp;{' '}
+                        <Icon
+                          icon={IconNames.ARROW_BOTTOM_LEFT}
+                          data-tooltip={`Realtime queries (${formatInteger(
+                            c.queries || 0,
+                          )} / ${formatInteger(c.totalQueries || 0)})`}
                         />
                       </>
                     )}
@@ -541,6 +566,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const loadBytes = stages.getTotalCounterForStage(stage, inputCounter, 'loadBytes');
     const loadTime = stages.getTotalCounterForStage(stage, inputCounter, 'loadTime');
     const loadWait = stages.getTotalCounterForStage(stage, inputCounter, 'loadWait');
+    const queries = stages.getTotalCounterForStage(stage, inputCounter, 'queries');
+    const totalQueries = stages.getTotalCounterForStage(stage, inputCounter, 'totalQueries');
     const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
@@ -581,6 +608,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               className="load-indicator"
               icon={IconNames.IMPORT}
               data-tooltip={formatLoadTooltip(loadFiles, loadBytes, loadTime, loadWait)}
+            />
+          </>
+        )}
+        {Boolean(queries || totalQueries) && (
+          <>
+            {' '}
+            &nbsp;{' '}
+            <Icon
+              icon={IconNames.ARROW_BOTTOM_LEFT}
+              data-tooltip={`Realtime queries (${formatInteger(queries || 0)} / ${formatInteger(
+                totalQueries || 0,
+              )})`}
             />
           </>
         )}
@@ -972,7 +1011,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <div>{formatInteger(value)}</div>
                   <div
                     className="detail-line"
-                    data-tooltip="Workers are counted as inactive until they report starting to read rows from their input."
+                    data-tooltip="Workers are counted as active once they report any activity."
                   >{`${formatInteger(inactiveWorkers)} inactive`}</div>
                 </div>
               );

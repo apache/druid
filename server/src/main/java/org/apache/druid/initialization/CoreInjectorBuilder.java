@@ -96,16 +96,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
 
   public CoreInjectorBuilder forServer()
   {
-    forServerWithoutJetty();
-    add(JettyServerModule.class);
-    return this;
-  }
-
-  /**
-   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
-   */
-  public CoreInjectorBuilder forServerWithoutJetty()
-  {
     withLogging();
     withLifecycle();
     add(
@@ -144,7 +134,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new ServiceClientModule(),
         new StorageConnectorModule(),
         new CatalogCoreModule(),
-        new DefaultServerHolderModule()
+        new DefaultServerHolderModule(),
+        JettyServerModule.class
     );
     return this;
   }

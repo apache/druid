@@ -35,7 +35,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -90,10 +89,10 @@ public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(2, historyAfterTermination.size());
     Assertions.assertInstanceOf(NoopSupervisorSpec.class, historyAfterTermination.get(0).getSpec());
 
-    // Wait until the cleanup metric has been emitted
-    coordinator.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("metadata/kill/supervisor/count")
-                      .hasValueMatching(Matchers.greaterThanOrEqualTo(1L))
+    // Wait until both entries have been cleaned up.
+    coordinator.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("metadata/kill/supervisor/count"),
+        aggregate -> aggregate.hasSumAtLeast(2)
     );
 
     // Verify that the history now returns 404 Not Found

@@ -33,6 +33,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
 import org.apache.druid.frame.processor.FrameChannelMixer;
+import org.apache.druid.frame.processor.FrameCombinerFactory;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessorDecorator;
 import org.apache.druid.frame.processor.OutputChannel;
@@ -59,6 +60,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -73,11 +75,17 @@ public class StandardShuffleOperations
 {
   private final ExecutionContext executionContext;
   private final WorkOrder workOrder;
+  @Nullable
+  private final FrameCombinerFactory combinerFactory;
 
-  public StandardShuffleOperations(final ExecutionContext executionContext)
+  public StandardShuffleOperations(
+      final ExecutionContext executionContext,
+      @Nullable final FrameCombinerFactory combinerFactory
+  )
   {
     this.executionContext = executionContext;
     this.workOrder = executionContext.workOrder();
+    this.combinerFactory = combinerFactory;
   }
 
   /**
@@ -224,7 +232,8 @@ public class StandardShuffleOperations
               stageDefinition.getShuffleSpec().limitHint(),
               executionContext.cancellationId(),
               executionContext.counters().sortProgress(),
-              executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
+              executionContext.frameContext().frameWriterSpec().getRemoveNullBytes(),
+              combinerFactory
           );
 
           return FutureUtils.transform(
@@ -402,7 +411,8 @@ public class StandardShuffleOperations
                       // There's a single SuperSorterProgressTrackerCounter per worker, but workers that do local
                       // sorting have a SuperSorter per partition.
                       new SuperSorterProgressTracker(),
-                      executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
+                      executionContext.frameContext().frameWriterSpec().getRemoveNullBytes(),
+                      combinerFactory
                   );
 
                   return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));

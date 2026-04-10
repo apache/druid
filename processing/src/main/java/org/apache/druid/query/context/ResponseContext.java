@@ -488,8 +488,8 @@ public abstract class ResponseContext
               TIMEOUT_AT,
               NUM_SCANNED_ROWS,
               CPU_CONSUMED_NANOS,
-              TRUNCATED,
-              }
+              TRUNCATED
+          }
       );
     }
 

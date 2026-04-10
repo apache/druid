@@ -88,7 +88,7 @@ public class ExternalInputSliceReader implements InputSliceReader
   {
     final ExternalInputSlice externalInputSlice = (ExternalInputSlice) slice;
     final ChannelCounters inputCounters = counters.channel(CounterNames.inputChannel(inputNumber))
-                                                  .setTotalFiles(slice.fileCount());
+                                                  .addTotalFiles(slice.fileCount());
     final List<LoadableSegment> loadableSegments = new ArrayList<>();
 
     for (final InputSource inputSource : externalInputSlice.getInputSources()) {

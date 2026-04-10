@@ -20,12 +20,23 @@
 package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchModule;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -40,6 +51,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -73,53 +85,64 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [ \"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDefaultSchemaDimensions(List.of("product"))
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
         ),
-        "["
-        + "{\"type\": \"momentSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 10, \"compress\": true},"
-        + "{\"type\": \"momentSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"valueWithNulls\", \"k\": 10, \"compress\": true}"
-        + "]",
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
+        ),
+        List.of(
+            new MomentSketchAggregatorFactory("sketch", "value", 10, true),
+            new MomentSketchAggregatorFactory("sketchWithNulls", "valueWithNulls", 10, true)
+        ),
         0,
         // minTimestamp
         Granularities.NONE,
         10,
         // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"momentSketchMerge\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 10, \"compress\": true},",
-            "    {\"type\": \"momentSketchMerge\", \"name\": \"sketchWithNulls\", \"fieldName\": \"sketchWithNulls\", \"k\": 10, \"compress\": true}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"momentSketchSolveQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"momentSketchMin\", \"name\": \"min\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"momentSketchMax\", \"name\": \"max\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"momentSketchSolveQuantiles\", \"name\": \"quantilesWithNulls\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}},",
-            "    {\"type\": \"momentSketchMin\", \"name\": \"minWithNulls\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}},",
-            "    {\"type\": \"momentSketchMax\", \"name\": \"maxWithNulls\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(
+                        new MomentSketchMergeAggregatorFactory("sketch", 10, true),
+                        new MomentSketchMergeAggregatorFactory("sketchWithNulls", 10, true)
+                    )
+                    .setPostAggregatorSpecs(
+                        new MomentSketchQuantilePostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new MomentSketchMinPostAggregator(
+                            "min",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new MomentSketchMaxPostAggregator(
+                            "max",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new MomentSketchQuantilePostAggregator(
+                            "quantilesWithNulls",
+                            new FieldAccessPostAggregator("sketchWithNulls", "sketchWithNulls"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new MomentSketchMinPostAggregator(
+                            "minWithNulls",
+                            new FieldAccessPostAggregator("sketchWithNulls", "sketchWithNulls")
+                        ),
+                        new MomentSketchMaxPostAggregator(
+                            "maxWithNulls",
+                            new FieldAccessPostAggregator("sketchWithNulls", "sketchWithNulls")
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -169,40 +192,36 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [ \"product\", {\"name\":\"valueWithNulls\", \"type\":\"double\"}],",
-            "      \"dimensionExclusions\": [\"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\", \"valueWithNulls\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDimensions(
+                              List.of(
+                                  new StringDimensionSchema("product"),
+                                  new DoubleDimensionSchema("valueWithNulls")
+                              )
+                          )
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
         ),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
+        ),
+        List.of(new DoubleSumAggregatorFactory("value", "value")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"momentSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 10},",
-            "    {\"type\": \"momentSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"valueWithNulls\", \"k\": 10}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(
+                        new MomentSketchAggregatorFactory("sketch", "value", 10, null),
+                        new MomentSketchAggregatorFactory("sketchWithNulls", "valueWithNulls", 10, null)
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -218,4 +237,3 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
   }
 }
-

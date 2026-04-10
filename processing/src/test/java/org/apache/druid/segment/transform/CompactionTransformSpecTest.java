@@ -21,7 +21,6 @@ package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -52,13 +51,11 @@ public class CompactionTransformSpecTest
     final CompactionTransformSpec expected = new CompactionTransformSpec(
         new SelectorDimFilter("dim1", "foo", null),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
+            new ExpressionVirtualColumn(
+                "isRobotFiltered",
+                "concat(isRobot, '_filtered')",
+                ColumnType.STRING,
+                ExprMacroTable.nil()
             )
         )
     );

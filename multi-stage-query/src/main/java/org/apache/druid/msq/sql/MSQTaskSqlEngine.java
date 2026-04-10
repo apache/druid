@@ -186,10 +186,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         null,
         overlordClient,
         plannerContext,
-        jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory,
-        queryKitSpecFactory
+        terminalStageSpecFactory
     );
   }
 
@@ -221,10 +219,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         destination,
         overlordClient,
         plannerContext,
-        jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory,
-        queryKitSpecFactory
+        terminalStageSpecFactory
     );
   }
 

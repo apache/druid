@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,13 +42,11 @@ public class ReindexingDeletionRuleTest
 
   private final DimFilter testFilter = new EqualityFilter("isRobot", ColumnType.STRING, "true", null);
   private final VirtualColumns virtualColumns = VirtualColumns.create(
-      ImmutableList.of(
-          new ExpressionVirtualColumn(
-              "isRobotFiltered",
-              "concat(isRobot, '_filtered')",
-              ColumnType.STRING,
-              ExprMacroTable.nil()
-          )
+      new ExpressionVirtualColumn(
+          "isRobotFiltered",
+          "concat(isRobot, '_filtered')",
+          ColumnType.STRING,
+          ExprMacroTable.nil()
       )
   );
 

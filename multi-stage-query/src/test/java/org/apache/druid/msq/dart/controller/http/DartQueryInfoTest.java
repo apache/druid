@@ -44,7 +44,8 @@ public class DartQueryInfoTest
         "",
         "",
         DateTimes.of("2000"),
-        StandardQueryState.RUNNING
+        StandardQueryState.RUNNING,
+        1000L
     );
     ObjectMapper jsonMapper = new DefaultObjectMapper().registerModules(new DartWorkerModule().getJacksonModules());
     byte[] bytes = jsonMapper.writeValueAsBytes(dartQueryInfo);

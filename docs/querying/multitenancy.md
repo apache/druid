@@ -43,7 +43,6 @@ and expiration rules.
 Pros of shared datasources:
 
 - Each datasource requires its own JVMs for realtime indexing.
-- Each datasource requires its own YARN resources for Hadoop batch jobs.
 - Each datasource requires its own segment files on disk.
 - For these reasons it can be wasteful to have a very large number of small datasources.
 
@@ -57,7 +56,7 @@ If your multitenant cluster uses shared datasources, most of your queries will l
 dimension. These sorts of queries perform best when data is well-partitioned by tenant. There are a few ways to
 accomplish this.
 
-With batch indexing, you can use [single-dimension partitioning](../ingestion/hadoop.md#single-dimension-range-partitioning)
+With batch indexing, you can use [multi-dimension partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning)
 to partition your data by tenant_id. Druid always partitions by time first, but the secondary partition within each
 time bucket will be on tenant_id.
 

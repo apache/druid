@@ -120,7 +120,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         jsonMapper,
         policyEnforcer,
         injector,
-        new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, null),
+        createWorkerClient(queryId),
         processingConfig,
         segmentWrangler,
         groupingEngine,
@@ -134,5 +134,10 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         dataServerQueryHandlerFactory,
         emitter
     );
+  }
+
+  protected DartWorkerClient createWorkerClient(String queryId)
+  {
+    return new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, null);
   }
 }

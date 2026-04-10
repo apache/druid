@@ -125,7 +125,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(
+      String dataSource,
+      List<Interval> intervals
+  )
   {
     return List.of();
   }
@@ -257,6 +260,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
+  }
+
+  @Override
+  public int insertIntoUpgradeSegmentsTable(
+      Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
   }
 
   @Override

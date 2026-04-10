@@ -21,15 +21,15 @@ package org.apache.druid.server.compaction;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -62,18 +62,15 @@ public class InlineReindexingRuleProviderTest
         null,
         null,
         null,
-        null,
         null
     );
 
     Assertions.assertNotNull(provider.getDeletionRules());
     Assertions.assertTrue(provider.getDeletionRules().isEmpty());
-    Assertions.assertNotNull(provider.getIOConfigRules());
-    Assertions.assertTrue(provider.getIOConfigRules().isEmpty());
-    Assertions.assertNotNull(provider.getSegmentGranularityRules());
-    Assertions.assertTrue(provider.getSegmentGranularityRules().isEmpty());
-    Assertions.assertNotNull(provider.getTuningConfigRules());
-    Assertions.assertTrue(provider.getTuningConfigRules().isEmpty());
+    Assertions.assertNotNull(provider.getPartitioningRules());
+    Assertions.assertTrue(provider.getPartitioningRules().isEmpty());
+    Assertions.assertNotNull(provider.getIndexSpecRules());
+    Assertions.assertTrue(provider.getIndexSpecRules().isEmpty());
     Assertions.assertTrue(provider.getDataSchemaRules().isEmpty());
   }
 
@@ -105,28 +102,20 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_allNonAdditiveRules_validateNonAdditivity()
   {
-    // Test IOConfig rules
+    // Test partitioning rules
     testNonAdditivity(
-        "ioConfig",
-        this::createIOConfigRule,
-        InlineReindexingRuleProvider.Builder::ioConfigRules,
-        InlineReindexingRuleProvider::getIOConfigRule
+        "partitioning",
+        this::createPartitioningRule,
+        InlineReindexingRuleProvider.Builder::partitioningRules,
+        InlineReindexingRuleProvider::getPartitioningRule
     );
 
-    // Test segment granularity rules
+    // Test index spec rules
     testNonAdditivity(
-        "segmentGranularity",
-        this::createSegmentGranularityRule,
-        InlineReindexingRuleProvider.Builder::segmentGranularityRules,
-        InlineReindexingRuleProvider::getSegmentGranularityRule
-    );
-
-    // Test tuning config rules
-    testNonAdditivity(
-        "tuningConfig",
-        this::createTuningConfigRule,
-        InlineReindexingRuleProvider.Builder::tuningConfigRules,
-        InlineReindexingRuleProvider::getTuningConfigRule
+        "indexSpec",
+        this::createIndexSpecRule,
+        InlineReindexingRuleProvider.Builder::indexSpecRules,
+        InlineReindexingRuleProvider::getIndexSpecRule
     );
 
     testNonAdditivity(
@@ -141,27 +130,23 @@ public class InlineReindexingRuleProviderTest
   public void test_allRuleTypesWireCorrectly_withInterval()
   {
     ReindexingDeletionRule filterRule = createFilterRule("filter", Period.days(30));
-    ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
-    ReindexingSegmentGranularityRule segmentGranularityRule = createSegmentGranularityRule("segmentGranularity", Period.days(30));
-    ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
+    ReindexingPartitioningRule partitioningRule = createPartitioningRule("partitioning", Period.days(30));
+    ReindexingIndexSpecRule indexSpecRule = createIndexSpecRule("indexSpec", Period.days(30));
     ReindexingDataSchemaRule dataSchemaRule = createDataSchemaRule("dataSchema", Period.days(30));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .deletionRules(ImmutableList.of(filterRule))
-        .ioConfigRules(ImmutableList.of(ioConfigRule))
-        .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
-        .tuningConfigRules(ImmutableList.of(tuningConfigRule))
+        .partitioningRules(ImmutableList.of(partitioningRule))
+        .indexSpecRules(ImmutableList.of(indexSpecRule))
         .dataSchemaRules(ImmutableList.of(dataSchemaRule))
         .build();
 
     Assertions.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
     Assertions.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
-    Assertions.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("partitioning", provider.getPartitioningRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assertions.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
-
-    Assertions.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("indexSpec", provider.getIndexSpecRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assertions.assertEquals("dataSchema", provider.getDataSchemaRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
   }
@@ -225,35 +210,75 @@ public class InlineReindexingRuleProviderTest
     Assertions.assertEquals("inline", provider.getType());
   }
 
+  @Test
+  public void test_equals_sameObject_returnsTrue()
+  {
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
+
+    Assertions.assertEquals(provider, provider);
+  }
+
+  @Test
+  public void test_equals_null_returnsFalse()
+  {
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
+
+    Assertions.assertNotEquals(null, provider);
+  }
+
+  @Test
+  public void test_equals_equalObjects_returnsTrue()
+  {
+    ReindexingDeletionRule rule = createFilterRule("filter-30d", Period.days(30));
+
+    InlineReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(rule))
+        .build();
+    InlineReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(rule))
+        .build();
+
+    Assertions.assertEquals(provider1, provider2);
+    Assertions.assertEquals(provider1.hashCode(), provider2.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentRules_returnsFalse()
+  {
+    InlineReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(createFilterRule("filter-30d", Period.days(30))))
+        .build();
+    InlineReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .deletionRules(ImmutableList.of(createFilterRule("filter-60d", Period.days(60))))
+        .build();
+
+    Assertions.assertNotEquals(provider1, provider2);
+  }
+
   private ReindexingDeletionRule createFilterRule(String id, Period period)
   {
     return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
   }
 
-  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
+  private ReindexingPartitioningRule createPartitioningRule(String id, Period period)
   {
-    return new ReindexingIOConfigRule(id, null, period, new UserCompactionTaskIOConfig(null));
-  }
-
-  private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)
-  {
-    return new ReindexingSegmentGranularityRule(
+    return new ReindexingPartitioningRule(
         id,
         null,
         period,
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null
     );
   }
 
-  private ReindexingTuningConfigRule createTuningConfigRule(String id, Period period)
+  private ReindexingIndexSpecRule createIndexSpecRule(String id, Period period)
   {
-    return new ReindexingTuningConfigRule(
+    return new ReindexingIndexSpecRule(
         id,
         null,
         period,
-        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null
-        )
+        IndexSpec.getDefault()
     );
   }
 

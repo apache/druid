@@ -224,13 +224,11 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   {
     final List<Object> results = new ArrayList<>(rowsPerSegment);
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v",
-                expression,
-                ExpressionType.toColumnType(outputType),
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v",
+            expression,
+            ExpressionType.toColumnType(outputType),
+            TestExprMacroTable.INSTANCE
         )
     );
     final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);

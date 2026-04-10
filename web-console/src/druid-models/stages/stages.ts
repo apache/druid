@@ -180,6 +180,8 @@ export interface ChannelCounter {
   loadTime?: number[];
   loadWait?: number[];
   loadFiles?: number[];
+  queries?: number[];
+  totalQueries?: number[];
 }
 
 export type ChannelFields =
@@ -191,7 +193,9 @@ export type ChannelFields =
   | 'loadBytes'
   | 'loadTime'
   | 'loadWait'
-  | 'loadFiles';
+  | 'loadFiles'
+  | 'queries'
+  | 'totalQueries';
 
 export interface SortProgressCounter {
   type: 'sortProgress';
@@ -325,6 +329,8 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     loadTime: 0,
     loadWait: 0,
     loadFiles: 0,
+    queries: 0,
+    totalQueries: 0,
   };
 }
 
@@ -627,6 +633,8 @@ export class Stages {
               loadTime: sum(c.loadTime || []),
               loadWait: sum(c.loadWait || []),
               loadFiles: sum(c.loadFiles || []),
+              queries: sum(c.queries || []),
+              totalQueries: sum(c.totalQueries || []),
             }
           : zeroChannelFields();
       }
@@ -644,18 +652,30 @@ export class Stages {
 
     const channelCounters = this.getChannelCounterNamesForStage(stage);
 
-    // Calculate and return the number of workers that have zero count across all inputChannelCounters
+    // Calculate and return the number of workers that have zero interesting counters
     return sum(
-      Object.values(forStageCounters).map(stageCounters =>
-        Number(
+      Object.values(forStageCounters).map(stageCounters => {
+        // Check if the worker has any wall time recorded
+        const { cpu } = stageCounters;
+        if (cpu) {
+          const totalWall = sum(CPUS_COUNTER_FIELDS, field => cpu[field]?.wall || 0);
+          if (totalWall > 0) return 0;
+        }
+
+        // Check if the worker has any channel activity
+        return Number(
           channelCounters.every(channel => {
             const c = stageCounters[channel];
             if (!c) return true;
-            const totalRows = sum(c.rows || []);
-            return totalRows === 0;
+            return (
+              sum(c.rows || []) === 0 &&
+              sum(c.files || []) === 0 &&
+              sum(c.bytes || []) === 0 &&
+              sum(c.frames || []) === 0
+            );
           }),
-        ),
-      ),
+        );
+      }),
     );
   }
 

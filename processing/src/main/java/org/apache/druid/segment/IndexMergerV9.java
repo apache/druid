@@ -20,12 +20,12 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -94,10 +94,9 @@ public class IndexMergerV9 extends IndexMergerBase
   }
 
   /**
-   * This constructor is used only for Hadoop ingestion and Tranquility as they do not support storing empty columns yet.
-   * See {@code HadoopDruidIndexerConfig} and {@code PlumberSchool} for hadoop ingestion and Tranquility, respectively.
+   * This constructor is used only for tests
    */
-  @Inject
+  @VisibleForTesting
   public IndexMergerV9(
       ObjectMapper mapper,
       IndexIO indexIO,

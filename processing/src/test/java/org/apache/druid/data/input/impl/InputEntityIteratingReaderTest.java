@@ -191,7 +191,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
   {
     final InputEntityIteratingReader inputReader = new InputEntityIteratingReader(
         new InputRowSchema(
-            new TimestampSpec(null, null, null),
+            TimestampSpec.DEFAULT,
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
             ),

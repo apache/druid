@@ -99,19 +99,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    return fullyQualifiedStorageDirectory.get();
-  }
-
   @Override
   public DataSegment push(final File inDir, final DataSegment segment, final boolean useUniquePath) throws IOException
   {
@@ -286,18 +273,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
             segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
         ),
         segment.getVersion().replace(':', '_')
-    );
-  }
-
-  @Override
-  public String makeIndexPathName(DataSegment dataSegment, String indexName)
-  {
-    // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
-    return StringUtils.format(
-        "./%s/%d_%s",
-        this.getStorageDir(dataSegment, false),
-        dataSegment.getShardSpec().getPartitionNum(),
-        indexName
     );
   }
 }

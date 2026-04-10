@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [ "17", "21" ]
-        pattern: [ "C*", "D*,H*,N*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
+        pattern: [ "C*", "N*", "D*,H*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true

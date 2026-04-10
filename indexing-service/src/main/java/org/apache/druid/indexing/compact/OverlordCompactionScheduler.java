@@ -183,7 +183,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
     this.brokerClient = brokerClient;
     this.activeSupervisors = new ConcurrentHashMap<>();
-    this.datasourceToCompactionSnapshot = new AtomicReference<>();
+    this.datasourceToCompactionSnapshot = new AtomicReference<>(Collections.emptyMap());
     this.latestJobQueue = new AtomicReference<>();
 
     this.taskActionClientFactory = taskActionClientFactory;

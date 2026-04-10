@@ -21,15 +21,15 @@ package org.apache.druid.server.compaction;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -168,74 +168,50 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getSegmentGranularityRules_compositingBehavior()
+  public void test_getPartitioningRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().segmentGranularityRules(rules).build(),
-        ComposingReindexingRuleProvider::getSegmentGranularityRules,
-        createSegmentGranularityRule("rule1", Period.days(7)),
-        createSegmentGranularityRule("rule2", Period.days(30)),
-        ReindexingSegmentGranularityRule::getId
+        rules -> InlineReindexingRuleProvider.builder().partitioningRules(rules).build(),
+        ComposingReindexingRuleProvider::getPartitioningRules,
+        createPartitioningRule("rule1", Period.days(7)),
+        createPartitioningRule("rule2", Period.days(30)),
+        ReindexingPartitioningRule::getId
     );
   }
 
   @Test
-  public void test_getIOConfigRules_compositingBehavior()
+  public void test_getIndexSpecRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
-        ComposingReindexingRuleProvider::getIOConfigRules,
-        createIOConfigRule("rule1", Period.days(7)),
-        createIOConfigRule("rule2", Period.days(30)),
-        ReindexingIOConfigRule::getId
+        rules -> InlineReindexingRuleProvider.builder().indexSpecRules(rules).build(),
+        ComposingReindexingRuleProvider::getIndexSpecRules,
+        createIndexSpecRule("rule1", Period.days(7)),
+        createIndexSpecRule("rule2", Period.days(30)),
+        ReindexingIndexSpecRule::getId
     );
   }
 
   @Test
-  public void test_getIOConfigRuleWithInterval_compositingBehavior()
+  public void test_getIndexSpecRuleWithInterval_compositingBehavior()
   {
     testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
-        (provider, it) -> provider.getIOConfigRule(it.interval, it.time),
-        createIOConfigRule("rule1", Period.days(7)),
-        createIOConfigRule("rule2", Period.days(30)),
-        ReindexingIOConfigRule::getId
+        rules -> InlineReindexingRuleProvider.builder().indexSpecRules(rules).build(),
+        (provider, it) -> provider.getIndexSpecRule(it.interval, it.time),
+        createIndexSpecRule("rule1", Period.days(7)),
+        createIndexSpecRule("rule2", Period.days(30)),
+        ReindexingIndexSpecRule::getId
     );
   }
 
   @Test
-  public void test_getTuningConfigRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().tuningConfigRules(rules).build(),
-        ComposingReindexingRuleProvider::getTuningConfigRules,
-        createTuningConfigRule("rule1", Period.days(7)),
-        createTuningConfigRule("rule2", Period.days(30)),
-        ReindexingTuningConfigRule::getId
-    );
-  }
-
-  @Test
-  public void test_getTuningConfigRuleWithInterval_compositingBehavior()
+  public void test_getPartitioningRuleWithInterval_compositingBehavior()
   {
     testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().tuningConfigRules(rules).build(),
-        (provider, it) -> provider.getTuningConfigRule(it.interval, it.time),
-        createTuningConfigRule("rule1", Period.days(7)),
-        createTuningConfigRule("rule2", Period.days(30)),
-        ReindexingTuningConfigRule::getId
-    );
-  }
-
-  @Test
-  public void test_getSegmentGranularityRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().segmentGranularityRules(rules).build(),
-        (provider, it) -> provider.getSegmentGranularityRule(it.interval, it.time),
-        createSegmentGranularityRule("rule1", Period.days(7)),
-        createSegmentGranularityRule("rule2", Period.days(30)),
-        ReindexingSegmentGranularityRule::getId
+        rules -> InlineReindexingRuleProvider.builder().partitioningRules(rules).build(),
+        (provider, it) -> provider.getPartitioningRule(it.interval, it.time),
+        createPartitioningRule("rule1", Period.days(7)),
+        createPartitioningRule("rule2", Period.days(30)),
+        ReindexingPartitioningRule::getId
     );
   }
 
@@ -425,7 +401,7 @@ public class ComposingReindexingRuleProviderTest
    */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new InlineReindexingRuleProvider(null, null, null, null, null)
+    return new InlineReindexingRuleProvider(null, null, null, null)
     {
       @Override
       public boolean isReady()
@@ -446,35 +422,25 @@ public class ComposingReindexingRuleProviderTest
     );
   }
 
-  private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)
+  private ReindexingPartitioningRule createPartitioningRule(String id, Period period)
   {
-    return new ReindexingSegmentGranularityRule(
+    return new ReindexingPartitioningRule(
         id,
-        "Test granularity rule",
+        "Test partitioning rule",
         period,
-        Granularities.DAY
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null
     );
   }
 
-  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
+  private ReindexingIndexSpecRule createIndexSpecRule(String id, Period period)
   {
-    return new ReindexingIOConfigRule(
+    return new ReindexingIndexSpecRule(
         id,
-        "Test IO config rule",
+        "Test index spec rule",
         period,
-        new UserCompactionTaskIOConfig(null)
-    );
-  }
-
-  private ReindexingTuningConfigRule createTuningConfigRule(String id, Period period)
-  {
-    return new ReindexingTuningConfigRule(
-        id,
-        "Test tuning config rule",
-        period,
-        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null
-        )
+        IndexSpec.getDefault()
     );
   }
 

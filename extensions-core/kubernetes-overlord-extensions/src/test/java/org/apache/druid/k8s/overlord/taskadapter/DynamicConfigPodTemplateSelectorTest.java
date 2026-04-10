@@ -37,7 +37,6 @@ import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynami
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.Selector;
 import org.apache.druid.k8s.overlord.execution.SelectorBasedPodTemplateSelectStrategy;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,13 +70,13 @@ public class DynamicConfigPodTemplateSelectorTest
   @Test
   public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
   {
-    Exception exception = Assert.assertThrows(
-        "No base prop should throw an IAE",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             new Properties(),
             effectiveConfig
-        )
+        ),
+        "No base prop should throw an IAE"
     );
     Assertions.assertEquals(
         exception.getMessage(),
@@ -93,13 +92,13 @@ public class DynamicConfigPodTemplateSelectorTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Exception exception = Assert.assertThrows(
-        "Empty base pod template should throw a exception",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             props,
             effectiveConfig
-        )
+        ),
+        "Empty base pod template should throw a exception"
     );
 
     Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
@@ -195,7 +194,7 @@ public class DynamicConfigPodTemplateSelectorTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
-    Assert.assertThrows(IAE.class, () -> new DynamicConfigPodTemplateSelector(
+    Assertions.assertThrows(IAE.class, () -> new DynamicConfigPodTemplateSelector(
             props,
             effectiveConfig
         )
@@ -301,10 +300,10 @@ public class DynamicConfigPodTemplateSelectorTest
     // Now we change the file to an empty file, and expect an assertion.
     mapper.writeValue(baseTemplatePath.toFile(), null);
 
-    Exception exception = Assert.assertThrows(
-        "Empty base pod template should throw a exception",
+    Exception exception = Assertions.assertThrows(
         IAE.class,
-        () -> adapter.getPodTemplateForTask(task)
+        () -> adapter.getPodTemplateForTask(task),
+        "Empty base pod template should throw a exception"
     );
 
     Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file"));

@@ -29,8 +29,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.DruidNode;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -62,8 +62,8 @@ public class K8sDruidNodeAnnouncerTest
     K8sDruidNodeAnnouncer announcer = new K8sDruidNodeAnnouncer(podInfo, discoveryConfig, mockK8sApiClient, jsonMapper);
     announcer.announce(testNode);
 
-    Assert.assertEquals(podInfo.getPodName(), podNameArg.getValue());
-    Assert.assertEquals(podInfo.getPodNamespace(), namespaceArg.getValue());
+    Assertions.assertEquals(podInfo.getPodName(), podNameArg.getValue());
+    Assertions.assertEquals(podInfo.getPodNamespace(), namespaceArg.getValue());
 
     List<Map<String, Object>> actualPatchList = jsonMapper.readValue(
         patchArg.getValue(),
@@ -92,7 +92,7 @@ public class K8sDruidNodeAnnouncerTest
             "value", jsonMapper.writeValueAsString(testNode)
         )
     );
-    Assert.assertEquals(expectedPatchList, actualPatchList);
+    Assertions.assertEquals(expectedPatchList, actualPatchList);
   }
 
   @Test
@@ -108,8 +108,8 @@ public class K8sDruidNodeAnnouncerTest
     K8sDruidNodeAnnouncer announcer = new K8sDruidNodeAnnouncer(podInfo, discoveryConfig, mockK8sApiClient, jsonMapper);
     announcer.unannounce(testNode);
 
-    Assert.assertEquals(podInfo.getPodName(), podNameArg.getValue());
-    Assert.assertEquals(podInfo.getPodNamespace(), namespaceArg.getValue());
+    Assertions.assertEquals(podInfo.getPodName(), podNameArg.getValue());
+    Assertions.assertEquals(podInfo.getPodNamespace(), namespaceArg.getValue());
 
     List<Map<String, String>> actualPatchList = jsonMapper.readValue(
         patchArg.getValue(),
@@ -134,6 +134,6 @@ public class K8sDruidNodeAnnouncerTest
             "path", "/metadata/annotations/druidNodeInfo-router"
         )
     );
-    Assert.assertEquals(expectedPatchList, actualPatchList);
+    Assertions.assertEquals(expectedPatchList, actualPatchList);
   }
 }

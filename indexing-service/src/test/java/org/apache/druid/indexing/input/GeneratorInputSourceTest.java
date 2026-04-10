@@ -133,7 +133,7 @@ public class GeneratorInputSourceTest
     );
 
     InputRowSchema rowSchema = new InputRowSchema(
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null
     );

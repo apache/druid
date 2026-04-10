@@ -27,11 +27,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -40,12 +43,16 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +62,7 @@ import java.util.concurrent.Future;
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
  */
-public class SupervisorManager
+public class SupervisorManager implements SupervisorStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
@@ -83,6 +90,32 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  @Override
+  public Collection<SupervisorStatsProvider.SupervisorStats> getSupervisorStats()
+  {
+    List<SupervisorStatsProvider.SupervisorStats> stats = new ArrayList<>();
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+
+      final Pair<Supervisor, SupervisorSpec> pair = entry.getValue();
+      if (pair == null || pair.lhs == null) {
+        continue;
+      }
+      final Supervisor supervisor = pair.lhs;
+      final SupervisorSpec supervisorSpec = pair.rhs;
+      final SupervisorStateManager.State state = supervisor.getState();
+
+      stats.add(new SupervisorStatsProvider.SupervisorStats(
+          supervisorSpec.getId(),
+          supervisorSpec.getType(),
+          state == null ? "UNKNOWN" : state.getBasicState().toString(),
+          DefaultQueryMetrics.getTableNamesAsString(new HashSet<>(supervisorSpec.getDataSources())),
+          supervisorSpec.getSource() == null ? "" : supervisorSpec.getSource(),
+          state == null ? "UNKNOWN" : state.toString()
+      ));
+    }
+    return stats;
   }
 
   /**
@@ -427,6 +460,55 @@ public class SupervisorManager
     return false;
   }
 
+  /**
+   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * that is currently waiting to publish offsets for the given partitions.
+   *
+   * @return true only if the given {@param supervisorId} represents a
+   * {@link SeekableStreamSupervisor} and the supervisor has other tasks that
+   * are currently publishing offsets to an overlapping set of partitions.
+   */
+  public boolean isAnotherTaskGroupPublishingToPartitions(
+      String supervisorId,
+      String taskId,
+      DataSourceMetadata startMetadata
+  )
+  {
+    InvalidInput.conditionalException(supervisorId != null, "'supervisorId' cannot be null");
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor == null || supervisor.rhs == null) {
+      throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
+    }
+    if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
+      return false;
+    }
+
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
+      throw InvalidInput.exception(
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
+      );
+    }
+
+    try {
+      final Set<Object> partitionIds = Set.copyOf(
+          ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
+              .getSeekableStreamSequenceNumbers()
+              .getPartitionSequenceNumberMap()
+              .keySet()
+      );
+      return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
+          .isAnotherTaskGroupPublishingToPartitions(taskId, partitionIds);
+    }
+    catch (Exception e) {
+      log.error(
+          e,
+          "Failed to check if a publish is pending for supervisor[%s], metadata[%s]",
+          supervisorId, startMetadata
+      );
+      return false;
+    }
+  }
 
   /**
    * Stops a supervisor with a given id and then removes it from the list.

@@ -27,6 +27,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
@@ -43,7 +44,6 @@ import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
@@ -60,11 +60,13 @@ import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private static final Logger log = new Logger(MSQTestWorkerContext.class);
   private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
 
   private final String workerId;
@@ -72,7 +74,7 @@ public class MSQTestWorkerContext implements WorkerContext
   private final ObjectMapper mapper;
   private final Injector injector;
   private final Map<String, WorkerRunRef> inMemoryWorkers;
-  private final File file = FileUtils.createTempDir();
+  private final File file;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
   private final ServiceEmitter serviceEmitter;
@@ -92,6 +94,7 @@ public class MSQTestWorkerContext implements WorkerContext
   )
   {
     this.workerId = workerId;
+    this.file = FileUtils.createTempDir("msq-worker-" + workerId);
     this.inMemoryWorkers = inMemoryWorkers;
     this.controller = controller;
     this.mapper = mapper;
@@ -158,7 +161,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
   }
 
   @Override
@@ -206,6 +209,12 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public void close()
   {
+    try {
+      FileUtils.deleteDirectory(file);
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to delete temp dir[%s] for worker[%s]", file, workerId);
+    }
   }
 
   class FrameContextImpl implements FrameContext
@@ -229,12 +238,6 @@ public class MSQTestWorkerContext implements WorkerContext
     public SegmentWrangler segmentWrangler()
     {
       return injector.getInstance(SegmentWrangler.class);
-    }
-
-    @Override
-    public GroupingEngine groupingEngine()
-    {
-      return injector.getInstance(GroupingEngine.class);
     }
 
     @Override

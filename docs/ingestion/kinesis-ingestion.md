@@ -136,7 +136,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 
 #### Data format
 
-The Kinesis indexing service supports both [`inputFormat`](data-formats.md#input-format) and [`parser`](data-formats.md#parser) to specify the data format. Use the `inputFormat` to specify the data format for the Kinesis indexing service unless you need a format only supported by the legacy `parser`. For more information, see [Source input formats](data-formats.md).
+The Kinesis indexing service supports [`inputFormat`](data-formats.md#input-format). For more information, see [Source input formats](data-formats.md).
 
 The Kinesis indexing service supports the following values for `inputFormat`:
 
@@ -146,8 +146,7 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `json`
 * `avro_stream`
 * `protobuf`
-
-You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
+* `thrift`
 
 ### Tuning configuration
 

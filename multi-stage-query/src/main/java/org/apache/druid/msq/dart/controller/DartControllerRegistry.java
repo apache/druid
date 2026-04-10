@@ -32,6 +32,11 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
+import org.apache.druid.msq.exec.ControllerRegistry;
+import org.apache.druid.msq.indexing.report.MSQStatusReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -51,7 +56,7 @@ import java.util.concurrent.TimeUnit;
  * Registry for actively-running {@link Controller} and recently-completed {@link TaskReport}.
  */
 @ManageLifecycle
-public class DartControllerRegistry
+public class DartControllerRegistry implements ControllerRegistry
 {
   /**
    * Minimum frequency for checking if {@link #cleanupExpiredReports()} needs to be run.
@@ -124,6 +129,7 @@ public class DartControllerRegistry
    * Add a controller. Throws {@link DruidException} if a controller with the same {@link Controller#queryId()} is
    * already registered.
    */
+  @Override
   public void register(ControllerHolder holder)
   {
     final String dartQueryId = holder.getController().queryId();
@@ -138,6 +144,7 @@ public class DartControllerRegistry
    * time afterwards, based on {@link DartControllerConfig#getMaxRetainedReportCount()} and
    * {@link DartControllerConfig#getMaxRetainedReportDuration()}.
    */
+  @Override
   public void deregister(ControllerHolder holder, @Nullable TaskReport.ReportMap completeReport)
   {
     final String dartQueryId = holder.getController().queryId();
@@ -166,7 +173,7 @@ public class DartControllerRegistry
         completeReports.put(
             dartQueryId,
             new QueryInfoAndReport(
-                DartQueryInfo.fromControllerHolder(holder),
+                createQueryInfo(holder).withDurationMs(getDurationMs(completeReport)),
                 completeReport,
                 DateTimes.nowUtc()
             )
@@ -253,6 +260,14 @@ public class DartControllerRegistry
   }
 
   /**
+   * Create {@link DartQueryInfo} from a {@link ControllerHolder}.
+   */
+  protected DartQueryInfo createQueryInfo(final ControllerHolder controllerHolder)
+  {
+    return DartQueryInfo.fromControllerHolder(controllerHolder);
+  }
+
+  /**
    * Removes reports that have exceeded {@link DartControllerConfig#getMaxRetainedReportDuration()}.
    */
   private void cleanupExpiredReports()
@@ -275,12 +290,28 @@ public class DartControllerRegistry
     }
   }
 
-  private static QueryInfoAndReport getQueryDetails(final ControllerHolder controllerHolder)
+  private QueryInfoAndReport getQueryDetails(final ControllerHolder controllerHolder)
   {
     return new QueryInfoAndReport(
-        DartQueryInfo.fromControllerHolder(controllerHolder),
+        createQueryInfo(controllerHolder),
         controllerHolder.getController().liveReports(),
         DateTimes.nowUtc()
     );
+  }
+
+  /**
+   * Extracts durationMs from the {@link MSQStatusReport} within a {@link TaskReport.ReportMap}, if present.
+   */
+  @Nullable
+  private static Long getDurationMs(final TaskReport.ReportMap reportMap)
+  {
+    final TaskReport msqReport = reportMap.get(MSQTaskReport.REPORT_KEY);
+    if (msqReport instanceof MSQTaskReport) {
+      final MSQTaskReportPayload payload = ((MSQTaskReport) msqReport).getPayload();
+      if (payload != null && payload.getStatus() != null) {
+        return payload.getStatus().getDurationMs();
+      }
+    }
+    return null;
   }
 }

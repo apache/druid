@@ -72,6 +72,7 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -170,6 +171,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
   }
@@ -482,6 +484,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
@@ -534,6 +537,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
@@ -586,6 +590,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
@@ -696,6 +701,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();

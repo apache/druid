@@ -27,8 +27,6 @@ import TabItem from '@theme/TabItem';
 
 Apache Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
 
-Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long-running Druid clusters.
-
 ## How it works
 
 The K8s extension builds a pod spec for each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the Druid deployment, thus restarting pods or doing upgrades has no effect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
@@ -910,6 +908,35 @@ was [okhttp](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient
 |`druid.indexer.runner.k8sAndWorker.http.vertx.workerPoolSize`|`Integer`|...|20|No|
 |`druid.indexer.runner.k8sAndWorker.http.vertx.eventLoopPoolSize`|`Integer`|...|`2 * number cores`|No|
 |`druid.indexer.runner.k8sAndWorker.http.vertx.internalBlockingPoolSize`|`Integer`|...|20|No|
+
+##### `WebClientOptions` pass-through
+
+The vert.x HTTP client also supports a generic pass-through for any property on the underlying Vert.x [`WebClientOptions`](https://vertx.io/docs/apidocs/io/vertx/ext/web/client/WebClientOptions.html) object (which extends [`HttpClientOptions`](https://vertx.io/docs/apidocs/io/vertx/core/http/HttpClientOptions.html)). This gives operators full control over connection pool behavior, timeouts, and other low-level HTTP client settings without requiring new Druid configuration fields.
+
+Set properties using the prefix `druid.indexer.runner.k8sAndWorker.http.vertx.webClientOptions.<propertyName>`, where `<propertyName>` matches the corresponding setter on `WebClientOptions` (e.g., `setMaxPoolSize` maps to `maxPoolSize`).
+
+**Tuning connection keep-alive timeouts**
+
+This pass-through is particularly useful for environments where an intermediate network component (such as an AWS ALB, or service mesh sidecar) closes idle connections before the client expects it. When this happens, the client may attempt to reuse a connection that the server has already closed, resulting in unexpected connection errors.
+
+To mitigate this, set the client-side keep-alive and idle timeouts to a value **lower** than the shortest server-side timeout in your network path. For example, if your AWS ALB has a 60 second idle timeout (the default), setting the client to 30 seconds ensures the client retires idle connections well before the server does:
+
+```properties
+druid.indexer.runner.k8sAndWorker.http.vertx.webClientOptions.keepAliveTimeout=30
+druid.indexer.runner.k8sAndWorker.http.vertx.webClientOptions.idleTimeout=30
+```
+
+**Commonly useful properties**
+
+|Property|Type|Description|Default|
+|--------|----|-----------|-------|
+|`keepAliveTimeout`|`Integer`|Seconds an idle HTTP keep-alive connection is retained before the client closes it.|`60`|
+|`idleTimeout`|`Integer`|Seconds a connection can remain idle before being closed. Acts as a general safety net alongside `keepAliveTimeout`.|`0` (disabled)|
+|`maxPoolSize`|`Integer`|Maximum number of connections in the pool per endpoint.|`5`|
+|`connectTimeout`|`Integer`|Milliseconds to wait when establishing a new connection.|`60000`|
+|`poolCleanerPeriod`|`Integer`|Milliseconds between pool sweeps that evict connections exceeding the above timeouts.|`1000`|
+
+Any property with a public setter on `WebClientOptions` or its parent classes (`HttpClientOptions`, `ClientOptionsBase`, `TCPSSLOptions`, `NetworkOptions`) can be set through this mechanism.
 
 #### OkHttp Client
 

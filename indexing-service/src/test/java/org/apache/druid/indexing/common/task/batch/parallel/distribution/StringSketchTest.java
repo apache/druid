@@ -74,9 +74,15 @@ public class StringSketchTest
     @Test
     public void abidesEqualsContract()
     {
+      ItemsSketch<StringTuple> red = ItemsSketch.getInstance(StringTuple.class, StringSketch.SKETCH_K, StringSketch.STRING_TUPLE_COMPARATOR);
+      red.update(StringTuple.create("a"));
+      ItemsSketch<StringTuple> blue = ItemsSketch.getInstance(StringTuple.class, StringSketch.SKETCH_K, StringSketch.STRING_TUPLE_COMPARATOR);
+      blue.update(StringTuple.create("b"));
+
       EqualsVerifier.forClass(StringSketch.class)
                     .usingGetClass()
                     .withNonnullFields("delegate")
+                    .withPrefabValues(ItemsSketch.class, red, blue)
                     .verify();
     }
   }

@@ -209,7 +209,7 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
         cursor = FrameProcessors.makeCursor(
             frame,
             frameReader,
-            VirtualColumns.create(Collections.singletonList(hashPartitionVirtualColumn))
+            VirtualColumns.create(hashPartitionVirtualColumn)
         );
 
         cursorRowPartitionNumberSupplier =

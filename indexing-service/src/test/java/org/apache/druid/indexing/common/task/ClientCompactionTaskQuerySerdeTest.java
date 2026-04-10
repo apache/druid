@@ -193,13 +193,14 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     Assert.assertEquals(query.getId(), task.getId());
     Assert.assertEquals(query.getDataSource(), task.getDataSource());
+    Assert.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
     Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
     Assert.assertEquals(
         query.getIoConfig().getInputSpec().getInterval(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getInterval()
     );
     Assert.assertEquals(
-        query.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds(),
+        ((ClientCompactionIntervalSpec) query.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
     Assert.assertEquals(

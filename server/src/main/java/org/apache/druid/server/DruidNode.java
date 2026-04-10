@@ -93,6 +93,10 @@ public class DruidNode
   );
 
   @JsonProperty
+  @NotNull
+  private final String buildRevision = BuildInfo.getBuildRevision();
+
+  @JsonProperty
   private Map<String, String> labels;
 
   public DruidNode(
@@ -264,6 +268,11 @@ public class DruidNode
   public String getVersion()
   {
     return version;
+  }
+
+  public String getBuildRevision()
+  {
+    return buildRevision;
   }
 
   public DruidNode withService(String service)

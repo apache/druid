@@ -94,6 +94,7 @@ public abstract class EmbeddedClusterTestBase
   protected void setup() throws Exception
   {
     cluster = createCluster();
+    cluster.setTestClassName(getClass().getSimpleName());
     cluster.start();
   }
 

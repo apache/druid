@@ -1,0 +1,78 @@
+#!/bin/bash -eu
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -e
+
+# Check if --force flag is provided
+FORCE_BUILD=false
+if [[ "$@" == *"--force"* ]]; then
+  FORCE_BUILD=true
+fi
+
+# Function to check if a file is newer than another
+is_newer_than() {
+  # Returns 0 (true) if $1 is newer than $2, 1 (false) otherwise
+  if [ ! -f "$2" ]; then
+    return 0  # If target doesn't exist, we need to build
+  fi
+  if [ ! -f "$1" ]; then
+    return 1  # If source doesn't exist, we can't build (will error later)
+  fi
+  [ "$1" -nt "$2" ]
+}
+
+SQL_DOCS_OUTPUT="lib/sql-docs.ts"
+SQL_DOCS_SCRIPT="script/create-sql-docs.mjs"
+SQL_DOCS_FILELIST="script/sql-doc-files.txt"
+
+BUILD_SQL_DOCS=false
+
+if [ "$FORCE_BUILD" = true ] || [ ! -f "$SQL_DOCS_OUTPUT" ]; then
+  BUILD_SQL_DOCS=true
+else
+  # Check if create-sql-docs.mjs is newer than output
+  if is_newer_than "$SQL_DOCS_SCRIPT" "$SQL_DOCS_OUTPUT"; then
+    BUILD_SQL_DOCS=true
+  fi
+
+  # Check if sql-doc-files.txt is newer than output
+  if is_newer_than "$SQL_DOCS_FILELIST" "$SQL_DOCS_OUTPUT"; then
+    BUILD_SQL_DOCS=true
+  fi
+
+  # Check if any file listed in sql-doc-files.txt is newer than output
+  if [ -f "$SQL_DOCS_FILELIST" ] && [ "$BUILD_SQL_DOCS" = false ]; then
+    while read -r file; do
+      # Skip empty lines and comments
+      if [[ -z "$file" ]] || [[ "$file" =~ ^[[:space:]]*# ]]; then
+        continue
+      fi
+      if [ -n "$file" ] && is_newer_than "$file" "$SQL_DOCS_OUTPUT"; then
+        BUILD_SQL_DOCS=true
+        break
+      fi
+    done < "$SQL_DOCS_FILELIST"
+  fi
+fi
+
+if [ "$BUILD_SQL_DOCS" = true ]; then
+  echo "Compiling SQL function docs for the web console..."
+  ./script/create-sql-docs.mjs
+else
+  echo "SQL docs are up to date, skipping..."
+fi

@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.column.ColumnHolder;
 
 @JsonTypeName(InsertTimeNullFault.CODE)
@@ -32,6 +33,15 @@ public class InsertTimeNullFault extends BaseMSQFault
   InsertTimeNullFault()
   {
     super(CODE, "Null timestamp (%s) encountered during INSERT or REPLACE.", ColumnHolder.TIME_COLUMN_NAME);
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @JsonCreator

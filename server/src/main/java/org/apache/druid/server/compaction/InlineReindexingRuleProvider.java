@@ -42,7 +42,7 @@ import java.util.Objects;
  * returns {@link ReindexingRule.AppliesToMode#FULL}. Rules with partial or no overlap are excluded.
  * <p>
  * For non-additive rule types, when multiple rules fully match an interval, only the rule with the oldest threshold
- * (largest period) is returned. For example, if both a P30D and P90D granularity rule match an interval, the P90D
+ * (largest period) is returned. For example, if both a P30D and P90D partitioning rule match an interval, the P90D
  * rule is selected because it has the oldest threshold (now - 90 days is older than now - 30 days).
  * <p>
  * Example usage:
@@ -89,25 +89,22 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public static final String TYPE = "inline";
 
   private final List<ReindexingDeletionRule> deletionRules;
-  private final List<ReindexingIOConfigRule> ioConfigRules;
-  private final List<ReindexingSegmentGranularityRule> segmentGranularityRules;
-  private final List<ReindexingTuningConfigRule> tuningConfigRules;
+  private final List<ReindexingPartitioningRule> partitioningRules;
+  private final List<ReindexingIndexSpecRule> indexSpecRules;
   private final List<ReindexingDataSchemaRule> dataSchemaRules;
 
 
   @JsonCreator
   public InlineReindexingRuleProvider(
       @JsonProperty("deletionRules") @Nullable List<ReindexingDeletionRule> deletionRules,
-      @JsonProperty("ioConfigRules") @Nullable List<ReindexingIOConfigRule> ioConfigRules,
-      @JsonProperty("segmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> segmentGranularityRules,
-      @JsonProperty("tuningConfigRules") @Nullable List<ReindexingTuningConfigRule> tuningConfigRules,
+      @JsonProperty("partitioningRules") @Nullable List<ReindexingPartitioningRule> partitioningRules,
+      @JsonProperty("indexSpecRules") @Nullable List<ReindexingIndexSpecRule> indexSpecRules,
       @JsonProperty("dataSchemaRules") @Nullable List<ReindexingDataSchemaRule> dataSchemaRules
   )
   {
     this.deletionRules = Configs.valueOrDefault(deletionRules, Collections.emptyList());
-    this.ioConfigRules = Configs.valueOrDefault(ioConfigRules, Collections.emptyList());
-    this.segmentGranularityRules = Configs.valueOrDefault(segmentGranularityRules, Collections.emptyList());
-    this.tuningConfigRules = Configs.valueOrDefault(tuningConfigRules, Collections.emptyList());
+    this.partitioningRules = Configs.valueOrDefault(partitioningRules, Collections.emptyList());
+    this.indexSpecRules = Configs.valueOrDefault(indexSpecRules, Collections.emptyList());
     this.dataSchemaRules = Configs.valueOrDefault(dataSchemaRules, Collections.emptyList());
   }
 
@@ -145,24 +142,17 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("ioConfigRules")
-  public List<ReindexingIOConfigRule> getIOConfigRules()
+  @JsonProperty("partitioningRules")
+  public List<ReindexingPartitioningRule> getPartitioningRules()
   {
-    return ioConfigRules;
+    return partitioningRules;
   }
 
   @Override
-  @JsonProperty("segmentGranularityRules")
-  public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
+  @JsonProperty("indexSpecRules")
+  public List<ReindexingIndexSpecRule> getIndexSpecRules()
   {
-    return segmentGranularityRules;
-  }
-
-  @Override
-  @JsonProperty("tuningConfigRules")
-  public List<ReindexingTuningConfigRule> getTuningConfigRules()
-  {
-    return tuningConfigRules;
+    return indexSpecRules;
   }
 
   @Override
@@ -173,26 +163,19 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 
   @Override
   @Nullable
-  public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
-  {
-    return getApplicableRule(ioConfigRules, interval, referenceTime);
-  }
-
-  @Override
-  @Nullable
-  public ReindexingSegmentGranularityRule getSegmentGranularityRule(
+  public ReindexingPartitioningRule getPartitioningRule(
       Interval interval,
       DateTime referenceTime
   )
   {
-    return getApplicableRule(segmentGranularityRules, interval, referenceTime);
+    return getApplicableRule(partitioningRules, interval, referenceTime);
   }
 
   @Override
   @Nullable
-  public ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime)
+  public ReindexingIndexSpecRule getIndexSpecRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRule(tuningConfigRules, interval, referenceTime);
+    return getApplicableRule(indexSpecRules, interval, referenceTime);
   }
 
   /**
@@ -252,9 +235,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     }
     InlineReindexingRuleProvider that = (InlineReindexingRuleProvider) o;
     return Objects.equals(deletionRules, that.deletionRules)
-           && Objects.equals(ioConfigRules, that.ioConfigRules)
-           && Objects.equals(segmentGranularityRules, that.segmentGranularityRules)
-           && Objects.equals(tuningConfigRules, that.tuningConfigRules)
+           && Objects.equals(partitioningRules, that.partitioningRules)
+           && Objects.equals(indexSpecRules, that.indexSpecRules)
            && Objects.equals(dataSchemaRules, that.dataSchemaRules);
   }
 
@@ -263,9 +245,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   {
     return Objects.hash(
         deletionRules,
-        ioConfigRules,
-        segmentGranularityRules,
-        tuningConfigRules,
+        partitioningRules,
+        indexSpecRules,
         dataSchemaRules
     );
   }
@@ -275,9 +256,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   {
     return "InlineReindexingRuleProvider{"
            + "deletionRules=" + deletionRules
-           + ", ioConfigRules=" + ioConfigRules
-           + ", segmentGranularityRules=" + segmentGranularityRules
-           + ", tuningConfigRules=" + tuningConfigRules
+           + ", partitioningRules=" + partitioningRules
+           + ", indexSpecRules=" + indexSpecRules
            + ", dataSchemaRules=" + dataSchemaRules
            + '}';
   }
@@ -285,9 +265,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public static class Builder
   {
     private List<ReindexingDeletionRule> deletionRules;
-    private List<ReindexingIOConfigRule> ioConfigRules;
-    private List<ReindexingSegmentGranularityRule> segmentGranularityRules;
-    private List<ReindexingTuningConfigRule> tuningConfigRules;
+    private List<ReindexingPartitioningRule> partitioningRules;
+    private List<ReindexingIndexSpecRule> indexSpecRules;
     private List<ReindexingDataSchemaRule> dataSchemaRules;
 
     public Builder deletionRules(List<ReindexingDeletionRule> deletionRules)
@@ -302,21 +281,15 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       return this;
     }
 
-    public Builder ioConfigRules(List<ReindexingIOConfigRule> ioConfigRules)
+    public Builder partitioningRules(List<ReindexingPartitioningRule> partitioningRules)
     {
-      this.ioConfigRules = ioConfigRules;
+      this.partitioningRules = partitioningRules;
       return this;
     }
 
-    public Builder segmentGranularityRules(List<ReindexingSegmentGranularityRule> segmentGranularityRules)
+    public Builder indexSpecRules(List<ReindexingIndexSpecRule> indexSpecRules)
     {
-      this.segmentGranularityRules = segmentGranularityRules;
-      return this;
-    }
-
-    public Builder tuningConfigRules(List<ReindexingTuningConfigRule> tuningConfigRules)
-    {
-      this.tuningConfigRules = tuningConfigRules;
+      this.indexSpecRules = indexSpecRules;
       return this;
     }
 
@@ -324,9 +297,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     {
       return new InlineReindexingRuleProvider(
           deletionRules,
-          ioConfigRules,
-          segmentGranularityRules,
-          tuningConfigRules,
+          partitioningRules,
+          indexSpecRules,
           dataSchemaRules
       );
     }

@@ -52,6 +52,7 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Dart implementation of {@link ControllerContext}.
@@ -210,7 +211,12 @@ public class DartControllerContext implements ControllerContext
   {
     // We're ignoring WorkerFailureListener. Dart worker failures are routed into the controller by
     // ControllerMessageListener, which receives a notification when a worker goes offline.
-    return new DartWorkerManager(queryKernelConfig.getWorkerIds(), workerClient);
+    final List<String> workerIds = queryKernelConfig.getWorkerIds();
+    return new DartWorkerManager(
+        workerIds,
+        workerIds.stream().map(id -> WorkerId.fromString(id).getHostAndPort()).collect(Collectors.toList()),
+        workerClient
+    );
   }
 
   @Override

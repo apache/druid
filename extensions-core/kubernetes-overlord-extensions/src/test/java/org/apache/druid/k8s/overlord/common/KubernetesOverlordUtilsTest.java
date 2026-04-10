@@ -19,8 +19,8 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class KubernetesOverlordUtilsTest
 {
@@ -28,14 +28,14 @@ public class KubernetesOverlordUtilsTest
   @Test
   public void test_shortLabel()
   {
-    Assert.assertEquals("data_source", KubernetesOverlordUtils.convertStringToK8sLabel("data_source"));
+    Assertions.assertEquals("data_source", KubernetesOverlordUtils.convertStringToK8sLabel("data_source"));
   }
 
 
   @Test
   public void test_stripDisallowedPatterns()
   {
-    Assert.assertEquals("data_source-1.wikipedia", KubernetesOverlordUtils.convertStringToK8sLabel(
+    Assertions.assertEquals("data_source-1.wikipedia", KubernetesOverlordUtils.convertStringToK8sLabel(
         "_.-data_source-1.wikipedia.-_"
     ));
   }
@@ -43,13 +43,13 @@ public class KubernetesOverlordUtilsTest
   @Test
   public void test_nullLabel()
   {
-    Assert.assertEquals("", KubernetesOverlordUtils.convertStringToK8sLabel(null));
+    Assertions.assertEquals("", KubernetesOverlordUtils.convertStringToK8sLabel(null));
   }
 
   @Test
   public void test_stripTaskId()
   {
-    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesOverlordUtils.convertTaskIdToK8sLabel(
+    Assertions.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesOverlordUtils.convertTaskIdToK8sLabel(
         "api-issued_kill_wikipedia_new_balhnoib_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:28:42.526Z"
     ));
   }
@@ -57,13 +57,13 @@ public class KubernetesOverlordUtilsTest
   @Test
   public void test_nullTaskId()
   {
-    Assert.assertEquals("", KubernetesOverlordUtils.convertTaskIdToK8sLabel(null));
+    Assertions.assertEquals("", KubernetesOverlordUtils.convertTaskIdToK8sLabel(null));
   }
 
   @Test
   public void test_stripJobName()
   {
-    Assert.assertEquals("apiissuedkillwikipedianewbalhn-8916017dfd5469fe9a8881b1035497a2", KubernetesOverlordUtils.convertTaskIdToJobName(
+    Assertions.assertEquals("apiissuedkillwikipedianewbalhn-8916017dfd5469fe9a8881b1035497a2", KubernetesOverlordUtils.convertTaskIdToJobName(
         "api-issued_kill_wikipedia_new_balhnoib_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:28:42.526Z"
     ));
   }
@@ -73,7 +73,7 @@ public class KubernetesOverlordUtilsTest
   {
     String jobName1 = KubernetesOverlordUtils.convertTaskIdToJobName("coordinator-issued_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_116_pcgkebcl_2023-07-19T16:53:11.416Z");
     String jobName2 = KubernetesOverlordUtils.convertTaskIdToJobName("coordinator-issued_compact_1234_telemetry_wikipedia_geteditfailuresinnorthamerica_agg_summ_117_pcgkebcl_2023-07-19T16:53:11.416Z");
-    Assert.assertNotEquals(jobName1, jobName2);
+    Assertions.assertNotEquals(jobName1, jobName2);
   }
 
   @Test
@@ -89,21 +89,21 @@ public class KubernetesOverlordUtilsTest
       String result = KubernetesOverlordUtils.convertStringToK8sLabel(longLabel);
 
       // Result should not exceed 63 characters
-      Assert.assertTrue("Label should not exceed 63 characters", result.length() <= 63);
+      Assertions.assertTrue(result.length() <= 63, "Label should not exceed 63 characters");
 
       // Result should not be empty
-      Assert.assertFalse("Label should not be empty", result.isEmpty());
+      Assertions.assertFalse(result.isEmpty(), "Label should not be empty");
 
       // Result should not end with a hyphen, underscore, or dot
-      Assert.assertFalse("Label should not end with hyphen", result.endsWith("-"));
-      Assert.assertFalse("Label should not end with underscore", result.endsWith("_"));
-      Assert.assertFalse("Label should not end with dot", result.endsWith("."));
+      Assertions.assertFalse(result.endsWith("-"), "Label should not end with hyphen");
+      Assertions.assertFalse(result.endsWith("_"), "Label should not end with underscore");
+      Assertions.assertFalse(result.endsWith("."), "Label should not end with dot");
 
       // Result should end with an alphanumeric character
       char lastChar = result.charAt(result.length() - 1);
-      Assert.assertTrue(
-          "Label should end with alphanumeric character, but ends with: " + lastChar,
-          Character.isLetterOrDigit(lastChar)
+      Assertions.assertTrue(
+          Character.isLetterOrDigit(lastChar),
+          "Label should end with alphanumeric character, but ends with: " + lastChar
       );
     }
   }

@@ -54,7 +54,6 @@ import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -137,6 +136,7 @@ import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.server.metrics.SupervisorStatsProvider;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
@@ -173,7 +173,8 @@ public class CliOverlord extends ServerRunnable
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/druid/indexer/v1/isLeader",
-      "/status/health"
+      "/status/health",
+      "/status/ready"
   );
 
   private Properties properties;
@@ -234,6 +235,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
             binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
+            binder.bind(SupervisorStatsProvider.class).to(SupervisorManager.class);
 
             binder.bind(TaskLogStreamer.class)
                   .to(SwitchingTaskLogStreamer.class)
@@ -516,7 +518,6 @@ public class CliOverlord extends ServerRunnable
         new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),
         new SamplerModule(),

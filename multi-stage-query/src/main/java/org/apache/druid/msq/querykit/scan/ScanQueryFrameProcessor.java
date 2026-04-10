@@ -19,7 +19,9 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -73,7 +75,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
@@ -99,6 +100,9 @@ import java.util.stream.Collectors;
  */
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
+  public static final JavaType SCAN_RESULT_VALUE_TYPE =
+      TypeFactory.defaultInstance().constructType(ScanResultValue.class);
+
   private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private static final int NO_LIMIT = -1;
 
@@ -230,6 +234,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         dataServerQueryResultFuture =
             dataServerQueryHandler.fetchRowsFromDataServer(
                 preparedQuery,
+                ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
                 ScanQueryFrameProcessor::mappingFunction,
                 closer
             );
@@ -292,26 +297,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
-      if (segmentReference == null) {
-        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
-      }
-
-      final Segment segment = segmentReference.getSegmentReference().orElse(null);
-      if (segment == null) {
-        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
-      }
-
+      final Segment segment = mapSegment(segmentHolder, closer);
       final CursorFactory cursorFactory = segment.as(CursorFactory.class);
       if (cursorFactory == null) {
-        throw new ISE(
+        throw DruidException.defensive(
             "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
         );
-      }
-
-      if (segmentHolder.getInputCounters() != null) {
-        final int rowCount = getSegmentRowCount(segmentReference);
-        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
       }
 
       final CursorHolder nextCursorHolder =

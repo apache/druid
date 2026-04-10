@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -52,6 +53,7 @@ public class SingleDimensionRangeBucketShardSpec extends BaseDimensionRangeShard
   {
     super(
         dimension == null ? Collections.emptyList() : Collections.singletonList(dimension),
+        VirtualColumns.EMPTY,
         start == null ? null : StringTuple.create(start),
         end == null ? null : StringTuple.create(end)
     );

@@ -194,10 +194,14 @@ class StorageLocationTest
     final Closer closer = Closer.create();
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry1.getId(), () -> entry1)));
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry2.getId(), () -> entry2)));
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -206,6 +210,9 @@ class StorageLocationTest
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry5.getId(), () -> entry5)));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(75, location.getWeakStats().getHoldBytes());
+
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -222,7 +229,12 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry6.getId()));
 
-    Assertions.assertTrue(location.reserveWeak(entry7));
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(75, location.getWeakStats().getHoldBytes());
+
+    Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry7.getId(), () -> entry7)));
+    Assertions.assertEquals(4, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -232,6 +244,10 @@ class StorageLocationTest
     Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
+    // all storage is held, cannot reserve
+    Assertions.assertFalse(location.reserveWeak(entry8));
+
+    // release holds
     CloseableUtils.closeAndWrapExceptions(closer);
     Assertions.assertTrue(location.reserveWeak(entry8));
 
@@ -244,6 +260,8 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry8.getId()));
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
   }
 
   @Test
@@ -366,7 +384,34 @@ class StorageLocationTest
       }
     }
 
-    Assertions.assertEquals(0, loc.getActiveWeakHolds());
+    Assertions.assertEquals(0, loc.getWeakStats().getHoldCount());
+  }
+
+  @Test
+  public void testReclaimRestoreDoesNotCreateZombieEntries()
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 10);
+    CacheEntry entry2 = new TestCacheEntry("2", 90);
+    CacheEntry entry3 = new TestCacheEntry("3", 20);
+
+    location.reserveWeak(entry1);
+    // hold entry2 so it cannot be evicted by reclaim
+    StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
+        entry2.getId(),
+        () -> entry2
+    );
+
+    // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
+    // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
+    // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
+    // thrown.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    hold2.close();
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})

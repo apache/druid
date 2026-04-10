@@ -55,7 +55,6 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -247,7 +246,6 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule(),

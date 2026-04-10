@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.selector;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
@@ -48,22 +49,35 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   @GuardedBy("this")
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers;
 
-  private final TierSelectorStrategy strategy;
+  private final TierSelectorStrategy historicalTierStrategy;
+  private final TierSelectorStrategy realtimeTierStrategy;
 
   private final AtomicReference<DataSegment> segment;
 
   private final HistoricalFilter filter;
 
+  @VisibleForTesting
   public ServerSelector(
       DataSegment segment,
-      TierSelectorStrategy strategy,
+      TierSelectorStrategy historicalTierStrategy,
+      HistoricalFilter filter
+  )
+  {
+    this(segment, historicalTierStrategy, historicalTierStrategy, filter);
+  }
+
+  public ServerSelector(
+      DataSegment segment,
+      TierSelectorStrategy historicalTierStrategy,
+      TierSelectorStrategy realtimeTierStrategy,
       HistoricalFilter filter
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
-    this.strategy = strategy;
-    this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
-    this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.historicalTierStrategy = historicalTierStrategy;
+    this.realtimeTierStrategy = realtimeTierStrategy;
+    this.historicalServers = new Int2ObjectRBTreeMap<>(historicalTierStrategy.getComparator());
+    this.realtimeServers = new Int2ObjectRBTreeMap<>(this.realtimeTierStrategy.getComparator());
     this.filter = filter;
   }
 
@@ -135,16 +149,16 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     synchronized (this) {
       if (numCandidates > 0) {
         candidates = new ArrayList<>(numCandidates);
-        strategy.pick(filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get(), numCandidates)
-            .stream()
-            .map(server -> server.getServer().getMetadata())
-            .forEach(candidates::add);
+        historicalTierStrategy.pick(filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get(), numCandidates)
+                              .stream()
+                              .map(server -> server.getServer().getMetadata())
+                              .forEach(candidates::add);
 
         if (candidates.size() < numCandidates) { //-V6007: false alarm due to a bug in PVS-Studio
-          strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
-              .stream()
-              .map(server -> server.getServer().getMetadata())
-              .forEach(candidates::add);
+          realtimeTierStrategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
+                              .stream()
+                              .map(server -> server.getServer().getMetadata())
+                              .forEach(candidates::add);
         }
         return candidates;
       } else {
@@ -180,9 +194,9 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
-        return strategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
+        return historicalTierStrategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
       }
-      return strategy.pick(query, realtimeServers, segment.get());
+      return realtimeTierStrategy.pick(query, realtimeServers, segment.get());
     }
   }
 

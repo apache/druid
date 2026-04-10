@@ -39,6 +39,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
@@ -386,17 +387,19 @@ public class KubernetesOverlordModule implements DruidModule
   private static class VertxHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
   {
     private DruidKubernetesVertxHttpClientConfig config;
+    private ObjectMapper jsonMapper;
 
     @Inject
-    public void inject(DruidKubernetesVertxHttpClientConfig config)
+    public void inject(DruidKubernetesVertxHttpClientConfig config, @Json ObjectMapper jsonMapper)
     {
-      this.config = config;  // Guice injects the Vertx-specific config
+      this.config = config;
+      this.jsonMapper = jsonMapper;
     }
 
     @Override
     public DruidKubernetesHttpClientFactory get()
     {
-      return new DruidKubernetesVertxHttpClientFactory(config);
+      return new DruidKubernetesVertxHttpClientFactory(config, jsonMapper);
     }
   }
 

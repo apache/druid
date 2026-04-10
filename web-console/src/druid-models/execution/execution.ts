@@ -38,6 +38,7 @@ import type {
   MsqTaskReportResponse,
   SegmentLoadWaiterStatus,
   TaskStatus,
+  WorkerState,
 } from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -175,6 +176,7 @@ export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
   sqlQuery?: string;
+  sqlQueryId?: string;
   nativeQuery?: any;
   queryContext?: QueryContext;
   status?: ExecutionStatus;
@@ -188,6 +190,7 @@ export interface ExecutionValue {
   error?: ExecutionError;
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
+  workers?: Record<string, WorkerState[]>;
   _payload?: MsqTaskPayloadResponse;
   segmentStatus?: SegmentLoadWaiterStatus;
 }
@@ -348,6 +351,7 @@ export class Execution {
       stages: Array.isArray(stages)
         ? new Stages(stages, deepGet(taskReport, 'multiStageQuery.payload.counters'))
         : undefined,
+      workers: deepGet(taskReport, 'multiStageQuery.payload.status.workers'),
       error,
       warnings: Array.isArray(warnings) ? warnings : undefined,
       result,
@@ -393,6 +397,7 @@ export class Execution {
   public readonly engine: DruidEngine;
   public readonly id: string;
   public readonly sqlQuery?: string;
+  public readonly sqlQueryId?: string;
   public readonly nativeQuery?: any;
   public readonly queryContext?: QueryContext;
   public readonly status?: ExecutionStatus;
@@ -406,6 +411,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly workers?: Record<string, WorkerState[]>;
   public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
@@ -415,6 +421,7 @@ export class Execution {
     this.id = value.id;
     if (!this.id) throw new Error('must have an id');
     this.sqlQuery = value.sqlQuery;
+    this.sqlQueryId = value.sqlQueryId;
     this.nativeQuery = value.nativeQuery;
     this.queryContext = value.queryContext;
     this.status = value.status;
@@ -428,6 +435,7 @@ export class Execution {
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.workers = value.workers;
     this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
@@ -438,6 +446,7 @@ export class Execution {
       engine: this.engine,
       id: this.id,
       sqlQuery: this.sqlQuery,
+      sqlQueryId: this.sqlQueryId,
       nativeQuery: this.nativeQuery,
       queryContext: this.queryContext,
       status: this.status,
@@ -451,6 +460,7 @@ export class Execution {
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      workers: this.workers,
       segmentStatus: this.segmentStatus,
 
       _payload: this._payload,
@@ -478,6 +488,14 @@ export class Execution {
     }
 
     return new Execution(value);
+  }
+
+  public changeSqlQueryId(sqlQueryId: string | null | undefined): Execution {
+    if (!sqlQueryId) return this;
+    return new Execution({
+      ...this.valueOf(),
+      sqlQueryId,
+    });
   }
 
   public changeDestination(destination: ExecutionDestination): Execution {

@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Unit tests for {@link StringDimensionIndexer}.
@@ -136,6 +137,63 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(byteVal, false);
     Assert.assertEquals(
         StringUtils.encodeBase64String(byteVal),
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
+  }
+
+  @Test
+  public void testTruncation()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        5
+    );
+
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent("abcdefghij", false);
+    Assert.assertEquals(
+        "abcde",
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
+  }
+
+  @Test
+  public void testSingleValueMvdTruncated()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        5
+    );
+
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(
+        Collections.singletonList("abcdefghij"),
+        false
+    );
+    Assert.assertEquals(
+        "abcde",
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
+  }
+
+  @Test
+  public void testMultiValueNotTruncated()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        5
+    );
+
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(
+        Arrays.asList("abcdefghij", "klmnopqrst"),
+        false
+    );
+    Assert.assertEquals(
+        Arrays.asList("abcdefghij", "klmnopqrst"),
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
   }

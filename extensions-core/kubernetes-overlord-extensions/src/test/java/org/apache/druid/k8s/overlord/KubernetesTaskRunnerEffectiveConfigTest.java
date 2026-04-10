@@ -24,8 +24,8 @@ import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynami
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
 import org.apache.druid.k8s.overlord.execution.TaskTypePodTemplateSelectStrategy;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class KubernetesTaskRunnerEffectiveConfigTest
 {
@@ -38,7 +38,7 @@ public class KubernetesTaskRunnerEffectiveConfigTest
     Supplier<KubernetesTaskRunnerDynamicConfig> dynamicSupplier = () -> null;
     KubernetesTaskRunnerEffectiveConfig effective = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicSupplier);
 
-    Assert.assertEquals(7, effective.getCapacity().intValue());
+    Assertions.assertEquals(7, effective.getCapacity().intValue());
   }
 
   @Test
@@ -50,7 +50,7 @@ public class KubernetesTaskRunnerEffectiveConfigTest
     Supplier<KubernetesTaskRunnerDynamicConfig> dynamicSupplier = () -> new DefaultKubernetesTaskRunnerDynamicConfig(null, 9);
     KubernetesTaskRunnerEffectiveConfig effective = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicSupplier);
 
-    Assert.assertEquals(9, effective.getCapacity().intValue());
+    Assertions.assertEquals(9, effective.getCapacity().intValue());
   }
 
   @Test
@@ -62,7 +62,7 @@ public class KubernetesTaskRunnerEffectiveConfigTest
     Supplier<KubernetesTaskRunnerDynamicConfig> dynamicSupplier = () -> new DefaultKubernetesTaskRunnerDynamicConfig(null, null);
     KubernetesTaskRunnerEffectiveConfig effective = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicSupplier);
 
-    Assert.assertEquals(7, effective.getCapacity().intValue());
+    Assertions.assertEquals(7, effective.getCapacity().intValue());
   }
 
   @Test
@@ -73,8 +73,8 @@ public class KubernetesTaskRunnerEffectiveConfigTest
     KubernetesTaskRunnerEffectiveConfig effective = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicSupplier);
 
     PodTemplateSelectStrategy strategy = effective.getPodTemplateSelectStrategy();
-    Assert.assertTrue(strategy instanceof TaskTypePodTemplateSelectStrategy);
-    Assert.assertEquals(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, strategy);
+    Assertions.assertTrue(strategy instanceof TaskTypePodTemplateSelectStrategy);
+    Assertions.assertEquals(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, strategy);
   }
 
   @Test
@@ -85,6 +85,6 @@ public class KubernetesTaskRunnerEffectiveConfigTest
     Supplier<KubernetesTaskRunnerDynamicConfig> dynamicSupplier = () -> new DefaultKubernetesTaskRunnerDynamicConfig(custom, null);
     KubernetesTaskRunnerEffectiveConfig effective = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicSupplier);
 
-    Assert.assertEquals(custom, effective.getPodTemplateSelectStrategy());
+    Assertions.assertEquals(custom, effective.getPodTemplateSelectStrategy());
   }
 }

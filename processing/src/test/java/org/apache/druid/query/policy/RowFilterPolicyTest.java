@@ -26,8 +26,10 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.junit.Assert;
@@ -77,6 +79,18 @@ public class RowFilterPolicyTest
     final RowFilterPolicy policy = RowFilterPolicy.from(policyFilter);
 
     Assert.assertEquals(policyFilter, policy.visit(CursorBuildSpec.FULL_SCAN).getFilter());
+  }
+
+  @Test
+  public void testCreateSegmentPruner()
+  {
+    DimFilter policyFilter = new EqualityFilter("col", ColumnType.STRING, "val", null);
+    final RowFilterPolicy policy = RowFilterPolicy.from(policyFilter);
+
+    Assert.assertEquals(
+        new FilterSegmentPruner(policyFilter, null, VirtualColumns.EMPTY),
+        policy.createSegmentPruner()
+    );
   }
 
   @Test

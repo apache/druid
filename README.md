@@ -29,10 +29,6 @@
 | 🔍 CodeQL                             | [![codeql](https://img.shields.io/github/actions/workflow/status/apache/druid/codeql.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/codeql.yml) |
 | 🕒 Cron Job ITS                       | [![cron-job-its](https://img.shields.io/github/actions/workflow/status/apache/druid/cron-job-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/cron-job-its.yml) |
 | 🏷️ Labeler                            | [![labeler](https://img.shields.io/github/actions/workflow/status/apache/druid/labeler.yml?logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/labeler.yml) |
-| ♻️ Reusable Revised ITS               | [![reusable-revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-revised-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/reusable-revised-its.yml) |
-| ♻️ Reusable Standard ITS              | [![reusable-standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-standard-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/reusable-standard-its.yml) |
-| 🔄 Revised ITS                        | [![revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/revised-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/revised-its.yml) |
-| 🔧 Standard ITS                       | [![standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/standard-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/standard-its.yml) |
 | 🛠️ Static Checks                      | [![static-checks](https://img.shields.io/github/actions/workflow/status/apache/druid/static-checks.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/static-checks.yml) |
 | 🧪 Unit and Integration Tests Unified | [![unit-and-integration-tests-unified](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-and-integration-tests-unified.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/unit-and-integration-tests-unified.yml) |
 
@@ -58,7 +54,7 @@ Druid is designed for workflows where fast queries and ingest really matter. Dru
 
 ### Getting started
 
-You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
+You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart. For Kubernetes deployments, the [druid-operator](https://github.com/apache/druid-operator) is maintained in a separate repository.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
 You can also interact with Druid via the built-in [web console](https://druid.apache.org/docs/latest/operations/web-console.html) (shown below).

@@ -128,6 +128,7 @@ public class CompressionUtils
 
     private final String suffix;
     private final String extension;
+
     Format(String suffix, String extension)
     {
       this.suffix = suffix;

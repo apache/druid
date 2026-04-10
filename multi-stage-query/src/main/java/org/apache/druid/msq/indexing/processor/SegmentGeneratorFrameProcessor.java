@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing.processor;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -208,6 +209,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
           segmentGenerationProgressCounter.incrementRowsProcessed(1);
         }
         catch (Exception e) {
+          Throwables.throwIfUnchecked(e);
           throw new RuntimeException(e);
         }
 
