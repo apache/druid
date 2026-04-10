@@ -80,6 +80,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -112,9 +113,11 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -122,6 +125,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -985,10 +989,38 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    final Filter theFilter = makeFilter(filter);
-    final Filter postFilteringFilter = new Filter()
-    {
+    final Filter postFilteringFilter = makePostFilter(filter);
 
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
+      final SingleValueDimensionVectorSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+
+      final List<String> values = new ArrayList<>();
+
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
+        final int[] rowVector = selector.getRowVector();
+        for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+          values.add(selector.lookupName(rowVector[i]));
+        }
+        cursor.advance();
+      }
+
+      return values;
+    }
+  }
+
+  @Nonnull
+  private Filter makePostFilter(DimFilter filter)
+  {
+    final Filter theFilter = makeFilter(filter);
+    return new Filter()
+    {
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
       {
@@ -1020,29 +1052,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         return null;
       }
     };
-
-    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
-      final VectorCursor cursor = cursorHolder.asVectorCursor();
-      final SingleValueDimensionVectorSelector selector = cursor
-          .getColumnSelectorFactory()
-          .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
-
-      final List<String> values = new ArrayList<>();
-
-      while (!cursor.isDone()) {
-        cursor.advance();
-      }
-      cursor.reset();
-      while (!cursor.isDone()) {
-        final int[] rowVector = selector.getRowVector();
-        for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
-          values.add(selector.lookupName(rowVector[i]));
-        }
-        cursor.advance();
-      }
-
-      return values;
-    }
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingVectorCursor(
@@ -1291,6 +1300,25 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           expectedRows.size(),
           selectCountUsingVectorizedFilteredAggregator(filter)
       );
+    } else if (!(cursorFactory instanceof ColumnarFrameCursorFactory)) {
+      final List<VirtualColumn> relevant = new ArrayList<>();
+      Queue<String> toResolve = new ArrayDeque<>(filter.getRequiredColumns());
+      while (!toResolve.isEmpty()) {
+        VirtualColumn vc = VIRTUAL_COLUMNS.getVirtualColumn(toResolve.poll());
+        if (vc != null) {
+          relevant.add(vc);
+          toResolve.addAll(vc.requiredColumns());
+        }
+      }
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                  .setVirtualColumns(VirtualColumns.create(relevant))
+                                                  // use makePostFilter since some things with non-vectorizable
+                                                  // matchers can still use indexes
+                                                  .setFilter(makePostFilter(filter))
+                                                  .build();
+      try (CursorHolder holder = cursorFactory.makeCursorHolder(spec)) {
+        Assert.assertFalse(holder.canVectorize());
+      }
     }
   }
 

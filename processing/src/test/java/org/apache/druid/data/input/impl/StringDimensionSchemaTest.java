@@ -28,8 +28,8 @@ import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.column.StringBitmapIndexType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringDimensionSchemaTest
 {
@@ -48,7 +48,7 @@ public class StringDimensionSchemaTest
   {
     final String json = "\"dim\"";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim"), schema);
+    Assertions.assertEquals(new StringDimensionSchema("dim"), schema);
   }
 
   @Test
@@ -60,7 +60,7 @@ public class StringDimensionSchemaTest
                         + "  \"createBitmapIndex\" : false\n"
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
+    Assertions.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
   }
 
   @Test
@@ -76,11 +76,11 @@ public class StringDimensionSchemaTest
     final StringColumnFormatSpec expectedSpec = StringColumnFormatSpec.builder()
         .setMaxStringLength(200)
         .build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, expectedSpec),
         schema
     );
-    Assert.assertEquals(Integer.valueOf(200), schema.getColumnFormatSpec().getMaxStringLength());
+    Assertions.assertEquals(Integer.valueOf(200), schema.getColumnFormatSpec().getMaxStringLength());
   }
 
   @Test
@@ -95,8 +95,8 @@ public class StringDimensionSchemaTest
 
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
-    Assert.assertEquals(Integer.valueOf(50), effective.getColumnFormatSpec().getMaxStringLength());
-    Assert.assertEquals("dim", effective.getName());
+    Assertions.assertEquals(Integer.valueOf(50), effective.getColumnFormatSpec().getMaxStringLength());
+    Assertions.assertEquals("dim", effective.getName());
   }
 
   @Test
@@ -115,7 +115,7 @@ public class StringDimensionSchemaTest
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
     // Per-column maxStringLength=20 should not be overridden by job level 50
-    Assert.assertEquals(Integer.valueOf(20), effective.getColumnFormatSpec().getMaxStringLength());
+    Assertions.assertEquals(Integer.valueOf(20), effective.getColumnFormatSpec().getMaxStringLength());
   }
 
   @Test
@@ -126,7 +126,7 @@ public class StringDimensionSchemaTest
 
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
-    Assert.assertFalse(effective.hasBitmapIndex());
+    Assertions.assertFalse(effective.hasBitmapIndex());
   }
 
   @Test
@@ -138,7 +138,7 @@ public class StringDimensionSchemaTest
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
     // multiValueHandling=ARRAY must not be overridden by the DEFAULT (SORTED_ARRAY)
-    Assert.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
+    Assertions.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
   }
 
   @Test
@@ -150,9 +150,9 @@ public class StringDimensionSchemaTest
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
     // With no stringColumnFormatSpec, should return same object
-    Assert.assertSame(schema, effective);
-    Assert.assertEquals(schema.hasBitmapIndex(), effective.hasBitmapIndex());
-    Assert.assertEquals(schema.getMultiValueHandling(), effective.getMultiValueHandling());
+    Assertions.assertSame(schema, effective);
+    Assertions.assertEquals(schema.hasBitmapIndex(), effective.hasBitmapIndex());
+    Assertions.assertEquals(schema.getMultiValueHandling(), effective.getMultiValueHandling());
   }
 
   @Test
@@ -169,7 +169,7 @@ public class StringDimensionSchemaTest
 
     final StringDimensionSchema effective = (StringDimensionSchema) schema.getEffectiveSchema(indexSpec);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringBitmapIndexType.NoIndex.INSTANCE,
         effective.getColumnFormatSpec().getIndexType()
     );
@@ -185,9 +185,9 @@ public class StringDimensionSchemaTest
     // Parent has SORTED_SET + createBitmapIndex=true, columnFormatSpec has ARRAY + NoIndex, formatSpec should be honored
     final StringDimensionSchema schema = new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, true, spec);
 
-    Assert.assertEquals(MultiValueHandling.ARRAY, schema.getDimensionHandler().getMultivalueHandling());
+    Assertions.assertEquals(MultiValueHandling.ARRAY, schema.getDimensionHandler().getMultivalueHandling());
     final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
-    Assert.assertFalse(handlerSchema.hasBitmapIndex());
+    Assertions.assertFalse(handlerSchema.hasBitmapIndex());
   }
 
   @Test
@@ -200,7 +200,7 @@ public class StringDimensionSchemaTest
     final StringDimensionSchema schema = new StringDimensionSchema("dim", null, false, spec);
     final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
 
-    Assert.assertTrue(handlerSchema.hasBitmapIndex());
+    Assertions.assertTrue(handlerSchema.hasBitmapIndex());
   }
 
   @Test
@@ -209,11 +209,11 @@ public class StringDimensionSchemaTest
     final StringColumnFormatSpec spec = StringColumnFormatSpec.builder()
         .setMaxStringLength(100)
         .build();
-    // columnFormatSpec has only maxStringLength, and nono indexType or multiValueHandling, parent values should be used
+    // columnFormatSpec has only maxStringLength, and no indexType or multiValueHandling, parent values should be used
     final StringDimensionSchema schema = new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, spec);
 
-    Assert.assertEquals(MultiValueHandling.SORTED_SET, schema.getDimensionHandler().getMultivalueHandling());
+    Assertions.assertEquals(MultiValueHandling.SORTED_SET, schema.getDimensionHandler().getMultivalueHandling());
     final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
-    Assert.assertFalse(handlerSchema.hasBitmapIndex());
+    Assertions.assertFalse(handlerSchema.hasBitmapIndex());
   }
 }

@@ -27,14 +27,21 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -137,34 +144,35 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 128},",
-            "  {\"type\": \"quantilesDoublesSketch\", \"name\": \"non_existent_sketch\", \"fieldName\": \"non_existent_sketch\", \"k\": 128}",
-            "]"
+        List.of(
+            new DoublesSketchAggregatorFactory("sketch", "sketch", 128),
+            new DoublesSketchAggregatorFactory("non_existent_sketch", "non_existent_sketch", 128)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 128},",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"non_existent_sketch\", \"fieldName\": \"non_existent_sketch\", \"k\": 128}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("sketch", "sketch", 128),
+                        new DoublesSketchAggregatorFactory("non_existent_sketch", "non_existent_sketch", 128)
+                    )
+                    .setPostAggregatorSpecs(
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogram",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0.25, 0.5, 0.75},
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -214,32 +222,47 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
-        "[{\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128},"
-        + "{\"type\": \"quantilesDoublesSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"valueWithNulls\", \"k\": 128}]",
+        List.of(
+            new DoublesSketchAggregatorFactory("sketch", "value", 128),
+            new DoublesSketchAggregatorFactory("sketchWithNulls", "valueWithNulls", 128)
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 128},",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"sketchWithNulls\", \"k\": 128},",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"non_existent_sketch\", \"fieldName\": \"non_existent_sketch\", \"k\": 128}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantilesWithNulls\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogramWithNulls\", \"splitPoints\": [6.25, 7.5, 8.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("sketch", "sketch", 128),
+                        new DoublesSketchAggregatorFactory("sketchWithNulls", "sketchWithNulls", 128),
+                        new DoublesSketchAggregatorFactory("non_existent_sketch", "non_existent_sketch", 128)
+                    )
+                    .setPostAggregatorSpecs(
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogram",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0.25, 0.5, 0.75},
+                            null
+                        ),
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantilesWithNulls",
+                            new FieldAccessPostAggregator("field", "sketchWithNulls"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogramWithNulls",
+                            new FieldAccessPostAggregator("field", "sketchWithNulls"),
+                            new double[]{6.25, 7.5, 8.75},
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -303,33 +326,56 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
         ),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"},"
-        + "{\"type\": \"doubleSum\", \"name\": \"valueWithNulls\", \"fieldName\": \"valueWithNulls\"}]",
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value"),
+            new DoubleSumAggregatorFactory("valueWithNulls", "valueWithNulls")
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128},",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketchWithNulls\", \"fieldName\": \"valueWithNulls\", \"k\": 128}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantileWithNulls\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantilesWithNulls\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogramWithNulls\", \"splitPoints\": [6.25, 7.5, 8.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchWithNulls\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("sketch", "value", 128),
+                        new DoublesSketchAggregatorFactory("sketchWithNulls", "valueWithNulls", 128)
+                    )
+                    .setPostAggregatorSpecs(
+                        new DoublesSketchToQuantilePostAggregator(
+                            "quantile",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            0.5
+                        ),
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogram",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0.25, 0.5, 0.75},
+                            null
+                        ),
+                        new DoublesSketchToQuantilePostAggregator(
+                            "quantileWithNulls",
+                            new FieldAccessPostAggregator("field", "sketchWithNulls"),
+                            0.5
+                        ),
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantilesWithNulls",
+                            new FieldAccessPostAggregator("field", "sketchWithNulls"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogramWithNulls",
+                            new FieldAccessPostAggregator("field", "sketchWithNulls"),
+                            new double[]{6.25, 7.5, 8.75},
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -405,28 +451,38 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("sketch", "value", 128)
+                    )
+                    .setPostAggregatorSpecs(
+                        new DoublesSketchToQuantilePostAggregator(
+                            "quantile",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            0.5
+                        ),
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogram",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0.25, 0.5, 0.75},
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -463,7 +519,7 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void timeSeriesQueryInputAsFloat() throws Exception
   {
-    Sequence<ResultRow> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
+    Sequence<Result<TimeseriesResultValue>> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
         new InputRowSchema(
             new TimestampSpec("timestamp", "yyyyMMddHH", null),
@@ -471,29 +527,40 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"timeseries\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile1\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles1\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram1\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test_datasource")
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z").toString())
+              .aggregators(
+                  new DoublesSketchAggregatorFactory("sketch", "value", 128)
+              )
+              .postAggregators(
+                  new DoublesSketchToQuantilePostAggregator(
+                      "quantile1",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      0.5
+                  ),
+                  new DoublesSketchToQuantilesPostAggregator(
+                      "quantiles1",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      new double[]{0, 0.5, 1}
+                  ),
+                  new DoublesSketchToHistogramPostAggregator(
+                      "histogram1",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      new double[]{0.25, 0.5, 0.75},
+                      null
+                  )
+              )
+              .build()
     );
-    List<ResultRow> results = seq.toList();
+    List<Result<TimeseriesResultValue>> results = seq.toList();
     Assert.assertEquals(1, results.size());
   }
 
@@ -508,28 +575,38 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "sequenceNumber", "product", "value")),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128, \"maxStreamLength\": 10}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("sketch", "value", 128, 10L, null)
+                    )
+                    .setPostAggregatorSpecs(
+                        new DoublesSketchToQuantilePostAggregator(
+                            "quantile",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            0.5
+                        ),
+                        new DoublesSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        ),
+                        new DoublesSketchToHistogramPostAggregator(
+                            "histogram",
+                            new FieldAccessPostAggregator("field", "sketch"),
+                            new double[]{0.25, 0.5, 0.75},
+                            null
+                        )
+                    )
+                    .build()
     );
     seq.toList();
   }

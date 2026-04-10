@@ -437,58 +437,6 @@ Projections you define become a dimension for your datasource. To remove a proje
 }
 ```
 
-### Legacy `dataSchema` spec
-
-The legacy `dataSchema` spec has below two more components in addition to the ones listed in the [`dataSchema`](#dataschema) section above.
-
-- [input row parser](#parser-deprecated), [flattening of nested data](#flattenspec) (if needed)
-
-#### `parser` (Deprecated)
-
-In legacy `dataSchema`, the `parser` is located in the `dataSchema` → `parser` and is responsible for configuring a wide variety of
-items related to parsing input records. The `parser` is only supported by Hadoop ingestion, and is deprecated.
-For details about supported `parser` types, see the ["Data formats" page](data-formats.md).
-
-For details about major components of the `parseSpec`, refer to their subsections:
-
-- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](./schema-model.md#primary-timestamp).
-- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](./schema-model.md#dimensions).
-- [`flattenSpec`](#flattenspec), responsible for flattening nested data formats.
-
-An example `parser` is:
-
-```
-"parser": {
-  "type": "string",
-  "parseSpec": {
-    "format": "json",
-    "flattenSpec": {
-      "useFieldDiscovery": true,
-      "fields": [
-        { "type": "path", "name": "userId", "expr": "$.user.id" }
-      ]
-    },
-    "timestampSpec": {
-      "column": "timestamp",
-      "format": "auto"
-    },
-    "dimensionsSpec": {
-      "dimensions": [
-        "page",
-        "language",
-        { "type": "long", "name": "userId" }
-      ]
-    }
-  }
-}
-```
-
-#### `flattenSpec`
-
-In the legacy `dataSchema`, the `flattenSpec` is located in `dataSchema` → `parser` → `parseSpec` → `flattenSpec` and is responsible for
-bridging the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model.
-See [Flatten spec](./data-formats.md#flattenspec) for more details.
-
 ## `ioConfig`
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted

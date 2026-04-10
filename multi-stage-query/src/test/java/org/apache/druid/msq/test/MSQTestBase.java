@@ -363,7 +363,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(makeTestWorkerMemoryParameters());
   protected static final String TEST_CONTROLLER_TASK_ID = "query-test-query";
   // Fields in the query context to ignore during assertion.
-  protected Set<String> ignoreFields = Set.of(MultiStageQueryContext.CTX_START_TIME);
+  protected Set<String> ignoreFields = Set.of(
+      MultiStageQueryContext.CTX_START_TIME,
+      MultiStageQueryContext.CTX_QUERY_DEADLINE
+  );
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {

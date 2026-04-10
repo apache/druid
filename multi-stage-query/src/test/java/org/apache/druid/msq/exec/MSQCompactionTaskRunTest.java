@@ -492,7 +492,9 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     rows.add("2014-01-01T02:00:30Z,b1,12\n");
     rows.add("2014-01-01T02:00:30Z,c1,13\n");
     final IndexTask appendTask = buildIndexTask(
-        DEFAULT_PARSE_SPEC,
+        DEFAULT_TIMESTAMP_SPEC,
+        DEFAULT_DIMENSIONS_SPEC,
+        DEFAULT_INPUT_FORMAT,
         rows,
         Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"),
         true
@@ -554,7 +556,9 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     rows.add("2014-01-01T02:00:30Z,b1,12\n");
     rows.add("2014-01-01T02:00:30Z,c1,13\n");
     final IndexTask appendTask = buildIndexTask(
-        DEFAULT_PARSE_SPEC,
+        DEFAULT_TIMESTAMP_SPEC,
+        DEFAULT_DIMENSIONS_SPEC,
+        DEFAULT_INPUT_FORMAT,
         rows,
         Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"),
         true
@@ -655,7 +659,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
     Assume.assumeTrue("Minor compaction depends on concurrent lock", useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(
-        runTask(buildIndexTask(DEFAULT_PARSE_SPEC, rows, inputInterval, false)),
+        runTask(buildIndexTask(DEFAULT_TIMESTAMP_SPEC, DEFAULT_DIMENSIONS_SPEC, DEFAULT_INPUT_FORMAT, rows, inputInterval, false)),
         9
     );
 
@@ -673,7 +677,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assert.assertEquals(3, resultPair1.rhs.getSegments().size());
 
     Pair<TaskStatus, DataSegmentsWithSchemas> appendTask =
-        runTask(buildIndexTask(DEFAULT_PARSE_SPEC, rows, inputInterval, true));
+        runTask(buildIndexTask(DEFAULT_TIMESTAMP_SPEC, DEFAULT_DIMENSIONS_SPEC, DEFAULT_INPUT_FORMAT, rows, inputInterval, true));
     verifyTaskSuccessRowsAndSchemaMatch(appendTask, 9);
 
     List<SegmentDescriptor> uncompacted = appendTask.rhs.getSegments()
@@ -715,7 +719,9 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     rows.add("2014-01-01T10:00:20Z,c1,13\n");
     final IndexTask indexTask = buildIndexTask(
         Granularities.SIX_HOUR,
-        DEFAULT_PARSE_SPEC,
+        DEFAULT_TIMESTAMP_SPEC,
+        DEFAULT_DIMENSIONS_SPEC,
+        DEFAULT_INPUT_FORMAT,
         rows,
         TEST_INTERVAL_DAY,
         true

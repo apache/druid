@@ -56,7 +56,6 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.InlineDataSource;
@@ -680,10 +679,8 @@ public class MSQTaskQueryMakerTest
         ingestDestination,
         fakeOverlordClient,
         plannerContextMock,
-        objectMapper,
         fieldMapping,
-        terminalStageSpecFactory,
-        new MSQTaskQueryKitSpecFactory(new DruidProcessingConfig())
+        terminalStageSpecFactory
     );
   }
 }

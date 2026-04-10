@@ -41,6 +41,8 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionPlan;
+import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
@@ -392,7 +394,8 @@ public class AggregatorUtil
       return capabilities == null || capabilities.isNumeric();
     }
     if (expression != null) {
-      return fieldExpression.get().canVectorize(columnInspector);
+      ExpressionPlan plan = ExpressionPlanner.plan(columnInspector, fieldExpression.get());
+      return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
     }
     return false;
   }

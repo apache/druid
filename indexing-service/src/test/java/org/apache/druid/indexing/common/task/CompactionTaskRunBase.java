@@ -31,12 +31,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -148,13 +148,14 @@ import java.util.stream.Collectors;
 public abstract class CompactionTaskRunBase
 {
   protected static final String DATA_SOURCE = "test";
-  protected static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec("ts", "auto", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
-      "|",
+  protected static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+  protected static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
+      "|",
+      null,
       false,
-      0
+      0,
+      null
   );
   protected static final Granularity DEFAULT_SEGMENT_GRAN = Granularities.HOUR;
   protected static final Granularity DEFAULT_QUERY_GRAN = Granularities.MINUTE;
@@ -500,7 +501,9 @@ public abstract class CompactionTaskRunBase
     rows.add("2014-01-01T08:00:30Z,b,2\n");
     rows.add("2014-01-01T08:00:30Z,c,3\n");
     final IndexTask indexTask = buildIndexTask(
-        DEFAULT_PARSE_SPEC,
+        DEFAULT_TIMESTAMP_SPEC,
+        DEFAULT_DIMENSIONS_SPEC,
+        DEFAULT_INPUT_FORMAT,
         rows,
         Intervals.of("2014-01-01T06:00:00Z/2014-01-01T12:00:00Z"),
         false
@@ -1209,22 +1212,19 @@ public abstract class CompactionTaskRunBase
         "2014-01-01T01:00:20Z,b,20,110,2\n",
         "2014-01-01T01:00:20Z,c,30,120,3\n"
     );
-    final ParseSpec spatialSpec = new CSVParseSpec(
-        new TimestampSpec("ts", "auto", null),
-        DimensionsSpec.builder()
-                      .setDimensions(Arrays.asList(
-                          new StringDimensionSchema("ts"),
-                          new StringDimensionSchema("dim"),
-                          new NewSpatialDimensionSchema("spatial", Arrays.asList("x", "y"))
-                      ))
-                      .build(),
-        "|",
-        Arrays.asList("ts", "dim", "x", "y", "val"),
-        false,
-        0
+    final TimestampSpec spatialTimestampSpec = new TimestampSpec("ts", "auto", null);
+    final DimensionsSpec spatialDimensionsSpec = DimensionsSpec.builder()
+        .setDimensions(Arrays.asList(
+            new StringDimensionSchema("ts"),
+            new StringDimensionSchema("dim"),
+            new NewSpatialDimensionSchema("spatial", Arrays.asList("x", "y"))
+        ))
+        .build();
+    final InputFormat spatialInputFormat = new CsvInputFormat(
+        Arrays.asList("ts", "dim", "x", "y", "val"), "|", null, false, 0, null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runTask(
-        buildIndexTask(spatialSpec, spatialrows, Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z"), false),
+        buildIndexTask(spatialTimestampSpec, spatialDimensionsSpec, spatialInputFormat, spatialrows, Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z"), false),
         null,
         null
     );
@@ -1319,23 +1319,22 @@ public abstract class CompactionTaskRunBase
         "2014-01-01T01:00:20Z,b,20,110,2\n",
         "2014-01-01T01:00:20Z,c,30,120,3\n"
     );
-    final ParseSpec spec = new CSVParseSpec(
-        new TimestampSpec("ts", "auto", null),
-        DimensionsSpec.builder()
-                      .setDimensions(Arrays.asList(
-                          new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
-                          AutoTypeColumnSchema.of("dim"),
-                          new AutoTypeColumnSchema("x", ColumnType.LONG, null),
-                          new AutoTypeColumnSchema("y", ColumnType.LONG, null)
-                      ))
-                      .build(),
-        "|",
-        Arrays.asList("ts", "dim", "x", "y", "val"),
-        false,
-        0
+    final TimestampSpec specTimestampSpec = new TimestampSpec("ts", "auto", null);
+    final DimensionsSpec specDimensionsSpec = DimensionsSpec.builder()
+        .setDimensions(Arrays.asList(
+            new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+            AutoTypeColumnSchema.of("dim"),
+            new AutoTypeColumnSchema("x", ColumnType.LONG, null),
+            new AutoTypeColumnSchema("y", ColumnType.LONG, null)
+        ))
+        .build();
+    final InputFormat specInputFormat = new CsvInputFormat(
+        Arrays.asList("ts", "dim", "x", "y", "val"), "|", null, false, 0, null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runTask(buildIndexTask(
-        spec,
+        specTimestampSpec,
+        specDimensionsSpec,
+        specInputFormat,
         rows,
         Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z"),
         false
@@ -1437,25 +1436,24 @@ public abstract class CompactionTaskRunBase
         "2014-01-01T00:01:20Z,b,20,110,2\n",
         "2014-01-01T00:01:20Z,c,30,120,3\n"
     );
-    final ParseSpec spec = new CSVParseSpec(
-        new TimestampSpec("ts", "auto", null),
-        DimensionsSpec.builder()
-                      .setDimensions(Arrays.asList(
-                          new AutoTypeColumnSchema("x", ColumnType.LONG, null),
-                          new LongDimensionSchema("__time"),
-                          new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
-                          AutoTypeColumnSchema.of("dim"),
-                          new AutoTypeColumnSchema("y", ColumnType.LONG, null)
-                      ))
-                      .setForceSegmentSortByTime(false)
-                      .build(),
-        "|",
-        Arrays.asList("ts", "dim", "x", "y", "val"),
-        false,
-        0
+    final TimestampSpec timestampSpec = new TimestampSpec("ts", "auto", null);
+    final DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
+        .setDimensions(Arrays.asList(
+            new AutoTypeColumnSchema("x", ColumnType.LONG, null),
+            new LongDimensionSchema("__time"),
+            new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+            AutoTypeColumnSchema.of("dim"),
+            new AutoTypeColumnSchema("y", ColumnType.LONG, null)
+        ))
+        .setForceSegmentSortByTime(false)
+        .build();
+    final InputFormat inputFormat = new CsvInputFormat(
+        Arrays.asList("ts", "dim", "x", "y", "val"), "|", null, false, 0, null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runTask(buildIndexTask(
-        spec,
+        timestampSpec,
+        dimensionsSpec,
+        inputFormat,
         rows,
         Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z"),
         false
@@ -1578,25 +1576,29 @@ public abstract class CompactionTaskRunBase
   ) throws Exception
   {
     return runTask(
-        buildIndexTask(DEFAULT_PARSE_SPEC, TEST_ROWS, TEST_INTERVAL, appendToExisting),
+        buildIndexTask(DEFAULT_TIMESTAMP_SPEC, DEFAULT_DIMENSIONS_SPEC, DEFAULT_INPUT_FORMAT, TEST_ROWS, TEST_INTERVAL, appendToExisting),
         readyLatchToCountDown,
         latchToAwaitBeforeRun
     );
   }
 
   protected IndexTask buildIndexTask(
-      ParseSpec parseSpec,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      InputFormat inputFormat,
       List<String> rows,
       Interval interval,
       boolean appendToExisting
   ) throws Exception
   {
-    return buildIndexTask(DEFAULT_SEGMENT_GRAN, parseSpec, rows, interval, appendToExisting);
+    return buildIndexTask(DEFAULT_SEGMENT_GRAN, timestampSpec, dimensionsSpec, inputFormat, rows, interval, appendToExisting);
   }
 
   protected IndexTask buildIndexTask(
       Granularity segmentGranularity,
-      ParseSpec parseSpec,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      InputFormat inputFormat,
       List<String> rows,
       Interval interval,
       boolean appendToExisting
@@ -1615,7 +1617,9 @@ public abstract class CompactionTaskRunBase
         null,
         IndexTaskTest.createIngestionSpec(
             tmpDir,
-            parseSpec,
+            timestampSpec,
+            dimensionsSpec,
+            inputFormat,
             null,
             new UniformGranularitySpec(segmentGranularity, DEFAULT_QUERY_GRAN, List.of(interval)),
             IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),

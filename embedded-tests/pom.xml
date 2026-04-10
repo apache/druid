@@ -748,7 +748,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.5</version>
+      <version>5.5.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -861,7 +861,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <excludedGroups>docker-test</excludedGroups>
+          <excludedGroups>docker-test,perf</excludedGroups>
         </configuration>
       </plugin>
       <plugin>

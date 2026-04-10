@@ -247,6 +247,7 @@ libraries:
   - software.amazon.awssdk: arns
   - software.amazon.awssdk: auth
   - software.amazon.awssdk: aws-core
+  - software.amazon.awssdk: aws-crt-client
   - software.amazon.awssdk: aws-query-protocol
   - software.amazon.awssdk: aws-xml-protocol
   - software.amazon.awssdk: checksums
@@ -303,11 +304,24 @@ notice: |
 
 ---
 
+name: AWS CRT
+license_category: binary
+module: extensions-core/s3-extensions
+license_name: Apache License version 2.0
+version: 0.40.1
+libraries:
+  - software.amazon.awssdk.crt: aws-crt
+notice: |
+  AWS Common Runtime for Java
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
 name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.19.2
+version: 2.20.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-annotations
@@ -348,9 +362,19 @@ notice: |
 
 name: Jackson
 license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: "2.20"
+libraries:
+  - com.fasterxml.jackson.core: jackson-annotations
+
+---
+
+name: Jackson
+license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.19.2
+version: 2.20.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -376,7 +400,7 @@ name: JavaBeans Activation Framework API JAR
 license_category: binary
 module: java-core
 license_name: Eclipse Distribution License 1.0
-version: 1.2.1
+version: 1.2.2
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jakarta.EDL1
 libraries:
@@ -400,7 +424,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 2.9.3
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -410,7 +434,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.35.1
+version: 2.41.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -621,7 +645,7 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.17.0
+version: 2.21.0
 libraries:
   - commons-io: commons-io
 notices:
@@ -693,7 +717,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2
+version: 4.5.0
 libraries:
   - org.apache.commons: commons-collections4
 notices:
@@ -707,7 +731,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.27.0
+version: 1.28.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -1197,7 +1221,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.4
+version: 2.5
 libraries:
   - org.yaml: snakeyaml
 
@@ -1227,7 +1251,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.81"
+version: "1.82"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1420,7 +1444,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.6.Final
+version: 4.2.12.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2218,7 +2242,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.1.0
+version: 3.6.1
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2240,7 +2264,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.0.30
+version: 12.1.8
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -2251,6 +2275,8 @@ libraries:
   - org.eclipse.jetty: jetty-server
   - org.eclipse.jetty: jetty-session
   - org.eclipse.jetty: jetty-util
+  - org.eclipse.jetty.compression: jetty-compression-common
+  - org.eclipse.jetty.compression: jetty-compression-gzip
   - org.eclipse.jetty.ee8: jetty-ee8-nested
   - org.eclipse.jetty.ee8: jetty-ee8-proxy
   - org.eclipse.jetty.ee8: jetty-ee8-security
@@ -2623,7 +2649,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.49
+version: 1.6.13
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -2891,6 +2917,20 @@ notices:
 ---
 
 
+name: JTS
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Eclipse Public License 2.0
+version: 1.20.0
+libraries:
+  - org.locationtech.jts: jts-core
+notices:
+  - jts-core: |
+      The JTS Topology Suite is a Java library for creating and manipulating vector geometry.
+      Eclipse Distribution License 1.0 / Eclipse Public License 2.0
+---
+
+
 name: Apache Directory
 license_category: binary
 module: hadoop-client
@@ -2996,7 +3036,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.19.2
+version: 2.20.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3151,7 +3191,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.0
+version: 2.5
 libraries:
   - org.yaml: snakeyaml
 
@@ -3246,6 +3286,20 @@ notices:
 
       | This product includes software developed by Odiago, Inc.
       | (http://www.wibidata.com).
+
+---
+
+name: Apache Avro
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.12.0
+libraries:
+  - org.apache.avro: avro
+notices:
+  - avro: |
+      Apache Avro
+      Copyright 2010-2019 The Apache Software Foundation
 
 ---
 
@@ -3399,7 +3453,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.15.2
+version: 1.16.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3450,7 +3504,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: "2.0.2"
+version: "2.0.3"
 libraries:
   - io.airlift: aircompressor
 
@@ -3540,7 +3594,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.2-3
+version: 1.5.7-7
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4098,7 +4152,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: "0.21"
+version: "2.0.3"
 libraries:
   - io.airlift: aircompressor
 
@@ -4400,7 +4454,7 @@ license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
 copyright: LAMP/EPFL and Lightbend, Inc.
-version: 2.12.7
+version: 2.13.16
 libraries:
   - org.scala-lang: scala-library
 
@@ -4600,7 +4654,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.73.Final
+version: 2.0.75.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -4833,7 +4887,7 @@ notice: |
 
 name: org.apache.ranger ranger-plugins-audit-dest-es
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4843,7 +4897,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-audit-dest-hdfs
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4853,7 +4907,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-common
 license_category: binary
-version: 2.7.0
+version: 2.8.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5173,7 +5227,7 @@ name: jakarta.activation
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Eclipse Distribution License 1.0
-version: 1.2.2
+version: 2.0.1
 libraries:
   - com.sun.activation: jakarta.activation
 
@@ -5608,7 +5662,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.12.2
+version: 1.15.0
 license_file_path: licenses/bin/axios.MIT
 
 ---

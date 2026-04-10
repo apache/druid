@@ -225,7 +225,7 @@ public class RegularLoadableSegment implements LoadableSegment
    */
   private DruidException segmentNotFound()
   {
-    return DruidException.forPersona(DruidException.Persona.USER)
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                          .build("Segment[%s] not found on this server. Please retry your query.", segmentId);
   }

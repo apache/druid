@@ -229,24 +229,24 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testExpressionVirtualColumn() throws IOException
   {
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new BloomDimFilter("expr", bloomKFilter(1000, 1.1F), null),
         List.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatchesSkipVectorize(new BloomDimFilter("expr", bloomKFilter(1000, 1.2F), null), List.of());
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(new BloomDimFilter("expr", bloomKFilter(1000, 1.2F), null), List.of());
+    assertFilterMatches(
         new BloomDimFilter("exprDouble", bloomKFilter(1000, 2.1D), null),
         List.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new BloomDimFilter("exprDouble", bloomKFilter(1000, 2.2D), null),
         List.of()
     );
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new BloomDimFilter("exprLong", bloomKFilter(1000, 3L), null),
         List.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatchesSkipVectorize(new BloomDimFilter("exprLong", bloomKFilter(1000, 4L), null), List.of());
+    assertFilterMatches(new BloomDimFilter("exprLong", bloomKFilter(1000, 4L), null), List.of());
   }
 
   @Test

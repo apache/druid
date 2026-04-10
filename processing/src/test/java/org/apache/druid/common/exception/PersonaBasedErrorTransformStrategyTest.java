@@ -22,9 +22,9 @@ package org.apache.druid.common.exception;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -32,7 +32,7 @@ public class PersonaBasedErrorTransformStrategyTest
 {
   private PersonaBasedErrorTransformStrategy target;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     target = new PersonaBasedErrorTransformStrategy();
@@ -44,7 +44,7 @@ public class PersonaBasedErrorTransformStrategyTest
     DruidException druidException = DruidException.forPersona(DruidException.Persona.USER)
                                                   .ofCategory(DruidException.Category.FORBIDDEN)
                                                   .build("Permission exception");
-    Assert.assertEquals(Optional.empty(), target.maybeTransform(druidException, Optional.empty()));
+    Assertions.assertEquals(Optional.empty(), target.maybeTransform(druidException, Optional.empty()));
   }
 
   @Test

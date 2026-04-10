@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.dart.controller.sql;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.report.TaskReport;
@@ -30,13 +29,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
-import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.ControllerRegistry;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.SequenceQueryListener;
@@ -52,7 +51,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
@@ -63,7 +61,6 @@ import org.apache.druid.sql.calcite.run.SqlResults;
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -85,7 +82,7 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Controller registry, used to register and remove controllers as they start and finish.
    */
-  private final DartControllerRegistry controllerRegistry;
+  private final ControllerRegistry controllerRegistry;
 
   /**
    * Controller config.
@@ -96,7 +93,6 @@ public class DartQueryMaker implements QueryMaker
    * Executor for running controllers.
    */
   private final ControllerThreadPool controllerThreadPool;
-  private final ServerConfig serverConfig;
 
   final QueryKitSpecFactory queryKitSpecFactory;
   final MultiQueryKit queryKit;
@@ -105,12 +101,11 @@ public class DartQueryMaker implements QueryMaker
       List<Entry<Integer, String>> fieldMapping,
       DartControllerContextFactory controllerContextFactory,
       PlannerContext plannerContext,
-      DartControllerRegistry controllerRegistry,
+      ControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
       ControllerThreadPool controllerThreadPool,
       QueryKitSpecFactory queryKitSpecFactory,
-      MultiQueryKit queryKit,
-      ServerConfig serverConfig
+      MultiQueryKit queryKit
   )
   {
     this.fieldMapping = fieldMapping;
@@ -121,17 +116,15 @@ public class DartQueryMaker implements QueryMaker
     this.controllerThreadPool = controllerThreadPool;
     this.queryKitSpecFactory = queryKitSpecFactory;
     this.queryKit = queryKit;
-    this.serverConfig = serverConfig;
   }
 
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
     ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
-    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.buildLegacyMSQSpec(
         null,
         druidQuery,
-        finalizeTimeout(druidQuery.getQuery().context()),
         columnMappings,
         plannerContext,
         null
@@ -208,18 +201,6 @@ public class DartQueryMaker implements QueryMaker
   }
 
   /**
-   * Adds the timeout parameter to the query context, considering the default and maximum values from
-   * {@link ServerConfig}.
-   */
-  private QueryContext finalizeTimeout(QueryContext queryContext)
-  {
-    final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
-    QueryContext timeoutContext = queryContext.override(Map.of(QueryContexts.TIMEOUT_KEY, timeout));
-    timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
-    return timeoutContext;
-  }
-
-  /**
    * Runs a controller in {@link #controllerThreadPool} and returns a {@link QueryResponse} object.
    *
    * @param controller     controller to run
@@ -256,7 +237,7 @@ public class DartQueryMaker implements QueryMaker
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
+   * Arranges for {@link ControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
   private Sequence<Object[]> runWithReport(
       final ControllerHolder controllerHolder,
@@ -286,7 +267,11 @@ public class DartQueryMaker implements QueryMaker
 
     try {
       // Submit controller and wait for it to finish.
-      controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool).get();
+      controllerHolder.runAsync(
+          listener,
+          controllerRegistry,
+          controllerThreadPool
+      ).get();
 
       // Return a sequence with just one row (the report).
       final TaskReport.ReportMap reportMap =
@@ -306,7 +291,7 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Run a query and return the results only, streamed back using {@link SequenceQueryListener}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
+   * Arranges for {@link ControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
   private Sequence<Object[]> runWithSequence(
       final ControllerHolder controllerHolder,
@@ -315,8 +300,11 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     final SequenceQueryListener listener = new SequenceQueryListener();
-    final ListenableFuture<?> runFuture =
-        controllerHolder.runAsync(listener, controllerRegistry, controllerThreadPool);
+    controllerHolder.runAsync(
+        listener,
+        controllerRegistry,
+        controllerThreadPool
+    );
 
     return Sequences.wrap(
         listener.getSequence().flatMap(
@@ -334,7 +322,7 @@ public class DartQueryMaker implements QueryMaker
           public void after(final boolean isDone, final Throwable thrown)
           {
             if (!isDone || thrown != null) {
-              runFuture.cancel(true); // Cancel on early stop or failure
+              controllerHolder.cancel(CancellationReason.UNKNOWN);
             }
           }
         }

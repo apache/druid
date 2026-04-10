@@ -23,10 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -148,6 +151,22 @@ public class RestrictedDataSourceTest
         "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
         s
     );
+  }
+
+  @Test
+  public void test_createSegmentPruner_withRowFilterPolicy()
+  {
+    Assert.assertEquals(
+        new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
+        restrictedFooDataSource.createSegmentPruner()
+    );
+  }
+
+  @Test
+  public void test_createSegmentPruner_withNoRestrictionPolicy()
+  {
+    SegmentPruner pruner = restrictedBarDataSource.createSegmentPruner();
+    Assert.assertNull(pruner);
   }
 
   @Test

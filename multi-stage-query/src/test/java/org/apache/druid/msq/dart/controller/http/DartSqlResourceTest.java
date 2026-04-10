@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
@@ -46,6 +45,7 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
@@ -114,6 +114,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -263,6 +264,11 @@ public class DartSqlResourceTest extends MSQTestBase
                     MAX_CONTROLLERS,
                     StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
                 )
+            ),
+            Executors.newSingleThreadScheduledExecutor(
+                Execs.makeThreadFactory(
+                    StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-timeout")
+                )
             )
         ),
         new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
@@ -297,9 +303,9 @@ public class DartSqlResourceTest extends MSQTestBase
     mockCloser.close();
 
     // shutdown(), not shutdownNow(), to ensure controllers stop timely on their own.
-    controllerThreadPool.getExecutorService().shutdown();
+    controllerThreadPool.getRunExecutorService().shutdown();
 
-    if (!controllerThreadPool.getExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
+    if (!controllerThreadPool.getRunExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
       throw new IAE("controllerExecutor.awaitTermination() timed out");
     }
 
@@ -384,7 +390,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // With selfOnly = null, the endpoint returns both queries.
@@ -415,7 +421,7 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder localHolder = setUpMockRunningQuery(REGULAR_USER_NAME);
 
     // Remote call fails.
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFailedFuture(new IOException("something went wrong")));
 
     // We only see local queries, because the remote call failed. (The entire call doesn't fail; we see what we
@@ -453,7 +459,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by REGULAR_USER_NAME.
@@ -491,7 +497,7 @@ public class DartSqlResourceTest extends MSQTestBase
         StandardQueryState.RUNNING,
         null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true, false))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
@@ -581,7 +587,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
@@ -589,7 +595,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
-    Assertions.assertEquals("RUNTIME_FAILURE", e.get("category"));
+    Assertions.assertEquals("INVALID_INPUT", e.get("category"));
     assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
   }
 
@@ -753,7 +759,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     // Block up the controllerExecutor so the controller runs long enough to cancel it.
-    final Future<?> sleepFuture = controllerThreadPool.getExecutorService().submit(() -> {
+    final Future<?> sleepFuture = controllerThreadPool.getRunExecutorService().submit(() -> {
       try {
         Thread.sleep(3_600_000);
       }
