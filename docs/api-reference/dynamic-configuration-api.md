@@ -376,6 +376,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
   "queryContext": {
     "priority": 0,
     "timeout": 300000
+  },
+  "perSegmentTimeoutConfig": {
+    "large_table": {
+      "perSegmentTimeoutMs": 10000,
+      "monitorOnly": false
+    }
   }
 }
 ```
@@ -445,6 +451,15 @@ curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
   "queryContext": {
     "priority": 0,
     "timeout": 300000
+  },
+  "perSegmentTimeoutConfig": {
+    "large_table": {
+      "perSegmentTimeoutMs": 10000
+    },
+    "huge_dataset": {
+      "perSegmentTimeoutMs": 5000,
+      "monitorOnly": true
+    }
   }
 }'
 ```
@@ -477,6 +492,15 @@ X-Druid-Comment: Add query blocklist rules and set default context
   "queryContext": {
     "priority": 0,
     "timeout": 300000
+  },
+  "perSegmentTimeoutConfig": {
+    "large_table": {
+      "perSegmentTimeoutMs": 10000
+    },
+    "huge_dataset": {
+      "perSegmentTimeoutMs": 5000,
+      "monitorOnly": true
+    }
   }
 }
 ```
@@ -496,6 +520,7 @@ The following table shows the dynamic configuration properties for the Broker.
 |--------|-----------|-------|
 |`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
 |`queryContext`| Map of default query context key-value pairs applied to all queries on this broker. These values override static defaults set via runtime properties (`druid.query.default.context.*`) but are overridden by context values supplied in individual query payloads. Useful for setting cluster-wide defaults such as `priority` or `timeout` without restarting. See [Query context reference](../querying/query-context-reference.md) for available keys.|none|
+|`perSegmentTimeoutConfig`| Map of datasource names to per-segment timeout configurations. When a query targets a datasource in this map, the Broker injects the configured `perSegmentTimeout` into the query context before forwarding to Historicals. See [Per-segment timeout configuration](#per-segment-timeout-configuration) for details.|none|
 
 #### Query blocklist rules
 
@@ -528,6 +553,51 @@ When a query is blocked, the Broker returns an HTTP 403 error with a message ind
   "errorMessage": "Query[abc-123-def] blocked by rule[block-expensive-scans]",
   "persona": "USER",
   "category": "FORBIDDEN"
+}
+```
+
+#### Per-segment timeout configuration
+
+Per-segment timeout configuration allows operators to set per-datasource segment processing timeouts without restarting the cluster. This is useful when different datasources have different performance characteristics — for example, allowing longer timeouts for larger datasets.
+
+Each entry in the `perSegmentTimeoutConfig` map is keyed by datasource name and has the following properties:
+
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
+|`perSegmentTimeoutMs`|Per-segment processing timeout in milliseconds. Must be greater than 0.|Yes|N/A|
+|`monitorOnly`|When `true`, the timeout value is logged but not enforced. Useful for observing the impact of a timeout before enabling enforcement.|No|`false`|
+
+**Precedence order** (highest to lowest):
+
+1. User-supplied `perSegmentTimeout` in the query context
+2. Per-datasource value from `perSegmentTimeoutConfig`
+3. Cluster-wide default from `druid.query.default.context.perSegmentTimeout`
+
+> **Note:** For queries involving multiple datasources (e.g. joins or unions), the timeout from the
+> first matching datasource is applied. The match order is non-deterministic.
+> To avoid this, configure the same timeout for all datasources involved in such queries, or set `perSegmentTimeout` explicitly in the query context.
+
+**Example configuration:**
+
+```json
+{
+  "perSegmentTimeoutConfig": {
+    "large_datasource": {
+      "perSegmentTimeoutMs": 10000
+    },
+    "critical_datasource": {
+      "perSegmentTimeoutMs": 5000,
+      "monitorOnly": true
+    }
+  }
+}
+```
+
+To clear all per-datasource timeouts, POST an empty map:
+
+```json
+{
+  "perSegmentTimeoutConfig": {}
 }
 ```
 
@@ -603,7 +673,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "Add query blocklist rules",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"queryContext\":{\"priority\":0,\"timeout\":300000}}",
+    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"queryContext\":{\"priority\":0,\"timeout\":300000},\"perSegmentTimeoutConfig\":{\"large_table\":{\"perSegmentTimeoutMs\":10000,\"monitorOnly\":false}}}",
     "auditTime": "2024-03-06T12:00:00.000Z"
   }
 ]

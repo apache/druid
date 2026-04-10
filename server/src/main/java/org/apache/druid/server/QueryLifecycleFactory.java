@@ -28,6 +28,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -35,6 +36,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -78,10 +80,15 @@ public class QueryLifecycleFactory
 
   public QueryLifecycle factorize()
   {
-    final List<QueryBlocklistRule> queryBlocklist =
-        brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null
-        ? brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist()
-        : Collections.emptyList();
+    final List<QueryBlocklistRule> queryBlocklist;
+    final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
+    if (brokerViewOfBrokerConfig != null && brokerViewOfBrokerConfig.getDynamicConfig() != null) {
+      queryBlocklist = brokerViewOfBrokerConfig.getDynamicConfig().getQueryBlocklist();
+      perSegmentTimeoutConfig = brokerViewOfBrokerConfig.getDynamicConfig().getPerSegmentTimeoutConfig();
+    } else {
+      queryBlocklist = Collections.emptyList();
+      perSegmentTimeoutConfig = Collections.emptyMap();
+    }
 
     return new QueryLifecycle(
         conglomerate,
@@ -94,6 +101,7 @@ public class QueryLifecycleFactory
         authConfig,
         policyEnforcer,
         queryBlocklist,
+        perSegmentTimeoutConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

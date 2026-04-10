@@ -20,7 +20,6 @@
 package org.apache.druid.compressedbigdecimal.aggregator;
 
 import com.google.common.collect.Iterables;
-import com.google.common.io.Resources;
 import org.apache.druid.compressedbigdecimal.ArrayCompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
 import org.apache.druid.data.input.ColumnsFilter;
@@ -36,6 +35,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -47,7 +48,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -121,8 +121,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
   public abstract void testIngestAndTimeseriesQuery() throws Exception;
 
   protected void testIngestAndTimeseriesQueryHelper(
-      String jsonAggregatorsFile,
-      String jsonQueryFile,
+      List<AggregatorFactory> ingestionAggregators,
+      TimeseriesQuery query,
       String expected
   ) throws Exception
   {
@@ -130,17 +130,11 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
         SCHEMA,
         FORMAT,
-        Resources.asCharSource(
-            this.getClass().getResource("/" + jsonAggregatorsFile),
-            StandardCharsets.UTF_8
-        ).read(),
+        ingestionAggregators,
         0,
         Granularities.NONE,
         5,
-        Resources.asCharSource(
-            this.getClass().getResource("/" + jsonQueryFile),
-            StandardCharsets.UTF_8
-        ).read()
+        query
     );
 
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
@@ -165,8 +159,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
   public abstract void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception;
 
   protected void testIngestMultipleSegmentsAndTimeseriesQueryHelper(
-      String jsonAggregatorsFile,
-      String jsonQueryFile,
+      List<AggregatorFactory> ingestionAggregators,
+      TimeseriesQuery query,
       String expected
   ) throws Exception
   {
@@ -175,10 +169,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
         SCHEMA,
         FORMAT,
-        Resources.asCharSource(
-            this.getClass().getResource("/" + jsonAggregatorsFile),
-            StandardCharsets.UTF_8
-        ).read(),
+        ingestionAggregators,
         segmentDir1,
         0,
         Granularities.NONE,
@@ -189,10 +180,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
         SCHEMA,
         FORMAT,
-        Resources.asCharSource(
-            this.getClass().getResource("/" + jsonAggregatorsFile),
-            StandardCharsets.UTF_8
-        ).read(),
+        ingestionAggregators,
         segmentDir2,
         0,
         Granularities.NONE,
@@ -201,10 +189,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
 
     Sequence seq = helper.runQueryOnSegments(
         Arrays.asList(segmentDir1, segmentDir2),
-        Resources.asCharSource(
-            this.getClass().getResource("/" + jsonQueryFile),
-            StandardCharsets.UTF_8
-        ).read()
+        query
     );
 
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
@@ -221,4 +206,3 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
 
   }
 }
-

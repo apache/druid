@@ -50,6 +50,7 @@ import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Virtual columns are "views" created over a {@link ColumnSelectorFactory} or {@link ColumnSelector}. They can
@@ -473,6 +474,27 @@ public interface VirtualColumn extends Cacheable
   List<String> requiredColumns();
 
   /**
+   * Returns true if the virtual column supports {@link #rewriteRequiredColumns(Map)}
+   */
+  default boolean supportsRequiredRewrite()
+  {
+    return false;
+  }
+
+  /**
+   * Return a copy of this virtual column that is identical to this virtual column except that it operates on different
+   * columns, based on a renaming map where the key is the column to be renamed and the value is the new column. Callers
+   * should check {@link #supportsRequiredRewrite()} first to ensure that this method is supported.
+   *
+   * @param columnRewrites Column rewrite map
+   * @return Copy of this virtual column that operates on new columns based on the rewrite map
+   */
+  default VirtualColumn rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    throw DruidException.defensive("Required column rewrite is not supported by virtual column[%s].", getOutputName());
+  }
+
+  /**
    * Indicates that this virtual column can be referenced with dot notation. For example,
    * a virtual column named "foo" could be referred to as "foo.bar" with the Cursor it is
    * registered with. In that case, init will be called with columnName "foo.bar" rather
@@ -518,7 +540,7 @@ public interface VirtualColumn extends Cacheable
    * virtual column, regardless of the output name. If this method returns null, it does not participate in equivalence
    * comparisons.
    *
-   * @see VirtualColumns#findEquivalent(VirtualColumn)
+   * @see VirtualColumns#findEquivalent(VirtualColumns, VirtualColumn)
    */
   @Nullable
   default EquivalenceKey getEquivalanceKey()

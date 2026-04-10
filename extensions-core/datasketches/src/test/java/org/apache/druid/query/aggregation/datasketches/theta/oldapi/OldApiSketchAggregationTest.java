@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.theta.oldapi;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.ColumnsFilter;
@@ -31,9 +30,9 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -56,7 +55,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -103,9 +101,57 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleDataIngestAndQuery() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval(Intervals.of("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"))
+        .setAggregatorSpecs(
+            new OldSketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null),
+            new OldSketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null)
+        )
+        .setPostAggregatorSpecs(
+            new OldSketchEstimatePostAggregator(
+                "sketchEstimatePostAgg",
+                new FieldAccessPostAggregator("field", "sketch_count")
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchIntersectionPostAgg",
+                    "INTERSECT",
+                    16384,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sketch_count")
+                    )
+                )
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchAnotBPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchAnotBUnionPostAgg",
+                    "NOT",
+                    16384,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sketch_count")
+                    )
+                )
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchUnionPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchUnionPostAgg",
+                    "UNION",
+                    16384,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sketch_count")
+                    )
+                )
+            )
+        )
+        .build();
 
     final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
@@ -115,11 +161,14 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
-        readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
+        List.of(
+            new OldSketchBuildAggregatorFactory("pty_country", "pty_country", null),
+            new OldSketchBuildAggregatorFactory("non_existing_col_validation", "non_existing_col", null)
+        ),
         0,
         Granularities.NONE,
         1000,
-        groupByQueryString
+        groupByQuery
     );
 
     List results = seq.toList();
@@ -147,9 +196,57 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testSketchDataIngestAndQuery() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval(Intervals.of("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"))
+        .setAggregatorSpecs(
+            new OldSketchMergeAggregatorFactory("sids_sketch_count", "sids_sketch", 16384, null),
+            new OldSketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null)
+        )
+        .setPostAggregatorSpecs(
+            new OldSketchEstimatePostAggregator(
+                "sketchEstimatePostAgg",
+                new FieldAccessPostAggregator("field", "sids_sketch_count")
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchIntersectionPostAgg",
+                    "INTERSECT",
+                    16384,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sids_sketch_count")
+                    )
+                )
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchAnotBPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchAnotBUnionPostAgg",
+                    "NOT",
+                    null,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sids_sketch_count")
+                    )
+                )
+            ),
+            new OldSketchEstimatePostAggregator(
+                "sketchUnionPostAggEstimate",
+                new OldSketchSetPostAggregator(
+                    "sketchUnionPostAgg",
+                    "UNION",
+                    16384,
+                    Lists.newArrayList(
+                        new FieldAccessPostAggregator("field1", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("field2", "sids_sketch_count")
+                    )
+                )
+            )
+        )
+        .build();
 
     final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
@@ -159,11 +256,14 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
-        readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
+        List.of(
+            new OldSketchMergeAggregatorFactory("sids_sketch", "sketch", 16384, null),
+            new OldSketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null)
+        ),
         0,
         Granularities.NONE,
         1000,
-        groupByQueryString
+        groupByQuery
     );
 
     List results = seq.toList();
@@ -283,13 +383,5 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
             PostAggregator.class
         )
     );
-  }
-
-  public static String readFileFromClasspathAsString(String fileName) throws IOException
-  {
-    return Files.asCharSource(
-        new File(OldApiSketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
-        StandardCharsets.UTF_8
-    ).read();
   }
 }
