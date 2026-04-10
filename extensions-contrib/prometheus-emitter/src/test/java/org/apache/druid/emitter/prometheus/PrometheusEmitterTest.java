@@ -27,6 +27,7 @@ import io.prometheus.client.exporter.PushGateway;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.emitter.service.UnitEvent;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -602,6 +603,49 @@ public class PrometheusEmitterTest
             .setDimension("server", "historical1")
             .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(event);
+    emitter.close();
+  }
+
+  @Test
+  public void testFilteringAllowsConfiguredMetricOnly() throws Exception
+  {
+    final PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.exporter,
+        "druid",
+        null,
+        0,
+        null,
+        false,
+        false,
+        null,
+        null,
+        false,
+        null
+    );
+    config.setShouldFilterMetrics(true);
+
+    final PrometheusEmitter emitter = new PrometheusEmitter(config);
+    Assert.assertFalse(emitter.shouldFilterOutMetric("query/time"));
+    Assert.assertTrue(emitter.shouldFilterOutMetric("some/unlisted/metric"));
+    emitter.emit(
+        ServiceMetricEvent.builder().setMetric("query/time", 10).setDimension("dataSource", "wikipedia").setDimension("type", "groupBy")
+                          .build(ImmutableMap.of("service", "broker", "host", "druid.test.cn"))
+    );
+    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 5).build("broker", "druid.test.cn"));
+    emitter.emit(new UnitEvent("alerts", 1));
+
+    Assert.assertEquals(
+        1.0,
+        CollectorRegistry.defaultRegistry.getSampleValue(
+            "druid_query_time_bucket",
+            new String[]{"dataSource", "type", "le"},
+            new String[]{"wikipedia", "groupBy", "0.1"}
+        ),
+        0.0
+    );
+    Assert.assertNull(
+        CollectorRegistry.defaultRegistry.getSampleValue("druid_some_unlisted_metric")
+    );
     emitter.close();
   }
 

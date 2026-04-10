@@ -66,7 +66,7 @@ public class Metrics
   public Metrics(PrometheusEmitterConfig config)
   {
     String namespace = config.getNamespace();
-    String path = config.getDimensionMapPath();
+    String path = config.getMetricSpecPath().orElse(config.getDimensionMapPath());
     boolean isAddHostAsLabel = config.isAddHostAsLabel();
     boolean isAddServiceAsLabel = config.isAddServiceAsLabel();
     Map<String, String> extraLabels = config.getExtraLabels();
@@ -136,7 +136,7 @@ public class Metrics
       InputStream is;
       if (Strings.isNullOrEmpty(path)) {
         log.info("Using default metric configuration");
-        is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
+        is = this.getClass().getClassLoader().getResourceAsStream(PrometheusEmitterConfig.DEFAULT_METRIC_SPEC_PATH);
       } else {
         log.info("Using metric configuration at [%s]", path);
         is = new FileInputStream(new File(path));

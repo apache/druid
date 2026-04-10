@@ -126,6 +126,18 @@ public class Emitters
           Float.parseFloat(props.getProperty("org.apache.druid.java.util.emitter.http.minHttpTimeoutMillis"))
       );
     }
+    if (props.containsKey("org.apache.druid.java.util.emitter.shouldFilterMetrics")) {
+      httpMap.put(
+          "shouldFilterMetrics",
+          Boolean.parseBoolean(props.getProperty("org.apache.druid.java.util.emitter.shouldFilterMetrics"))
+      );
+    }
+    if (props.containsKey("org.apache.druid.java.util.emitter.metricSpecPath")) {
+      httpMap.put(
+          "metricSpecPath",
+          props.getProperty("org.apache.druid.java.util.emitter.metricSpecPath")
+      );
+    }
     return httpMap;
   }
 
@@ -145,9 +157,9 @@ public class Emitters
           "shouldFilterMetrics", Boolean.parseBoolean(props.getProperty("org.apache.druid.java.util.emitter.logging.shouldFilterMetrics"))
       );
     }
-    if (props.containsKey("org.apache.druid.java.util.emitter.logging.allowedMetricsPath")) {
+    if (props.containsKey("org.apache.druid.java.util.emitter.logging.metricSpecPath")) {
       loggingMap.put(
-          "allowedMetricsPath", props.getProperty("org.apache.druid.java.util.emitter.logging.allowedMetricsPath")
+          "metricSpecPath", props.getProperty("org.apache.druid.java.util.emitter.logging.metricSpecPath")
       );
     }
     return loggingMap;

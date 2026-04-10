@@ -137,6 +137,21 @@ public class HttpEmitterConfigTest
   }
 
   @Test
+  public void testSettingMetricFilteringLegacy()
+  {
+    final Properties props = new Properties();
+    props.setProperty("org.apache.druid.java.util.emitter.http.url", "http://example.com/");
+    props.setProperty("org.apache.druid.java.util.emitter.shouldFilterMetrics", "true");
+    props.setProperty("org.apache.druid.java.util.emitter.metricSpecPath", "/tmp/http-metrics.json");
+
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final HttpEmitterConfig config = objectMapper.convertValue(Emitters.makeHttpMap(props), HttpEmitterConfig.class);
+
+    Assert.assertTrue(config.isShouldFilterMetrics());
+    Assert.assertEquals("/tmp/http-metrics.json", config.getMetricSpecPath().orElse(null));
+  }
+
+  @Test
   public void testMemoryLimits()
   {
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(

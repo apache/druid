@@ -19,42 +19,24 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 
-import javax.validation.constraints.NotNull;
+import java.util.Set;
 
-/**
- */
-public class LoggingEmitterConfig extends GlobalEmitterConfig
+public final class MetricAllowlistParsers
 {
-  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultMetrics.json";
 
-  @NotNull
-  @JsonProperty
-  private String loggerClass = LoggingEmitter.class.getName();
-
-  @NotNull
-  @JsonProperty
-  private String logLevel = "info";
-
-  public String getLoggerClass()
+  public static Set<String> parseMetricNameObject(JsonNode metricConfig, String source)
   {
-    return loggerClass;
-  }
-
-  public String getLogLevel()
-  {
-    return logLevel;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LoggingEmitterConfig{" +
-           "loggerClass='" + loggerClass + '\'' +
-           ", logLevel='" + logLevel + '\'' +
-           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
-           ", metricSpecPath='" + getMetricSpecPath() + '\'' +
-           '}';
+    if (!metricConfig.isObject()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Metric allowlist file [%s] must be a JSON object of metric names.", source);
+    }
+    final ImmutableSet.Builder<String> metricNames = ImmutableSet.builder();
+    metricConfig.fieldNames().forEachRemaining(metricNames::add);
+    return metricNames.build();
   }
 }

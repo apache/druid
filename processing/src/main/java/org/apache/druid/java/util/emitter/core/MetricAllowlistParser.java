@@ -19,42 +19,24 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
-import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
+ * Parses a metric specification document into a set of metric names that can be used for filtering.
+ *
+ * <p>The expected JSON shape is parser-dependent and is implemented by each parser implementation.
  */
-public class LoggingEmitterConfig extends GlobalEmitterConfig
+public interface MetricAllowlistParser
 {
-  public static final String DEFAULT_METRIC_SPEC_PATH = "defaultMetrics.json";
-
-  @NotNull
-  @JsonProperty
-  private String loggerClass = LoggingEmitter.class.getName();
-
-  @NotNull
-  @JsonProperty
-  private String logLevel = "info";
-
-  public String getLoggerClass()
-  {
-    return loggerClass;
-  }
-
-  public String getLogLevel()
-  {
-    return logLevel;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LoggingEmitterConfig{" +
-           "loggerClass='" + loggerClass + '\'' +
-           ", logLevel='" + logLevel + '\'' +
-           ", shouldFilterMetrics=" + isShouldFilterMetrics() +
-           ", metricSpecPath='" + getMetricSpecPath() + '\'' +
-           '}';
-  }
+  /**
+   * Parses metric configuration from the provided JSON node.
+   *
+   * @param metricConfig root JSON node of the metric specification
+   * @param source source identifier used for error reporting (for example, a path)
+   *
+   * @return metric names extracted from the configuration
+   */
+  Set<String> parse(JsonNode metricConfig, String source);
 }

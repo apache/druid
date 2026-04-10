@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.asynchttpclient.AsyncHttpClient;
 
 import java.io.Closeable;
@@ -37,7 +38,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
-public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
+public class ParametrizedUriEmitter extends AbstractFilteringEmitter implements Flushable, Closeable
 {
   private static final Logger log = new Logger(ParametrizedUriEmitter.class);
   private static final Set<String> ONLY_FEED_PARAM = ImmutableSet.of("feed");
@@ -85,6 +86,16 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
       UriExtractor uriExtractor
   )
   {
+    super(
+        config.isShouldFilterMetrics(),
+        loadAllowedMetricNames(
+            config.isShouldFilterMetrics(),
+            jsonMapper,
+            config.getMetricSpecPath(),
+            ParametrizedUriEmitterConfig.DEFAULT_METRIC_SPEC_PATH,
+            MetricAllowlistParsers::parseMetricNameObject
+        )
+    );
     this.config = config;
     this.client = client;
     this.jsonMapper = jsonMapper;
@@ -115,7 +126,14 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
   }
 
   @Override
-  public void emit(Event event)
+  protected boolean shouldFilterEvent(final Event event)
+  {
+    return event instanceof ServiceMetricEvent
+           && shouldFilterOutMetric(((ServiceMetricEvent) event).getMetric());
+  }
+
+  @Override
+  protected void emitFilteredEvent(final Event event)
   {
     try {
       URI uri = uriExtractor.apply(event);
@@ -206,4 +224,11 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
            ", config=" + config +
            '}';
   }
+
+  @Override
+  public MetricAllowlistParser getMetricAllowlistParser()
+  {
+    return MetricAllowlistParsers::parseMetricNameObject;
+  }
+
 }
