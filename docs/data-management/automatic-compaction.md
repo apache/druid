@@ -93,7 +93,8 @@ The recommended way to run automatic compaction is using compaction supervisors 
 * Can use either the native compaction engine or the [MSQ task engine](#use-msq-for-auto-compaction)
 * More reactive and submits tasks as soon as a compaction slot is available
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
-* Uses new Indexing State Fingerprinting mechanisms to store less data per segment in metadata storage
+* Can be configured to store compact fingerprints instead of full compaction state in metadata storage
+* Supports minor compaction through the [MostFragmentedFirst policy](../api-reference/automatic-compaction-api.md/#compaction-policy-mostfragmentedfirst)
 
 To use a compaction supervisor, submit the auto-compaction configuration as a supervisor spec. Set `type` to `autocompact` and include the auto-compaction config in the `spec`.
 
