@@ -118,6 +118,7 @@
         <jna.version>5.18.1</jna.version>
         <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
+        <parquet.version>1.16.0</parquet.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
@@ -353,7 +354,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.13.1</version>
+                <version>1.14.0</version>
             </dependency>
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
@@ -761,7 +762,7 @@
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
                 <artifactId>jaxb-runtime</artifactId>
-                <version>2.3.3</version>
+                <version>2.3.9</version>
             </dependency>
             <dependency>
                 <groupId>org.graalvm.js</groupId>
