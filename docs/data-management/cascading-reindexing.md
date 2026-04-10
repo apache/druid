@@ -36,6 +36,13 @@ For example, you might want to:
 
 Cascading reindexing handles all of this automatically by generating a timeline of compaction intervals and applying the appropriate rules to each interval.
 
+## Prerequisites
+
+Before using cascading reindexing, ensure your cluster meets the following requirements:
+
+- **MSQ compaction engine**: Set `engine` to `msq` in the compaction dynamic config or in the supervisor spec.
+- **At least two compaction task slots**: The MSQ task engine requires at least two tasks (one controller, one worker).
+
 ## How cascading reindexing works
 
 ### Rule-based configuration
