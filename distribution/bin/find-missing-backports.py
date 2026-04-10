@@ -35,6 +35,8 @@ def extract_pr_title_from_commit_message(commit_msg):
 
 def extract_pr_numbers_from_commit_message(commit_msg):
     extracted_numbers = re.findall(pr_number_pattern, commit_msg)
+    if len(extracted_numbers) == 0:
+      print("No pr number found from commit: {}".format(commit_msg))
     return extracted_numbers
 
 def find_missing_backports(pr_jsons, release_pr_subjects, release_pr_numbers):

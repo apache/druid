@@ -25,6 +25,7 @@
   - [ ] [Key propagation](#Key-propagation)
   - [ ] [Maven credentials](#Maven-credentials)
 - [ ] [Announce intention to release](#Announce-intention-to-release)
+- [ ] [Security vulnerabilities](#Security-vulnerabilities)
 - [ ] [Create a release branch](#Create-a-release-branch)
   - [ ] [Preparing the release branch](#Preparing-the-release-branch)
   - [ ] [Preparing the master branch for the next version after branching](#Preparing-the-master-branch-for-the-next-version-after-branching)
@@ -126,20 +127,23 @@ You'll need to configure Maven with your Apache credentials by adding the follow
 
 First up in performing an official release of Apache Druid is to announce in the dev mailing list, dev@druid.apache.org, that it is about time for the next (approximately) quarterly release, or, that there is a critical bug that warrants doing a bug fix release, whatever the reason happens to be. Check for any critical bugs that are still open, or issues or PRs tagged with the release milestone, and give the community a bit of heads up to try and wrap up anything that _needs_ to be in the next release.
 
+## Security vulnerabilities
+The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are security vulnerabilities, we need to fix them before creating an RC.
+
 ## Create a release branch
 
 Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
 
 ```bash
-$ git checkout origin/0.17.0
+$ git checkout origin/master
 ...
-$ git checkout -b 0.17.1
+$ git checkout -b 37.0.0
 ```
 
 ```bash
-$ git checkout origin/master
+$ git checkout origin/37.0.0
 ...
-$ git checkout -b 0.17.0
+$ git checkout -b 37.0.1
 ```
 
 ### Preparing the release branch
@@ -148,18 +152,18 @@ Ensure that the web console and docker-compose file are in the correct state in 
 [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) should match the release version. If they do not, run:
 
 ```bash
-npm version 0.17.0
+npm version 37.0.0
 ```
 
 [unified-console.html](../web-console/unified-console.html), Javascript script tag must match the package.json version:
 
 ```html
-<script src="public/web-console-0.17.0.js"></script>
+<script src="public/web-console-37.0.0.js"></script>
 ```
 
 [`links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to the release version:
 ```
-const DRUID_DOCS_VERSION = '0.17.0';
+const DRUID_DOCS_VERSION = '37.0.0';
 ```
 
 After this is done, run:
@@ -181,7 +185,7 @@ The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/di
 ```yaml
 ...
   coordinator:
-    image: apache/druid:0.17.0
+    image: apache/druid:37.0.0
     container_name: coordinator
 ...
 ```
@@ -192,13 +196,13 @@ Once everything is ready, then push the branch to `origin`.
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
 
 ```bash
-$ mvn versions:set -DnewVersion=0.18.0-SNAPSHOT
+$ mvn versions:set -DnewVersion=38.0.0-SNAPSHOT
 ```
 
 You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
 
 ```bash
-npm version 0.18.0
+npm version 38.0.0
 ```
 
 which will update `package.json` and `package-lock.json`.
@@ -206,7 +210,7 @@ which will update `package.json` and `package-lock.json`.
 You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version:
 
 ```html
-<script src="public/web-console-0.18.0.js"></script>
+<script src="public/web-console-38.0.0.js"></script>
 ```
 
 [`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) should already be set to `'latest'` in the master branch, and so should not have to be adjusted.
@@ -216,12 +220,13 @@ The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/di
 ```yaml
 ...
   coordinator:
-    image: apache/druid:0.18.0
+    image: apache/druid:38.0.0
     container_name: coordinator
 ...
 ```
 
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
+You must finish this step right after the branch cut, this affects [auto-add-milestone](../.github/scripts/auto-add-milestone.sh) github action.
 
 ### Backport PRs tagged with release milestone
 If a PR is merged into the master branch after the release branch is created and tagged with the release version, then the commit must be backported to the release branch. Following tools can be helpful:
@@ -233,11 +238,11 @@ If a PR is merged into the master branch after the release branch is created and
 The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
 
 Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
-To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commit should show
+To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/37.0.0. On this page, latest commit should show
 a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
 You can restart a failed build via travis if it is flaky. 
 
-The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are failures, we need to fix them before creating an RC.
+Make sure [Cron Job ITS](https://github.com/apache/druid/actions/workflows/cron-job-its.yml) passes.
 
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
