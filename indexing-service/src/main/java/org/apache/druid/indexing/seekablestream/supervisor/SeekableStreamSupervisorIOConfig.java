@@ -88,13 +88,16 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
-    this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+    boolean isAutoScalerAvailable = autoScalerConfig != null;
+    this.autoScalerEnabled = isAutoScalerAvailable && autoScalerConfig.getEnableTaskAutoScaler();
     if (autoScalerEnabled) {
       // Priority: taskCountStart > taskCount > taskCountMin
       this.taskCount = Configs.valueOrDefault(
           autoScalerConfig.getTaskCountStart(),
           Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
       );
+    } else if (isAutoScalerAvailable) {
+      this.taskCount = taskCount != null ? taskCount : autoScalerConfig.getTaskCountMin();
     } else {
       this.taskCount = taskCount != null ? taskCount : 1;
     }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
@@ -212,6 +213,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
    * @param lags the lag metrics of Stream (Kafka/Kinesis)
    * @return Integer, target number of tasksCount. -1 means skip scale action.
    */
+  @VisibleForTesting
   int computeDesiredTaskCount(List<Long> lags)
   {
     // if the supervisor is not suspended, ensure required tasks are running
