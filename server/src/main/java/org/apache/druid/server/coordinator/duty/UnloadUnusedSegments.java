@@ -26,7 +26,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
-import org.apache.druid.server.coordinator.stats.DruidRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
@@ -67,7 +67,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
         server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();
 
-    final DruidRunStats stats = params.getDruidRunStats();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
     int numQueuedDrops = allServers.stream().mapToInt(
         server -> dropUnusedSegments(server, params, stats, broadcastStatusByDatasource)
     ).sum();
@@ -82,7 +82,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private int dropUnusedSegments(
       ServerHolder serverHolder,
       DruidCoordinatorRuntimeParams params,
-      DruidRunStats stats,
+      CoordinatorRunStats stats,
       Map<String, Boolean> broadcastStatusByDatasource
   )
   {

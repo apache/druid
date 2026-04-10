@@ -88,7 +88,7 @@ public class KillStalePendingSegments implements CoordinatorDuty
             "Killed [%d] pendingSegments created before [%s] for datasource[%s].",
             pendingSegmentsKilled, minCreatedTime, dataSource
         );
-        params.getDruidRunStats().add(
+        params.getCoordinatorStats().add(
             Stats.Kill.PENDING_SEGMENTS,
             RowKey.of(Dimension.DATASOURCE, dataSource),
             pendingSegmentsKilled

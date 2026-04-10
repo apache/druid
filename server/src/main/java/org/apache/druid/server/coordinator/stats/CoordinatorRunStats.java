@@ -35,20 +35,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * runtime of a single coordinator duty.
  */
 @ThreadSafe
-public class DruidRunStats
+public class CoordinatorRunStats
 {
-  private static final DruidRunStats EMPTY_INSTANCE = new DruidRunStats()
+  private static final CoordinatorRunStats EMPTY_INSTANCE = new CoordinatorRunStats()
   {
     @Override
     public void add(CoordinatorStat stat, RowKey rowKey, long value)
     {
-      throw new UnsupportedOperationException("Cannot add stats to empty DruidRunStats instance");
+      throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
     }
 
     @Override
     public void updateMax(CoordinatorStat stat, RowKey rowKey, long value)
     {
-      throw new UnsupportedOperationException("Cannot add stats to empty DruidRunStats instance");
+      throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
     }
   };
 
@@ -56,23 +56,23 @@ public class DruidRunStats
       allStats = new ConcurrentHashMap<>();
   private final Map<Dimension, String> debugDimensions = new HashMap<>();
 
-  public static DruidRunStats empty()
+  public static CoordinatorRunStats empty()
   {
     return EMPTY_INSTANCE;
   }
 
-  public DruidRunStats()
+  public CoordinatorRunStats()
   {
     this(null);
   }
 
   /**
-   * Creates a new {@code DruidRunStats}.
+   * Creates a new {@code CoordinatorRunStats}.
    *
    * @param debugDimensions Dimension values for which all metrics should be
    *                        collected and logged.
    */
-  public DruidRunStats(Map<Dimension, String> debugDimensions)
+  public CoordinatorRunStats(Map<Dimension, String> debugDimensions)
   {
     if (debugDimensions != null) {
       this.debugDimensions.putAll(debugDimensions);

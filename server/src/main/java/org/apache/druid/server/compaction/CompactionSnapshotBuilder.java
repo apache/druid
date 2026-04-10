@@ -20,8 +20,8 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
@@ -34,10 +34,10 @@ import java.util.Map;
  */
 public class CompactionSnapshotBuilder
 {
-  private final DruidRunStats stats;
+  private final CoordinatorRunStats stats;
   private final Map<String, AutoCompactionSnapshot.Builder> datasourceToBuilder = new HashMap<>();
 
-  public CompactionSnapshotBuilder(DruidRunStats runStats)
+  public CompactionSnapshotBuilder(CoordinatorRunStats runStats)
   {
     this.stats = runStats;
   }

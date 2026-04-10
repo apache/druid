@@ -36,7 +36,7 @@ import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.server.coordinator.stats.DruidRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -147,7 +147,7 @@ public class CompactionRunSimulator
         clusterConfig.isStoreCompactionStatePerSegment()
     );
 
-    final DruidRunStats stats = new DruidRunStats();
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,

@@ -27,8 +27,8 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 
@@ -51,7 +51,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final DruidCompactionConfig compactionConfig;
   private final SegmentLoadingConfig segmentLoadingConfig;
-  private final DruidRunStats stats;
+  private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
 
@@ -63,7 +63,7 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       DruidCompactionConfig compactionConfig,
       SegmentLoadingConfig segmentLoadingConfig,
-      DruidRunStats stats,
+      CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
       Set<String> broadcastDatasources
   )
@@ -148,7 +148,7 @@ public class DruidCoordinatorRuntimeParams
     return segmentLoadingConfig;
   }
 
-  public DruidRunStats getDruidRunStats()
+  public CoordinatorRunStats getCoordinatorStats()
   {
     return stats;
   }
@@ -200,7 +200,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private DruidCompactionConfig compactionConfig;
     private SegmentLoadingConfig segmentLoadingConfig;
-    private DruidRunStats stats;
+    private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
@@ -219,7 +219,7 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         DruidCompactionConfig compactionConfig,
         SegmentLoadingConfig segmentLoadingConfig,
-        DruidRunStats stats,
+        CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
         Set<String> broadcastDatasources
     )
@@ -262,7 +262,7 @@ public class DruidCoordinatorRuntimeParams
     {
       Map<Dimension, String> debugDimensions =
           coordinatorDynamicConfig == null ? null : coordinatorDynamicConfig.getValidatedDebugDimensions();
-      stats = stats == null ? new DruidRunStats(debugDimensions) : stats;
+      stats = stats == null ? new CoordinatorRunStats(debugDimensions) : stats;
     }
 
     /**
