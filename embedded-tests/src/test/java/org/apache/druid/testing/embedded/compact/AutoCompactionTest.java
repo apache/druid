@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -98,7 +99,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -188,13 +188,23 @@ public class AutoCompactionTest extends CompactionTestBase
               )
           );
 
-  private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
+  private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10_000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
+  private static final ClusterCompactionConfig DEFAULT_LEGACY_COMPACTION_CONFIG = new ClusterCompactionConfig(0.5, 10, null, false, CompactionEngine.NATIVE, true);
 
   public static List<CompactionEngine> getEngine()
   {
     return List.of(CompactionEngine.NATIVE);
+  }
+
+  public static List<ClusterCompactionConfig> getClusterCompactionConfig()
+  {
+    return List.of(
+        DEFAULT_LEGACY_COMPACTION_CONFIG,
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.NATIVE, true),
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true)
+    );
   }
   
   @Override
@@ -203,14 +213,14 @@ public class AutoCompactionTest extends CompactionTestBase
     // Use timeout required for hash partitioning task
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .useDefaultTimeoutForLatchableEmitter(30)
+                               .useDefaultTimeoutForLatchableEmitter(300)
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(broker)
-                               .addServer(new EmbeddedIndexer().addProperty("druid.worker.capacity", "10"))
+                               .addServer(new EmbeddedIndexer().addProperty("druid.worker.capacity", "10").setServerMemory(2_000_000_000L))
                                .addServer(new EmbeddedHistorical())
                                .addServer(new EmbeddedRouter());
   }
@@ -226,10 +236,9 @@ public class AutoCompactionTest extends CompactionTestBase
   }
 
   @BeforeEach
-  public void resetCompactionTaskSlots()
+  public void resetClusterCompactionConfig()
   {
-    // Set compaction slot to 5
-    updateCompactionTaskSlot(0.5, 10);
+    updateClusterConfig(DEFAULT_LEGACY_COMPACTION_CONFIG);
     fullDatasourceName = dataSource;
   }
 
@@ -353,7 +362,7 @@ public class AutoCompactionTest extends CompactionTestBase
     }
   }
 
-  @Test()
+  @Test
   public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics() throws Exception
   {
     // added = 31, count = null, sum_added = null
@@ -1504,12 +1513,11 @@ public class AutoCompactionTest extends CompactionTestBase
     }
   }
 
-  @ValueSource(booleans = {false})
-  @ParameterizedTest(name = "useSupervisors={0}")
-  public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
+  @MethodSource("getClusterCompactionConfig")
+  @ParameterizedTest(name = "clusterCompactionConfig={0}")
+  public void testAutoCompactionDutyWithFilter(ClusterCompactionConfig config) throws Exception
   {
-    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null, true));
-
+    updateClusterConfig(config);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
@@ -1533,7 +1541,7 @@ public class AutoCompactionTest extends CompactionTestBase
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
+      forceTriggerOrWaitForCompaction(intervalsBeforeCompaction, config, 2);
 
       // For dim "page", result should only contain value "Striker Eureka"
       verifyScanResult("added", "459.0");
@@ -1542,17 +1550,17 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<TaskStatusPlus> compactTasksBefore = getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
+      forceTriggerOrWaitForCompaction(intervalsBeforeCompaction, config, 2);
       List<TaskStatusPlus> compactTasksAfter = getCompleteTasksForDataSource(fullDatasourceName);
       Assertions.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
   }
 
-  @ValueSource(booleans = {false})
-  @ParameterizedTest(name = "useSupervisors={0}")
-  public void testAutoCompationDutyWithMetricsSpec(boolean useSupervisors) throws Exception
+  @MethodSource("getClusterCompactionConfig")
+  @ParameterizedTest(name = "clusterCompactionConfig={0}")
+  public void testAutoCompationDutyWithMetricsSpec(ClusterCompactionConfig config) throws Exception
   {
-    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null, true));
+    updateClusterConfig(config);
 
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1576,7 +1584,7 @@ public class AutoCompactionTest extends CompactionTestBase
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
+      forceTriggerOrWaitForCompaction(intervalsBeforeCompaction, config, 2);
 
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
@@ -1587,7 +1595,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<TaskStatusPlus> compactTasksBefore = getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
+      forceTriggerOrWaitForCompaction(intervalsBeforeCompaction, config, 2);
       List<TaskStatusPlus> compactTasksAfter = getCompleteTasksForDataSource(fullDatasourceName);
       Assertions.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
@@ -1775,40 +1783,23 @@ public class AutoCompactionTest extends CompactionTestBase
       CompactionEngine engine
   )
   {
+    UserCompactionTaskQueryTuningConfig tuningConfig =
+        UserCompactionTaskQueryTuningConfig.builder()
+                                           .partitionsSpec(partitionsSpec)
+                                           .splitHintSpec(new MaxSizeSplitHintSpec(null, 1))
+                                           .maxNumConcurrentSubTasks(1)
+                                           .totalNumMergeTasks(1)
+                                           .build();
     DataSourceCompactionConfig dataSourceCompactionConfig =
         InlineSchemaDataSourceCompactionConfig.builder()
                                               .forDataSource(fullDatasourceName)
                                               .withSkipOffsetFromLatest(skipOffsetFromLatest)
-                                              .withTuningConfig(
-                                                  new UserCompactionTaskQueryTuningConfig(
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      new MaxSizeSplitHintSpec(null, 1),
-                                                      partitionsSpec,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      1,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      null,
-                                                      1,
-                                                      null
-                                                  )
-                                              )
+                                              .withTuningConfig(tuningConfig)
                                               .withGranularitySpec(granularitySpec)
                                               .withDimensionsSpec(dimensionsSpec)
                                               .withMetricsSpec(metricsSpec)
                                               .withTransformSpec(transformSpec)
-                                              .withIoConfig(
-                                                  !dropExisting ? null : new UserCompactionTaskIOConfig(true)
-                                              )
+                                              .withIoConfig(!dropExisting ? null : new UserCompactionTaskIOConfig(true))
                                               .withEngine(engine)
                                               .withTaskContext(ImmutableMap.of("maxNumTasks", 2))
                                               .build();
@@ -1840,32 +1831,31 @@ public class AutoCompactionTest extends CompactionTestBase
    * {@link #fullDatasourceName}, and verifies the total number of segments in
    * the datasource after compaction.
    */
-  private void forceTriggerAutoCompaction(
+  private void forceTriggerOrWaitForCompaction(
       List<Interval> intervals,
-      boolean useSupervisors,
+      ClusterCompactionConfig config,
       int numExpectedSegmentsAfterCompaction
-  ) throws Exception
+  )
   {
-    if (useSupervisors) {
+    if (config.isUseSupervisors()) {
       // Enable compaction for the requested intervals
       final FixedIntervalOrderPolicy policy = new FixedIntervalOrderPolicy(
           intervals.stream().map(
               interval -> new FixedIntervalOrderPolicy.Candidate(fullDatasourceName, interval)
           ).collect(Collectors.toList())
       );
-      updateClusterConfig(
-          new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null, true)
-      );
+      updateClusterConfig(config.toBuilder().compactionPolicy(policy).build());
 
-      // Wait for scheduler to pick up the compaction job
-      // Instead of sleep, we can latch on a relevant metric later
-      Thread.sleep(30_000);
+      // Wait for all compaction jobs to be submitted
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName("interval/waitCompact/count")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                        .hasValueMatching(Matchers.equalTo(0L))
+      );
       waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
 
       // Disable all compaction
-      updateClusterConfig(
-          new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null, true)
-      );
+      updateClusterConfig(config.toBuilder().compactionPolicy(COMPACT_NOTHING_POLICY).build());
     } else {
       forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
     }
@@ -1908,7 +1898,7 @@ public class AutoCompactionTest extends CompactionTestBase
     Assertions.assertEquals(actualTombstoneCount, expectedCompactedTombstoneCount);
   }
 
-  private void verifySegmentsCompacted(PartitionsSpec partitionsSpec, int expectedCompactedSegmentCount)
+  private void verifySegmentsCompacted(PartitionsSpec expectedPartitionsSpec, int expectedCompactedSegmentCount)
   {
     Set<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord);
     List<DataSegment> foundCompactedSegments = new ArrayList<>();
@@ -1921,7 +1911,7 @@ public class AutoCompactionTest extends CompactionTestBase
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assertions.assertNotNull(compactedSegment.getLastCompactionState());
       Assertions.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assertions.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec(), partitionsSpec);
+      Assertions.assertEquals(expectedPartitionsSpec, compactedSegment.getLastCompactionState().getPartitionsSpec());
     }
 
   }

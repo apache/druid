@@ -804,7 +804,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |--------|-----------|-------|
 |`druid.manager.config.pollDuration`|How often the manager polls the config table for updates.|`PT1M`|
 |`druid.manager.segments.pollDuration`|The duration between polls the Coordinator does for updates to the set of active segments. Generally defines the amount of lag time it can take for the Coordinator to notice new segments.|`PT1M`|
-|`druid.manager.segments.useIncrementalCache`|(Experimental) Denotes the usage mode of the segment metadata incremental cache. This cache provides a performance improvement over the polling mechanism currently employed by the Coordinator as it retrieves payloads of only updated segments. Possible cache modes are: (a) `never`: Incremental cache is disabled. (b) `always`: Incremental cache is enabled. Service start-up will be blocked until cache has synced with the metadata store at least once. (c) `ifSynced`: Cache is enabled. This mode does not block service start-up and is a way to retain existing behavior of the Coordinator. If the incremental cache is in modes `always` or `ifSynced`, reads from the cache will block until it has synced with the metadata store at least once after becoming leader. The Coordinator never writes to this cache.|`never`|
+|`druid.manager.segments.useIncrementalCache`|Denotes the usage mode of the segment metadata incremental cache. This cache provides a performance improvement over the polling mechanism currently employed by the Coordinator as it retrieves payloads of only updated segments. Possible cache modes are: (a) `never`: Incremental cache is disabled. (b) `always`: Incremental cache is enabled. Service start-up will be blocked until cache has synced with the metadata store at least once. (c) `ifSynced`: Cache is enabled. This mode does not block service start-up and is a way to retain existing behavior of the Coordinator. If the incremental cache is in modes `always` or `ifSynced`, reads from the cache will block until it has synced with the metadata store at least once after becoming leader. The Coordinator never writes to this cache.|`ifSynced`|
 |`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the Coordinator to notice rules.|`PT1M`|
 |`druid.manager.rules.defaultRule`|The default rule for the cluster|`_default`|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|`PT10M`|
@@ -1053,14 +1053,14 @@ If autoscaling is enabled, you can set these additional configs:
 
 The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
-##### Segment metadata cache (Experimental)
+##### Segment metadata cache
 
 The following properties pertain to segment metadata caching on the Overlord that may be used to speed up segment allocation and other metadata operations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.segments.useIncrementalCache`|Denotes the usage mode of the segment metadata incremental cache. Possible modes are: (a) `never`: Cache is disabled. (b) `always`: Reads are always done from the cache. Service start-up will be blocked until cache has synced with the metadata store at least once. Transactions will block until cache has synced with the metadata store at least once after becoming leader. (c) `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions.|`never`|
-|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useIncrementalCache` is set to `always` or `ifSynced`.|`PT1M` (1 minute)|
+|`druid.manager.segments.useIncrementalCache`|Denotes the usage mode of the segment metadata incremental cache. Possible modes are: (a) `never`: Cache is disabled. (b) `always`: Reads are always done from the cache. Service start-up will be blocked until cache has synced with the metadata store at least once. Transactions will block until cache has synced with the metadata store at least once after becoming leader. (c) `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions.|`ifSynced`|
+|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when incremental cache usage mode is to `always` or `ifSynced`.|`PT1M` (1 minute)|
 
 ##### Auto-kill unused segments (Experimental)
 
@@ -1069,7 +1069,7 @@ None of the configs that apply to [auto-kill performed by the Coordinator](../da
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.segments.killUnused.enabled`|Boolean flag to enable auto-kill of eligible unused segments on the Overlord. This feature can be used only when [segment metadata caching](#segment-metadata-cache-experimental) is enabled on the Overlord and MUST NOT be enabled if `druid.coordinator.kill.on` is already set to `true` on the Coordinator.|`true`|
+|`druid.manager.segments.killUnused.enabled`|Boolean flag to enable auto-kill of eligible unused segments on the Overlord. This feature can be used only when [segment metadata caching](#segment-metadata-cache) is enabled on the Overlord and MUST NOT be enabled if `druid.coordinator.kill.on` is already set to `true` on the Coordinator.|`true`|
 |`druid.manager.segments.killUnused.bufferPeriod`|Period after which a segment marked as unused becomes eligible for auto-kill on the Overlord. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`P30D` (30 days)|
 
 #### Overlord dynamic configuration
