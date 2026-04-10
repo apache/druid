@@ -174,4 +174,46 @@ public class StringDimensionSchemaTest
         effective.getColumnFormatSpec().getIndexType()
     );
   }
+
+  @Test
+  public void testGetDimensionHandlerColumnFormatSpecOverridesParent()
+  {
+    final StringColumnFormatSpec spec = StringColumnFormatSpec.builder()
+        .setIndexType(StringBitmapIndexType.NoIndex.INSTANCE)
+        .setMultiValueHandling(MultiValueHandling.ARRAY)
+        .build();
+    // Parent has SORTED_SET + createBitmapIndex=true, columnFormatSpec has ARRAY + NoIndex, formatSpec should be honored
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, true, spec);
+
+    Assert.assertEquals(MultiValueHandling.ARRAY, schema.getDimensionHandler().getMultivalueHandling());
+    final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
+    Assert.assertFalse(handlerSchema.hasBitmapIndex());
+  }
+
+  @Test
+  public void testGetDimensionHandlerColumnFormatSpecIndexTypeOverridesParentFalse()
+  {
+    final StringColumnFormatSpec spec = StringColumnFormatSpec.builder()
+        .setIndexType(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE)
+        .build();
+    // Parent has createBitmapIndex=false, columnFormatSpec has DictionaryEncodedValueIndex, formatSpec should be honored
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", null, false, spec);
+    final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
+
+    Assert.assertTrue(handlerSchema.hasBitmapIndex());
+  }
+
+  @Test
+  public void testGetDimensionHandlerFallsBackToParentWhenColumnFormatSpecFieldsNull()
+  {
+    final StringColumnFormatSpec spec = StringColumnFormatSpec.builder()
+        .setMaxStringLength(100)
+        .build();
+    // columnFormatSpec has only maxStringLength, and nono indexType or multiValueHandling, parent values should be used
+    final StringDimensionSchema schema = new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false, spec);
+
+    Assert.assertEquals(MultiValueHandling.SORTED_SET, schema.getDimensionHandler().getMultivalueHandling());
+    final DimensionSchema handlerSchema = schema.getDimensionHandler().getDimensionSchema(null);
+    Assert.assertFalse(handlerSchema.hasBitmapIndex());
+  }
 }
