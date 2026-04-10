@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -54,7 +54,7 @@ public class GenericIndexedStringWriterTest extends InitializedNullHandlingTest
       writer.write(s);
     }
     for (int i = 0; i < strings.size(); i++) {
-      Assert.assertEquals(strings.get(i), writer.get(i));
+      Assertions.assertEquals(strings.get(i), writer.get(i));
     }
   }
 }

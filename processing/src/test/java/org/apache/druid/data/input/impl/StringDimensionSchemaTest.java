@@ -26,8 +26,8 @@ import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringDimensionSchemaTest
 {
@@ -46,7 +46,7 @@ public class StringDimensionSchemaTest
   {
     final String json = "\"dim\"";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim"), schema);
+    Assertions.assertEquals(new StringDimensionSchema("dim"), schema);
   }
 
   @Test
@@ -59,17 +59,17 @@ public class StringDimensionSchemaTest
                         + "  \"maxStringLength\" : 200\n"
                         + "}";
     final StringDimensionSchema schema = (StringDimensionSchema) jsonMapper.readValue(json, DimensionSchema.class);
-    Assert.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
-    Assert.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
+    Assertions.assertEquals(new StringDimensionSchema("dim", MultiValueHandling.SORTED_SET, false), schema);
+    Assertions.assertEquals(Integer.valueOf(200), schema.getMaxStringLength());
   }
 
   @Test
   public void testInvalidMaxStringLength()
   {
-    final Exception exception = Assert.assertThrows(
+    final Exception exception = Assertions.assertThrows(
         DruidException.class,
         () -> new StringDimensionSchema("dim", null, true, -1)
     );
-    Assert.assertTrue(exception.getMessage().contains("maxStringLength for column [dim] must be >= 0"));
+    Assertions.assertTrue(exception.getMessage().contains("maxStringLength for column [dim] must be >= 0"));
   }
 }

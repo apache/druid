@@ -34,8 +34,8 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 
@@ -105,10 +105,10 @@ public class SegmentAnalysisTest
         SegmentAnalysis.class
     );
 
-    Assert.assertEquals(analysis, analysis2);
+    Assertions.assertEquals(analysis, analysis2);
 
     // Verify column order is preserved.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.copyOf(columns.entrySet()),
         ImmutableList.copyOf(analysis2.getColumns().entrySet())
     );

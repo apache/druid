@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
@@ -32,13 +32,13 @@ public class URIsTest
     final String strUri = "https://test-user@127.0.0.1:8000/test/path?test-query#test-fragment";
     final URI uri = URIs.parse(strUri, "http");
 
-    Assert.assertEquals("https", uri.getScheme());
-    Assert.assertEquals("test-user", uri.getUserInfo());
-    Assert.assertEquals("127.0.0.1", uri.getHost());
-    Assert.assertEquals(8000, uri.getPort());
-    Assert.assertEquals("/test/path", uri.getPath());
-    Assert.assertEquals("test-query", uri.getQuery());
-    Assert.assertEquals("test-fragment", uri.getFragment());
+    Assertions.assertEquals("https", uri.getScheme());
+    Assertions.assertEquals("test-user", uri.getUserInfo());
+    Assertions.assertEquals("127.0.0.1", uri.getHost());
+    Assertions.assertEquals(8000, uri.getPort());
+    Assertions.assertEquals("/test/path", uri.getPath());
+    Assertions.assertEquals("test-query", uri.getQuery());
+    Assertions.assertEquals("test-fragment", uri.getFragment());
   }
 
   @Test
@@ -47,13 +47,13 @@ public class URIsTest
     final String strUri = "test-user@127.0.0.1:8000/test/path?test-query#test-fragment";
     final URI uri = URIs.parse(strUri, "http");
 
-    Assert.assertEquals("http", uri.getScheme());
-    Assert.assertEquals("test-user", uri.getUserInfo());
-    Assert.assertEquals("127.0.0.1", uri.getHost());
-    Assert.assertEquals(8000, uri.getPort());
-    Assert.assertEquals("/test/path", uri.getPath());
-    Assert.assertEquals("test-query", uri.getQuery());
-    Assert.assertEquals("test-fragment", uri.getFragment());
+    Assertions.assertEquals("http", uri.getScheme());
+    Assertions.assertEquals("test-user", uri.getUserInfo());
+    Assertions.assertEquals("127.0.0.1", uri.getHost());
+    Assertions.assertEquals(8000, uri.getPort());
+    Assertions.assertEquals("/test/path", uri.getPath());
+    Assertions.assertEquals("test-query", uri.getQuery());
+    Assertions.assertEquals("test-fragment", uri.getFragment());
   }
 
   @Test
@@ -62,9 +62,9 @@ public class URIsTest
     final String strUri = "127.0.0.1:8000";
     final URI uri = URIs.parse(strUri, "https");
 
-    Assert.assertEquals("https", uri.getScheme());
-    Assert.assertNull(uri.getUserInfo());
-    Assert.assertEquals("127.0.0.1", uri.getHost());
-    Assert.assertEquals(8000, uri.getPort());
+    Assertions.assertEquals("https", uri.getScheme());
+    Assertions.assertNull(uri.getUserInfo());
+    Assertions.assertEquals("127.0.0.1", uri.getHost());
+    Assertions.assertEquals(8000, uri.getPort());
   }
 }
