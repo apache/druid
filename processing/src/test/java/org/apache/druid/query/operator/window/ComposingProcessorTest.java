@@ -20,8 +20,8 @@
 package org.apache.druid.query.operator.window;
 
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,24 +35,24 @@ public class ComposingProcessorTest
     final ProcessorForTesting secondProcessor = new ProcessorForTesting();
 
     ComposingProcessor proc = new ComposingProcessor(firstProcessor, secondProcessor);
-    Assert.assertTrue(proc.getOutputColumnNames().isEmpty());
+    Assertions.assertTrue(proc.getOutputColumnNames().isEmpty());
 
     proc.process(null);
-    Assert.assertEquals(1, firstProcessor.processCounter);
-    Assert.assertEquals(1, secondProcessor.processCounter);
+    Assertions.assertEquals(1, firstProcessor.processCounter);
+    Assertions.assertEquals(1, secondProcessor.processCounter);
 
     proc.process(null);
-    Assert.assertEquals(2, firstProcessor.processCounter);
-    Assert.assertEquals(2, secondProcessor.processCounter);
+    Assertions.assertEquals(2, firstProcessor.processCounter);
+    Assertions.assertEquals(2, secondProcessor.processCounter);
 
-    Assert.assertTrue(proc.validateEquivalent(proc));
-    Assert.assertEquals(1, firstProcessor.validateCounter);
-    Assert.assertEquals(1, secondProcessor.validateCounter);
+    Assertions.assertTrue(proc.validateEquivalent(proc));
+    Assertions.assertEquals(1, firstProcessor.validateCounter);
+    Assertions.assertEquals(1, secondProcessor.validateCounter);
 
     firstProcessor.validationResult = false;
-    Assert.assertFalse(proc.validateEquivalent(proc));
-    Assert.assertEquals(2, firstProcessor.validateCounter);
-    Assert.assertEquals(1, secondProcessor.validateCounter);
+    Assertions.assertFalse(proc.validateEquivalent(proc));
+    Assertions.assertEquals(2, firstProcessor.validateCounter);
+    Assertions.assertEquals(1, secondProcessor.validateCounter);
   }
 
   private static class ProcessorForTesting implements Processor

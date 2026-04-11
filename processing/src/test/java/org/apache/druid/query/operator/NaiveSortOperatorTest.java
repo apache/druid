@@ -27,7 +27,7 @@ import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class NaiveSortOperatorTest
 {
