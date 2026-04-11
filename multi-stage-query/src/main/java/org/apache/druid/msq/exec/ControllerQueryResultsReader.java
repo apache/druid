@@ -37,8 +37,6 @@ import java.util.List;
  */
 public class ControllerQueryResultsReader implements FrameProcessor<Void>
 {
-  private static final Logger log = new Logger(ControllerQueryResultsReader.class);
-
   private final ReadableFrameChannel in;
   private final FrameReader frameReader;
   private final QueryListener queryListener;
