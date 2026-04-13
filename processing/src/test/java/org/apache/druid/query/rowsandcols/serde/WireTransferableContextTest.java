@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class WireTransferableContextTest
   @Test
   public void test_defaultLegacyFrameSerialization()
   {
-    Assert.assertTrue(WireTransferableContext.DEFAULT_LEGACY_FRAME_SERIALIZATION);
+    Assertions.assertTrue(WireTransferableContext.DEFAULT_LEGACY_FRAME_SERIALIZATION);
   }
 
   @Test
@@ -47,9 +47,9 @@ public class WireTransferableContextTest
 
     final WireTransferableContext context = new WireTransferableContext(mockMapper, mockDeserializer, true);
 
-    Assert.assertSame(mockMapper, context.smileMapper());
-    Assert.assertSame(mockDeserializer, context.concreteDeserializer());
-    Assert.assertTrue(context.useLegacyFrameSerialization());
+    Assertions.assertSame(mockMapper, context.smileMapper());
+    Assertions.assertSame(mockDeserializer, context.concreteDeserializer());
+    Assertions.assertTrue(context.useLegacyFrameSerialization());
   }
 
   @Test
@@ -57,23 +57,23 @@ public class WireTransferableContextTest
   {
     final WireTransferableContext context = new WireTransferableContext(null, null, false);
 
-    Assert.assertNull(context.smileMapper());
-    Assert.assertNull(context.concreteDeserializer());
-    Assert.assertFalse(context.useLegacyFrameSerialization());
+    Assertions.assertNull(context.smileMapper());
+    Assertions.assertNull(context.concreteDeserializer());
+    Assertions.assertFalse(context.useLegacyFrameSerialization());
   }
 
   @Test
   public void test_useLegacyFrameSerialization_true()
   {
     final WireTransferableContext context = new WireTransferableContext(null, null, true);
-    Assert.assertTrue(context.useLegacyFrameSerialization());
+    Assertions.assertTrue(context.useLegacyFrameSerialization());
   }
 
   @Test
   public void test_useLegacyFrameSerialization_false()
   {
     final WireTransferableContext context = new WireTransferableContext(null, null, false);
-    Assert.assertFalse(context.useLegacyFrameSerialization());
+    Assertions.assertFalse(context.useLegacyFrameSerialization());
   }
 
   @Test
@@ -89,7 +89,7 @@ public class WireTransferableContextTest
     final WireTransferableContext context = new WireTransferableContext(mockMapper, null, true);
     final WireTransferable.ByteArrayOffsetAndLen result = context.serializedBytes(mockWireTransferable);
 
-    Assert.assertSame(expectedResult, result);
+    Assertions.assertSame(expectedResult, result);
     Mockito.verify(mockWireTransferable).serializedBytes(mockMapper);
   }
 
@@ -106,7 +106,7 @@ public class WireTransferableContextTest
     final WireTransferableContext context = new WireTransferableContext(null, mockDeserializer, true);
     final RowsAndColumns result = context.deserialize(buffer);
 
-    Assert.assertSame(mockRac, result);
+    Assertions.assertSame(mockRac, result);
     Mockito.verify(mockDeserializer).deserialize(buffer);
   }
 
@@ -116,11 +116,11 @@ public class WireTransferableContextTest
     final WireTransferableContext context = new WireTransferableContext(null, null, true);
     final ByteBuffer buffer = ByteBuffer.allocate(10);
 
-    final DruidException exception = Assert.assertThrows(
+    final DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> context.deserialize(buffer)
     );
-    Assert.assertTrue(exception.getMessage().contains("Cannot deserialize"));
-    Assert.assertTrue(exception.getMessage().contains("no concreteDeserializer"));
+    Assertions.assertTrue(exception.getMessage().contains("Cannot deserialize"));
+    Assertions.assertTrue(exception.getMessage().contains("no concreteDeserializer"));
   }
 }

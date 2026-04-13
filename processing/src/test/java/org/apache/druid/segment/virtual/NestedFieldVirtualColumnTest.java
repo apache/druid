@@ -25,8 +25,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedPathFinder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NestedFieldVirtualColumnTest
 {
@@ -38,7 +38,7 @@ public class NestedFieldVirtualColumnTest
     NestedFieldVirtualColumn there = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
     String json = JSON_MAPPER.writeValueAsString(there);
     NestedFieldVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedFieldVirtualColumn.class);
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
@@ -47,14 +47,13 @@ public class NestedFieldVirtualColumnTest
     NestedFieldVirtualColumn there = new NestedFieldVirtualColumn("nested", "$.x.y.z[1]", "v0", ColumnType.LONG);
     String json = JSON_MAPPER.writeValueAsString(there);
     NestedFieldVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedFieldVirtualColumn.class);
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
   public void testBothPathAndPartsDefined()
   {
-    Assert.assertThrows(
-        "Cannot define both 'path' and 'pathParts'",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new NestedFieldVirtualColumn(
             "nested",
@@ -64,15 +63,15 @@ public class NestedFieldVirtualColumnTest
             false,
             "$.x.y.z",
             false
-        )
+        ),
+        "Cannot define both 'path' and 'pathParts'"
     );
   }
 
   @Test
   public void testNoPathAndPartsDefined()
   {
-    Assert.assertThrows(
-        "Must define exactly one of 'path' or 'pathParts'",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new NestedFieldVirtualColumn(
             "nested",
@@ -82,7 +81,8 @@ public class NestedFieldVirtualColumnTest
             null,
             null,
             null
-        )
+        ),
+        "Must define exactly one of 'path' or 'pathParts'"
     );
   }
 
@@ -92,10 +92,10 @@ public class NestedFieldVirtualColumnTest
     NestedFieldVirtualColumn v1 = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
     NestedFieldVirtualColumn v2 = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v1", ColumnType.LONG);
     NestedFieldVirtualColumn v3 = new NestedFieldVirtualColumn("nested", "$.x.y.z[0]", "v0", ColumnType.LONG);
-    Assert.assertNotEquals(v1, v2);
-    Assert.assertEquals(v1.getEquivalanceKey(), v2.getEquivalanceKey());
-    Assert.assertNotEquals(v1, v3);
-    Assert.assertNotEquals(v1.getEquivalanceKey(), v3.getEquivalanceKey());
+    Assertions.assertNotEquals(v1, v2);
+    Assertions.assertEquals(v1.getEquivalanceKey(), v2.getEquivalanceKey());
+    Assertions.assertNotEquals(v1, v3);
+    Assertions.assertNotEquals(v1.getEquivalanceKey(), v3.getEquivalanceKey());
   }
 
   @Test

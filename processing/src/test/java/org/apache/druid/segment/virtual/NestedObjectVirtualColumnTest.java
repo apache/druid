@@ -26,8 +26,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -49,7 +49,7 @@ public class NestedObjectVirtualColumnTest
     );
     String json = JSON_MAPPER.writeValueAsString(there);
     NestedObjectVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedObjectVirtualColumn.class);
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
@@ -65,7 +65,7 @@ public class NestedObjectVirtualColumnTest
         keyExprMap,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertEquals(keyExprMap, column.getKeyExprMap());
+    Assertions.assertEquals(keyExprMap, column.getKeyExprMap());
   }
 
   @Test
@@ -80,9 +80,9 @@ public class NestedObjectVirtualColumnTest
         TestExprMacroTable.INSTANCE
     );
     String result = column.toString();
-    Assert.assertTrue(result.startsWith("NestedObjectVirtualColumn{"));
-    Assert.assertTrue(result.contains("name='test_obj'"));
-    Assert.assertTrue(result.contains("object="));
+    Assertions.assertTrue(result.startsWith("NestedObjectVirtualColumn{"));
+    Assertions.assertTrue(result.contains("name='test_obj'"));
+    Assertions.assertTrue(result.contains("object="));
   }
 
   @Test
@@ -97,7 +97,7 @@ public class NestedObjectVirtualColumnTest
         json,
         NestedObjectVirtualColumn.TypedExpression.class
     );
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
@@ -107,8 +107,8 @@ public class NestedObjectVirtualColumnTest
         "test_expression",
         ColumnType.DOUBLE
     );
-    Assert.assertEquals("test_expression", typedExpr.getExpression());
-    Assert.assertEquals(ColumnType.DOUBLE, typedExpr.getType());
+    Assertions.assertEquals("test_expression", typedExpr.getExpression());
+    Assertions.assertEquals(ColumnType.DOUBLE, typedExpr.getType());
   }
 
   @Test
