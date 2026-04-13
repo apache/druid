@@ -1,0 +1,22 @@
+name: Build on Release
+run-name: "Build ${{ github.event.release.tag_name }}"
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  build-production:
+    name: Build Production Image
+    uses: THG-Fulfil/shared-workflows/.github/workflows/release-build.yml@rowan-changes
+    with:
+      build_type: java
+      java_version: '8|11'
+    secrets: inherit
