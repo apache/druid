@@ -163,4 +163,135 @@ public class DiskNormalizedCostBalancerStrategyTest
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
+
+  @Test
+  public void testPrefersServerWithLessDiskUsage()
+  {
+    List<ServerHolder> serverHolderList = new ArrayList<>();
+    long maxSize = 10_000_000L;
+
+    // Server with high disk usage (80% full)
+    TestLoadQueuePeon peonFull = new TestLoadQueuePeon();
+    List<DataSegment> fullSegments = IntStream.range(0, 20)
+        .mapToObj(j -> getSegment(j))
+        .collect(Collectors.toList());
+    ImmutableDruidDataSource fullDataSource =
+        new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), fullSegments);
+    serverHolderList.add(
+        new ServerHolder(
+            new ImmutableDruidServer(
+                new DruidServerMetadata(
+                    "HIGH_USAGE_SERVER",
+                    "localhost",
+                    null,
+                    maxSize,
+                    null,
+                    ServerType.HISTORICAL,
+                    "hot",
+                    1
+                ),
+                8_000_000L,
+                ImmutableMap.of("DUMMY", fullDataSource),
+                fullSegments.size()
+            ),
+            peonFull
+        ));
+
+    // Server with low disk usage (20% full)
+    TestLoadQueuePeon peonEmpty = new TestLoadQueuePeon();
+    List<DataSegment> emptySegments = IntStream.range(100, 120)
+        .mapToObj(j -> getSegment(j))
+        .collect(Collectors.toList());
+    ImmutableDruidDataSource emptyDataSource =
+        new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), emptySegments);
+    serverHolderList.add(
+        new ServerHolder(
+            new ImmutableDruidServer(
+                new DruidServerMetadata(
+                    "LOW_USAGE_SERVER",
+                    "localhost",
+                    null,
+                    maxSize,
+                    null,
+                    ServerType.HISTORICAL,
+                    "hot",
+                    1
+                ),
+                2_000_000L,
+                ImmutableMap.of("DUMMY", emptyDataSource),
+                emptySegments.size()
+            ),
+            peonEmpty
+        ));
+
+    DataSegment segment = getSegment(1000);
+    BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
+    );
+    ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
+    Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
+    Assert.assertEquals(
+        "Server with less disk usage should be preferred",
+        "LOW_USAGE_SERVER",
+        holder.getServer().getName()
+    );
+  }
+
+  @Test
+  public void testDoesNotMoveSegmentWhenUtilizationIsSimilar()
+  {
+    long maxSize = 10_000_000L;
+
+    // Source server at 50% usage, holds segments 0-19
+    TestLoadQueuePeon sourcePeon = new TestLoadQueuePeon();
+    List<DataSegment> sourceSegments = IntStream.range(0, 20)
+        .mapToObj(j -> getSegment(j))
+        .collect(Collectors.toList());
+    ImmutableDruidDataSource sourceDs =
+        new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), sourceSegments);
+    ServerHolder source = new ServerHolder(
+        new ImmutableDruidServer(
+            new DruidServerMetadata("SOURCE", "localhost", null, maxSize, null, ServerType.HISTORICAL, "hot", 1),
+            5_000_000L,
+            ImmutableMap.of("DUMMY", sourceDs),
+            sourceSegments.size()
+        ),
+        sourcePeon
+    );
+
+    // Destination server at 48% usage, holds segments 100-119
+    // 48/50 = 0.96 > MOVE_THRESHOLD (0.95), so the stickiness should prevent the move
+    TestLoadQueuePeon destPeon = new TestLoadQueuePeon();
+    List<DataSegment> destSegments = IntStream.range(100, 120)
+        .mapToObj(j -> getSegment(j))
+        .collect(Collectors.toList());
+    ImmutableDruidDataSource destDs =
+        new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), destSegments);
+    ServerHolder destination = new ServerHolder(
+        new ImmutableDruidServer(
+            new DruidServerMetadata("DESTINATION", "localhost", null, maxSize, null, ServerType.HISTORICAL, "hot", 1),
+            4_800_000L,
+            ImmutableMap.of("DUMMY", destDs),
+            destSegments.size()
+        ),
+        destPeon
+    );
+
+    // Pick a segment loaded on the source
+    DataSegment segmentToMove = sourceSegments.get(0);
+
+    BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
+    );
+
+    List<ServerHolder> servers = new ArrayList<>();
+    servers.add(source);
+    servers.add(destination);
+
+    ServerHolder result = strategy.findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    Assert.assertNull(
+        "Segment should not move when utilization difference is within the 5% threshold",
+        result
+    );
+  }
 }

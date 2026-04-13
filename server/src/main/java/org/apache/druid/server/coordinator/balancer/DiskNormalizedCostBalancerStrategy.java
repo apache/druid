@@ -24,24 +24,32 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 /**
- * A {@link BalancerStrategy} which can be used when historicals in a tier have
- * varying disk capacities. This strategy normalizes the cost of placing a segment on
- * a server as calculated by {@link CostBalancerStrategy} by doing the following:
- * <ul>
- * <li>Divide the cost by the number of segments on the server. This ensures that
- * cost does not increase just because the number of segments on a server is higher.</li>
- * <li>Multiply the resulting value by disk usage ratio. This ensures that all
- * hosts have equivalent levels of percentage disk utilization.</li>
- * </ul>
- * i.e. to place a segment on a given server
+ * A {@link BalancerStrategy} which normalizes the cost of placing a segment on a
+ * server as calculated by {@link CostBalancerStrategy} by multiplying it by the
+ * server's disk usage ratio.
  * <pre>
- * cost = as computed by CostBalancerStrategy
- * normalizedCost = (cost / numSegments) * usageRatio
- *                = (cost / numSegments) * (diskUsed / totalDiskSpace)
+ * normalizedCost = cost * usageRatio
+ *     where usageRatio = diskUsed / totalDiskSpace
  * </pre>
+ * This penalizes servers that are more full, driving disk utilization to equalize
+ * across the tier. When all servers have equal disk usage, the behavior is identical
+ * to {@link CostBalancerStrategy}. When historicals have different disk capacities,
+ * this naturally accounts for both fill level and total capacity.
+ * <p>
+ * To prevent oscillation when servers have similar utilization, a segment that is
+ * already placed on a server receives a 5% cost discount ({@link #MOVE_THRESHOLD}).
+ * This means a move only occurs when the destination is meaningfully cheaper.
  */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
+  /**
+   * Cost multiplier applied when a segment is already on the server. This
+   * creates a "stickiness" that prevents oscillation: a segment only moves
+   * when the destination's disk-normalized cost is at least 5% lower than
+   * the current server's.
+   */
+  private static final double MOVE_THRESHOLD = 0.95;
+
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
     super(exec);
@@ -59,15 +67,14 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
       return cost;
     }
 
-    int nSegments = 1;
-    if (server.getServer().getNumSegments() > 0) {
-      nSegments = server.getServer().getNumSegments();
+    double usageRatio = (double) server.getSizeUsed() / server.getMaxSize();
+    double normalizedCost = cost * usageRatio;
+
+    if (server.isProjectedSegment(proposalSegment)) {
+      normalizedCost *= MOVE_THRESHOLD;
     }
 
-    double normalizedCost = cost / nSegments;
-    double usageRatio = (double) server.getSizeUsed() / (double) server.getServer().getMaxSize();
-
-    return normalizedCost * usageRatio;
+    return normalizedCost;
   }
 }
 
