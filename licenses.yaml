@@ -4249,15 +4249,16 @@ libraries:
 
 name: grpc-io
 license_category: binary
-module: extensions/druid-google-extensions
+module: extensions-contrib/grpc-query
 license_name: Apache License version 2.0
-version: 1.59.0
+version: 1.80.0
 libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-api
   - io.grpc: grpc-auth
   - io.grpc: grpc-context
   - io.grpc: grpc-core
+  - io.grpc: grpc-grpclb
   - io.grpc: grpc-grpclib
   - io.grpc: grpc-inprocess
   - io.grpc: grpc-protobuf
@@ -4348,16 +4349,6 @@ license_name: BSD-3-Clause License
 version: 3.24.4
 libraries:
   - com.google.protobuf: protobuf-java-util
-
----
-
-name: google-grpc
-license_category: binary
-module: extensions/druid-google-extensions
-license_name: Apache License version 2.0
-version: 1.59.0
-libraries:
-  - io.grpc: grpc-grpclb
 
 ---
 
