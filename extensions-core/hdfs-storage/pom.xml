@@ -48,10 +48,6 @@
             <scope>runtime</scope>
             <exclusions>
                 <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-bundle</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>software.amazon.awssdk</groupId>
                     <artifactId>bundle</artifactId>
                 </exclusion>
@@ -163,12 +159,6 @@
                     <artifactId>hadoop-client-minicluster</artifactId>
                     <version>${hadoop.compile.version}</version>
                     <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-s3</artifactId>
-                    <version>${aws.sdk.v1.version}</version>
-                    <scope>runtime</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.logging.log4j</groupId>
