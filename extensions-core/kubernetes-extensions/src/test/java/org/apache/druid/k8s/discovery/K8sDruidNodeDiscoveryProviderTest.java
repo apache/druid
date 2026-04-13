@@ -431,7 +431,8 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(10)
   public void testNodeRoleWatcherHandlesChannelResetException() throws Exception
   {
     String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
