@@ -37,7 +37,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
   @TempDir
   static Path folder;
 
-  public ComposingOutputChannelFactoryTest() throws IOException
+  public ComposingOutputChannelFactoryTest()
   {
     super(
         new ComposingOutputChannelFactory(
