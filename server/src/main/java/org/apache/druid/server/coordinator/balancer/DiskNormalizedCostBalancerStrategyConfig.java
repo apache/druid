@@ -19,32 +19,15 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DiskNormalizedCostBalancerStrategyFactory extends BalancerStrategyFactory
+public class DiskNormalizedCostBalancerStrategyConfig
 {
-  private final DiskNormalizedCostBalancerStrategyConfig config;
+  @JsonProperty
+  private double diskUtilThresholdTolerance = DiskNormalizedCostBalancerStrategy.DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE;
 
-  public DiskNormalizedCostBalancerStrategyFactory()
+  public double getDiskUtilThresholdTolerance()
   {
-    this(new DiskNormalizedCostBalancerStrategyConfig());
-  }
-
-  @JsonCreator
-  public DiskNormalizedCostBalancerStrategyFactory(
-      @JacksonInject DiskNormalizedCostBalancerStrategyConfig config
-  )
-  {
-    this.config = config;
-  }
-
-  @Override
-  public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
-  {
-    return new DiskNormalizedCostBalancerStrategy(
-        getOrCreateBalancerExecutor(numBalancerThreads),
-        config.getDiskUtilThresholdTolerance()
-    );
+    return diskUtilThresholdTolerance;
   }
 }

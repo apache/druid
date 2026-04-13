@@ -43,16 +43,22 @@ import org.apache.druid.timeline.DataSegment;
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
   /**
-   * Cost multiplier applied when a segment is already on the server. This
-   * creates a "stickiness" that prevents oscillation: a segment only moves
-   * when the destination's disk-normalized cost is at least 5% lower than
-   * the current server's.
+   * Default cost multiplier applied when a segment is already on the server.
+   * Configurable via {@code druid.coordinator.balancer.diskNormalized.diskUtilThresholdTolerance}.
    */
-  private static final double MOVE_THRESHOLD = 0.95;
+  static final double DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE = 0.95;
+
+  private final double diskUtilThresholdTolerance;
 
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
+    this(exec, DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE);
+  }
+
+  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double diskUtilThresholdTolerance)
+  {
     super(exec);
+    this.diskUtilThresholdTolerance = diskUtilThresholdTolerance;
   }
 
   @Override
@@ -71,7 +77,7 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     double normalizedCost = cost * usageRatio;
 
     if (server.isProjectedSegment(proposalSegment)) {
-      normalizedCost *= MOVE_THRESHOLD;
+      normalizedCost *= diskUtilThresholdTolerance;
     }
 
     return normalizedCost;
