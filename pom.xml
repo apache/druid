@@ -118,7 +118,6 @@
         <jna.version>5.18.1</jna.version>
         <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
-        <parquet.version>1.16.0</parquet.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
