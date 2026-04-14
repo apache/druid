@@ -321,7 +321,7 @@ public class ServerSideEncryptingAmazonS3
       assumeRoleExternalId = s3InputSourceConfig.getAssumeRoleExternalId();
     } else if (s3ExportStorageProvider != null) {
       assumeRoleArn = s3ExportStorageProvider.getAssumeRoleArn();
-      assumeRoleExternalId = s3ExportStorageProvider.getAssumeRoleArn();
+      assumeRoleExternalId = s3ExportStorageProvider.getAssumeRoleExternalId();
     } else {
       assumeRoleArn = null;
       assumeRoleExternalId = null;
@@ -359,7 +359,6 @@ public class ServerSideEncryptingAmazonS3
                        .socketTimeout(Duration.ofMillis(awsClientConfig.getSocketTimeoutMillis()))
                        .maxConnections(awsClientConfig.getMaxConnections());
       S3Configuration s3Config = S3Configuration.builder()
-                                                .pathStyleAccessEnabled(awsClientConfig.isEnablePathStyleAccess())
                                                 .chunkedEncodingEnabled(!awsClientConfig.isDisableChunkedEncoding())
                                                 .build();
       clientBuilder.serviceConfiguration(s3Config)
@@ -438,30 +437,26 @@ public class ServerSideEncryptingAmazonS3
   public static AwsCredentialsProvider createAssumeRoleCredentialsProvider(
       String assumeRoleArn,
       @Nullable String assumeRoleExternalId,
-      AWSEndpointConfig awsEndpointConfig,
+      @Nullable AWSEndpointConfig awsEndpointConfig,
       AwsCredentialsProvider baseCredentialsProvider
   )
   {
-    String roleSessionName = StringUtils.format("druid-s3-input-source-%s", UUID.randomUUID().toString());
+    String roleSessionName = StringUtils.format("druid-s3-%s", UUID.randomUUID().toString());
 
-    StsClientBuilder stsBuilder = StsClient.builder()
-                                           .credentialsProvider(baseCredentialsProvider);
-
+    StsClientBuilder stsBuilder = StsClient.builder().credentialsProvider(baseCredentialsProvider);
     // If we have endpoint config, use its region for STS too
     if (awsEndpointConfig != null && awsEndpointConfig.getSigningRegion() != null) {
       stsBuilder.region(Region.of(awsEndpointConfig.getSigningRegion()));
     }
 
-    StsClient stsClient = stsBuilder.build();
-
-    AssumeRoleRequest.Builder assumeRoleRequestBuilder = AssumeRoleRequest.builder()
-                                                                          .roleArn(assumeRoleArn)
-                                                                          .roleSessionName(roleSessionName)
-                                                                          .durationSeconds(3600)
-                                                                          .externalId(assumeRoleExternalId);
+    AssumeRoleRequest.Builder assumeRoleRequestBuilder =
+        AssumeRoleRequest.builder().roleArn(assumeRoleArn).roleSessionName(roleSessionName).durationSeconds(3600);
+    if (assumeRoleExternalId != null) {
+      assumeRoleRequestBuilder.externalId(assumeRoleExternalId);
+    }
 
     return StsAssumeRoleCredentialsProvider.builder()
-                                           .stsClient(stsClient)
+                                           .stsClient(stsBuilder.build())
                                            .refreshRequest(assumeRoleRequestBuilder.build())
                                            .asyncCredentialUpdateEnabled(true)
                                            .staleTime(Duration.ofMinutes(3))
