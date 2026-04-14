@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
+import react from '@vitejs/plugin-react';
 import { readFileSync } from 'fs';
 import postcssPresetEnv from 'postcss-preset-env';
 import * as sass from 'sass';
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 const version = JSON.parse(readFileSync('./package.json', 'utf-8')).version;
