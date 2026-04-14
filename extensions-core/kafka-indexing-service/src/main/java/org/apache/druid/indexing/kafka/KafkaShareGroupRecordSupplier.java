@@ -108,7 +108,7 @@ public class KafkaShareGroupRecordSupplier
     for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeoutMs))) {
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
-          new KafkaTopicPartition(false, record.topic(), record.partition()),
+          new KafkaTopicPartition(true, record.topic(), record.partition()),
           record.offset(),
           record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
           record.timestamp()
@@ -164,7 +164,7 @@ public class KafkaShareGroupRecordSupplier
     for (Map.Entry<TopicIdPartition, Optional<KafkaException>> entry : result.entrySet()) {
       final TopicIdPartition tip = entry.getKey();
       mapped.put(
-          new KafkaTopicPartition(false, tip.topic(), tip.partition()),
+          new KafkaTopicPartition(true, tip.topic(), tip.partition()),
           entry.getValue().map(e -> (Exception) e)
       );
     }
