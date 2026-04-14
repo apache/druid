@@ -192,7 +192,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (isScaleActionAllowed() && isTaskCountOutOfBounds) {
       taskCount = currentTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], scaling.", supervisorId, config.getTaskCountMin(), config.getTaskCountMax());
+      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
+               supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount);
     } else if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
@@ -217,7 +218,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                              "Already at max task count"
                          )
                          .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
-      } else if (optimalTaskCount <= config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
+      } else if (optimalTaskCount == config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
         emitter.emit(getMetricBuilder()
                          .setDimension(
                              SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,

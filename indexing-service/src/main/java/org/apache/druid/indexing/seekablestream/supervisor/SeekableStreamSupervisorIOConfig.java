@@ -97,9 +97,9 @@ public abstract class SeekableStreamSupervisorIOConfig
           Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
       );
     } else if (isAutoScalerAvailable) {
-      this.taskCount = taskCount != null ? taskCount : autoScalerConfig.getTaskCountMin();
+      this.taskCount = Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin());
     } else {
-      this.taskCount = taskCount != null ? taskCount : 1;
+      this.taskCount = Configs.valueOrDefault(taskCount, 1);
     }
     Preconditions.checkArgument(stopTaskCount == null || stopTaskCount > 0,
                                 "stopTaskCount must be greater than 0");
