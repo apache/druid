@@ -117,6 +117,5 @@ export default defineConfig(({ mode }) => {
       react(),
       cssInjectedByJsPlugin(),
     ],
-
   };
 });
