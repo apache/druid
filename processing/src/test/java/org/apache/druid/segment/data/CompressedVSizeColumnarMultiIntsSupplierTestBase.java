@@ -39,10 +39,20 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
 {
 
   @BeforeEach
-  public abstract void setUpSimple();
+  public void setup()
+  {
+    setUpSimple();
+  }
 
   @AfterEach
-  public abstract void teardown() throws IOException;
+  public void teardown() throws IOException
+  {
+    teardownSimple();
+  }
+
+  public abstract void setUpSimple();
+
+  public abstract void teardownSimple() throws IOException;
 
   public abstract List<int[]> getValsUsed();
 

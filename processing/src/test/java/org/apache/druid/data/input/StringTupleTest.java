@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -52,7 +53,7 @@ public class StringTupleTest
   public void testToArray()
   {
     StringTuple tuple = StringTuple.create("a", "b", "c");
-    assertEquals(new String[]{"a", "b", "c"}, tuple.toArray());
+    assertArrayEquals(new String[]{"a", "b", "c"}, tuple.toArray());
   }
 
   @Test

@@ -28,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
@@ -35,6 +37,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.mockito.Mockito.spy;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class DoubleAnyVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int NULL_POSITION = 32;
