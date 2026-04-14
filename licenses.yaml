@@ -434,7 +434,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.41.0
+version: 2.45.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -3795,7 +3795,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.25.8
+version: 4.33.2
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4186,7 +4186,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20231028-2.0.0
+version: v1-rev20260204-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4206,7 +4206,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.29.1
+version: 2.64.1
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4216,7 +4216,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.20.0
+version: 2.59.0
 libraries:
   - com.google.cloud: google-cloud-storage
   - com.google.api: api-common
@@ -4227,7 +4227,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.37.0
+version: 2.76.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4239,7 +4239,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.29.1-alpha
+version: 2.64.1
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4271,7 +4271,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.28.0
+version: 2.67.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4281,7 +4281,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.62.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4291,7 +4291,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.20.0
+version: 1.43.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4302,7 +4302,7 @@ name: google-auto-value
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.10.4
+version: 1.11.0
 libraries:
   - com.google.auto.value: auto-value-annotations
 
@@ -4312,7 +4312,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.27.0
+version: 2.66.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -4334,7 +4334,7 @@ name: google-http-client
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.43.3
+version: 2.1.0
 libraries:
   - com.google.http-client: google-http-client-apache-v2
   - com.google.http-client: google-http-client-appengine
@@ -4377,7 +4377,7 @@ name: threetenbp
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.6.8
+version: 1.7.0
 libraries:
   - org.threeten: threetenbp
 

@@ -51,6 +51,7 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
             <version>${com.google.cloud.storage.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -88,6 +89,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>failureaccess</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <scope>provided</scope>
@@ -107,16 +113,16 @@
             <artifactId>jsr305</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.api</groupId>
-            <artifactId>gax</artifactId>
-            <version>2.37.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-core</artifactId>
-            <version>2.27.0</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.google.api</groupId>-->
+<!--            <artifactId>gax</artifactId>-->
+<!--            <version>2.76.0</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.google.cloud</groupId>-->
+<!--            <artifactId>google-cloud-core</artifactId>-->
+<!--            <version>2.66.0</version>-->
+<!--        </dependency>-->
         <!-- Tests -->
         <dependency>
             <groupId>org.apache.druid</groupId>

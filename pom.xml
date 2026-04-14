@@ -112,7 +112,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.2.12.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <protobuf.version>3.25.8</protobuf.version>
+        <protobuf.version>4.33.2</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>2.0.17</slf4j.version>
         <jna.version>5.18.1</jna.version>
@@ -133,10 +133,10 @@
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
-        <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
-        <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
+        <com.google.apis.client.version>2.9.0</com.google.apis.client.version>
+        <com.google.http.client.apis.version>2.1.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.64.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -344,6 +344,13 @@
               <groupId>com.github.seancfoley</groupId>
               <artifactId>ipaddress</artifactId>
               <version>5.3.4</version>
+          </dependency>
+          <dependency>
+              <groupId>io.grpc</groupId>
+              <artifactId>grpc-bom</artifactId>
+              <version>1.80.0</version>
+              <type>pom</type>
+              <scope>import</scope>
           </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -1382,6 +1389,10 @@
                 <artifactId>google-api-client</artifactId>
                 <version>${com.google.apis.client.version}</version>
                 <exclusions>
+                    <exclusion>
+                      <groupId>com.google.http-client</groupId>
+                      <artifactId>google-http-client-gson</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>com.google.code.findbugs</groupId>
                         <artifactId>jsr305</artifactId>
