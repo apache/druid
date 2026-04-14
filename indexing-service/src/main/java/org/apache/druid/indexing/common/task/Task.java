@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
@@ -307,6 +308,31 @@ public interface Task
   {
     final ContextValueType value = getContextValue(key);
     return value == null ? defaultValue : value;
+  }
+
+  /**
+   * Returns the task auth context containing credentials for external services.
+   * This is transient and not serialized to metadata storage.
+   *
+   * <p>The auth context is injected by {@link TaskAuthContextProvider} during task submission
+   * and is available during task execution for accessing external services that require
+   * user credentials (e.g., Iceberg REST Catalog with OAuth).
+   *
+   * @return the task auth context, or null if not set
+   */
+  default TaskAuthContext getTaskAuthContext()
+  {
+    return null;
+  }
+
+  /**
+   * Sets the task auth context. Called by OverlordResource during task submission.
+   *
+   * @param authContext the auth context to set, may be null
+   */
+  default void setTaskAuthContext(TaskAuthContext authContext)
+  {
+    // Default no-op for backward compatibility with existing Task implementations
   }
 
   default TaskIdentifier getMetadata()

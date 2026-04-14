@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.auth.TaskAuthContext;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
@@ -32,6 +33,7 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -123,4 +125,14 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
+
+  /**
+   * Returns the task auth context for accessing external resources that require authentication.
+   * May be null if no auth context is available.
+   */
+  @Nullable
+  default TaskAuthContext taskAuthContext()
+  {
+    return null;
+  }
 }

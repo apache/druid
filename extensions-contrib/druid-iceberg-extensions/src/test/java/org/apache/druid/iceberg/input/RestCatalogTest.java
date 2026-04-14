@@ -24,7 +24,7 @@ import com.google.common.net.HttpHeaders;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.rest.RESTCatalog;
+import org.apache.iceberg.catalog.Catalog;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -79,12 +79,11 @@ public class RestCatalogTest
         mapper,
         new Configuration()
     );
-    RESTCatalog innerCatalog = (RESTCatalog) testRestCatalog.retrieveCatalog();
+    Catalog innerCatalog = testRestCatalog.retrieveCatalog();
 
     Assert.assertEquals("rest", innerCatalog.name());
-    Assert.assertNotNull(innerCatalog.properties());
     Assert.assertNotNull(testRestCatalog.getCatalogProperties());
-    Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
+    Assert.assertEquals(catalogUri, testRestCatalog.getCatalogUri());
   }
   @After
   public void tearDown() throws IOException
