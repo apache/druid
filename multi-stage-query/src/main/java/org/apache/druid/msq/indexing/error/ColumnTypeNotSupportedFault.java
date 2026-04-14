@@ -29,6 +29,7 @@ import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @JsonTypeName(ColumnTypeNotSupportedFault.CODE)

@@ -103,7 +103,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     return taskType;
   }
-  
+
   @Override
   public String getDataSource()
   {

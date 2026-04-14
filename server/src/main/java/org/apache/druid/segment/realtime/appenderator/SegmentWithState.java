@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.List;
 

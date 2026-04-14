@@ -32,6 +32,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 

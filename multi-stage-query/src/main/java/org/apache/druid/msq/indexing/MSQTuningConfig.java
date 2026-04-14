@@ -25,6 +25,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

@@ -52,6 +52,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;

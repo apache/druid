@@ -25,6 +25,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 

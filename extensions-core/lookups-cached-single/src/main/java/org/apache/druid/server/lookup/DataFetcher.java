@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.lookup.jdbc.JdbcDataFetcher;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

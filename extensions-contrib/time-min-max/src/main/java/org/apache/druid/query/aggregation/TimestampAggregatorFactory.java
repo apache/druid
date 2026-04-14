@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.Comparator;

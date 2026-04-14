@@ -30,6 +30,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;

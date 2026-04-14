@@ -52,6 +52,7 @@ import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;

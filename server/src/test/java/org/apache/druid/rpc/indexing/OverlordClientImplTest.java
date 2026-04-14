@@ -70,6 +70,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;

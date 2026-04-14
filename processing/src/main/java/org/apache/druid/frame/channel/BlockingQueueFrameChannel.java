@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.NoSuchElementException;
 import java.util.Optional;

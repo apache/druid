@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
+
 import java.util.function.Function;
 
 /**

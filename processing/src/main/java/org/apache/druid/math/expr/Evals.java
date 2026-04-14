@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.List;
 

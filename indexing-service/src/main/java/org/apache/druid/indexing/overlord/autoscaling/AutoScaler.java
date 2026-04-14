@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

@@ -27,6 +27,7 @@ import org.apache.druid.segment.serde.cell.ByteBufferProvider;
 import org.apache.druid.segment.serde.cell.CellReader;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

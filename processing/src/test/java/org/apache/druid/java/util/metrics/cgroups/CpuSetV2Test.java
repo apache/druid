@@ -54,15 +54,15 @@ public class CpuSetV2Test
   {
     // Set up v2 cpuset files directly in cgroupDir (unified hierarchy root)
     File cgroupRoot = cgroupDir;
-    
+
     // Create v2 cpuset files with different names than v1
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "0-7\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "0-3\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "0-1\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "0\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -84,15 +84,15 @@ public class CpuSetV2Test
   public void testComplexCpuRangesParsing() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Test complex CPU ranges with mixed single CPUs and ranges
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "0-2,7,12-14\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "0,2,7\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "0,2-3\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "0\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -117,15 +117,15 @@ public class CpuSetV2Test
   public void testEmptyCpuSetFiles() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Create empty cpuset files
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -158,15 +158,15 @@ public class CpuSetV2Test
   public void testInvalidCpuSetData() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Create files with invalid data
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "invalid-range\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "not-a-number\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "1-abc\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "5-3\n".getBytes(StandardCharsets.UTF_8)); // Invalid range (high < low)
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -183,15 +183,15 @@ public class CpuSetV2Test
   public void testMixedValidAndInvalidData() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Mix valid and invalid data in the same line
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "0-2,invalid,7,bad-range,10\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "0,not-valid,2\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "0\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "0\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -199,7 +199,7 @@ public class CpuSetV2Test
 
     // Should parse only valid parts: 0-2,7,10 -> [0,1,2,7,10]
     int[] expectedCpus = {0, 1, 2, 7, 10};
-    // Should parse only valid parts: 0,2 -> [0,2]  
+    // Should parse only valid parts: 0,2 -> [0,2]
     int[] expectedEffectiveCpus = {0, 2};
     int[] expectedMems = {0};
     int[] expectedEffectiveMems = {0};
@@ -214,15 +214,15 @@ public class CpuSetV2Test
   public void testSingleCpuValues() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Test single CPU values without ranges
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "5\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "3\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "1\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "0\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -238,15 +238,15 @@ public class CpuSetV2Test
   public void testLargeRanges() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Test larger ranges
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "0-15\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "8-11\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         "0-3\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "1-2\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
@@ -267,15 +267,15 @@ public class CpuSetV2Test
   public void testWhitespaceInFiles() throws IOException
   {
     File cgroupRoot = cgroupDir;
-    
+
     // Test files with extra whitespace
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"),
         "  0-2,7  \n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"),
         "\t0,2\t\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"),
         " 0 \n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"),
         "0\n".getBytes(StandardCharsets.UTF_8));
 
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);

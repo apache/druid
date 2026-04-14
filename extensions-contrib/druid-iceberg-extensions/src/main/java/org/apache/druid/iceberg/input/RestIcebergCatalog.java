@@ -35,6 +35,7 @@ import org.apache.iceberg.rest.HTTPClient;
 import org.apache.iceberg.rest.RESTCatalog;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**

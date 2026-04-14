@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.IdentityHashMap;

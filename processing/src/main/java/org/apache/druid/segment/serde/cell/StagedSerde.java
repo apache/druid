@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde.cell;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 

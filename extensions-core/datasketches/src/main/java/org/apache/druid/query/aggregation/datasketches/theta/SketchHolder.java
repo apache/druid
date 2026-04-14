@@ -314,7 +314,7 @@ public class SketchHolder
 
   /**
    *  Ideally make use of Sketch's equals and hashCode methods but which are not value based implementations.
-   *  And yet need value based equals and hashCode implementations for SketchHolder. 
+   *  And yet need value based equals and hashCode implementations for SketchHolder.
    *  Hence using Arrays.equals() and Arrays.hashCode().
    */
   @Override
@@ -328,7 +328,7 @@ public class SketchHolder
     }
     return Arrays.equals(this.getSketch().toByteArray(), ((SketchHolder) o).getSketch().toByteArray());
   }
-  
+
   @Override
   public int hashCode()
   {

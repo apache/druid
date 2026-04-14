@@ -48,6 +48,7 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 
 import javax.annotation.Nullable;
 import javax.xml.bind.DatatypeConverter;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -208,7 +209,7 @@ public class ExportMetadata extends GuiceRunnable
     final Injector injector = makeInjector();
     SQLMetadataConnector dbConnector = injector.getInstance(SQLMetadataConnector.class);
     MetadataStorageTablesConfig metadataStorageTablesConfig = injector.getInstance(MetadataStorageTablesConfig.class);
-    
+
     // We export a raw CSV first, and then apply some conversions for easier imports:
     // Boolean strings are rewritten as 1 and 0
     // hexadecimal BLOB columns are rewritten with rewriteHexPayloadAsEscapedJson()

@@ -24,6 +24,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
+
 import java.util.EnumSet;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  *
  * This largely exists just to make it possible to add Filters via Guice/DI and shouldn't really exist
  * anywhere that is not initialization code.
- * 
+ *
  * Note that some of the druid nodes (router for example) use async servlets and your filter
  * implementation should be able to handle those requests properly.
  */
@@ -61,9 +62,9 @@ public interface ServletFilterHolder
 
   /**
    * Get Filter initialization parameters.
-   * 
+   *
    * @return a map containing all the Filter initialization
-   * parameters 
+   * parameters
    */
   Map<String, String> getInitParameters();
 

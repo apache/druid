@@ -36,6 +36,7 @@ import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensio
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class MSQErrorReport

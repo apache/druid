@@ -36,6 +36,7 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.validation.constraints.NotNull;
+
 import java.io.File;
 import java.net.URI;
 import java.util.List;

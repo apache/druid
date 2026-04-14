@@ -27,6 +27,7 @@ import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Locale;
 

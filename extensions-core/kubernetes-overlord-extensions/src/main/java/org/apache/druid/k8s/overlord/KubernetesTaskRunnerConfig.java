@@ -96,7 +96,7 @@ public interface KubernetesTaskRunnerConfig
     return new Builder();
   }
 
-  public static class Builder
+  class Builder
   {
     private String namespace;
     private String overlordNamespace;

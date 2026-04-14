@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;

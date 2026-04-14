@@ -61,6 +61,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.List;
 import java.util.Properties;
 

@@ -25,6 +25,7 @@ import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 

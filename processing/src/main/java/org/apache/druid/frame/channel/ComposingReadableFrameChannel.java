@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

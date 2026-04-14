@@ -26,6 +26,7 @@ import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public final class CompressedComplexColumn<T> implements ComplexColumn

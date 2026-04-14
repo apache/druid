@@ -24,6 +24,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.function.Supplier;
 
 /**

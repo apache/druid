@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;

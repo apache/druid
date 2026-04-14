@@ -89,4 +89,3 @@ abstract class InMemoryRepositoryMixIn
   {
   }
 }
-

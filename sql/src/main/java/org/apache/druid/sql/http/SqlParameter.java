@@ -31,6 +31,7 @@ import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 
 import javax.annotation.Nullable;
+
 import java.sql.Date;
 import java.util.Objects;
 

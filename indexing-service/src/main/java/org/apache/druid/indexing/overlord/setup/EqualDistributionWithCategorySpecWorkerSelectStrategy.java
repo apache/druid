@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements WorkerSelectStrategy

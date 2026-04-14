@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;

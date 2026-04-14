@@ -63,6 +63,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 
 import javax.annotation.Nullable;
+
 import java.io.Reader;
 import java.util.List;
 import java.util.Objects;

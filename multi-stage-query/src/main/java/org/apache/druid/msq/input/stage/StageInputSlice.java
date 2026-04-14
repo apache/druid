@@ -27,6 +27,7 @@ import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

@@ -31,6 +31,7 @@ import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.segment.filter.SearchQueryFilter;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;

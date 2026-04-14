@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.SegmentPruner;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

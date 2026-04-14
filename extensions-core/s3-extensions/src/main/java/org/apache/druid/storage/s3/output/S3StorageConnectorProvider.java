@@ -31,6 +31,7 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)

@@ -132,4 +132,3 @@ public class BrokerProcessingModuleTest
     return injector;
   }
 }
-

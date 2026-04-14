@@ -99,7 +99,7 @@ abstract class KllSketchBuildBufferAggregatorHelper<SketchType extends KllSketch
   }
 
   abstract SketchType newDirectInstance(int k, WritableMemory mem, MemoryRequestServer reqServer);
-  
+
   abstract SketchType writableWrap(WritableMemory mem, MemoryRequestServer reqServer);
 
   /**

@@ -42,6 +42,7 @@ import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublis
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;

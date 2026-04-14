@@ -48,6 +48,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -174,7 +175,7 @@ public interface Function extends NamedFunction
    * anything other than the {@link Function} implementation having no specialized index supplier implementation, and
    * so callers can fall back to generic handling as appropriate.
    *
-   * @see Expr#asColumnIndexSupplier(ColumnIndexSelector, ColumnType) 
+   * @see Expr#asColumnIndexSupplier(ColumnIndexSelector, ColumnType)
    */
   @Nullable
   default ColumnIndexSupplier asColumnIndexSupplier(

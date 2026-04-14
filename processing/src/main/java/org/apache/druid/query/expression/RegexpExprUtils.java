@@ -23,6 +23,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 

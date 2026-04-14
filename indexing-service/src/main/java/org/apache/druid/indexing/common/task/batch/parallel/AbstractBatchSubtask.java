@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public abstract class AbstractBatchSubtask extends AbstractBatchIndexTask

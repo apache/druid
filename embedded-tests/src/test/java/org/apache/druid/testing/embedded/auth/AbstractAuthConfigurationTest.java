@@ -243,7 +243,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
    * @see User
    */
   protected abstract Properties getAvaticaConnectionPropertiesForUser(User user);
-  
+
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
@@ -1040,5 +1040,5 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
           return newServer;
         }
     );
-  }  
+  }
 }

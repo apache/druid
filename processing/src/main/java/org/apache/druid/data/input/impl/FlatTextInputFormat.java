@@ -35,6 +35,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

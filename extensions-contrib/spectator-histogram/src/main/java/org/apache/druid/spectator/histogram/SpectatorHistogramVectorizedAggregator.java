@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /*

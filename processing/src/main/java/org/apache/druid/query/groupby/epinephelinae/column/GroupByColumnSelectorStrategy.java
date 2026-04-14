@@ -27,6 +27,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

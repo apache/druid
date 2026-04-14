@@ -30,6 +30,7 @@ import org.apache.druid.msq.sql.SqlStatementState;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class SqlStatementResult

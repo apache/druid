@@ -25,6 +25,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 abstract class KllSketchBuildBufferAggregator<SketchType extends KllSketch, ValueType> implements BufferAggregator

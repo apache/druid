@@ -29,6 +29,7 @@ import org.apache.druid.collections.spatial.ImmutableNode;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;

@@ -48,6 +48,7 @@ import org.junit.Test;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchResult;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;

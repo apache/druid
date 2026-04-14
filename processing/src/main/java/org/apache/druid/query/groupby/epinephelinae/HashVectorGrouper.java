@@ -35,6 +35,7 @@ import org.apache.druid.query.groupby.epinephelinae.collection.MemoryOpenHashTab
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collections;
@@ -159,7 +160,7 @@ public class HashVectorGrouper implements VectorGrouper
           // Out of space. Finish up unfinished aggregations, then try to grow.
           if (aggregationNumRows > 0) {
             doAggregateVector(aggregationStartRow, aggregationNumRows);
-            aggregationStartRow = aggregationStartRow + aggregationNumRows;
+            aggregationStartRow += aggregationNumRows;
             aggregationNumRows = 0;
           }
 

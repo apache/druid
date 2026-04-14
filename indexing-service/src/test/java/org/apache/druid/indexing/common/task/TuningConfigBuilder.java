@@ -269,7 +269,7 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
     this.maxAllowedLockCount = maxAllowedLockCount;
     return self();
   }
-  
+
   @SuppressWarnings("unchecked")
   private Self self()
   {

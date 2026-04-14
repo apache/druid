@@ -39,5 +39,3 @@ public class DummyNonBlockingPoolTest
     Assertions.assertThrows(UnsupportedOperationException.class, pool::take);
   }
 }
-
-

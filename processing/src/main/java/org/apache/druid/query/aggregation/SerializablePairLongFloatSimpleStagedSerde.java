@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 

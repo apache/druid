@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**

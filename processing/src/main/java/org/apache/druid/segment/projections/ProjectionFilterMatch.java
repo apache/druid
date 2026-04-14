@@ -26,6 +26,7 @@ import org.apache.druid.segment.filter.IsBooleanFilter;
 import org.apache.druid.segment.filter.TrueFilter;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

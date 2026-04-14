@@ -31,6 +31,7 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

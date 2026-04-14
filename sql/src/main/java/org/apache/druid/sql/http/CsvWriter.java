@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;

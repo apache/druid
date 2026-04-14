@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;

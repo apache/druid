@@ -23,6 +23,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class ImmutableDruidDataSourceTestUtils

@@ -34,6 +34,7 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;

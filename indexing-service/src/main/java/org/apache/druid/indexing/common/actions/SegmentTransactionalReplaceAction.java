@@ -37,6 +37,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;

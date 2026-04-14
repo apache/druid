@@ -307,7 +307,7 @@ public class CpuV2Test
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
-    // V2 should not provide jiffies, only microseconds  
+    // V2 should not provide jiffies, only microseconds
     Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
     Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
     Assert.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());

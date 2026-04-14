@@ -23,6 +23,7 @@ import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;

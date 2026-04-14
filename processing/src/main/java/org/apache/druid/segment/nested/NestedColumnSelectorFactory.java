@@ -26,6 +26,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public interface NestedColumnSelectorFactory

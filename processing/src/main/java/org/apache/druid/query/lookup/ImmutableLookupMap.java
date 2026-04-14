@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;

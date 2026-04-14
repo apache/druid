@@ -30,6 +30,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Optional;
 
 //

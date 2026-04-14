@@ -30,6 +30,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Objects;

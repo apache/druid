@@ -94,4 +94,3 @@ public class ParquetGroupJsonProvider extends FlattenerJsonProvider
     throw new UnsupportedOperationException(o.getClass().getName());
   }
 }
-

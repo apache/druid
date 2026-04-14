@@ -41,6 +41,7 @@ import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.validation.constraints.NotNull;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;

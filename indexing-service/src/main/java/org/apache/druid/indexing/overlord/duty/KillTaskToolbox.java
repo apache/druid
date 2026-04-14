@@ -34,6 +34,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.OutputStream;
 

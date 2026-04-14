@@ -40,7 +40,7 @@ public class UnnestSegment extends WrappedSegment
     this.unnestColumn = unnestColumn;
     this.filter = filter;
   }
-  
+
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)

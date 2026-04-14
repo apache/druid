@@ -270,7 +270,7 @@ public class PrometheusEmitterTest
         null,
         true,
         true,
-        60, 
+        60,
         null,
         false,
         null

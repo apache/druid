@@ -96,7 +96,7 @@ public class OmniDataSegmentArchiverTest
         )
     );
   }
-  
+
   @LazySingleton
   private static class BadSegmentArchiver implements DataSegmentArchiver
   {

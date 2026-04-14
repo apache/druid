@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.virtual.VirtualColumnCacheHelper;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;

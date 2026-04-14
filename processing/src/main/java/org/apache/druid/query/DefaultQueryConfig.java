@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nonnull;
+
 import java.util.Collections;
 import java.util.Map;
 

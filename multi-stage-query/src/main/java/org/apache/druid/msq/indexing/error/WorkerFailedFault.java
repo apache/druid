@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @JsonTypeName(WorkerFailedFault.CODE)

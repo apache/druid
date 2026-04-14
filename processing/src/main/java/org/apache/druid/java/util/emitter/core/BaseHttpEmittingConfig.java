@@ -25,6 +25,7 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
+
 import java.util.concurrent.TimeUnit;
 
 public class BaseHttpEmittingConfig

@@ -50,6 +50,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;

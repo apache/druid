@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class LongMaxVectorAggregator implements VectorAggregator

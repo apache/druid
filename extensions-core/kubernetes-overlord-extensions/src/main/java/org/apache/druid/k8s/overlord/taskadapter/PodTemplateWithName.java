@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 
 import javax.annotation.Nonnull;
+
 import java.util.Objects;
 
 public class PodTemplateWithName

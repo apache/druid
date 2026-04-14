@@ -28,6 +28,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public abstract class BaseSingleValueDimensionSelector implements DimensionSelector

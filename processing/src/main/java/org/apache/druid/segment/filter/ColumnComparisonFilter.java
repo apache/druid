@@ -40,6 +40,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

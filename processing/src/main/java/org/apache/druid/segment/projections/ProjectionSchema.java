@@ -28,6 +28,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

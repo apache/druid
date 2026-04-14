@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.any;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

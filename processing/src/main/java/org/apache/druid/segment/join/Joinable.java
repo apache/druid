@@ -26,6 +26,7 @@ import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;

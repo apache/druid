@@ -25,6 +25,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 
 public class FixedBucketsHistogramAggregator implements Aggregator

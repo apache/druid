@@ -34,6 +34,7 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

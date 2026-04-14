@@ -20,6 +20,7 @@
 package org.apache.druid.indexer.partitions;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.any;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class DoubleAnyBufferAggregator extends NumericAnyBufferAggregator<BaseDoubleColumnValueSelector>

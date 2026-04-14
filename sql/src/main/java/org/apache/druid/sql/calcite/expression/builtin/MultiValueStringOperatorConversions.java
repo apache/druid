@@ -48,6 +48,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.List;
 

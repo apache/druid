@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class RowFunctionTest implements RowFunction

@@ -32,6 +32,7 @@ import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

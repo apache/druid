@@ -111,7 +111,7 @@ class JodaStuff
       }
       if (t == JsonToken.VALUE_STRING) {
         String str = jp.getText().trim();
-        if (str.length() == 0) { // [JACKSON-360]
+        if (str.isEmpty()) { // [JACKSON-360]
           return null;
         }
         // make sure to preserve time zone information when parsing timestamps

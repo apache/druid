@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.query.QueryException;
 
 import javax.annotation.Nullable;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 

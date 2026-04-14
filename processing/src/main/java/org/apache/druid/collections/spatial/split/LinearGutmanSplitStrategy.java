@@ -103,7 +103,7 @@ public class LinearGutmanSplitStrategy extends GutmanSplitStrategy
 
   /**
    * This algorithm is from the original paper.
-   *  
+   *
    * Algorithm LinearPickNext. PickNext simply choose any of the remaining entries.
    *
    * @param nodes  - remaining nodes

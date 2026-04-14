@@ -26,6 +26,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.FalseFilter;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Set;
 

@@ -59,7 +59,7 @@ public class MSQWorkerTaskLauncherTest
     Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
   }
 
-  
+
   @Test
   public void testLaunchWorkersIfNeeded_returnsEmptySet_whenNoFailures() throws InterruptedException
   {
@@ -67,7 +67,7 @@ public class MSQWorkerTaskLauncherTest
     var result = target.launchWorkersIfNeeded(0);
     Assert.assertTrue(result.isEmpty());
   }
-  
+
   @Test
   public void testWaitForWorkers_returnsEmptySet_whenNoFailures() throws InterruptedException
   {

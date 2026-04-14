@@ -32,6 +32,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 

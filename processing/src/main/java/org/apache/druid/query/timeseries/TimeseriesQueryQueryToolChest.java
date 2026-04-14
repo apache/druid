@@ -66,6 +66,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;

@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;

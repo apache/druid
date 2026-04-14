@@ -31,6 +31,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 

@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 /**

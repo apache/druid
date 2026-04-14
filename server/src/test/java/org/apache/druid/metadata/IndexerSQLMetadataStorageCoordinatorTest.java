@@ -248,7 +248,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       cachePollExecutor.finishNextPendingTasks(2);
     }
   }
-  
+
   private boolean isCacheEnabled()
   {
     return cacheMode != SegmentMetadataCache.UsageMode.NEVER;

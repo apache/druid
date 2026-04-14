@@ -33,6 +33,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

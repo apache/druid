@@ -70,4 +70,3 @@ public class ComposingEmitterModule implements DruidModule
     return new ComposingEmitter(emitters);
   }
 }
-

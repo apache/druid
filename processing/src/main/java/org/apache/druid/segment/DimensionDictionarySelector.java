@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

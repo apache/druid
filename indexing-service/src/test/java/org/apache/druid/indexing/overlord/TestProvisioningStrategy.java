@@ -25,6 +25,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 
 import javax.annotation.Nonnull;
+
 import java.util.Collection;
 
 

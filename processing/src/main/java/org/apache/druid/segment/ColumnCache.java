@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 
 /**

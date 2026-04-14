@@ -32,6 +32,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;

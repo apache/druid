@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class NoopDoublesSketchBufferAggregator implements BufferAggregator, VectorAggregator

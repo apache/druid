@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.vector.VectorMatch;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 

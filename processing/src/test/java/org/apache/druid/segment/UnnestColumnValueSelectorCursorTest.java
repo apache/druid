@@ -692,4 +692,3 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     Assert.assertEquals(k, 9);
   }
 }
-

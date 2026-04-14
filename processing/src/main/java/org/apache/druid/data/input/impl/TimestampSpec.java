@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -160,7 +161,7 @@ public class TimestampSpec
   //returns null. this can be improved in future but is good enough for most use-cases.
   public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge)
   {
-    if (toMerge == null || toMerge.size() == 0) {
+    if (toMerge == null || toMerge.isEmpty()) {
       return null;
     }
 

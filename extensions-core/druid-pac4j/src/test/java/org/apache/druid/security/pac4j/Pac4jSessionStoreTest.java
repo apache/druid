@@ -209,7 +209,7 @@ public class Pac4jSessionStoreTest
     profile.addAttribute("refresh_token", "refresh");
     profile.addAttribute("id_token", "id");
     profile.addAttribute("credentials", "creds");
-    
+
     sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profile);
 
     Cookie cookie = cookieCapture.getValue();
@@ -225,13 +225,13 @@ public class Pac4jSessionStoreTest
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     CommonProfile retrievedProfile = (CommonProfile) value.get();
     Assert.assertEquals("name", retrievedProfile.getAttribute("display_name"));
-    
+
     // Verify sensitive data was removed
     Assert.assertNull(retrievedProfile.getAttribute("access_token"));
     Assert.assertNull(retrievedProfile.getAttribute("refresh_token"));
     Assert.assertNull(retrievedProfile.getAttribute("id_token"));
     Assert.assertNull(retrievedProfile.getAttribute("credentials"));
-    
+
     EasyMock.verify(webContext2);
   }
 
@@ -251,16 +251,16 @@ public class Pac4jSessionStoreTest
     profile1.setId("profile1");
     profile1.addAttribute("display_name", "name1");
     profile1.addAttribute("access_token", "token1");
-    
+
     CommonProfile profile2 = new CommonProfile();
     profile2.setId("profile2");
     profile2.addAttribute("display_name", "name2");
     profile2.addAttribute("refresh_token", "refresh2");
-    
+
     Map<String, CommonProfile> profiles = new HashMap<>();
     profiles.put("profile1", profile1);
     profiles.put("profile2", profile2);
-    
+
     sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profiles);
 
     Cookie cookie = cookieCapture.getValue();
@@ -277,11 +277,11 @@ public class Pac4jSessionStoreTest
     @SuppressWarnings("unchecked")
     Map<String, CommonProfile> retrievedProfiles = (Map<String, CommonProfile>) value.get();
     Assert.assertEquals(2, retrievedProfiles.size());
-    
+
     // Verify sensitive data was removed from both profiles
     Assert.assertNull(retrievedProfiles.get("profile1").getAttribute("access_token"));
     Assert.assertNull(retrievedProfiles.get("profile2").getAttribute("refresh_token"));
-    
+
     EasyMock.verify(webContext2);
   }
 
@@ -367,4 +367,3 @@ public class Pac4jSessionStoreTest
     EasyMock.verify(webContext);
   }
 }
-

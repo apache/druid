@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
+
 import java.math.BigInteger;
 import java.util.Objects;
 

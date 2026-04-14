@@ -42,6 +42,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

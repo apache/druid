@@ -37,6 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.util.Collections;
 
 public class SamplerResourceTest

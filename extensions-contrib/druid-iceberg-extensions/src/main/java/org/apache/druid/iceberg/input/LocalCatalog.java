@@ -27,6 +27,7 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Objects;
 

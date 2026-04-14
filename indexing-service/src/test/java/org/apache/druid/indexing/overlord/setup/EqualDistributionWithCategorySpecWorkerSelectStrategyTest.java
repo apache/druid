@@ -39,6 +39,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashSet;
 
@@ -207,7 +208,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         false
     );
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
@@ -236,7 +237,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         false
     );
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
@@ -266,7 +267,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 

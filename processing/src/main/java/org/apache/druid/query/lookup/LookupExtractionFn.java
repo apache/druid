@@ -28,6 +28,7 @@ import org.apache.druid.query.extraction.ExtractionCacheHelper;
 import org.apache.druid.query.extraction.FunctionalExtraction;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 

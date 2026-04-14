@@ -37,6 +37,7 @@ import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

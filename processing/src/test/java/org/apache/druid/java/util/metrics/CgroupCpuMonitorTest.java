@@ -128,10 +128,10 @@ public class CgroupCpuMonitorTest
 
 
     CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
-    
+
     // Constructor should detect v2 and log warning
     CgroupCpuMonitor monitor = new CgroupCpuMonitor(v2Discoverer, "test-feed");
-    
+
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
 
     // doMonitor should return true
@@ -141,14 +141,14 @@ public class CgroupCpuMonitorTest
     Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
-  @Test  
+  @Test
   public void testCgroupsV1MonitoringContinuesNormally() throws IOException, InterruptedException
   {
     // This test verifies that the existing v1 monitoring continues to work
     // after the v2 detection changes
     final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    
+
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
 

@@ -35,6 +35,7 @@ import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.QueryInfo;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

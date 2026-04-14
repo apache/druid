@@ -25,6 +25,7 @@ import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 
 public class LimitTimeIntervalOperator implements Operator

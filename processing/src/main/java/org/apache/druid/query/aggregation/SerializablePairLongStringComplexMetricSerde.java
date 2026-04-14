@@ -39,6 +39,7 @@ import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 

@@ -29,6 +29,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.util.stream.Collectors;
 
 public class BinaryOperatorConversion implements SqlOperatorConversion

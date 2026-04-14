@@ -70,6 +70,7 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

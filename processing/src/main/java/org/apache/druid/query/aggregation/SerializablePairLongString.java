@@ -33,5 +33,3 @@ public class SerializablePairLongString extends SerializablePair<Long, String>
     super(lhs, rhs);
   }
 }
-
-

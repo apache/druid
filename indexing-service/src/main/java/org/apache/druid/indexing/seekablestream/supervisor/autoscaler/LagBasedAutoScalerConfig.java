@@ -31,6 +31,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -46,6 +46,7 @@ import org.apache.druid.segment.generator.GeneratorColumnSchema;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.Collections;
 import java.util.Iterator;
@@ -81,7 +82,7 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
   private final Long startTime;
   private final Integer numConsecutiveTimestamps;
   private final Double timestampIncrement;
-  
+
   @JsonCreator
   public GeneratorInputSource(
       @JsonProperty("schemaName") @Nullable String schemaName,

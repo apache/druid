@@ -24,6 +24,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunner;
 
 import javax.annotation.Nonnull;
+
 import java.util.Collection;
 
 /**

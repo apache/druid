@@ -53,6 +53,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

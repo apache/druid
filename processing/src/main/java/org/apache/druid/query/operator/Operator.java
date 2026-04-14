@@ -22,6 +22,7 @@ package org.apache.druid.query.operator;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 
 /**

@@ -31,12 +31,13 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
   public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
-  
+
   public static final String USERNAME_KEY = "username";
   public static final String PASSWORD_KEY = "password";
 

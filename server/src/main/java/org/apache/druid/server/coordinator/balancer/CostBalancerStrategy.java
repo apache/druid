@@ -405,4 +405,3 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
 }
-

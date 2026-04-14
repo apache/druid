@@ -33,6 +33,7 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.query.QueryContext;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

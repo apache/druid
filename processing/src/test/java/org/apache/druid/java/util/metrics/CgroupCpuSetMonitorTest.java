@@ -89,7 +89,7 @@ public class CgroupCpuSetMonitorTest
     File cgroupV2Dir = temporaryFolder.newFolder();
     File procV2Dir = temporaryFolder.newFolder();
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
-    
+
     // Create v2 cpuset files in unified hierarchy
     File cgroupRoot = new File(procV2Dir, "unified");
     FileUtils.mkdirp(cgroupRoot);
@@ -103,7 +103,7 @@ public class CgroupCpuSetMonitorTest
     CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, "test-feed");
 
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    
+
     // doMonitor should return true but skip actual monitoring
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(4, emitter.getNumEmittedEvents());

@@ -27,6 +27,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

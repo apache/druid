@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;

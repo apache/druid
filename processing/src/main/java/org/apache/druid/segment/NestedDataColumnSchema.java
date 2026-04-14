@@ -28,6 +28,7 @@ import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

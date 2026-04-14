@@ -23,6 +23,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Comparator;
 

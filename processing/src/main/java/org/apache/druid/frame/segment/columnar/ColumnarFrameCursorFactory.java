@@ -54,6 +54,7 @@ import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 

@@ -86,7 +86,7 @@ public abstract class Granularity implements Cacheable
    */
   public static Granularity mergeGranularities(List<Granularity> toMerge)
   {
-    if (toMerge == null || toMerge.size() == 0) {
+    if (toMerge == null || toMerge.isEmpty()) {
       return null;
     }
 

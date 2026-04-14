@@ -31,6 +31,7 @@ import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 @JsonTypeName(AzureStorageDruidModule.SCHEME)

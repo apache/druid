@@ -31,6 +31,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import javax.annotation.Nullable;
+
 import java.net.URI;
 import java.time.Duration;
 

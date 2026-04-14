@@ -32,6 +32,7 @@ import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableInd
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;

@@ -24,6 +24,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.LimitedColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 
 public class LimitedRowsAndColumns implements RowsAndColumns

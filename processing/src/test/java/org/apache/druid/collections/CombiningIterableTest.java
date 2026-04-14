@@ -59,7 +59,7 @@ public class CombiningIterableTest
     Set actualHashset = Sets.newHashSet(actualIterable);
     Assert.assertEquals(actualHashset, mergedLists);
   }
-  
+
   @Test
   public void testMerge()
   {

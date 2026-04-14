@@ -23,6 +23,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 

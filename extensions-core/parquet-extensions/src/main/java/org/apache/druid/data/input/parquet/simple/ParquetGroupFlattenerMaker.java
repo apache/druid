@@ -29,6 +29,7 @@ import org.apache.parquet.example.data.Group;
 import org.apache.parquet.schema.Type;
 
 import javax.annotation.Nullable;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;

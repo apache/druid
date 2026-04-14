@@ -39,6 +39,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.net.URI;
 import java.util.List;
 import java.util.Map;

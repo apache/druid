@@ -123,9 +123,9 @@ public class ApproximateHistogramErrorBenchmark
     }
 
     float min = Floats.min(values);
-    min = (float) (min < 0 ? 1.02 : .98) * min;
+    min *= (float) (min < 0 ? 1.02 : .98);
     float max = Floats.max(values);
-    max = (float) (max < 0 ? .98 : 1.02) * max;
+    max *= (float) (max < 0 ? .98 : 1.02);
     final float stride = (max - min) / numBuckets;
     final float[] breaks = new float[numBreaks];
     for (int i = 0; i < numBreaks; i++) {

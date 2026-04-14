@@ -31,6 +31,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

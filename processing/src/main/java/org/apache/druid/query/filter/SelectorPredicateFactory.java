@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

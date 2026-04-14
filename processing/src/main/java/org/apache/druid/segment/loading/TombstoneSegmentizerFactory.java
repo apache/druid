@@ -37,6 +37,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public class TombstoneSegmentizerFactory implements SegmentizerFactory
@@ -138,4 +139,3 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
     return segmentObject;
   }
 }
-

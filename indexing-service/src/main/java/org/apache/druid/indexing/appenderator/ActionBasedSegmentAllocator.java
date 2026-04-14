@@ -26,6 +26,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public class ActionBasedSegmentAllocator implements SegmentAllocator

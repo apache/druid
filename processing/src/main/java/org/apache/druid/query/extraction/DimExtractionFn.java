@@ -20,6 +20,7 @@
 package org.apache.druid.query.extraction;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public abstract class DimExtractionFn implements ExtractionFn

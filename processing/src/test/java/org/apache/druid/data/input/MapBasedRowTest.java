@@ -45,7 +45,7 @@ public class MapBasedRowTest
           .put("k6", "+9223372036854775802")
           .build()
     );
-    
+
     Assertions.assertEquals(-1.2, row.getMetric("k0"));
     Assertions.assertEquals(1.23, row.getMetric("k1"));
     Assertions.assertEquals(1.8, row.getMetric("k2"));

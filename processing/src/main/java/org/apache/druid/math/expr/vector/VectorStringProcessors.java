@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class VectorStringProcessors

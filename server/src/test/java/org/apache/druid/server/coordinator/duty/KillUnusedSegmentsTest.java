@@ -64,6 +64,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -90,7 +91,7 @@ public class KillUnusedSegmentsTest
   private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
   private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
   private static final RowKey DS3_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS3);
-  
+
   private static final String VERSION = "v1";
 
   private CoordinatorDynamicConfig.Builder dynamicConfigBuilder;

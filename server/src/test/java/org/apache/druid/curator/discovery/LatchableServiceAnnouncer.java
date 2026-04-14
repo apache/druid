@@ -22,6 +22,7 @@ package org.apache.druid.curator.discovery;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
+
 import java.util.concurrent.CountDownLatch;
 
 /**

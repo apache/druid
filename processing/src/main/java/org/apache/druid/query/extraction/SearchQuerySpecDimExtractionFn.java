@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.query.search.SearchQuerySpec;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

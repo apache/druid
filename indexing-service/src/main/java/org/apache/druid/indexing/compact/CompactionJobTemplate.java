@@ -24,6 +24,7 @@ import org.apache.druid.indexing.template.BatchIndexingJobTemplate;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

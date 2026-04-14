@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

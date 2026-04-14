@@ -23,6 +23,7 @@ import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest>

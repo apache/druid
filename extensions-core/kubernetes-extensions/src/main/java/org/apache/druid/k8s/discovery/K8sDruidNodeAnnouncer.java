@@ -242,7 +242,7 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
   {
     int hash = str.hashCode();
     if (hash < 0) {
-      hash = -1 * hash;
+      hash *= -1;
     }
     return String.valueOf(hash);
   }

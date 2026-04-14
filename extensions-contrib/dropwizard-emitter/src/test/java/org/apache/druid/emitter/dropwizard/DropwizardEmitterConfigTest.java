@@ -82,5 +82,3 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
   }
 
 }
-
-

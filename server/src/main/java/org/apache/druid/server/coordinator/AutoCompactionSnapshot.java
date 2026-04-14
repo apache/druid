@@ -27,6 +27,7 @@ import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.util.Objects;
 
 public class AutoCompactionSnapshot

@@ -44,6 +44,7 @@ import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 

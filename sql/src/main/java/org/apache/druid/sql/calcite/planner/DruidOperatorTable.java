@@ -132,6 +132,7 @@ import org.apache.druid.sql.calcite.external.TableAppendMacro;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

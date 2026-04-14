@@ -20,6 +20,7 @@
 package org.apache.druid.data;
 
 import javax.annotation.Nullable;
+
 import java.util.regex.Pattern;
 
 /**

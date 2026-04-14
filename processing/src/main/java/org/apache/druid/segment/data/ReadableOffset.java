@@ -36,4 +36,3 @@ public interface ReadableOffset extends HotLoopCallee
   @CalledFromHotLoop
   int getOffset();
 }
-

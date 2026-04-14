@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class TaskStatusPlus

@@ -31,6 +31,7 @@ import org.apache.druid.segment.loading.StorageStats;
 import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**

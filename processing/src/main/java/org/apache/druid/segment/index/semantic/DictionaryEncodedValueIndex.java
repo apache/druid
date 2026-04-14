@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.Iterator;
 
 /**

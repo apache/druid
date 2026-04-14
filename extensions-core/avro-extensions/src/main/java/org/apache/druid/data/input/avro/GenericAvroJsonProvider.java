@@ -28,6 +28,7 @@ import org.apache.avro.util.Utf8;
 import org.apache.druid.java.util.common.parsers.FlattenerJsonProvider;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;

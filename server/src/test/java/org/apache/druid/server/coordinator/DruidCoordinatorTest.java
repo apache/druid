@@ -83,6 +83,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -781,7 +782,7 @@ public class DruidCoordinatorTest
     EasyMock.replay(serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
-    
+
     // Wait for this coordinator to become leader
     leaderAnnouncerLatch.await();
 
@@ -877,7 +878,7 @@ public class DruidCoordinatorTest
         () -> peonMap.get(((ImmutableDruidServer) EasyMock.getCurrentArgument(0)).getName())
     ).anyTimes();
   }
-  
+
   private LoadQueuePeon createImmediateLoadPeonFor(DruidServer server)
   {
     return new TestLoadQueuePeon() {

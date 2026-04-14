@@ -42,6 +42,7 @@ import org.apache.druid.sql.calcite.planner.DruidConformance;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;

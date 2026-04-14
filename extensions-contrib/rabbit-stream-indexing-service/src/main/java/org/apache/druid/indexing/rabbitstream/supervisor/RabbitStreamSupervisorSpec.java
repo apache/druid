@@ -37,6 +37,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec

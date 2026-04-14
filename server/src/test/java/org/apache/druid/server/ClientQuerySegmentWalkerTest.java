@@ -1883,4 +1883,3 @@ public class ClientQuerySegmentWalkerTest
     return timeline;
   }
 }
-

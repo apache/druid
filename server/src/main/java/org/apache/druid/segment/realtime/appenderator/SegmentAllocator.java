@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import org.apache.druid.data.input.InputRow;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public interface SegmentAllocator

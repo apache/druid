@@ -20,6 +20,7 @@
 package org.apache.druid.collections;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;

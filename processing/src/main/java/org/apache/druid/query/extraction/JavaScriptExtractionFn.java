@@ -33,6 +33,7 @@ import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class JavaScriptExtractionFn implements ExtractionFn

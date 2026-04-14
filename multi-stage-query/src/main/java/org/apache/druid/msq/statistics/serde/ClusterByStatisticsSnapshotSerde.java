@@ -24,6 +24,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.KeyCollectorSnapshot;
 
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;

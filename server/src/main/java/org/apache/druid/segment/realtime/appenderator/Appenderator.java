@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.query.QuerySegmentWalker;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.List;
 

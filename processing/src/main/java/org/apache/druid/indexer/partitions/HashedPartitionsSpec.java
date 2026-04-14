@@ -28,6 +28,7 @@ import org.apache.druid.indexer.Property;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

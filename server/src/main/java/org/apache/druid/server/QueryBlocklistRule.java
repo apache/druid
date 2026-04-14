@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.query.Query;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;

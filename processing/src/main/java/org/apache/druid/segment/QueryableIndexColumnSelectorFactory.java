@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.nested.NestedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

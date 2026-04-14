@@ -299,7 +299,7 @@ public class SearchBinaryFnTest
         new SearchBinaryFn(searchSortSpec, Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
-  }  
+  }
 
   // merge function expects input to be sorted as per comparator
   private List<SearchHit> toHits(Comparator<SearchHit> comparator, String... hits)

@@ -25,6 +25,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 /**

@@ -26,6 +26,7 @@ import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.query.BitmapResultFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

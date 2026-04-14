@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.filter;
 import org.apache.druid.query.filter.Filter;
 
 import javax.annotation.Nullable;
+
 import java.util.Optional;
 
 /**

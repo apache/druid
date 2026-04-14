@@ -32,6 +32,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 

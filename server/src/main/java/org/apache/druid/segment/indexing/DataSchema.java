@@ -46,6 +46,7 @@ import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;

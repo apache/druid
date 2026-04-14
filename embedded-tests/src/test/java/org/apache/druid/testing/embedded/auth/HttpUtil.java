@@ -32,6 +32,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
+
 import java.net.URL;
 
 public class HttpUtil

@@ -23,6 +23,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
+
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 

@@ -32,6 +32,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;

@@ -23,6 +23,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
 import javax.annotation.Nullable;
+
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;

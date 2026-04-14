@@ -33,6 +33,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -89,7 +90,7 @@ public class GroupByQueryResources implements Closeable
       }
 
     }
-    if (subtotalSpecs == null || subtotalSpecs.size() == 0) {
+    if (subtotalSpecs == null || subtotalSpecs.isEmpty()) {
       return numMergeBuffersNeededForSubQuerySubtotal;
     }
 
@@ -180,7 +181,7 @@ public class GroupByQueryResources implements Closeable
    */
   private static ResourceHolder<ByteBuffer> getMergeBuffer(Deque<ByteBuffer> acquiredBufferPool)
   {
-    if (acquiredBufferPool.size() == 0) {
+    if (acquiredBufferPool.isEmpty()) {
       throw DruidException.defensive("Insufficient free merge buffers present.");
     }
     final ByteBuffer buffer = acquiredBufferPool.pop();

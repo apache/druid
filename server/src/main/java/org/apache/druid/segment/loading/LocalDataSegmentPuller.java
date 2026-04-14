@@ -30,6 +30,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;

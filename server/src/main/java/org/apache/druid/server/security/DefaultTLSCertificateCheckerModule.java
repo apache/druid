@@ -37,4 +37,3 @@ public class DefaultTLSCertificateCheckerModule implements Module
         .toInstance(INSTANCE);
   }
 }
-

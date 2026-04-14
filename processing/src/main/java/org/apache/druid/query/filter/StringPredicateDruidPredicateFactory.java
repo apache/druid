@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class StringPredicateDruidPredicateFactory implements DruidPredicateFactory

@@ -23,6 +23,7 @@ import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAg
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class MomentSketchObjectStrategy implements ObjectStrategy<MomentSketchWrapper>

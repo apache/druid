@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.calcite.schema.SchemaPlus;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;

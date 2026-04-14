@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Client to call various basic auth APIs on the Coordinator. 
+ * Client to call various basic auth APIs on the Coordinator.
  */
 public class SecurityClient
 {

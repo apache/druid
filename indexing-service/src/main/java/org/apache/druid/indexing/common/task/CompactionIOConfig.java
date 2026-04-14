@@ -27,6 +27,7 @@ import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

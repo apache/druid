@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

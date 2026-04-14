@@ -31,7 +31,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class DataSourceCompactionConfigAuditEntryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
-  
+
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
       new ClusterCompactionConfig(0.1, 9, null, null, null, null),
       InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),

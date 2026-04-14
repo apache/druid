@@ -22,6 +22,7 @@ package org.apache.druid.sql.hook;
 import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.query.Query;
+
 import java.util.Objects;
 
 /**

@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;

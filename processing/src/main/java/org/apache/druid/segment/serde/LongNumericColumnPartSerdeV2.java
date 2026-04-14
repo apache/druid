@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;

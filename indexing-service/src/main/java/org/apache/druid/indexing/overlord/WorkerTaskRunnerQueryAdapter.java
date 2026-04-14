@@ -35,6 +35,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
+
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 

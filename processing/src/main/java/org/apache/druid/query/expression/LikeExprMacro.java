@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.LikeDimFilter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class LikeExprMacro implements ExprMacroTable.ExprMacro

@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.cardinality.types.LongCardinalityAggre
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class LongCardinalityVectorProcessor implements CardinalityVectorProcessor

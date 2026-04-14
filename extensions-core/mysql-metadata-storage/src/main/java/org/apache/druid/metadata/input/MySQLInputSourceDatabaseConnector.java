@@ -32,6 +32,7 @@ import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.Set;
 

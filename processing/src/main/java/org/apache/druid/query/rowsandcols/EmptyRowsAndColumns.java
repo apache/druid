@@ -22,6 +22,7 @@ package org.apache.druid.query.rowsandcols;
 import org.apache.druid.query.rowsandcols.column.Column;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 

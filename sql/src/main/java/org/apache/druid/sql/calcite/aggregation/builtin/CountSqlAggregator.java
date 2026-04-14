@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+
 import java.util.List;
 
 public class CountSqlAggregator implements SqlAggregator

@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;

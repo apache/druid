@@ -207,4 +207,3 @@ class RedisCacheProviderWithConfig extends RedisCacheProvider
     return RedisCacheFactory.create(config);
   }
 }
-

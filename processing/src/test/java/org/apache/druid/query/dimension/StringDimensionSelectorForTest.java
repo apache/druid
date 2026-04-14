@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.function.Supplier;
 

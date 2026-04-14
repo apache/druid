@@ -23,6 +23,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public interface DataSegmentAnnouncer

@@ -25,6 +25,7 @@ import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 

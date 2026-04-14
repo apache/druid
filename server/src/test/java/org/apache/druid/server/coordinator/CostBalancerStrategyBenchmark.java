@@ -128,7 +128,7 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   {
     long diff = 0;
     for (int i = 0; i < 1000; i++) {
-      diff = diff + interval1.gap(interval2).toDurationMillis();
+      diff += interval1.gap(interval2).toDurationMillis();
     }
     sum = diff;
   }

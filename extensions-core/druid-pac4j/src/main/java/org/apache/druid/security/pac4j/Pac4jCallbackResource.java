@@ -54,4 +54,3 @@ public class Pac4jCallbackResource
     return Response.serverError().build();
   }
 }
-

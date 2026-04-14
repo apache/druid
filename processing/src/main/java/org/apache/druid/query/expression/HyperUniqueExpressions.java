@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

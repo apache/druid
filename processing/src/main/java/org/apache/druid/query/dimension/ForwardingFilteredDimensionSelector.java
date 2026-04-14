@@ -37,6 +37,7 @@ import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+
 import java.util.BitSet;
 
 final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelector implements IdLookup

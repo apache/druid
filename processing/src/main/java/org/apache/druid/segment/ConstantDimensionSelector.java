@@ -30,6 +30,7 @@ import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class ConstantDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup

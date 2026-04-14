@@ -48,6 +48,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -329,4 +330,3 @@ public class AzureStorageTest
     assertTrue(overrideArgument.getValue());
   }
 }
-

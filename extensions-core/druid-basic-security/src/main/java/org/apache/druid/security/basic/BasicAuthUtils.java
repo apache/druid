@@ -34,6 +34,7 @@ import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.HashMap;

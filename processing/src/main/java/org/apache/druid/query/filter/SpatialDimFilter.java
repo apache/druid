@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.SpatialFilter;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;

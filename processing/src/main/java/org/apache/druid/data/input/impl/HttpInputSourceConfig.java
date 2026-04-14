@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
@@ -97,4 +98,3 @@ public class HttpInputSourceConfig
            '}';
   }
 }
-

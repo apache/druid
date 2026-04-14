@@ -38,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
+
 import java.util.Collections;
 
 public class MessageRelayClientImplTest

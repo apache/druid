@@ -24,6 +24,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.function.Supplier;
 
 @NotThreadSafe

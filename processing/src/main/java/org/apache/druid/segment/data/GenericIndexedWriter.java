@@ -35,6 +35,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
 import javax.annotation.Nullable;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -415,7 +416,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
         long valuePosition;
         if (i != numberOfFilesRequired - 1) {
           valuePosition = headerOutLong.getLong(bagSize + counter);
-          counter = counter + bagSize;
+          counter += bagSize;
         } else {
           valuePosition = headerOutLong.getLong(numWritten - 1);
         }
@@ -486,7 +487,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
       if (currentValueOffset - lastValueOffset <= fileSizeLimit) {
         lastValueOffset = currentValueOffset;
-        headerIndex = headerIndex + bagSize;
+        headerIndex += bagSize;
       } else {
         return false;
       }

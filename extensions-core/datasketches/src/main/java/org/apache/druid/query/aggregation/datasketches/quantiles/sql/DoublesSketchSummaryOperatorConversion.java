@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DoublesSketchSummaryOperatorConversion implements SqlOperatorConversion

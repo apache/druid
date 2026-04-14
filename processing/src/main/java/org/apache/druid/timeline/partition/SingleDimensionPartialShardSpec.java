@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class SingleDimensionPartialShardSpec implements PartialShardSpec

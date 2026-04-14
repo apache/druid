@@ -27,6 +27,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**
@@ -82,7 +83,7 @@ public class DataSegmentPlus
     this.upgradedFromSegmentId = upgradedFromSegmentId;
     this.indexingStateFingerprint = indexingStateFingerprint;
   }
-  
+
   @Nullable
   @JsonProperty
   public DateTime getCreatedDate()

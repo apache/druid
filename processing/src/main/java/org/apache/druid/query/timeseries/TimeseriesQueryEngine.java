@@ -54,6 +54,7 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;

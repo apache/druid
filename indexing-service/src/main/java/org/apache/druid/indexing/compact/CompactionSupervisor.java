@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

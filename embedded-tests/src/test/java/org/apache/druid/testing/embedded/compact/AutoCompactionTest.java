@@ -206,7 +206,7 @@ public class AutoCompactionTest extends CompactionTestBase
         new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true)
     );
   }
-  
+
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
@@ -1987,7 +1987,7 @@ public class AutoCompactionTest extends CompactionTestBase
     Assertions.assertEquals(actualStatus.getIntervalCountCompacted(), intervalCountCompacted);
     Assertions.assertEquals(actualStatus.getIntervalCountSkipped(), intervalCountSkipped);
   }
-  
+
   private List<TaskStatusPlus> getCompleteTasksForDataSource(String dataSource)
   {
     return ImmutableList.copyOf(

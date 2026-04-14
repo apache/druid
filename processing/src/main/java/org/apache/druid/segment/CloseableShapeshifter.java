@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 
 /**

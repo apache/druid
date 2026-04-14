@@ -24,6 +24,7 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Set;
 

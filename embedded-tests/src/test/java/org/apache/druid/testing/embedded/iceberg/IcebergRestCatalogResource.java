@@ -34,6 +34,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -133,7 +134,7 @@ public class IcebergRestCatalogResource extends TestcontainerResource<GenericCon
   }
 
   /**
-   * Drops a namespace from the REST catalog. 
+   * Drops a namespace from the REST catalog.
    */
   public void dropNamespace(String namespace)
   {

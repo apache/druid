@@ -77,4 +77,3 @@ public class DruidProcessingModuleTest
     module.getIntermediateResultsPool(config, JvmUtils.getRuntimeInfo());
   }
 }
-

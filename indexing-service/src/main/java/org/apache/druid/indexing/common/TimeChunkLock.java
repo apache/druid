@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.LockRequest;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class TimeChunkLock implements TaskLock

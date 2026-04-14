@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

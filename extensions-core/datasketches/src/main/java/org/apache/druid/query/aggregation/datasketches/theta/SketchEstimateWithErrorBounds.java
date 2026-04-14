@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Container class used to return estimates in conjunction with 
+ * Container class used to return estimates in conjunction with
  * estimated error bounds.
  */
 public class SketchEstimateWithErrorBounds
@@ -32,7 +32,7 @@ public class SketchEstimateWithErrorBounds
   private final double highBound;
   private final double lowBound;
   private final int numStdDev;
-  
+
   @JsonCreator
   public SketchEstimateWithErrorBounds(
       @JsonProperty("estimate") double estimate,
@@ -46,7 +46,7 @@ public class SketchEstimateWithErrorBounds
     this.lowBound = lowBound;
     this.numStdDev = numStdDev;
   }
-  
+
   @JsonProperty
   public double getEstimate()
   {
@@ -100,8 +100,8 @@ public class SketchEstimateWithErrorBounds
       return true;
     } else if (obj == null || getClass() != obj.getClass()) {
       return false;
-    } 
-    
+    }
+
     SketchEstimateWithErrorBounds that = (SketchEstimateWithErrorBounds) obj;
     if (estimate != that.estimate ||
         highBound != that.highBound ||

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.file;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

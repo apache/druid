@@ -54,6 +54,7 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;

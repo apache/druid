@@ -24,6 +24,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 

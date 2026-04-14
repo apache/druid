@@ -25,6 +25,7 @@ import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
+
 import java.util.UUID;
 
 public final class StaticMapCacheGenerator implements CacheGenerator<StaticMapExtractionNamespace>

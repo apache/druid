@@ -26,27 +26,27 @@ import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
- 
+
 import java.util.Arrays;
 import java.util.Collections;
- 
+
 public class IPv6AddressMatchExprMacroTest extends MacroTestBase
 {
   private static final Expr IPV6 = ExprEval.ofString("201:ef:168::").toExpr();
   private static final Expr IPV6_CIDR = ExprEval.ofString("201:ef:168::/32").toExpr();
- 
+
   public IPv6AddressMatchExprMacroTest()
   {
     super(new IPv6AddressMatchExprMacro());
   }
- 
+
   @Test
   public void testTooFewArgs()
   {
     expectException(ExpressionValidationException.class, "requires 2 arguments");
     apply(Collections.emptyList());
   }
- 
+
   @Test
   public void testTooManyArgs()
   {
@@ -54,7 +54,7 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
     expectException(ExpressionValidationException.class, "requires 2 arguments");
     apply(Arrays.asList(IPV6, IPV6_CIDR, extraArgument));
   }
- 
+
   @Test
   public void testSubnetArgInvalid()
   {
@@ -75,21 +75,21 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   {
     Assert.assertTrue(eval(IPV6, IPV6_CIDR));
   }
- 
+
   @Test
   public void testNotMatchingStringArgIPv6()
   {
     Expr nonMatchingIpv6 = ExprEval.ofString("2002:ef:168::").toExpr();
     Assert.assertFalse(eval(nonMatchingIpv6, IPV6_CIDR));
   }
- 
+
   @Test
   public void testNotIpAddress()
   {
     Expr notIpAddress = ExprEval.ofString("druid.apache.org").toExpr();
     Assert.assertFalse(eval(notIpAddress, IPV6_CIDR));
   }
- 
+
   @Test
   public void testInclusive()
   {

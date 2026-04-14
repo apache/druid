@@ -27,6 +27,7 @@ import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 import org.apache.druid.collections.spatial.RTreeUtils;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

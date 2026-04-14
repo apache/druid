@@ -82,4 +82,3 @@ public class LookupModule implements DruidModule
     return new LookupNodeService(lookupListeningAnnouncerConfig.getLookupTier());
   }
 }
-

@@ -28,6 +28,7 @@ import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.kernel.StageId;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

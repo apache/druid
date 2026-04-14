@@ -32,6 +32,7 @@ import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long>

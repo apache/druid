@@ -22,6 +22,7 @@ package org.apache.druid.msq.input;
 import org.apache.druid.query.filter.SegmentPruner;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

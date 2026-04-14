@@ -41,6 +41,7 @@ import org.skife.jdbi.v2.Update;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotEmpty;
+
 import java.util.ArrayList;
 import java.util.List;
 

@@ -70,13 +70,13 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
     EasyMock.expect(request.getHttpURI()).andReturn(httpURI);
     EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH);
     EasyMock.expect(request.getMethod()).andReturn("GET");
-    
+
     response.setStatus(405);
     EasyMock.expectLastCall();
-    
+
     response.write(
-        EasyMock.eq(true), 
-        EasyMock.anyObject(ByteBuffer.class), 
+        EasyMock.eq(true),
+        EasyMock.anyObject(ByteBuffer.class),
         EasyMock.eq(callback)
     );
     EasyMock.expectLastCall();

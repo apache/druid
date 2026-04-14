@@ -133,7 +133,7 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
     String[] actualRows = result.split("\n");
     Arrays.sort(actualRows, String::compareTo);
     Assertions.assertArrayEquals(expectedRows, actualRows);
-        
+
   }
 
   @Test

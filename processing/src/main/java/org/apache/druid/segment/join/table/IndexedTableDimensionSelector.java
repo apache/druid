@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
 
 import javax.annotation.Nullable;
+
 import java.util.function.IntSupplier;
 
 public class IndexedTableDimensionSelector implements DimensionSelector

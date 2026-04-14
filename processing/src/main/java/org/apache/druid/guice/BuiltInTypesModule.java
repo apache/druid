@@ -41,6 +41,7 @@ import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
 import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 

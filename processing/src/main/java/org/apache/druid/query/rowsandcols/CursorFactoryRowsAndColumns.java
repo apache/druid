@@ -37,6 +37,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
+
 import java.util.Collection;
 import java.util.Collections;
 

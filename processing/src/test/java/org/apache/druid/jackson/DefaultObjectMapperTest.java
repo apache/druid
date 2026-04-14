@@ -117,4 +117,3 @@ public class DefaultObjectMapperTest
     Assert.fail("We expect InvalidTypeIdException to be thrown");
   }
 }
-

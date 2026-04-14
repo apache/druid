@@ -59,6 +59,7 @@ import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+
 import java.math.RoundingMode;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

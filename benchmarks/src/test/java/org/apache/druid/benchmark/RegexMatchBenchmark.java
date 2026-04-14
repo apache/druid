@@ -191,4 +191,3 @@ public class RegexMatchBenchmark
     }
   }
 }
-

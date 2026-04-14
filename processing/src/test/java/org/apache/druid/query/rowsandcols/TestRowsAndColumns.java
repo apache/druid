@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.rowsandcols.column.Column;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;

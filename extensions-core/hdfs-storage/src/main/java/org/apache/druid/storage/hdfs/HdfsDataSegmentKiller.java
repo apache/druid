@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public class HdfsDataSegmentKiller implements DataSegmentKiller

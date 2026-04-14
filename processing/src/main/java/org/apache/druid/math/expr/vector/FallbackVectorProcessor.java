@@ -32,6 +32,7 @@ import org.apache.druid.math.expr.LambdaExpr;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

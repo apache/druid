@@ -32,6 +32,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @SuppressWarnings("unused")

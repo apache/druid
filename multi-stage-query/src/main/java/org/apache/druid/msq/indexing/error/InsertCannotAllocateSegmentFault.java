@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @JsonTypeName(InsertCannotAllocateSegmentFault.CODE)

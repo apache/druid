@@ -33,6 +33,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

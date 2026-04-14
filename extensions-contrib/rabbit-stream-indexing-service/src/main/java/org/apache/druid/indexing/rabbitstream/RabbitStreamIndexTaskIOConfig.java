@@ -30,6 +30,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, Long>

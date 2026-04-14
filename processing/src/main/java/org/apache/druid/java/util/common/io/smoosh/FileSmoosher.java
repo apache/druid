@@ -40,6 +40,7 @@ import org.apache.druid.segment.file.SegmentInternalFileMetadata;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;

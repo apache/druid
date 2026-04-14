@@ -26,6 +26,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
 
 import javax.naming.directory.SearchResult;
+
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Arrays;

@@ -32,6 +32,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;

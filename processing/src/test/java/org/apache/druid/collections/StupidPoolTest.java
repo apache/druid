@@ -33,7 +33,7 @@ public class StupidPoolTest
   private Supplier<String> generator;
   private CloseableStupidPool<String> poolOfString;
   private ResourceHolder<String> resourceHolderObj;
-  private String defaultString = new String("test");
+  private String defaultString = "test";
 
   @BeforeEach
   public void setUp()

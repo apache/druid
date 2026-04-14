@@ -47,6 +47,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;

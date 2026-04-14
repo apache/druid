@@ -26,6 +26,7 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;

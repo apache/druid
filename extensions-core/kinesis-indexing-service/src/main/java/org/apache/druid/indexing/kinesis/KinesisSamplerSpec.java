@@ -35,6 +35,7 @@ import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 public class KinesisSamplerSpec extends SeekableStreamSamplerSpec

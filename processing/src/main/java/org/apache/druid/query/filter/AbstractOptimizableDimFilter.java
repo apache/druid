@@ -29,7 +29,7 @@ import com.google.common.base.Suppliers;
  * supplier relying on {@link #optimize(boolean)} and {@link #toFilter()}. This fulfils the expectation that
  * {@link #toOptimizedFilter(boolean)} returns the same instance when called multiple times.
  *
- * 
+ *
  */
 public abstract class AbstractOptimizableDimFilter implements DimFilter
 {

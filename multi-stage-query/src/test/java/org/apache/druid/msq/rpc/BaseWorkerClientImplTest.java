@@ -64,6 +64,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;

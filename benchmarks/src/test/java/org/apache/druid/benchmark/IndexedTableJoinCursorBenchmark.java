@@ -162,7 +162,7 @@ public class IndexedTableJoinCursorBenchmark
     final String[] split = joinColumns.split(",");
     final String lhsJoinColumn = split[0];
     final String rhsJoinColumn = split[1];
-    
+
     final List<JoinableClause> clauses = ImmutableList.of(
         new JoinableClause(
             prefix,

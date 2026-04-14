@@ -33,6 +33,7 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;

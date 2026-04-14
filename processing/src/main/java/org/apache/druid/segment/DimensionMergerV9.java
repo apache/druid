@@ -54,8 +54,8 @@ public interface DimensionMergerV9 extends DimensionMerger
    * Attaches the {@link DimensionMergerV9} of a "projection" parent column so that stuff like value dictionaries can
    * be shared between parent and child. This method is called during merging instead of {@link #writeMergedValueDictionary(List)} if
    * the parent column exists.
-   * 
-   * @see IndexMergerV9#makeProjections 
+   *
+   * @see IndexMergerV9#makeProjections
    */
   default void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
   {

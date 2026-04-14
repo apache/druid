@@ -26,6 +26,7 @@ import com.sun.jersey.api.client.WebResource;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.core.MediaType;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;

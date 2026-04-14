@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.NullableTypeStrategy;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.nio.ByteBuffer;
 import java.util.function.Function;
 

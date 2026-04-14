@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class CountVectorAggregator implements VectorAggregator

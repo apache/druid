@@ -49,7 +49,7 @@ import java.util.Map;
 public class InvalidFilteringTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "ts";
-  
+
   private static final InputRowSchema SCHEMA = new InputRowSchema(
       new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2", "dim3"))),

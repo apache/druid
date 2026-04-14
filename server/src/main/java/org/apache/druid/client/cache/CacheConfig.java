@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.Query;
 
 import javax.validation.constraints.Min;
+
 import java.util.List;
 
 public class CacheConfig

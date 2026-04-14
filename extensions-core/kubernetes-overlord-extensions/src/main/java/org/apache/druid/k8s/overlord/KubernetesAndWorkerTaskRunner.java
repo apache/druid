@@ -42,6 +42,7 @@ import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -256,7 +257,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     }
     return taskLocation;
   }
-  
+
   @Nullable
   @Override
   public RunnerTaskState getRunnerTaskState(String taskId)

@@ -34,6 +34,7 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.inject.Inject;
+
 import java.io.IOException;
 
 /**

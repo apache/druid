@@ -45,4 +45,3 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
     }
   }
 }
-

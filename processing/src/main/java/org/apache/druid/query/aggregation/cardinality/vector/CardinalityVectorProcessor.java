@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.cardinality.vector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

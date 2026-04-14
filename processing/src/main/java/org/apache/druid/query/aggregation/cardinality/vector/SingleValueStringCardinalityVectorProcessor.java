@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.cardinality.types.StringCardinalityAgg
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class SingleValueStringCardinalityVectorProcessor implements CardinalityVectorProcessor

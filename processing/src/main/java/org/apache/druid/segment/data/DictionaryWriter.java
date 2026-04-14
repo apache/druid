@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import org.apache.druid.segment.serde.Serializer;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public interface DictionaryWriter<T> extends Serializer

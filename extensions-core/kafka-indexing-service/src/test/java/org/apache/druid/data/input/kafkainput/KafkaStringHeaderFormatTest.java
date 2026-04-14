@@ -219,4 +219,3 @@ public class KafkaStringHeaderFormatTest
     Assert.assertEquals(expectedResults, rows);
   }
 }
-

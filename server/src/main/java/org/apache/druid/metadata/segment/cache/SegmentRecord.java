@@ -25,6 +25,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.sql.ResultSet;
 
 /**

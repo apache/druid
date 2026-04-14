@@ -28,6 +28,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class HllSketchBuildVectorAggregator implements VectorAggregator

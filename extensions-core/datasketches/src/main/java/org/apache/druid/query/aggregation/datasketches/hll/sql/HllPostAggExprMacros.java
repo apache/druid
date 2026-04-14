@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimateWithBoundsPostAggregator;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class HllPostAggExprMacros
@@ -145,4 +146,3 @@ public class HllPostAggExprMacros
     }
   }
 }
-

@@ -28,6 +28,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collections;
@@ -196,7 +197,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
    * this method modifies the position of {@link #buffer}
    */
   abstract int findInBucket(ByteBuffer value, int currBucketFirstValueIndex, int bucketSize, int sharedPrefixLength);
-  
+
   @Override
   public int size()
   {

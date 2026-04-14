@@ -36,6 +36,7 @@ import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 /**

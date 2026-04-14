@@ -64,4 +64,3 @@ public class KinesisSupervisorIngestionSpec extends SeekableStreamSupervisorInge
     return tuningConfig;
   }
 }
-

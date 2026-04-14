@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll.vector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

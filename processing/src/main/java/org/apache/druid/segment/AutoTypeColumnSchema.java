@@ -36,6 +36,7 @@ import org.apache.druid.segment.nested.VariantColumnSerializer;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

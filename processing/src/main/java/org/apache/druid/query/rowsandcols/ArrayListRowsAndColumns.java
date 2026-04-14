@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;

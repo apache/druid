@@ -24,6 +24,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnFormat;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

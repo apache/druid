@@ -29,6 +29,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 
 public class DefaultNaiveSortMaker implements NaiveSortMaker

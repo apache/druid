@@ -28,6 +28,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.List;
 

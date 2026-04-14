@@ -30,6 +30,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.validation.constraints.NotNull;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;

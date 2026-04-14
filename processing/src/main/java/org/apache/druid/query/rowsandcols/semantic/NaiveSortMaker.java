@@ -24,6 +24,7 @@ import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 
 /**

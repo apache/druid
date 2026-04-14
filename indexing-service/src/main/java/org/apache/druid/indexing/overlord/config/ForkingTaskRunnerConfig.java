@@ -27,6 +27,7 @@ import org.apache.druid.guice.IndexingServiceModuleHelper;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+
 import java.util.List;
 
 public class ForkingTaskRunnerConfig

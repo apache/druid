@@ -25,6 +25,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.Map;
 import java.util.Set;
 

@@ -37,6 +37,7 @@ import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;

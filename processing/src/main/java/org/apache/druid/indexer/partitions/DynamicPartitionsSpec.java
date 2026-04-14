@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.InvalidInput;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

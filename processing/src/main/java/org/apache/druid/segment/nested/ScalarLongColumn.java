@@ -39,6 +39,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;

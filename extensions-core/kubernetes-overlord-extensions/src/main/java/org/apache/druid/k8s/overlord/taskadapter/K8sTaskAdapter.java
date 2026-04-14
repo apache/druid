@@ -499,4 +499,3 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
   }
 }
-

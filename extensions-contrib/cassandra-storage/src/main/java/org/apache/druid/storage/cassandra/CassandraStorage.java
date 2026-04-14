@@ -33,13 +33,13 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 /**
  * Superclass for accessing Cassandra Storage.
- * 
+ *
  * This is the schema used to support the index and descriptor storage:
- * 
+ *
  * CREATE TABLE index_storage ( key text, chunk text, value blob, PRIMARY KEY (key, chunk)) WITH COMPACT STORAGE;
  * CREATE TABLE descriptor_storage ( key varchar, lastModified timestamp, descriptor varchar, PRIMARY KEY (key) ) WITH COMPACT STORAGE;
  */
-public class CassandraStorage 
+public class CassandraStorage
 {
   private static final String CLUSTER_NAME = "druid_cassandra_cluster";
   private static final String INDEX_TABLE_NAME = "index_storage";
@@ -48,7 +48,7 @@ public class CassandraStorage
   private AstyanaxContext<Keyspace> astyanaxContext;
   final Keyspace keyspace;
   final ChunkedStorageProvider indexStorage;
-  final ColumnFamily<String, String> descriptorStorage;  
+  final ColumnFamily<String, String> descriptorStorage;
   final CassandraDataSegmentConfig config;
 
   public CassandraStorage(CassandraDataSegmentConfig config)

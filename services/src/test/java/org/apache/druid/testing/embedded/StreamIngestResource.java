@@ -32,7 +32,7 @@ public abstract class StreamIngestResource<C extends GenericContainer<C>> extend
   public abstract void createTopicWithPartitions(String topic, int partitionCount);
 
   public abstract void deleteTopic(String topic);
-  
+
   public abstract void increasePartitionsInTopic(String topic, int newPartitionCount);
 
   public abstract void publishRecordsToTopic(String topic, List<byte[]> records);

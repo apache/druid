@@ -27,6 +27,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 
 import javax.annotation.Nullable;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 

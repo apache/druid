@@ -23,6 +23,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

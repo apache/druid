@@ -31,6 +31,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.util.Iterator;
 
 /**

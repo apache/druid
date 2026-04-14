@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;

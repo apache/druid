@@ -84,7 +84,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   {
     DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones = 
+    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones =
         determineNonOvershadowedEternityTombstones(
         dataSourcesSnapshot
     );

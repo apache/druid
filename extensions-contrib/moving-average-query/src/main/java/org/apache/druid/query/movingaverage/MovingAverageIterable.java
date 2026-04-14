@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;

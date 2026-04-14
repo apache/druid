@@ -26,6 +26,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
@@ -50,7 +51,7 @@ public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
       com.datadoghq.sketch.ddsketch.proto.DDSketch proto = com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom(readOnlyBuffer);
       DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
       return recovered;
-    } 
+    }
     catch (InvalidProtocolBufferException e) {
       throw new UnsupportedOperationException("Unable to decode from Proto");
     }

@@ -49,6 +49,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -122,7 +123,7 @@ public class BatchAppenderatorTester implements AutoCloseable
          false
     );
   }
-  
+
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,

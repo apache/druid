@@ -32,6 +32,7 @@ import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

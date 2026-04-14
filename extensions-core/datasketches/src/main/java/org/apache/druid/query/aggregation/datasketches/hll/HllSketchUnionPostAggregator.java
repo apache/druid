@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -130,7 +131,7 @@ public abstract class FastLineIterator<T> implements CloseableIterator<T>
           final long w = buffer.getLong(position);
           final int index = firstOccurrence(w, LF_REPEAT);
           if (index < Long.BYTES) {
-            position = position + index;
+            position += index;
             return readLineFromBuffer();
           } else {
             position += Long.BYTES;

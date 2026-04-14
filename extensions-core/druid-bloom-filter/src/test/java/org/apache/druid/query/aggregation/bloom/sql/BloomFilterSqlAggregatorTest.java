@@ -174,7 +174,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         expectedbl1.addString(raw);
       }
       List<String> lst = row.getDimension("dim2");
-      if (lst.size() == 0) {
+      if (lst.isEmpty()) {
         expected2.addBytes(null, 0, 0);
       }
       for (String s : lst) {

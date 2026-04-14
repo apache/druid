@@ -39,6 +39,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorDutyUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

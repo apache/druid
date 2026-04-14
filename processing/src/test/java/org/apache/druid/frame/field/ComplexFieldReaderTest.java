@@ -46,6 +46,7 @@ import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class ComplexFieldReaderTest extends InitializedNullHandlingTest

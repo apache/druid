@@ -55,6 +55,7 @@ import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

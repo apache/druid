@@ -1763,6 +1763,52 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <skip>${spotless.skip}</skip>
+                    <java>
+                        <excludes>
+                            <exclude>**/extendedset/intset/**</exclude>
+                        </excludes>
+                        <cleanthat>
+                            <version>2.25</version>
+                            <sourceJdk>${maven.compiler.source}</sourceJdk>
+                            <mutators>
+                                <mutator>SafeAndConsensual</mutator>
+                                <mutator>PrimitiveWrapperInstantiation</mutator>
+                                <mutator>UsePredefinedStandardCharset</mutator>
+                                <mutator>StringFromString</mutator>
+                                <mutator>UnnecessarySemicolon</mutator>
+                            </mutators>
+                            <excludedMutators>
+                                <!-- CleanThat bug: crashes on wildcard generics e.g. Map<HookKey<?>, List<DruidHook<?>>> -->
+                                <excludedMutator>UseDiamondOperator</excludedMutator>
+                                <excludedMutator>StreamAnyMatch</excludedMutator>
+                                <excludedMutator>ArraysDotStream</excludedMutator>
+                            </excludedMutators>
+                        </cleanthat>
+                        <removeUnusedImports/>
+                        <importOrder>
+                            <!-- matches checkstyle ImportOrder: groups=*,javax,java option=bottom; \# = static imports -->
+                            <order>,javax,java,\#</order>
+                        </importOrder>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
                 <version>3.5.1</version>
@@ -2425,6 +2471,7 @@
             <maven.javadoc.skip>true</maven.javadoc.skip>
             <pmd.skip>true</pmd.skip>
             <spotbugs.skip>true</spotbugs.skip>
+            <spotless.skip>true</spotless.skip>
             <maven.gitcommitid.skip>true</maven.gitcommitid.skip>
           </properties>
         </profile>

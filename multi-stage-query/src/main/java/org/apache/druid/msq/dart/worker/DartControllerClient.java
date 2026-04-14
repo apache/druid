@@ -37,6 +37,7 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

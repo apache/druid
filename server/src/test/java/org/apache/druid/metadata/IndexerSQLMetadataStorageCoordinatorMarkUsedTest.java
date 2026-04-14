@@ -61,14 +61,14 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
       = new TestDerbyConnector.DerbyConnectorRule();
-  
+
   private IndexerMetadataStorageCoordinator storageCoordinator;
 
   private final DataSegment wikiSegment1 =
       CreateDataSegments.ofDatasource(TestDataSource.WIKI).startingAt("2012-03-15").eachOfSizeInMb(500).get(0);
   private final DataSegment wikiSegment2 =
       CreateDataSegments.ofDatasource(TestDataSource.WIKI).startingAt("2012-01-05").eachOfSizeInMb(500).get(0);
-  
+
   @Before
   public void setup()
   {
@@ -102,12 +102,12 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
 
     derbyConnector.createSegmentTable();
   }
-  
+
   @Test
   public void test_markNonOvershadowedSegmentsAsUsed1()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -134,13 +134,13 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         koalaSegment3.getId()
     );
 
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
     );
     Assert.assertEquals(2, storageCoordinator.markNonOvershadowedSegmentsAsUsed(TestDataSource.KOALA, segmentIds));
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -155,7 +155,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_inEternityIntervalWithVersions()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -204,7 +204,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_withEmptyVersions()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -249,7 +249,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_inEternityIntervalWithEmptyVersions()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -294,7 +294,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_inFiniteIntervalWithVersions()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -316,7 +316,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
 
     publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
 
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -329,7 +329,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
             ImmutableList.of("2017-10-15T20:19:12.565Z", "2017-10-16T20:19:12.565Z")
         )
     );
-    
+
 
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
@@ -345,7 +345,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_withNonExistentVersions()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -367,7 +367,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
 
     publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
 
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -380,7 +380,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
             ImmutableList.of("foo", "bar")
         )
     );
-    
+
 
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
@@ -392,13 +392,13 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_invalidDataSource()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createNewSegment1(TestDataSource.KOALA);
     final DataSegment koalaSegment2 = createNewSegment2(TestDataSource.KOALA);
 
     publishUnusedSegments(koalaSegment1, koalaSegment2);
     final Set<SegmentId> segmentIds = Set.of(koalaSegment1.getId(), koalaSegment2.getId());
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -419,12 +419,12 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_withInvalidSegmentIds()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createNewSegment1(TestDataSource.KOALA);
     final DataSegment koalaSegment2 = createNewSegment2(TestDataSource.KOALA);
 
     final Set<SegmentId> segmentIds = Set.of(koalaSegment1.getId(), koalaSegment2.getId());
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -445,7 +445,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createNewSegment1(TestDataSource.KOALA);
     final DataSegment koalaSegment2 = createSegment(
         TestDataSource.KOALA,
@@ -464,7 +464,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
     publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3, koalaSegment4);
     final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
 
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -487,7 +487,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
   public void test_markNonOvershadowedSegmentsAsUsed_withOverlappingInterval()
   {
     publishSegments(wikiSegment1, wikiSegment2);
-    
+
     final DataSegment koalaSegment1 = createSegment(
         TestDataSource.KOALA,
         "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
@@ -512,7 +512,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
     publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3, koalaSegment4);
     final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
 
-    
+
     Assert.assertEquals(
         Set.of(wikiSegment1, wikiSegment2),
         retrieveAllUsedSegments(TestDataSource.WIKI)
@@ -653,7 +653,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         )
     );
   }
-  
+
   private Set<DataSegment> retrieveAllUsedSegments(String dataSource)
   {
     return storageCoordinator.retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED);

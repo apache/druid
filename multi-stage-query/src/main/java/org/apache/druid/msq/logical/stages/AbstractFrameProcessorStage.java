@@ -25,6 +25,7 @@ import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
+
 import java.util.List;
 
 /**

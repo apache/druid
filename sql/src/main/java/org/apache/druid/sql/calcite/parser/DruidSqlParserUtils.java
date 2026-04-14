@@ -62,6 +62,7 @@ import org.joda.time.Period;
 import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
+
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -674,13 +675,13 @@ public class DruidSqlParserUtils
    * @param expectedType the expected type
    * @param actualValue the value provided needed to determine type
    * @return DruidException with INVALID_INPUT category and USER persona
-   */                                                                                                                                                   
+   */
   public static DruidException invalidParameterTypeException(
       String functionName,
       String parameterName,
       String expectedType,
       @Nullable Object actualValue
-  )                                                                                                                                                     
+  )
   {
     final String actualType = actualValue == null ? "NULL" : actualValue.getClass().getSimpleName();
     return InvalidSqlInput.exception(
@@ -690,8 +691,8 @@ public class DruidSqlParserUtils
         expectedType,
         actualType
     );
-  }                                                                                                                                                     
-                                                                                                                                                        
+  }
+
   /**
    * Validates and returns a numeric value from a RexLiteral, or throws invalidParameterTypeException if invalid.
    *
@@ -700,7 +701,7 @@ public class DruidSqlParserUtils
    * @param parameterName the parameter name
    * @return the value as a Number
    * @throws DruidException if value is not a Number
-   */                                                                                                                                                   
+   */
   public static Number getNumericLiteral(
       @Nullable Object value,
       String functionName,

@@ -35,6 +35,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class LookupDimensionSpec implements DimensionSpec

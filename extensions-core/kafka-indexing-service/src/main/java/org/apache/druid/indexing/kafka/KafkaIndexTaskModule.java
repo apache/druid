@@ -35,7 +35,7 @@ import java.util.List;
 public class KafkaIndexTaskModule implements DruidModule
 {
   public static final String SCHEME = "kafka";
-  
+
   @Override
   public List<? extends Module> getJacksonModules()
   {

@@ -26,6 +26,7 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

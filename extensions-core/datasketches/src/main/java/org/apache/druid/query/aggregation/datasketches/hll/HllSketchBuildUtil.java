@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.DimensionDictionarySelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 

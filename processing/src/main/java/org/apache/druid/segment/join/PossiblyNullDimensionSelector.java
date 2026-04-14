@@ -31,6 +31,7 @@ import org.apache.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.function.BooleanSupplier;
 
 public class PossiblyNullDimensionSelector extends AbstractDimensionSelector implements IdLookup

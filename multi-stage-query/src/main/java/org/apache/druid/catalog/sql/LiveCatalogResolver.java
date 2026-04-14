@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;

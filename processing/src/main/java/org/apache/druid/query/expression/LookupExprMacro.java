@@ -36,6 +36,7 @@ import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class LookupExprMacro implements ExprMacroTable.ExprMacro

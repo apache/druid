@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 
 import javax.annotation.Nullable;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")

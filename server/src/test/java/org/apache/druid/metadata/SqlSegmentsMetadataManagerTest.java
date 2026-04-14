@@ -480,11 +480,11 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
         "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL"
     );
   }
-  
+
   private Set<DataSegment> retrieveAllUsedSegments()
   {
     return Sets.newHashSet(
         sqlSegmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
     );
-  }  
+  }
 }

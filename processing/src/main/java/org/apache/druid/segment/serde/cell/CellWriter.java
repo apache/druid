@@ -26,6 +26,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -30,6 +30,7 @@ import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

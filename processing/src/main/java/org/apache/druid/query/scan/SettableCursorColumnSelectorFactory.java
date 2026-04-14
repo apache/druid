@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.function.Supplier;
 
 /**

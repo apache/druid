@@ -84,16 +84,16 @@ public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
   public static CgroupDiscoverer autoCgroupDiscoverer(Path procPidDir)
   {
     CgroupVersion version = detectCgroupVersion(procPidDir);
-    
+
     switch (version) {
       case V2:
         LOG.info("Detected cgroups v2, using ProcCgroupV2Discoverer");
         return new ProcCgroupV2Discoverer(procPidDir);
-      
+
       case V1:
         LOG.info("Detected cgroups v1, using ProcCgroupDiscoverer");
         return new ProcCgroupDiscoverer(procPidDir);
-        
+
       case UNKNOWN:
       default:
         LOG.warn("Could not detect cgroups version, falling back to cgroups v1 discoverer");
@@ -107,7 +107,7 @@ public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
   private static CgroupVersion detectCgroupVersion(Path procPidDir)
   {
     File mountsFile = new File(procPidDir.toFile(), "mounts");
-    
+
     if (!mountsFile.exists() || !mountsFile.canRead()) {
       LOG.warn("Cannot read mounts file at [%s], unable to detect cgroups version", mountsFile);
       return CgroupVersion.UNKNOWN;
@@ -116,7 +116,7 @@ public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
     try {
       boolean hasV1 = false;
       boolean hasV2 = false;
-      
+
       for (String line : Files.readLines(mountsFile, StandardCharsets.UTF_8)) {
         String[] parts = line.split("\\s+");
         if (parts.length >= 3) {
@@ -128,7 +128,7 @@ public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
           }
         }
       }
-      
+
       // Prefer v2 if both are present (hybrid mode)
       if (hasV2) {
         return CgroupVersion.V2;

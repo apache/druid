@@ -32,6 +32,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.Objects;
 

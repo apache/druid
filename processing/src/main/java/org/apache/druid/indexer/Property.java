@@ -20,6 +20,7 @@
 package org.apache.druid.indexer;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.Objects;
 

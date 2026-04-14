@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.BitSet;
 
 public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFactory

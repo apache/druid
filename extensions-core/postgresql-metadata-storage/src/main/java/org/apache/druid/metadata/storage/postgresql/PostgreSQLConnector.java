@@ -120,7 +120,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 
     this.dbi = new DBI(datasource);
     this.dbTableSchema = tablesConfig.getDbTableSchema();
-    
+
     log.info("Configured PostgreSQL as metadata storage");
   }
 

@@ -41,4 +41,3 @@ public interface BatchIOConfig extends IOConfig
   @JsonProperty
   boolean isDropExisting();
 }
-

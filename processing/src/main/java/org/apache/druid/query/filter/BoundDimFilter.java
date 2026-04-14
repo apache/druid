@@ -41,6 +41,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.filter.BoundFilter;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;

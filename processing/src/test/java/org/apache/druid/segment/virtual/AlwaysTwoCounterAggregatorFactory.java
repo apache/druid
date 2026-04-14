@@ -38,6 +38,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 

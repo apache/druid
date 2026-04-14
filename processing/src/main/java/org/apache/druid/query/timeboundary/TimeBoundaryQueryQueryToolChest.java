@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

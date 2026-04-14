@@ -71,7 +71,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
   {
     return new ContainsSearchQuerySpec(value, true);
   }
-  
+
   @Test
   public void testSingleValueStringColumnWithoutNulls()
   {

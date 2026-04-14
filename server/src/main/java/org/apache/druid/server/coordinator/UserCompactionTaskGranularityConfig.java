@@ -26,6 +26,7 @@ import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

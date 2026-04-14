@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde.cell;
 import com.google.common.primitives.Ints;
 
 import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;

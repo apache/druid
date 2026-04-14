@@ -45,6 +45,7 @@ import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>> implements ColumnIndexSupplier

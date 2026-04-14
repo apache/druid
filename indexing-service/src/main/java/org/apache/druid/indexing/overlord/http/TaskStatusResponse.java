@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskStatusPlus;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class TaskStatusResponse

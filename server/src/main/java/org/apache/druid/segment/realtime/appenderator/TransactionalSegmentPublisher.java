@@ -27,6 +27,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Set;
 import java.util.function.Function;

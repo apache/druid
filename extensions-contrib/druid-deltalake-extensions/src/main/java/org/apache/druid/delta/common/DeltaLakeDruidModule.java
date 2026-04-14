@@ -67,4 +67,3 @@ public class DeltaLakeDruidModule implements DruidModule
   }
 
 }
-

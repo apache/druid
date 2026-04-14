@@ -40,6 +40,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
+
 import java.util.Map;
 
 public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest

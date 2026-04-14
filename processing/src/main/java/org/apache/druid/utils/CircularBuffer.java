@@ -67,7 +67,7 @@ public class CircularBuffer<E>
 
     int bufferIndex = start - index - 1;
     if (bufferIndex < 0) {
-      bufferIndex = buffer.length + bufferIndex;
+      bufferIndex += buffer.length;
     }
     return buffer[bufferIndex];
   }

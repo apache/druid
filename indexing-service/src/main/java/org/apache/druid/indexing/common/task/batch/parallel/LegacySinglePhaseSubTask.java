@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.task.TaskResource;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class LegacySinglePhaseSubTask extends SinglePhaseSubTask

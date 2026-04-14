@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.error.DruidException;
 
 import javax.validation.constraints.NotNull;
+
 import java.util.Optional;
 import java.util.function.Function;
 

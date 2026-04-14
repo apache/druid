@@ -318,7 +318,7 @@ public abstract class TaskBuilder<
     public IndexTask withId(String taskId)
     {
       Preconditions.checkNotNull(inputSource, "'inputSource' must be specified");
-      
+
       return new IndexTask(
           taskId,
           null,

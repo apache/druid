@@ -100,7 +100,7 @@ public class HyperLogLogCollectorTest
    *
    * It compares adding all the values to one HLL vs.
    * splitting up values into HLLs of 100 values each, and folding those HLLs into a single main HLL.
-   * 
+   *
    * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
    * with 100 values, requiring  a floating max as described in
    * https://druid.apache.org/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html

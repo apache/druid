@@ -40,6 +40,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;

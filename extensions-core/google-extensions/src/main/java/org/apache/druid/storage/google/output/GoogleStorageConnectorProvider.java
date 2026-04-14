@@ -31,6 +31,7 @@ import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 @JsonTypeName(GoogleStorageDruidModule.SCHEME)

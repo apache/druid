@@ -23,6 +23,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
+
 import java.util.SortedSet;
 
 /**

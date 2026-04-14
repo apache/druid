@@ -44,6 +44,7 @@ import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;

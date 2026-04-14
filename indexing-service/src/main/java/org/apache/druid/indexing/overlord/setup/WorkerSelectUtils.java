@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -124,7 +125,7 @@ public class WorkerSelectUtils
         final Map<String, String> supervisorIdCategoryAffinity = categoryConfig.getSupervisorIdCategoryAffinity();
 
         String preferredCategory = null;
-        
+
         // First, check if this task has a supervisorId and if there's a category affinity for it
         if (task instanceof SeekableStreamIndexTask) {
           final String supervisorId = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
@@ -132,12 +133,12 @@ public class WorkerSelectUtils
             preferredCategory = supervisorIdCategoryAffinity.get(supervisorId);
           }
         }
-        
+
         // If no supervisor-based category is found, fall back to datasource-based category affinity
         if (preferredCategory == null) {
           preferredCategory = categoryAffinity.get(task.getDataSource());
         }
-        
+
         // If there is no preferred category for the supervisorId or datasource, then use the defaultCategory.
         // However, the defaultCategory may be null too, so we need to do one more null check (see below).
         preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;

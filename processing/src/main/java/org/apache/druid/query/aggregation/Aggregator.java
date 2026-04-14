@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 
 /**

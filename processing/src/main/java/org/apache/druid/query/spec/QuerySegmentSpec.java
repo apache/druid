@@ -38,7 +38,7 @@ import java.util.List;
 })
 public interface QuerySegmentSpec
 {
-  public static QuerySegmentSpec ETERNITY = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
+  QuerySegmentSpec ETERNITY = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
   List<Interval> getIntervals();
 

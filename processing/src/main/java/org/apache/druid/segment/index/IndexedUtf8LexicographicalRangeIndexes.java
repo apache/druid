@@ -33,6 +33,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;

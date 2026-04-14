@@ -43,6 +43,7 @@ import org.apache.kafka.common.TopicPartition;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -229,4 +230,3 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
     }
   }
 }
-

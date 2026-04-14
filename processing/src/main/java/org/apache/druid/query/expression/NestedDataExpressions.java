@@ -38,6 +38,7 @@ import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;

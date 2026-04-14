@@ -27,6 +27,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

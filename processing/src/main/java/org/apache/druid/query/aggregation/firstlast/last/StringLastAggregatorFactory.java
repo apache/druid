@@ -52,6 +52,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;

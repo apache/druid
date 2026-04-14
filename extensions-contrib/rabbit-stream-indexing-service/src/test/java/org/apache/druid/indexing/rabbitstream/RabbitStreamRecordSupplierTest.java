@@ -58,7 +58,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
   private static EnvironmentBuilder environmentBuilder;
   private static ClientParameters clientParameters;
   private static Client client;
-  
+
   private static final String STREAM = "stream";
   private static final String PARTITION_ID1 = "stream-1";
   private static final String PARTITION_ID0 = "stream-0";
@@ -181,7 +181,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     environmentBuilder = createMock(EnvironmentBuilder.class);
     client = createMock(Client.class);
     clientParameters = createMock(ClientParameters.class);
-    
+
   }
 
   @Test
@@ -304,7 +304,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
 
     recordSupplier.assign(ImmutableSet.of(partition0));
     Assert.assertEquals(ImmutableSet.of(partition0), recordSupplier.getAssignment());
-  
+
     Assert.assertNotNull(recordSupplier.getOffset(partition0));
     Assert.assertNull(recordSupplier.getOffset(partition1));
 
@@ -494,7 +494,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     Map<String, Object> consumerProperties = ImmutableMap.of(
         "druid.dynamic.config.provider", OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
     );
-    
+
 
     EasyMock.expect(environmentBuilder.uri("rabbitmq-stream://localhost:5552")).andReturn(environmentBuilder).once();
     EasyMock.expect(environmentBuilder.password("RABBIT_PASSWORD")).andReturn(environmentBuilder).once();
@@ -506,9 +506,9 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     supplier.getRabbitEnvironment();
     verifyAll();
     supplier.close();
-   
 
-    
+
+
   }
 
 
@@ -527,9 +527,9 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     EasyMock.expect(clientParameters.host("localhost")).andReturn(clientParameters);
     EasyMock.expect(clientParameters.port(5552)).andReturn(clientParameters);
 
-    
+
     EasyMock.expect(client.partitions(STREAM)).andReturn(ALL_PARTITIONS);
-    
+
     client.close();
     replayAll();
 
@@ -540,9 +540,9 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
 
     Assert.assertEquals(2, partitions.size());
     Assert.assertTrue(partitions.containsAll(ALL_PARTITIONS));
-   
+
     supplier.close();
-    
+
   }
 
   @Test
@@ -558,7 +558,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     Map<String, Object> consumerProperties = ImmutableMap.of(
           "druid.dynamic.config.provider", OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
     );
-    
+
 
     EasyMock.expect(environmentBuilder.uri("rabbitmq-stream://localhost:5552")).andReturn(environmentBuilder).once();
     EasyMock.expect(environmentBuilder.password("RABBIT_PASSWORD")).andReturn(environmentBuilder).once();
@@ -571,14 +571,14 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     verifyAll();
     resetAll();
 
-    
+
     EasyMock.expect(clientParameters.host("localhost")).andReturn(clientParameters);
     EasyMock.expect(clientParameters.port(5552)).andReturn(clientParameters);
     EasyMock.expect(clientParameters.password("RABBIT_PASSWORD")).andReturn(clientParameters);
     EasyMock.expect(clientParameters.username("RABBIT_USERNAME")).andReturn(clientParameters);
-    
+
     EasyMock.expect(client.partitions(STREAM)).andReturn(ALL_PARTITIONS);
-    
+
     client.close();
     replayAll();
 
@@ -589,9 +589,9 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
 
     Assert.assertEquals(2, partitions.size());
     Assert.assertTrue(partitions.containsAll(ALL_PARTITIONS));
-   
+
     supplier.close();
-    
+
   }
 
 }

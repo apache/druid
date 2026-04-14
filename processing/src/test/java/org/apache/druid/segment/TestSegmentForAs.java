@@ -24,6 +24,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.function.Function;
 
 @SuppressWarnings("rawtypes")

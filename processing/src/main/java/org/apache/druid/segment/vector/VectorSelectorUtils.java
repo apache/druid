@@ -22,6 +22,7 @@ package org.apache.druid.segment.vector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 
 public class VectorSelectorUtils

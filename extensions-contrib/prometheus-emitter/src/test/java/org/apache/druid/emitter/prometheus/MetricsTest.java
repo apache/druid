@@ -84,7 +84,7 @@ public class MetricsTest
     Assert.assertEquals("host_name", dims[2]);
     Assert.assertEquals("server", dims[3]);
   }
-  
+
   @Test
   public void testMetricsConfigurationWithBadExtraLabels()
   {

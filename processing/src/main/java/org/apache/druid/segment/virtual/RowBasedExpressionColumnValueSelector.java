@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.RowIdSupplier;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.stream.Collectors;
 

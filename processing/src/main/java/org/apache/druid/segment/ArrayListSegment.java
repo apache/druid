@@ -25,6 +25,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 
 /**

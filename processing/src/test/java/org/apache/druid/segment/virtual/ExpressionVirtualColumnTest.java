@@ -59,6 +59,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 
 public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest

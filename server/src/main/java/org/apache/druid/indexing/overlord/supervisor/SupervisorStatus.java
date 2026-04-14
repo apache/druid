@@ -256,4 +256,3 @@ public class SupervisorStatus
     }
   }
 }
-

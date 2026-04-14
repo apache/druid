@@ -35,6 +35,7 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import javax.annotation.Nullable;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;

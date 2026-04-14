@@ -47,7 +47,7 @@ public class MemcacheClientPoolTest
     firstClientSecondRound.close();
     MemcacheClientPool.IdempotentCloseableHolder firstAgain = pool.get();
     Assert.assertEquals(1, firstAgain.count());
-    
+
     firstAgain.close();
     second.close();
     third.close();

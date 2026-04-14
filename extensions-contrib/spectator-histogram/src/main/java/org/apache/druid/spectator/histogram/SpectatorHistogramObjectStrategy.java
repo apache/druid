@@ -22,6 +22,7 @@ package org.apache.druid.spectator.histogram;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class SpectatorHistogramObjectStrategy implements ObjectStrategy<SpectatorHistogram>

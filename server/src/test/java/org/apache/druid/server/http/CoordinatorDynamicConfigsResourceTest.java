@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
+
 import java.util.List;
 
 public class CoordinatorDynamicConfigsResourceTest

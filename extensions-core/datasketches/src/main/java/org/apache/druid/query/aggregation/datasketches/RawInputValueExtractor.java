@@ -46,5 +46,5 @@ public class RawInputValueExtractor implements ComplexMetricExtractor
   {
     return inputRow.getRaw(metricName);
   }
-  
+
 }

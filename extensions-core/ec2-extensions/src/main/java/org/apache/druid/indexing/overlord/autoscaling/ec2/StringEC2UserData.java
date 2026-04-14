@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class StringEC2UserData implements EC2UserData<StringEC2UserData>

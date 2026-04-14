@@ -23,6 +23,7 @@ import org.apache.druid.segment.DictionaryMergingIterator;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 

@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
+
 import java.util.function.Supplier;
 
 /**

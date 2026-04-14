@@ -28,6 +28,7 @@ import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;

@@ -31,6 +31,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.RegexFilter;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;

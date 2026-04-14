@@ -34,6 +34,7 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;

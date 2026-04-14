@@ -34,6 +34,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentSt
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;

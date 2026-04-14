@@ -44,6 +44,7 @@ import org.apache.druid.query.rowsandcols.serde.RowsAndColumnsSerializer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.validation.Validator;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Properties;

@@ -49,4 +49,3 @@ public abstract class ThreadRenamingRunnable implements Runnable
 
   public abstract void doRun();
 }
-

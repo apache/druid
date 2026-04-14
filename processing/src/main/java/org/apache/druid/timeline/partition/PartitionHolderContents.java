@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import javax.annotation.Nullable;
+
 import java.util.Iterator;
 import java.util.List;
 

@@ -36,6 +36,7 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hive.HiveCatalog;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Map;
 

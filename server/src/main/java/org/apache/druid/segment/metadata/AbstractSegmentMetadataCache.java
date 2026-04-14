@@ -64,6 +64,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;

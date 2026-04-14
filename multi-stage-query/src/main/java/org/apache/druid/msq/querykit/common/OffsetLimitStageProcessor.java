@@ -45,6 +45,7 @@ import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Objects;

@@ -235,7 +235,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void poll()
   {
     try {
-    
+
       Map<String, List<Rule>> newRulesMap =
           dbi.withHandle(
               handle -> handle.createQuery(

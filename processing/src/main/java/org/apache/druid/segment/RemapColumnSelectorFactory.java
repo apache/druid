@@ -24,6 +24,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RemapColumnSelectorFactory implements ColumnSelectorFactory

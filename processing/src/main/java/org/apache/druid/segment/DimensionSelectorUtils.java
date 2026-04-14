@@ -28,6 +28,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+
 import java.util.BitSet;
 import java.util.Objects;
 

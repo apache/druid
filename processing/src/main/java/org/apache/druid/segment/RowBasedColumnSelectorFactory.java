@@ -46,6 +46,7 @@ import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

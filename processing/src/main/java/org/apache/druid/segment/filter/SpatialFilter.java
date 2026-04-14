@@ -49,6 +49,7 @@ import org.apache.druid.segment.index.semantic.SpatialIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.Set;
 

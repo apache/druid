@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Properties;
 
 public class SwitchingEmitterModuleTest

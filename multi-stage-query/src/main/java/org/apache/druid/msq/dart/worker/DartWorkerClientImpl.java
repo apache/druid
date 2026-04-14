@@ -41,6 +41,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.net.URI;
 import java.util.HashMap;

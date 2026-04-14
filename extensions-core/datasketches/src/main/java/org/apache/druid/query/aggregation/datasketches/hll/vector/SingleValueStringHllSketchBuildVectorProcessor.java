@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildUtil;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class SingleValueStringHllSketchBuildVectorProcessor implements HllSketchBuildVectorProcessor

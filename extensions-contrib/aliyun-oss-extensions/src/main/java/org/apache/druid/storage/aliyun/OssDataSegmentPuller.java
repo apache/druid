@@ -42,6 +42,7 @@ import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
+
 import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;

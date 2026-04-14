@@ -29,6 +29,7 @@ import org.apache.druid.msq.statistics.serde.DelegateOrMinSerializer;
 import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 @JsonTypeName(DelegateOrMinKeyCollectorSnapshot.TYPE)

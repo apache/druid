@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
+
 import java.util.SortedMap;
 import java.util.TreeMap;
 

@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro

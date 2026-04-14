@@ -22,6 +22,7 @@ package org.apache.druid.query.lookup;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 

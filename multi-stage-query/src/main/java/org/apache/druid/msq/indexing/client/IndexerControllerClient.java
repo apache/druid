@@ -37,6 +37,7 @@ import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;

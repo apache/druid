@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 
 /**

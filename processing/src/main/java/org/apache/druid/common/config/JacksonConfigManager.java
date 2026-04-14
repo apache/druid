@@ -32,6 +32,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 

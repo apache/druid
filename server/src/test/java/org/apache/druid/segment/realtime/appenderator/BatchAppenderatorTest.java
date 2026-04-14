@@ -1108,4 +1108,3 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   }
 
 }
-

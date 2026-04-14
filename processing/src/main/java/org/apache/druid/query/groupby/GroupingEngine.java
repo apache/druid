@@ -93,6 +93,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -193,7 +194,7 @@ public class GroupingEngine
         );
       } else {
         return new GroupByQueryResources(
-            mergeBufferHolders.subList(0, requiredMergeBufferNumForToolchestMerge), 
+            mergeBufferHolders.subList(0, requiredMergeBufferNumForToolchestMerge),
             mergeBufferHolders.subList(requiredMergeBufferNumForToolchestMerge, requiredMergeBufferNum)
         );
       }

@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Set;
 

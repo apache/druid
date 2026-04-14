@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class ColumnarFrameWriter implements FrameWriter

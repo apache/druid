@@ -33,6 +33,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
@@ -153,13 +154,13 @@ public class SketchEstimatePostAggregator implements PostAggregator
     if (!name.equals(that.name)) {
       return false;
     }
-    
+
     if (errorBoundsStdDev == null ^ that.errorBoundsStdDev == null) {
       // one of the two stddevs (not both) are null
       return false;
     }
-    
-    if (errorBoundsStdDev != null && that.errorBoundsStdDev != null && 
+
+    if (errorBoundsStdDev != null && that.errorBoundsStdDev != null &&
         errorBoundsStdDev.intValue() != that.errorBoundsStdDev.intValue()) {
       // neither stddevs are null, Integer values don't match
       return false;

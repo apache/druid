@@ -35,7 +35,7 @@ public class TaskStorageConfigTest
     TaskStorageConfig config = jsonMapper.readValue(
         "{\"recentlyFinishedThreshold\": \"PT12H\" }",
         TaskStorageConfig.class);
-    
+
     Assert.assertEquals(Period.parse("PT12H").toStandardDuration(), config.getRecentlyFinishedThreshold());
   }
 
@@ -45,7 +45,7 @@ public class TaskStorageConfigTest
     TaskStorageConfig config = jsonMapper.readValue(
         "{}",
         TaskStorageConfig.class);
-    
+
     Assert.assertEquals(Period.parse("PT24H").toStandardDuration(), config.getRecentlyFinishedThreshold());
   }
 }

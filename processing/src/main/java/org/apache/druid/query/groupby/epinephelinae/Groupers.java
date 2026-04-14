@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class Groupers

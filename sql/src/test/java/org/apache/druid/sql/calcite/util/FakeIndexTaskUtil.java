@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.util.datasets.InputSourceBasedTestDataset;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.stream.Collectors;

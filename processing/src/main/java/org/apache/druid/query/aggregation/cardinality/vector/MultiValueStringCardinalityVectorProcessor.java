@@ -25,6 +25,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class MultiValueStringCardinalityVectorProcessor implements CardinalityVectorProcessor

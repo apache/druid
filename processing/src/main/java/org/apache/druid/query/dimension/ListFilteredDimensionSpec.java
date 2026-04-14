@@ -28,6 +28,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.IdMapping;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.Set;
 

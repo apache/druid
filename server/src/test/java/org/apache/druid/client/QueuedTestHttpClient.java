@@ -76,4 +76,3 @@ public class QueuedTestHttpClient implements HttpClient
     throw new UnsupportedOperationException("Use go(Request, HttpResponseHandler<Intermediate, Final>, Duration) instead)");
   }
 }
-

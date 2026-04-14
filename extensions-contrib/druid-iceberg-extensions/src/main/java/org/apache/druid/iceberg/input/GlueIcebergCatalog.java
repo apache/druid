@@ -31,6 +31,7 @@ import org.apache.iceberg.aws.glue.GlueCatalog;
 import org.apache.iceberg.catalog.Catalog;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**

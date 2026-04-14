@@ -72,4 +72,3 @@ public class LogicalSegmentTest
     Assertions.assertEquals(emptyLogicalSegment.getStatus(), LogicalSegment.Status.EMPTY);
   }
 }
-

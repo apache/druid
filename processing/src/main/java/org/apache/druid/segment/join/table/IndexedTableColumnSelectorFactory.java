@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.function.IntSupplier;
 
 public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory

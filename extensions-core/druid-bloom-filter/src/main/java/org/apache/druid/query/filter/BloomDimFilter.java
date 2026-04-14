@@ -32,6 +32,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.Set;
 

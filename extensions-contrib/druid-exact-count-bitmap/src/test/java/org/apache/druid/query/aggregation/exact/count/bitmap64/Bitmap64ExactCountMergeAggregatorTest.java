@@ -95,7 +95,7 @@ public class Bitmap64ExactCountMergeAggregatorTest
 
     EasyMock.verify(mockSelector);
   }
-  
+
   @Test
   public void testAggregateMultipleCountersIncludingNull()
   {
@@ -104,7 +104,7 @@ public class Bitmap64ExactCountMergeAggregatorTest
     inputCounter1.add(20L);
 
     RoaringBitmap64Counter inputCounter3 = new RoaringBitmap64Counter();
-    inputCounter3.add(20L); 
+    inputCounter3.add(20L);
     inputCounter3.add(30L);
 
     EasyMock.expect(mockSelector.getObject()).andReturn(inputCounter1).once();

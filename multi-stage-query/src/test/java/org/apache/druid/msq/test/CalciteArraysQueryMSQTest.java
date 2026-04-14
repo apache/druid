@@ -39,4 +39,3 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 }
-

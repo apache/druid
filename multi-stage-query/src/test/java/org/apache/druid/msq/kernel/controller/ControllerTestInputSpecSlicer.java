@@ -25,6 +25,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.query.filter.SegmentPruner;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 

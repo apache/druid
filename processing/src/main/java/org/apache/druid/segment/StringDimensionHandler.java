@@ -33,6 +33,7 @@ import org.apache.druid.segment.selector.settable.SettableDimensionValueSelector
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;

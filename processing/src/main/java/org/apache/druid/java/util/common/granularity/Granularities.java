@@ -39,6 +39,7 @@ import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -103,7 +104,7 @@ public class Granularities
     String virtualColumnName = GRANULARITY_VIRTUAL_COLUMN_NAME;
     int ctr = 0;
     while (columnNamesForConflictResolution.contains(virtualColumnName)) {
-      virtualColumnName = virtualColumnName + ctr++;
+      virtualColumnName += ctr++;
     }
 
     final VirtualColumn granularityVirtual = toVirtualColumn(query.getGranularity(), virtualColumnName);

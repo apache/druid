@@ -85,7 +85,7 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      
+
       return true;
     }
 
@@ -107,7 +107,7 @@ public class StringComparators
       return new byte[]{(byte) LEXICOGRAPHIC_CACHE_ID};
     }
   }
-  
+
   public static class AlphanumericComparator extends StringComparator
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
@@ -124,9 +124,9 @@ public class StringComparators
         return -1;
       } else if (str2 == null) {
         return 1;
-      } else if (str1.length() == 0) {
-        return str2.length() == 0 ? 0 : -1;
-      } else if (str2.length() == 0) {
+      } else if (str1.isEmpty()) {
+        return str2.isEmpty() ? 0 : -1;
+      } else if (str2.isEmpty()) {
         return 1;
       }
 
@@ -315,7 +315,7 @@ public class StringComparators
       if (s == s2) {
         return 0;
       }
-      
+
       return ORDERING.compare(s, s2);
     }
 

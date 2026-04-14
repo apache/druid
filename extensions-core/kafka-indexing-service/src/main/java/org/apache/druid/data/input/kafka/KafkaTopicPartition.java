@@ -32,6 +32,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;

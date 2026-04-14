@@ -26,6 +26,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**
@@ -104,4 +105,3 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
     return "test_seekable_stream";
   }
 }
-

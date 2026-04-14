@@ -23,6 +23,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Set;
 

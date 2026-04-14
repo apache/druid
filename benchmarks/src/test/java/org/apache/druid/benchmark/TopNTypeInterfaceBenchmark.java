@@ -101,7 +101,7 @@ import java.util.concurrent.TimeUnit;
 public class TopNTypeInterfaceBenchmark
 {
   private static final SegmentId Q_INDEX_SEGMENT_ID = SegmentId.dummy("qIndex");
-  
+
   @Param({"1"})
   private int numSegments;
 

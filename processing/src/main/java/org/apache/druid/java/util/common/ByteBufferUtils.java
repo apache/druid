@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common;
 import org.apache.druid.collections.ResourceHolder;
 
 import javax.annotation.Nullable;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;

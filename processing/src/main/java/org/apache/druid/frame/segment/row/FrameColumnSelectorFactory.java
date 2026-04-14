@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier

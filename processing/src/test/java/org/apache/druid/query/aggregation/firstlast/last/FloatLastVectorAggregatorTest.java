@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -307,4 +308,3 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
     }
   }
 }
-

@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

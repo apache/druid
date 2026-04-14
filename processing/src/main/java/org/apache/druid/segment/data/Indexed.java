@@ -26,6 +26,7 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Iterator;
 

@@ -47,7 +47,7 @@ import java.util.Map;
  * constructed by that {@link org.apache.druid.segment.CursorHolder} whenever it builds a
  * {@link org.apache.druid.segment.Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} to ensure that all
  * the selectors needed to satisfy the original {@link CursorBuildSpec} are available at the correct names.
- * 
+ *
  * @see org.apache.druid.segment.QueryableIndexCursorFactory#makeCursorHolder(CursorBuildSpec)
  * @see org.apache.druid.segment.incremental.IncrementalIndexCursorFactory#makeCursorHolder(CursorBuildSpec)
  */

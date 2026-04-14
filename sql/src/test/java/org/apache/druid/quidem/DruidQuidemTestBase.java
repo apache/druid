@@ -185,7 +185,7 @@ public abstract class DruidQuidemTestBase
       final FileSystem fileSystem = FileSystems.getDefault();
       for (String filterGlob : filterStr.split(",")) {
         if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
-          filterGlob = filterGlob + IQ_SUFFIX;
+          filterGlob += IQ_SUFFIX;
         }
         filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
       }
@@ -406,7 +406,7 @@ public abstract class DruidQuidemTestBase
     public static boolean isOverwrite()
     {
       String property = System.getProperty(OVERWRITE_PROPERTY, "false");
-      return property.length() == 0 || Boolean.valueOf(property);
+      return property.isEmpty() || Boolean.valueOf(property);
     }
 
     private static boolean isUnsupportedComponentSupplier(String diff, String componentSupplier)

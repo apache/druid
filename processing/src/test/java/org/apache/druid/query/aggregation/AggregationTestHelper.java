@@ -88,6 +88,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -704,4 +705,3 @@ public class AggregationTestHelper implements Closeable
     resourceCloser.close();
   }
 }
-

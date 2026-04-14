@@ -34,6 +34,7 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.HashSet;

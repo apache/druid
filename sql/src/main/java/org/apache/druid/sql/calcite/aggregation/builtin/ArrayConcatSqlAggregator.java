@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class ArrayConcatSqlAggregator implements SqlAggregator

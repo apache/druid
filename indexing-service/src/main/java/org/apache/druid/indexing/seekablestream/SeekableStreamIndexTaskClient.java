@@ -174,5 +174,3 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
 
   void close();
 }
-
-

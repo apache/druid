@@ -29,6 +29,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 
 /**

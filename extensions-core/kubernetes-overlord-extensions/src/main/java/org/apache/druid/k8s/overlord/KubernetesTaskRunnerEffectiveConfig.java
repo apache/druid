@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Provides a flexible mechanism to configure Kubernetes task pods, 
- * by merging the static base settings from {@link KubernetesTaskRunnerConfig} 
+ * Provides a flexible mechanism to configure Kubernetes task pods,
+ * by merging the static base settings from {@link KubernetesTaskRunnerConfig}
  * with dynamic overrides from {@link KubernetesTaskRunnerDynamicConfig}.
  * <p>
  * Kubernetes will always use this effective config to run new tasks.
@@ -197,4 +197,3 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
     return dynamicConfigSupplier.get().getPodTemplateSelectStrategy();
   }
 }
-

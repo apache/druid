@@ -48,6 +48,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 
 import javax.annotation.Nonnull;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -462,7 +463,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       );
 
       // does not enable the current stage to enable running from start
-      Assert.assertTrue(createAndGetNewStageNumbers().size() == 0);
+      Assert.assertTrue(createAndGetNewStageNumbers().isEmpty());
       // only work order of failed worker should be there
       Assert.assertTrue(workOrderList.size() == 1);
       Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);

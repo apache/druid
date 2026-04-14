@@ -35,7 +35,7 @@ import java.util.List;
 public class StringComparatorsTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  
+
   private void commonTest(StringComparator comparator)
   {
     // equality test
@@ -43,15 +43,15 @@ public class StringComparatorsTest
     Assert.assertTrue(comparator.compare("", "") == 0);
     Assert.assertTrue(comparator.compare("123", "123") == 0);
     Assert.assertTrue(comparator.compare("abc123", "abc123") == 0);
-    
+
     // empty strings < non-empty
     Assert.assertTrue(comparator.compare("", "abc") < 0);
     Assert.assertTrue(comparator.compare("abc", "") > 0);
-    
+
     // null first test
     Assert.assertTrue(comparator.compare(null, "apple") < 0);
   }
-  
+
   @Test
   public void testLexicographicComparator()
   {
@@ -106,7 +106,7 @@ public class StringComparatorsTest
             "[1.00-5.00)", "[5.00-10.00)", "[10.00-20.00)", "Other"
         ),
         sortedFixedDecimal
-    ); 
+    );
   }
 
   @Test
@@ -180,7 +180,7 @@ public class StringComparatorsTest
         JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class)
     );
   }
-  
+
   @Test
   public void testAlphanumericComparatorSerdeTest() throws IOException
   {
@@ -193,12 +193,12 @@ public class StringComparatorsTest
     String makeFromJsonSpec = "\"alphanumeric\"";
     Assert.assertEquals(StringComparators.ALPHANUMERIC, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
   }
-  
+
   @Test
   public void testStrlenComparatorSerdeTest() throws IOException
   {
     String expectJsonSpec = "{\"type\":\"strlen\"}";
-    
+
     String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.STRLEN);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.STRLEN, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
@@ -222,7 +222,7 @@ public class StringComparatorsTest
     makeFromJsonSpec = "\"NuMeRiC\"";
     Assert.assertEquals(StringComparators.NUMERIC, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
   }
-  
+
   @Test
   public void testNaturalComparatorSerdeTest() throws IOException
   {

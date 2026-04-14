@@ -100,7 +100,7 @@ public class SubstringDimExtractionFnTest
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    
+
     final String json = "{ \"type\" : \"substring\", \"index\" : 1, \"length\" : 3 }";
     final String jsonNoLength = "{ \"type\" : \"substring\", \"index\" : 1 }";
 

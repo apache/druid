@@ -28,6 +28,7 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

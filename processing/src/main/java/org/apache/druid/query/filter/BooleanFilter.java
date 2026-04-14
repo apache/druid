@@ -23,6 +23,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;

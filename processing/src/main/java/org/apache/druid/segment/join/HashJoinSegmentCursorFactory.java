@@ -45,6 +45,7 @@ import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;

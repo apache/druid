@@ -34,7 +34,7 @@ public class GuiceServletConfig extends GuiceServletContextListener
   {
     this.injector = injector;
   }
-  
+
   @Override
   protected Injector getInjector()
   {

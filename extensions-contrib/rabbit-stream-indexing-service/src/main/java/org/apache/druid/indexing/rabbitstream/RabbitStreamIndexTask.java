@@ -36,6 +36,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 

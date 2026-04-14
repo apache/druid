@@ -23,6 +23,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IdLookup;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 
 public class NilVectorSelector

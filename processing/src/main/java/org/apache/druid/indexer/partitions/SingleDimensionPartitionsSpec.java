@@ -28,6 +28,7 @@ import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;

@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class SingleValueBufferAggregator implements BufferAggregator

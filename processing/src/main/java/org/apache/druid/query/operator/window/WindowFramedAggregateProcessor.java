@@ -27,6 +27,7 @@ import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatab
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

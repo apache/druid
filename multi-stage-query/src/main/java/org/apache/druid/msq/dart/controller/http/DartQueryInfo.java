@@ -33,6 +33,7 @@ import org.apache.druid.sql.http.QueryInfo;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

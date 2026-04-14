@@ -25,6 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Stopwatch;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 /**

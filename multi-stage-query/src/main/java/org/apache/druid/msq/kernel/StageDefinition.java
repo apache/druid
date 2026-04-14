@@ -54,6 +54,7 @@ import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;

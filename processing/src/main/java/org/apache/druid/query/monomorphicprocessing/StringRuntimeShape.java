@@ -20,6 +20,7 @@
 package org.apache.druid.query.monomorphicprocessing;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

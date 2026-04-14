@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 
 public abstract class SimpleImmutableBitmapDelegatingIterableIndex extends SimpleBitmapColumnIndex

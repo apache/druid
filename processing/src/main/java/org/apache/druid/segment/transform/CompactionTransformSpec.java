@@ -26,6 +26,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

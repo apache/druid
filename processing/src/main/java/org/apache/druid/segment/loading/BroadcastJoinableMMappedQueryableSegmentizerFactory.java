@@ -31,6 +31,7 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Objects;

@@ -22,9 +22,9 @@ package org.apache.druid.query.expression;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.IPAddressStringParameters;
 import inet.ipaddr.ipv6.IPv6Address;
- 
+
 import javax.annotation.Nullable;
- 
+
 public class IPv6AddressExprUtils
 {
 
@@ -56,7 +56,7 @@ public class IPv6AddressExprUtils
     IPAddressString ipAddressString = new IPAddressString(string, IPV6_ADDRESS_PARAMS);
     if (ipAddressString.isIPv6()) {
       return ipAddressString.getAddress().toIPv6();
-    } 
+    }
     return null;
   }
 
@@ -69,7 +69,7 @@ public class IPv6AddressExprUtils
     }
     return null;
   }
- 
+
   /**
   * @return IPv6 address from supplied array of bytes
   */

@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class ExpressionLambdaAggregator implements Aggregator

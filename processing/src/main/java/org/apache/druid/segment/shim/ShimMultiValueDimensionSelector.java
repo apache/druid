@@ -31,6 +31,7 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

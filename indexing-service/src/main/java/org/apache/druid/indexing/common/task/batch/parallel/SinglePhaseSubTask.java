@@ -84,6 +84,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -266,7 +267,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           inputSource,
           toolbox.getIndexingTmpDir()
       );
-      
+
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
       allSegments.addAll(dataSegmentsWithSchemas.getSegments());

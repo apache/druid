@@ -28,6 +28,7 @@ import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

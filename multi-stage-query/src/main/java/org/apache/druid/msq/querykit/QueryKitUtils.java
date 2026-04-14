@@ -51,6 +51,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;

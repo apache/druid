@@ -43,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.io.InputStream;
 
 public class WorkerChatHandlerTest

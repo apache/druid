@@ -34,7 +34,7 @@ public class IPv6AddressExprUtilsTest
         "2001::8a2e:370:7348",
         "::8a2e:370:7348"
     );
-   
+
   private static final List<String> INVALID_IPV6_ADDRESSES = Arrays.asList(
         "druid.apache.org",  // URL
         "190.0.0.0",  // IPv4 address
@@ -47,7 +47,7 @@ public class IPv6AddressExprUtilsTest
         "2001:db8:85a3:8d3::/64",
         "2001:db8::/8"
     );
- 
+
   private static final List<String> INVALID_IPV6_SUBNETS = Arrays.asList(
         "2001:db8:85a3::/129", // subnet mask too large
         "f3ed::" // no subnet mask
@@ -58,7 +58,7 @@ public class IPv6AddressExprUtilsTest
   {
     Assert.assertFalse(IPv6AddressExprUtils.isValidIPv6Address(null));
   }
- 
+
   @Test
   public void testIsValidIPv6Address()
   {
@@ -66,7 +66,7 @@ public class IPv6AddressExprUtilsTest
       Assert.assertTrue(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Address(address));
     }
   }
- 
+
   @Test
   public void testIsValidIPv6AddressNotIpAddress()
   {
@@ -74,13 +74,13 @@ public class IPv6AddressExprUtilsTest
       Assert.assertFalse(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Address(address));
     }
   }
- 
+
   @Test
   public void testIsValidSubnetNull()
   {
     Assert.assertFalse(IPv6AddressExprUtils.isValidIPv6Subnet(null));
   }
- 
+
   @Test
   public void testIsValidIPv6SubnetValid()
   {
@@ -88,7 +88,7 @@ public class IPv6AddressExprUtilsTest
       Assert.assertTrue(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Subnet(address));
     }
   }
- 
+
   @Test
   public void testIsValidIPv6SubnetInvalid()
   {
@@ -102,13 +102,13 @@ public class IPv6AddressExprUtilsTest
   {
     Assert.assertNull(IPv6AddressExprUtils.parse((String) null));
   }
-  
+
   @Test
   public void testParseNullBytes()
   {
     Assert.assertNull(IPv6AddressExprUtils.parse((byte[]) null));
   }
- 
+
   @Test
   public void testParseIPv6()
   {
@@ -119,7 +119,7 @@ public class IPv6AddressExprUtilsTest
       Assert.assertEquals(errMsg, string, address.toString());
     }
   }
- 
+
   @Test
   public void testParseNotIpV6Addresses()
   {
@@ -127,7 +127,7 @@ public class IPv6AddressExprUtilsTest
       Assert.assertNull(getErrMsg(address), IPv6AddressExprUtils.parse(address));
     }
   }
- 
+
   private String getErrMsg(String msg)
   {
     String prefix = "Failed: ";

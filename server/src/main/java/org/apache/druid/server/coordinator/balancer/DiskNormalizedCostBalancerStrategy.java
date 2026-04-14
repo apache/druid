@@ -70,4 +70,3 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     return normalizedCost * usageRatio;
   }
 }
-

@@ -33,6 +33,7 @@ import org.apache.druid.query.rowsandcols.semantic.SortedMatrixMaker;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;

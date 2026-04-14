@@ -67,6 +67,7 @@ import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;

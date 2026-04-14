@@ -94,7 +94,7 @@ public class HumanReadableBytes
     }
 
     number = number.trim();
-    if (number.length() == 0) {
+    if (number.isEmpty()) {
       throw new IAE("Invalid format of number: number is blank");
     }
 
@@ -134,7 +134,7 @@ public class HumanReadableBytes
     }
 
     number = number.trim();
-    if (number.length() == 0) {
+    if (number.isEmpty()) {
       return nullValue;
     }
     return parseInner(number);

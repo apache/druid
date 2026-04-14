@@ -70,4 +70,3 @@ public abstract class WrappedSegment implements Segment
     delegate.close();
   }
 }
-

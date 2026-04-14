@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

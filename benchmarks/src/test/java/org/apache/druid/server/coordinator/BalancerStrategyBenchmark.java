@@ -66,10 +66,10 @@ public class BalancerStrategyBenchmark
 
   @Param({"10000", "100000", "1000000"})
   private int numberOfSegments;
-  
+
   @Param({"10", "100", "1000"})
   private int maxSegmentsToMove;
-  
+
   private final List<ServerHolder> serverHolders = new ArrayList<>();
   private int reservoirSize = 1;
 
@@ -77,7 +77,7 @@ public class BalancerStrategyBenchmark
   public void setup()
   {
     reservoirSize = maxSegmentsToMove;
-    
+
     List<List<DataSegment>> segmentList = new ArrayList<>(NUMBER_OF_SERVERS);
     IntStream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));
     for (int i = 0; i < numberOfSegments; i++) {
@@ -95,7 +95,7 @@ public class BalancerStrategyBenchmark
           )
       );
     }
-    
+
     for (List<DataSegment> segments : segmentList) {
       serverHolders.add(
           new ServerHolder(

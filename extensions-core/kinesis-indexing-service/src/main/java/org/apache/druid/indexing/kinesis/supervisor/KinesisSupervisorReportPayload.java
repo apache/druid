@@ -23,6 +23,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

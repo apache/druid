@@ -79,6 +79,7 @@ import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;

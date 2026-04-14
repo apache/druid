@@ -840,20 +840,20 @@ public class ApproximateHistogram
 
   /**
    * mergeBins performs the given number of bin merge operations on the given histogram
-   * 
+   *
    * It repeatedly merges the two closest bins until it has performed the requested number of merge operations.
    * Merges are done in-place and unused bins have unknown state
-   * 
+   *
    * next / prev maintains a doubly-linked list of valid bin indices into the mergedBins array.
-   * 
+   *
    * Fast operation is achieved by building a min-heap of the deltas as opposed to repeatedly
    * scanning the array of deltas to find the minimum. A reverse index into the heap is maintained
    * to allow deleting and updating of specific deltas.
-   * 
+   *
    * next and prev arrays are used to maintain indices to the previous / next valid bin from a given bin index
-   * 
+   *
    * Its effect is equivalent to running the following code:
-   * 
+   *
    * <pre>
    *   ApproximateHistogram merged = new ApproximateHistogram(mergedBinCount, mergedPositions, mergedBins);
    *
@@ -1198,7 +1198,7 @@ public class ApproximateHistogram
 
   /**
    * Writes the dense representation of this ApproximateHistogram object to the given byte-buffer
-   * 
+   *
    * Requires 16 + 12 * size bytes of storage
    *
    * @param buf ByteBuffer to write the ApproximateHistogram to
@@ -1219,7 +1219,7 @@ public class ApproximateHistogram
 
   /**
    * Writes the sparse representation of this ApproximateHistogram object to the given byte-buffer
-   * 
+   *
    * Requires 16 + 12 * binCount bytes of storage
    *
    * @param buf ByteBuffer to write the ApproximateHistogram to
@@ -1241,7 +1241,7 @@ public class ApproximateHistogram
   /**
    * Returns a compact byte-buffer representation of this ApproximateHistogram object
    * storing actual values as opposed to histogram bins
-   * 
+   *
    * Requires 3 + 4 * count bytes of storage with count &lt;= 127
    *
    * @param buf ByteBuffer to write the ApproximateHistogram to

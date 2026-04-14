@@ -44,4 +44,3 @@ public interface AutoScalerConfig
   Double getStopTaskCountRatio();
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter);
 }
-

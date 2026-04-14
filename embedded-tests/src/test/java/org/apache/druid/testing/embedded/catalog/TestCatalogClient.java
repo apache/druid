@@ -155,7 +155,7 @@ public class TestCatalogClient
     );
     return getFromCoordinator(url, new TypeReference<>() {});
   }
-  
+
   private EmbeddedServiceClient serviceClient()
   {
     return cluster.callApi().serviceClient();

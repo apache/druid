@@ -54,6 +54,7 @@ import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;

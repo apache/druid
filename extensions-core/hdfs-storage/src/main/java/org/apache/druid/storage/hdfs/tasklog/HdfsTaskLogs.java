@@ -229,5 +229,3 @@ public class HdfsTaskLogs implements TaskLogs
     return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".payload.json"));
   }
 }
-
-

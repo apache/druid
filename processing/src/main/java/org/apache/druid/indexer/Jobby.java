@@ -22,6 +22,7 @@ package org.apache.druid.indexer;
 import org.apache.druid.java.util.common.UOE;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**

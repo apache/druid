@@ -36,6 +36,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.nested.NestedVectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

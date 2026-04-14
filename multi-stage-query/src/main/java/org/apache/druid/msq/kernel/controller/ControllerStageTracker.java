@@ -58,6 +58,7 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;

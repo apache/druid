@@ -54,4 +54,3 @@ public class ServiceStatusMonitor extends AbstractMonitor
     return true;
   }
 }
-

@@ -23,6 +23,7 @@ import org.apache.druid.segment.join.JoinableClause;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

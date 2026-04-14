@@ -25,6 +25,7 @@ import com.google.common.base.Splitter;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DelimitedParser extends AbstractFlatTextFormatParser

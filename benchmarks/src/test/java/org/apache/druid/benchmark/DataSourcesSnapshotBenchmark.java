@@ -116,4 +116,3 @@ public class DataSourcesSnapshotBenchmark
     blackhole.consume(totalSize);
   }
 }
-

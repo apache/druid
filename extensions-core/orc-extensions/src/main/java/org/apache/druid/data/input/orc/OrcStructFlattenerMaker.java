@@ -32,6 +32,7 @@ import org.apache.orc.mapred.OrcMap;
 import org.apache.orc.mapred.OrcStruct;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;

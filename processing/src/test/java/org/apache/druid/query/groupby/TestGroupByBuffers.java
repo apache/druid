@@ -25,6 +25,7 @@ import org.apache.druid.query.TestBufferPool;
 import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 
 public class TestGroupByBuffers implements Closeable

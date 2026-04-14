@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class ArbitraryGranularitySpec extends BaseGranularitySpec

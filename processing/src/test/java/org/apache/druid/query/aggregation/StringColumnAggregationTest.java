@@ -183,7 +183,7 @@ public class StringColumnAggregationTest
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
     Assert.assertEquals(numRows, result.getMetric("count").longValue());
-    
+
     Assert.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueSum, result.getMetric("multiDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(singleValueMax, result.getMetric("singleDoubleMax").doubleValue(), 0.0001d);
@@ -234,7 +234,7 @@ public class StringColumnAggregationTest
                                       new LongMaxAggregatorFactory("multiLongMax", multiValue),
                                       new LongMinAggregatorFactory("singleLongMin", singleValue),
                                       new LongMinAggregatorFactory("multiLongMin", multiValue),
-                                      
+
                                       new LongSumAggregatorFactory("count", "count")
                                   )
                                   .build();

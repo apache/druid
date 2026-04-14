@@ -25,6 +25,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -111,4 +112,3 @@ public class FloatFirstLastVectorAggregator extends FirstLastVectorAggregator<Fl
     return FirstLastUtils.readFloatPairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
   }
 }
-

@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;

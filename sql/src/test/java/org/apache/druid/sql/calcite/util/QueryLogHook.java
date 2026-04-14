@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import org.apache.calcite.runtime.Hook;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+
 import java.util.List;
 
 /**

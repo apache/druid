@@ -86,7 +86,7 @@ public class HyperUniquesAggregatorFactoryTest
     collector1.add(fn.hashLong(0).asBytes());
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
     Comparator comparator = factory.getComparator();
-    for (int i = 1; i < 100; i = i + 2) {
+    for (int i = 1; i < 100; i += 2) {
       collector1.add(fn.hashLong(i).asBytes());
       collector2.add(fn.hashLong(i + 1).asBytes());
       Assert.assertEquals(1, comparator.compare(collector1, collector2));

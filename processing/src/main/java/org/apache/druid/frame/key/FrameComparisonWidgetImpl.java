@@ -38,6 +38,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.List;
 
 /**

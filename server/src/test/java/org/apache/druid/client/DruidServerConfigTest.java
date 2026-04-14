@@ -154,4 +154,3 @@ public class DruidServerConfigTest
     Assert.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
   }
 }
-

@@ -45,6 +45,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -151,11 +152,11 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                   "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
                   getSupervisorsTable()
               );
-              
+
               if (limit != null) {
                 query += " " + connector.limitClause(limit);
               }
-              
+
               return handle.createQuery(query)
                            .bind("spec_id", id)
                            .map((index, r, ctx) -> createVersionSupervisorSpecFromResponse(r))

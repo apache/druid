@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**

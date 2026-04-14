@@ -43,6 +43,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;

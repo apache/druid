@@ -23,6 +23,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public interface ParallelIndexSupervisorTaskClient

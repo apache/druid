@@ -25,6 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;

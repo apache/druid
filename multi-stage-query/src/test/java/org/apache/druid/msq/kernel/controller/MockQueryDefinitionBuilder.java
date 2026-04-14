@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

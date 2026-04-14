@@ -69,6 +69,7 @@ import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.GetQueryReportResponse;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

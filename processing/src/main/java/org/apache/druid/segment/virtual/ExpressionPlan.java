@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;

@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**

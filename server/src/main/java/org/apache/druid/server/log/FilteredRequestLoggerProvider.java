@@ -29,6 +29,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.util.List;
 

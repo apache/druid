@@ -22,6 +22,7 @@ package org.apache.druid.query.rowsandcols.column.accessor;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 
 public abstract class ObjectColumnAccessorBase implements ColumnAccessor

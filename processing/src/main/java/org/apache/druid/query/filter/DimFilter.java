@@ -27,6 +27,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.CursorBuildSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 /**

@@ -66,7 +66,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
     // Add an EmbeddedOverlord and EmbeddedBroker to use their client and mapper bindings.
     overlord.addProperty("druid.plaintextPort", "7090");
     broker.addProperty("druid.plaintextPort", "7082");
-    
+
     return cluster
         .useContainerFriendlyHostname()
         .useDefaultTimeoutForLatchableEmitter(120)

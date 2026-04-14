@@ -24,6 +24,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

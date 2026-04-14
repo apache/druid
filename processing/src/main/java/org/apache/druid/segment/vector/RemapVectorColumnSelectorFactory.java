@@ -26,6 +26,7 @@ import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSe
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RemapVectorColumnSelectorFactory implements VectorColumnSelectorFactory

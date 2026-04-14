@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.InlineTable;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 /**

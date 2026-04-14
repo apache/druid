@@ -25,6 +25,7 @@ import com.nimbusds.jose.util.DefaultResourceRetriever;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;

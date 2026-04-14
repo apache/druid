@@ -32,6 +32,7 @@ import org.apache.kafka.common.utils.Time;
 import scala.Some;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

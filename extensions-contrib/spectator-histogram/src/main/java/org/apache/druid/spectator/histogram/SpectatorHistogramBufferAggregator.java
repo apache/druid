@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
+
 import java.nio.ByteBuffer;
 
 /**

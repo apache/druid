@@ -36,6 +36,7 @@ import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Collections;
 import java.util.Properties;
 

@@ -49,6 +49,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -339,7 +340,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     }
 
     @Override
-    public TaskState run() 
+    public TaskState run()
     {
       if (succeeds) {
         return TaskState.SUCCESS;

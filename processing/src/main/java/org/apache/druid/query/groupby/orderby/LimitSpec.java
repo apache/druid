@@ -28,6 +28,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 /**

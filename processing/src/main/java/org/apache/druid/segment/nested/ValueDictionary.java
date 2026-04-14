@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;

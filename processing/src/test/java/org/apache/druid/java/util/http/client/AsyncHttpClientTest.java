@@ -60,7 +60,7 @@ public class AsyncHttpClientTest
                   );
                   OutputStream out = clientSocket.getOutputStream()
               ) {
-                while (!in.readLine().equals("")) {
+                while (!in.readLine().isEmpty()) {
                   // skip lines
                 }
                 Thread.sleep(5000); // times out

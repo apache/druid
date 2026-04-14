@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.List;
 

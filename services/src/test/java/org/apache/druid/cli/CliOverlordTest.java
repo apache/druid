@@ -57,7 +57,7 @@ public class CliOverlordTest
   {
     // Small thread count where
     Assert.assertEquals(8, CliOverlord.getDefaultMaxConcurrentActions(10));
-    
+
     // Medium thread count where
     Assert.assertEquals(21, CliOverlord.getDefaultMaxConcurrentActions(25));
     Assert.assertEquals(26, CliOverlord.getDefaultMaxConcurrentActions(30));
@@ -66,7 +66,7 @@ public class CliOverlordTest
     // Large thread count
     Assert.assertEquals(46, CliOverlord.getDefaultMaxConcurrentActions(50));
     Assert.assertEquals(96, CliOverlord.getDefaultMaxConcurrentActions(100));
-    
+
     // Test edge cases - return atleast 1 thread
     Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(-1));
     Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(0));

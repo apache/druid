@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;

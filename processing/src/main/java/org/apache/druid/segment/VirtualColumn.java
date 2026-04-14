@@ -49,6 +49,7 @@ import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

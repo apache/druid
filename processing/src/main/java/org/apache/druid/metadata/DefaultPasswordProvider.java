@@ -75,4 +75,3 @@ public class DefaultPasswordProvider implements PasswordProvider
     return getPassword() != null ? getPassword().hashCode() : 0;
   }
 }
-

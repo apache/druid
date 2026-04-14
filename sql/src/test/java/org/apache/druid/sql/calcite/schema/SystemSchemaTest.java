@@ -1619,7 +1619,7 @@ public class SystemSchemaTest extends CalciteTestBase
     expectedRows
         .add(new Object[]{
             middleManager.getDruidNode().getHostAndPortToUse(),
-            middleManager.getDruidNode().getServiceName(),  
+            middleManager.getDruidNode().getServiceName(),
             ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
             "druid.test-key2", "test-value2"
         });

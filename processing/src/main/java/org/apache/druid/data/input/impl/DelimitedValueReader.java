@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.parsers.Parsers;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;

@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 /**

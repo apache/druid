@@ -27,6 +27,7 @@ import org.apache.druid.segment.join.JoinableClause;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -203,4 +204,3 @@ public class JoinFilterPreAnalysis
 
   }
 }
-

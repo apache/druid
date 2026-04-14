@@ -42,6 +42,7 @@ import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -79,7 +80,7 @@ public class FriendlyServersTest
                   );
                   OutputStream out = clientSocket.getOutputStream()
               ) {
-                while (!in.readLine().equals("")) {
+                while (!in.readLine().isEmpty()) {
                   // skip lines
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
@@ -144,7 +145,7 @@ public class FriendlyServersTest
                 requestContent.set(request.toString());
                 out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while (!in.readLine().equals("")) {
+                while (!in.readLine().isEmpty()) {
                   // skip lines
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
@@ -212,7 +213,7 @@ public class FriendlyServersTest
               ) {
                 // Read headers
                 String header;
-                while (!(header = in.readLine()).equals("")) {
+                while (!(header = in.readLine()).isEmpty()) {
                   if ("Accept-Encoding: identity".equals(header)) {
                     foundAcceptEncoding.set(true);
                   }

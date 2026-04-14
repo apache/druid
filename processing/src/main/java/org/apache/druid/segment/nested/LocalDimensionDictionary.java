@@ -36,7 +36,7 @@ public class LocalDimensionDictionary
   {
     return globalIdToLocalId;
   }
-  
+
   public int add(int originalValue)
   {
     int prev = globalIdToLocalId.get(originalValue);

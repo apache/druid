@@ -49,6 +49,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;

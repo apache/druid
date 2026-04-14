@@ -69,4 +69,3 @@ public class DoubleFirstAggregator extends NumericFirstAggregator
     return (long) firstValue;
   }
 }
-

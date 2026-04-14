@@ -39,6 +39,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;

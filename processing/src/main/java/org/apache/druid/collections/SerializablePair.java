@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 
 public class SerializablePair<T1, T2> extends Pair<T1, T2>

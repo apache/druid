@@ -29,6 +29,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public final class SegmentAllocators

@@ -137,7 +137,7 @@ public class ByteBufferHashTable
       final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
       if (nextTableStart > tableArenaSize / 2) {
         tableStart = nextTableStart;
-        nextBuckets = nextBuckets * 2;
+        nextBuckets *= 2;
       } else {
         break;
       }

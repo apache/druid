@@ -37,6 +37,7 @@ import org.apache.druid.timeline.CompactionState;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

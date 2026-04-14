@@ -31,6 +31,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
+
 import java.util.Properties;
 
 public class RequestLoggerProviderTest

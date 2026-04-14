@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;

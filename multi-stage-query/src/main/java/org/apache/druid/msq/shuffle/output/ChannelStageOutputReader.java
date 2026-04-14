@@ -36,6 +36,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelUtils;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

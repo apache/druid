@@ -63,6 +63,7 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.TransactionCallback;
 
 import javax.annotation.Nullable;
+
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;

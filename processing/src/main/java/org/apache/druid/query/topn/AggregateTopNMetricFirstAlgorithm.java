@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.Cursor;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;

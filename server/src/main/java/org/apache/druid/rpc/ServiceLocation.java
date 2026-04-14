@@ -29,6 +29,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;

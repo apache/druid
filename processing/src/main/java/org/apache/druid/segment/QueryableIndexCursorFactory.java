@@ -31,6 +31,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorOffset;
 
 import javax.annotation.Nullable;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 

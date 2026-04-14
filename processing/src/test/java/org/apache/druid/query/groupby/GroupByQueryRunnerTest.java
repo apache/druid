@@ -2950,7 +2950,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   {
     // Granularity != ALL requires time-ordering.
     assumeTimeOrdered();
-    
+
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -13776,4 +13776,3 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     verifyGroupByMetricsForSmallBufferConfig(false);
   }
 }
-

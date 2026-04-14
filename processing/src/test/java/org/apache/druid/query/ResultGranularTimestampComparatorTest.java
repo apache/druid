@@ -72,7 +72,7 @@ public class ResultGranularTimestampComparatorTest
     Assert.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, greater), descending ? 1 : -1);
     Assert.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, less), descending ? -1 : 1);
   }
-  
+
   @Test
   public void testCompareHour()
   {

@@ -42,6 +42,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;

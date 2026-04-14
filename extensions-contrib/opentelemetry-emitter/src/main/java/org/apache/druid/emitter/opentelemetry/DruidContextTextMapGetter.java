@@ -23,6 +23,7 @@ import io.opentelemetry.context.propagation.TextMapGetter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;

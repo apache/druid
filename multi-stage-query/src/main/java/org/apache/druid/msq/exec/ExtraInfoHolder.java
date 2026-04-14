@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.msq.kernel.WorkOrder;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

@@ -37,6 +37,7 @@ import javax.security.auth.login.LoginException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedActionException;
@@ -76,11 +77,11 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
   {
     try {
       String principal = config.getProperty(PRINCIPAL);
-      if (principal == null || principal.trim().length() == 0) {
+      if (principal == null || principal.trim().isEmpty()) {
         throw new ServletException("Principal not defined in configuration");
       }
       keytab = config.getProperty(KEYTAB, keytab);
-      if (keytab == null || keytab.trim().length() == 0) {
+      if (keytab == null || keytab.trim().isEmpty()) {
         throw new ServletException("Keytab not defined in configuration");
       }
       if (!new File(keytab).exists()) {

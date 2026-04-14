@@ -35,6 +35,7 @@ import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;

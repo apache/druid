@@ -59,6 +59,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

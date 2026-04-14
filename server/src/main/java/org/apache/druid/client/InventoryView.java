@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Collection;
 
 /**

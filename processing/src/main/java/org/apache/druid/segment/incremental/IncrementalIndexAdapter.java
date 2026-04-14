@@ -38,6 +38,7 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;

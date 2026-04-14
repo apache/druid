@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.QueryableProjection;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class IncrementalIndexCursorFactory implements CursorFactory

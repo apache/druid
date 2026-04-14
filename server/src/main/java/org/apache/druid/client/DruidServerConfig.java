@@ -30,6 +30,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.validation.constraints.NotNull;
+
 import java.util.Set;
 
 /**

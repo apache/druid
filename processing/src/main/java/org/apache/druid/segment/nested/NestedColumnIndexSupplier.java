@@ -23,6 +23,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public interface NestedColumnIndexSupplier

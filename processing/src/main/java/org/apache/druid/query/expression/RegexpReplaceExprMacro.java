@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

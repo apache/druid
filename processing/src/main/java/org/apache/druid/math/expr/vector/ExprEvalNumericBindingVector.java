@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
+
 import java.util.function.Supplier;
 
 /**

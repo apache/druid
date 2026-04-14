@@ -29,6 +29,7 @@ import org.apache.druid.segment.UnnestSegment;
 import org.apache.druid.segment.VirtualColumn;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -179,5 +180,3 @@ public class UnnestDataSource implements DataSource
     return Objects.hash(base, virtualColumn, unnestFilter);
   }
 }
-
-

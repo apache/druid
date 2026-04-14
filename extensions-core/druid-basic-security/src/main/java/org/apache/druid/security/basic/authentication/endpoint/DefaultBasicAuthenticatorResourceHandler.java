@@ -30,6 +30,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
 import javax.ws.rs.core.Response;
+
 import java.util.HashMap;
 import java.util.Map;
 

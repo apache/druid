@@ -33,7 +33,7 @@ import java.util.Objects;
 public class CompactionStatusResponse
 {
   private final List<AutoCompactionSnapshot> latestStatus;
-  
+
   @JsonCreator
   public CompactionStatusResponse(
       @JsonProperty("latestStatus") List<AutoCompactionSnapshot> latestStatus

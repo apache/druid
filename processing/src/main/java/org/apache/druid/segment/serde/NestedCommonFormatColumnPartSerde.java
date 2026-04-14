@@ -46,6 +46,7 @@ import org.apache.druid.segment.nested.ScalarStringColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.VariantColumnAndIndexSupplier;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

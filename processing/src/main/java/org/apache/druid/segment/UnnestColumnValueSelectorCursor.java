@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

@@ -37,6 +37,7 @@ import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 
 import javax.validation.constraints.NotNull;
+
 import java.io.File;
 import java.net.URI;
 import java.util.List;

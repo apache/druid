@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;

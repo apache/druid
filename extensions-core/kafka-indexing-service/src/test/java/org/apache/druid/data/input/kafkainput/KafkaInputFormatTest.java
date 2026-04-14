@@ -244,7 +244,7 @@ public class KafkaInputFormatTest
         // Payload verifications
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
-        
+
         Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));

@@ -36,6 +36,7 @@ import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -113,7 +114,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
    * Check the given URL whether it contains non-allowed properties.
    *
    * @see JdbcAccessSecurityConfig#getAllowedProperties()
-   * @see ConnectionUriUtils#tryParseJdbcUriParameters(String, boolean) 
+   * @see ConnectionUriUtils#tryParseJdbcUriParameters(String, boolean)
    */
   private static void checkConnectionURL(String url, JdbcAccessSecurityConfig securityConfig)
   {

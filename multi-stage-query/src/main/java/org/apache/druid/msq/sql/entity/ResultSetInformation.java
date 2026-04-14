@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 

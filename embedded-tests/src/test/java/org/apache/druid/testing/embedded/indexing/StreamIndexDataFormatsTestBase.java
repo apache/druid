@@ -155,23 +155,23 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     streamResource.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
-    
+
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
-    
+
     InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
         overlord.bindings().jsonMapper(),
         avroSchema
     );
-    
+
     JSONPathSpec flattenSpec = new JSONPathSpec(true, null);
-    
+
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         avroBytesDecoder,
         false,
         null
     );
-    
+
     SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -383,7 +383,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     schema.put("namespace", "org.apache.druid");
     schema.put("name", "wikipedia");
     schema.put("type", "record");
-    
+
     List<Map<String, Object>> fields = new ArrayList<>();
     fields.add(Map.of("name", "timestamp", "type", "string"));
     fields.add(Map.of("name", "page", "type", "string"));
@@ -401,7 +401,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     fields.add(Map.of("name", "added", "type", "long"));
     fields.add(Map.of("name", "deleted", "type", "long"));
     fields.add(Map.of("name", "delta", "type", "long"));
-    
+
     schema.put("fields", fields);
     return schema;
   }

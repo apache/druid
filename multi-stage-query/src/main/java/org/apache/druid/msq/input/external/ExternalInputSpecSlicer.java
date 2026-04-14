@@ -34,6 +34,7 @@ import org.apache.druid.msq.input.SlicerUtils;
 import org.apache.druid.query.filter.SegmentPruner;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;

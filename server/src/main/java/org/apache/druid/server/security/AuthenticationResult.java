@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Objects;
 

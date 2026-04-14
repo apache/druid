@@ -27,6 +27,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.regex.Pattern;

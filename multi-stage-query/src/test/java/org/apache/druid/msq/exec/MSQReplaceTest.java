@@ -83,6 +83,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -377,7 +378,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .verifyResults();
   }
-  
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByExpression(String contextName, Map<String, Object> context)

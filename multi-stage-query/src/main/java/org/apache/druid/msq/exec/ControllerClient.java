@@ -27,6 +27,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;

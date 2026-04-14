@@ -111,7 +111,7 @@ public class SerializerUtilsTest
   @Test
   public void testChannelWritefloat() throws IOException
   {
-    final int index = 0; 
+    final int index = 0;
     WritableByteChannel channelOutput = Channels.newChannel(outStream);
     serializerUtils.writeFloat(channelOutput, floats[index]);
     ByteArrayInputStream inputstream = new ByteArrayInputStream(outStream.toByteArray());
@@ -172,7 +172,7 @@ public class SerializerUtilsTest
     Assert.assertArrayEquals(longs, actuals);
   }
 
-  @Test 
+  @Test
   public void testReadStrings() throws IOException
   {
     ByteArrayInputStream inputstream = new ByteArrayInputStream(stringsByte);
@@ -184,7 +184,7 @@ public class SerializerUtilsTest
   @Test
   public void testChannelWriteString() throws IOException
   {
-    final int index = 0; 
+    final int index = 0;
     WritableByteChannel channelOutput = Channels.newChannel(outStream);
     serializerUtils.writeString(channelOutput, strings[index]);
     ByteArrayInputStream inputstream = new ByteArrayInputStream(outStream.toByteArray());
@@ -195,7 +195,7 @@ public class SerializerUtilsTest
     Assert.assertEquals(expected, actuals);
   }
 
-  @Test 
+  @Test
   public void testByteBufferReadStrings()
   {
     ByteBuffer buffer = ByteBuffer.allocate(stringsByte.length);

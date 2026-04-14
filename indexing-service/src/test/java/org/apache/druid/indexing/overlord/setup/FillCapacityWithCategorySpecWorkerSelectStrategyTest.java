@@ -39,6 +39,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashSet;
 
@@ -209,7 +210,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
 
     // Create a test task with supervisor ID "supervisor1"
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final FillCapacityWithCategorySpecWorkerSelectStrategy strategy =
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
@@ -240,7 +241,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
 
     // Create a test task with supervisor ID "supervisor1" (not in supervisorIdCategoryAffinity map)
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final FillCapacityWithCategorySpecWorkerSelectStrategy strategy =
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
@@ -271,7 +272,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
 
     // Create a test task with supervisor ID "supervisor1" and datasource "ds1"
     final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
-    
+
     final FillCapacityWithCategorySpecWorkerSelectStrategy strategy =
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 

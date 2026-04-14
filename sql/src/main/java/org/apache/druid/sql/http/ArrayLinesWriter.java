@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.OutputStream;
 

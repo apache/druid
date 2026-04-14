@@ -115,4 +115,3 @@ public class ArrayOfStringsNullSafeSerde extends ArrayOfStringsSerDe
     }
   }
 }
-

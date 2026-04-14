@@ -101,4 +101,3 @@ public class DropwizardRowIngestionMetersTest
     Assert.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME));
   }
 }
-

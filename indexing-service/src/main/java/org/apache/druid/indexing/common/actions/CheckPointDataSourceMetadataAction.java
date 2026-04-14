@@ -27,6 +27,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>

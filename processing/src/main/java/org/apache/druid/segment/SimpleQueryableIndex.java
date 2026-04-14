@@ -40,6 +40,7 @@ import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -282,4 +283,3 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     };
   }
 }
-

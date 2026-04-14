@@ -31,6 +31,7 @@ import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 

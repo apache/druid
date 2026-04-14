@@ -30,6 +30,7 @@ import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.BitSet;
 
 public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFactory

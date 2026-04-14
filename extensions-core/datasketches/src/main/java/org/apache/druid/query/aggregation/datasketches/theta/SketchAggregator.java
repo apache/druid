@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class SketchAggregator implements Aggregator

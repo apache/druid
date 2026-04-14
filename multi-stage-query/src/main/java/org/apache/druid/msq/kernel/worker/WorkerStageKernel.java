@@ -33,6 +33,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.Set;
 

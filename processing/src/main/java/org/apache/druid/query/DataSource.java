@@ -29,6 +29,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

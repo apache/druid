@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;

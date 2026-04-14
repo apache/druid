@@ -30,6 +30,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;

@@ -56,7 +56,7 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   {
     this(name, fieldName, null, ExprMacroTable.nil());
   }
-  
+
   @Override
   protected float nullValue()
   {

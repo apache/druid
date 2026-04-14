@@ -24,6 +24,7 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 public class NonFailingWritableFrameChannel implements WritableFrameChannel

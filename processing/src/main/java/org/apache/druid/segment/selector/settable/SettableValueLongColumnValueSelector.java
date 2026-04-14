@@ -54,4 +54,3 @@ public class SettableValueLongColumnValueSelector implements BaseLongColumnValue
     this.value = value;
   }
 }
-

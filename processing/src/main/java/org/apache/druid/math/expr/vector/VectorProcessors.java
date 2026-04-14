@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.function.Supplier;
 
@@ -864,7 +865,7 @@ public class VectorProcessors
   }
   /**
    * Basic scaffolding for an 'identifier' {@link ExprVectorProcessor}
-   * 
+   *
    * @see #identifier
    */
   static final class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>

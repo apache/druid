@@ -53,6 +53,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
+
 import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.ClosedChannelException;
@@ -439,7 +440,7 @@ public class TLSTest extends EmbeddedClusterTestBase
   {
     makeRequest(httpClient, HttpMethod.GET, getServerUrl(server) + "/status");
   }
-  
+
   private void verifyGetStatusHttpsIsOk(HttpClient httpClient, EmbeddedDruidServer<?> server)
   {
     makeRequest(httpClient, HttpMethod.GET, getServerHttpsUrl(server) + "/status");

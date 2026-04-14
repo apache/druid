@@ -22,6 +22,7 @@ package org.apache.druid.indexer.report;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;

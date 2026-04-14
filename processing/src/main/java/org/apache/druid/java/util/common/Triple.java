@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class Triple<T1, T2, T3>

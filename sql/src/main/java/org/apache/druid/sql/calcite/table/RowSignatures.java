@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
 import javax.annotation.Nonnull;
+
 import java.util.List;
 
 /**

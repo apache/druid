@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public class NoopInputSource implements InputSource

@@ -34,6 +34,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetad
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

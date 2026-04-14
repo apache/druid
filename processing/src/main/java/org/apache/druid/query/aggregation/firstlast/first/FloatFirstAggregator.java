@@ -73,4 +73,3 @@ public class FloatFirstAggregator extends NumericFirstAggregator
     return (long) firstValue;
   }
 }
-
