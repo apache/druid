@@ -147,6 +147,7 @@ export interface StageWorkerCounter {
   segmentGenerationProgress?: SegmentGenerationProgressCounter;
   warnings?: WarningCounter;
   cpu?: CpusCounter;
+  storage?: StorageCounter;
 }
 
 export type ChannelCounterName = `input${number}` | 'output' | 'shuffle';
@@ -301,6 +302,29 @@ export interface CpuCounter {
   wall: number;
 }
 
+export interface StorageCounter {
+  type: 'storage';
+  localBytesMax?: number;
+  localBytesReserved: number;
+  localFilesWritten: number;
+  localBytesWritten: number;
+  durableFileCount: number;
+  durableBytesWritten: number;
+}
+
+function normalizeStorageCounter(s: StorageCounter | undefined): StorageCounter | undefined {
+  if (!s) return;
+  return {
+    type: 'storage',
+    localBytesMax: s.localBytesMax != null ? Number(s.localBytesMax) : undefined,
+    localBytesReserved: Number(s.localBytesReserved),
+    localFilesWritten: Number(s.localFilesWritten),
+    localBytesWritten: Number(s.localBytesWritten),
+    durableFileCount: Number(s.durableFileCount),
+    durableBytesWritten: Number(s.durableBytesWritten),
+  };
+}
+
 function sumCpuCounters(cs: CpuCounter[]): CpuCounter {
   return aggregateThings(cs, {
     type: 'cpu',
@@ -316,6 +340,7 @@ export interface SimpleWideCounter {
   shuffle?: Record<ChannelFields, number>;
   segmentGenerationProgress?: SegmentGenerationProgressCounter;
   cpu?: CpusCounter;
+  storage?: StorageCounter;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -640,6 +665,7 @@ export class Stages {
       }
       newWideCounter.segmentGenerationProgress = stageCounters.segmentGenerationProgress;
       newWideCounter.cpu = stageCounters.cpu;
+      newWideCounter.storage = normalizeStorageCounter(stageCounters.storage);
       return newWideCounter;
     });
   }
