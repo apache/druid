@@ -172,7 +172,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
   }
 
