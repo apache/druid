@@ -22,6 +22,8 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
@@ -129,6 +131,8 @@ public class ShareGroupIndexTaskTest
   {
     final DataSchema dataSchema = DataSchema.builder()
         .withDataSource("test_datasource")
+        .withTimestamp(new TimestampSpec("__time", null, null))
+        .withDimensions(DimensionsSpec.EMPTY)
         .build();
 
     final Map<String, Object> consumerProps = ImmutableMap.of(
