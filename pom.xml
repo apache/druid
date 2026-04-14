@@ -1405,10 +1405,6 @@
                 <version>${com.google.apis.client.version}</version>
                 <exclusions>
                     <exclusion>
-                      <groupId>com.google.http-client</groupId>
-                      <artifactId>google-http-client-gson</artifactId>
-                    </exclusion>
-                    <exclusion>
                         <groupId>com.google.code.findbugs</groupId>
                         <artifactId>jsr305</artifactId>
                     </exclusion>
@@ -1434,6 +1430,11 @@
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client</artifactId>
                 <version>${com.google.http.client.apis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client-gson</artifactId>
+                <version>2.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
