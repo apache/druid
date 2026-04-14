@@ -75,12 +75,12 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedBroker broker = new EmbeddedBroker();
 
-  private KafkaResource kafkaServer;
+  private ShareGroupKafkaResource kafkaServer;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    kafkaServer = new KafkaResource();
+    kafkaServer = new ShareGroupKafkaResource();
 
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
