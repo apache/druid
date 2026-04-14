@@ -207,6 +207,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     } else {
       taskCount = -1;
       log.debug("No scaling required for supervisor[%s]", supervisorId);
+
+      // Emit metrics for scaling skip reasons; in case of min == max, signaling reaching
+      // max task count has bigger priority for the external observers / trackers
+      if (optimalTaskCount >= config.getTaskCountMax() || currentTaskCount == config.getTaskCountMax()) {
+        emitter.emit(getMetricBuilder()
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at max task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
+      } else if (optimalTaskCount <= config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
+        emitter.emit(getMetricBuilder()
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at min task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
+      }
     }
     return taskCount;
   }

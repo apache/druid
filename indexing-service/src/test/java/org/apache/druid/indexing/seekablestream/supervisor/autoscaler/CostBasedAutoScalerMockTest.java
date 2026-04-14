@@ -23,17 +23,22 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CostBasedAutoScalerMockTest
@@ -59,7 +64,7 @@ public class CostBasedAutoScalerMockTest
     mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSpec.getId()).thenReturn(SUPERVISOR_ID);
-    when(mockSpec.getDataSources()).thenReturn(java.util.List.of("test-datasource"));
+    when(mockSpec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(mockSpec.isSuspended()).thenReturn(false);
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn(STREAM_NAME);
@@ -411,6 +416,89 @@ public class CostBasedAutoScalerMockTest
     );
   }
 
+  @Test
+  public void testEmitsMaxTaskCountSkipReasonWhenCurrentIsAtMax()
+  {
+    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(10)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
+
+    final int currentTaskCount = 10; // already at max
+    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
+
+    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
+    verify(mockEmitter).emit(captor.capture());
+    Assert.assertEquals(
+        "Should emit 'Already at max task count' skip reason when current task count is at maximum",
+        "Already at max task count",
+        ((ServiceMetricEvent.Builder) captor.getValue())
+            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    );
+  }
+
+  @Test
+  public void testEmitsMinTaskCountSkipReasonWhenCurrentIsAtMin()
+  {
+    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(10)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
+
+    final int currentTaskCount = 10; // already at min
+    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
+
+    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
+    verify(mockEmitter).emit(captor.capture());
+    Assert.assertEquals(
+        "Should emit 'Already at min task count' skip reason when current task count is at minimum",
+        "Already at min task count",
+        ((ServiceMetricEvent.Builder) captor.getValue())
+            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    );
+  }
+
+  @Test
+  public void testMaxSkipReasonTakesPriorityWhenMinEqualsMax()
+  {
+    // When min == max, current is simultaneously at both bounds.
+    // The comment in the production code states that signaling max has higher priority.
+    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(5)
+                                                                       .taskCountMin(5)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
+
+    final int currentTaskCount = 5; // at both min and max
+    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
+    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
+
+    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
+    verify(mockEmitter).emit(captor.capture());
+    Assert.assertEquals(
+        "Max skip reason should take priority over min skip reason when min equals max",
+        "Already at max task count",
+        ((ServiceMetricEvent.Builder) captor.getValue())
+            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    );
+  }
+
   private void setupMocksForMetricsCollection(
       CostBasedAutoScaler autoScaler,
       int taskCount,
@@ -431,22 +519,7 @@ public class CostBasedAutoScalerMockTest
     SeekableStreamSupervisorIOConfig ioConfig = mock(SeekableStreamSupervisorIOConfig.class);
     doReturn(ioConfig).when(mockSupervisor).getIoConfig();
     doReturn(taskCount).when(ioConfig).getTaskCount();
+    doReturn(STREAM_NAME).when(ioConfig).getStream();
   }
 
-  private CostMetrics createMetrics(
-      double avgPartitionLag,
-      int currentTaskCount,
-      int partitionCount,
-      double pollIdleRatio
-  )
-  {
-    return new CostMetrics(
-        avgPartitionLag,
-        currentTaskCount,
-        partitionCount,
-        pollIdleRatio,
-        TASK_DURATION_SECONDS,
-        AVG_PROCESSING_RATE
-    );
-  }
 }
