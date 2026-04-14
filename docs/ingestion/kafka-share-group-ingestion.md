@@ -145,7 +145,7 @@ mvn test -pl extensions-core/kafka-indexing-service \
   -Pskip-static-checks -Dweb.console.skip=true -T1C
 ```
 
-E2E test (requires Docker for Kafka Testcontainer):
+E2E test (requires Docker running -- Testcontainers starts a Kafka 4.1.1 broker with share groups enabled automatically):
 
 ```bash
 mvn test -pl extensions-core/kafka-indexing-service \
@@ -153,3 +153,5 @@ mvn test -pl extensions-core/kafka-indexing-service \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Pskip-static-checks -Dweb.console.skip=true -T1C
 ```
+
+The E2E test uses `ShareGroupKafkaResource` which starts an `apache/kafka:4.1.1` container with `group.share.enable=true`. No manual Kafka setup is needed.
