@@ -49,12 +49,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 public class OpenLineageRequestLoggerTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String NAMESPACE = "druid://test:8082";
   private static final DateTime TIMESTAMP = DateTimes.of("2024-01-01T00:00:00Z");
   private static final String REMOTE_ADDR = "10.0.0.1";
+  private static final Set<String> DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES = Set.of(
+      "segmentMetadata",
+      "dataSourceMetadata",
+      "timeBoundary"
+  );
 
   private List<ObjectNode> capturedEvents;
   private OpenLineageRequestLogger logger;
@@ -63,11 +69,17 @@ public class OpenLineageRequestLoggerTest
   public void setUp()
   {
     capturedEvents = new ArrayList<>();
-    logger = new OpenLineageRequestLogger(
+    logger = createLogger(DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES);
+  }
+
+  private OpenLineageRequestLogger createLogger(Set<String> excludedNativeQueryTypes)
+  {
+    return new OpenLineageRequestLogger(
         MAPPER,
         NAMESPACE,
         OpenLineageRequestLoggerProvider.TransportType.CONSOLE,
-        null
+        null,
+        excludedNativeQueryTypes
     )
     {
       @Override
@@ -306,7 +318,8 @@ public class OpenLineageRequestLoggerTest
         MAPPER,
         NAMESPACE,
         OpenLineageRequestLoggerProvider.TransportType.HTTP,
-        null
+        null,
+        DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES
     );
     Assertions.assertThrows(IllegalStateException.class, httpLogger::start);
   }

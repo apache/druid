@@ -41,9 +41,10 @@ All configuration parameters are under `druid.request.logging`.
 | Property | Description | Required | Default |
 |---|---|---|---|
 | `druid.request.logging.type` | Set to `openlineage` to enable this extension. | yes | — |
-| `druid.request.logging.namespace` | Namespace used for OpenLineage job and dataset URIs. Typically the Broker URL. | no | `druid://localhost` |
+| `druid.request.logging.namespace` | Namespace used for OpenLineage job and dataset URIs. Typically the Broker URL. | no | `druid://<hostname>` |
 | `druid.request.logging.transportType` | Where to send events. `CONSOLE` logs JSON to the Druid log; `HTTP` POSTs to an OpenLineage API endpoint. | no | `CONSOLE` |
 | `druid.request.logging.transportUrl` | OpenLineage API endpoint URL. Required when `transportType=HTTP`. | no | — |
+| `druid.request.logging.excludedNativeQueryTypes` | Native query types to exclude from lineage emission. Internal broker queries like segment metadata lookups produce noisy, low-value events. | no | `["segmentMetadata", "dataSourceMetadata", "timeBoundary"]` |
 
 ### Examples
 
@@ -67,11 +68,7 @@ druid.request.logging.transportUrl=http://marquez:5000/api/v1/lineage
 
 ```properties
 druid.request.logging.type=composing
-druid.request.logging.loggerProviders[0].type=slf4j
-druid.request.logging.loggerProviders[1].type=openlineage
-druid.request.logging.loggerProviders[1].namespace=druid://broker.prod:8082
-druid.request.logging.loggerProviders[1].transportType=HTTP
-druid.request.logging.loggerProviders[1].transportUrl=http://marquez:5000/api/v1/lineage
+druid.request.logging.loggerProviders=[{"type":"slf4j"},{"type":"openlineage","namespace":"druid://broker.prod:8082","transportType":"HTTP","transportUrl":"http://marquez:5000/api/v1/lineage"}]
 ```
 
 ## Event structure

@@ -25,11 +25,13 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.RequestLoggerProvider;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  *  Configure logging type, namespace, transport type (http or default console), transportUrl in {@code runtime.properties} 
@@ -52,7 +54,7 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
 
   @JsonProperty
   @NotNull
-  private String namespace = "druid://localhost";
+  private String namespace = "druid://" + DruidNode.getDefaultHost();
 
   @JsonProperty
   @NotNull
@@ -62,10 +64,18 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   private String transportUrl;
 
+  @JsonProperty
+  @NotNull
+  private Set<String> excludedNativeQueryTypes = Set.of(
+      "segmentMetadata",
+      "dataSourceMetadata",
+      "timeBoundary"
+  );
+
   @Override
   public RequestLogger get()
   {
     log.debug("Creating OpenLineageRequestLogger [namespace=%s, transport=%s]", namespace, transportType);
-    return new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl);
+    return new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes);
   }
 }

@@ -99,21 +99,12 @@ public class OpenLineageRequestLogger implements RequestLogger
   private static final int EMIT_QUEUE_CAPACITY = 1000;
   private static final int EMIT_THREAD_COUNT = 1;
 
-  /**
-   * Internal broker query types that are automatically issued for schema discovery and metadata
-   * caching. These are not user-initiated and produce noisy, low-value lineage events.
-   */
-  private static final Set<String> INTERNAL_QUERY_TYPES = Set.of(
-      "segmentMetadata",
-      "dataSourceMetadata",
-      "timeBoundary"
-  );
-
   private final ObjectMapper jsonMapper;
   private final String namespace;
   private final OpenLineageRequestLoggerProvider.TransportType transportType;
   @Nullable
   private final String transportUrl;
+  private final Set<String> excludedNativeQueryTypes;
   @Nullable
   private final HttpClient httpClient;
   @Nullable
@@ -123,15 +114,29 @@ public class OpenLineageRequestLogger implements RequestLogger
       ObjectMapper jsonMapper,
       String namespace,
       OpenLineageRequestLoggerProvider.TransportType transportType,
-      @Nullable String transportUrl
+      @Nullable String transportUrl,
+      Set<String> excludedNativeQueryTypes
+  )
+  {
+    this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes, null);
+  }
+
+  public OpenLineageRequestLogger(
+      ObjectMapper jsonMapper,
+      String namespace,
+      OpenLineageRequestLoggerProvider.TransportType transportType,
+      @Nullable String transportUrl,
+      Set<String> excludedNativeQueryTypes,
+      @Nullable HttpClient httpClient
   )
   {
     this.jsonMapper = jsonMapper;
     this.namespace = namespace;
     this.transportType = transportType;
     this.transportUrl = transportUrl;
+    this.excludedNativeQueryTypes = excludedNativeQueryTypes;
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
-      this.httpClient = HttpClientBuilder.create().build();
+      this.httpClient = httpClient != null ? httpClient : HttpClientBuilder.create().build();
       // Bounded queue: if the queue is full, silently drop the event rather than blocking
       // the query thread. Uses Druid's Execs for daemon thread naming conventions.
       this.emitExecutor = new ThreadPoolExecutor(
@@ -204,7 +209,7 @@ public class OpenLineageRequestLogger implements RequestLogger
 
     String queryType = requestLogLine.getQuery().getType();
 
-    if (INTERNAL_QUERY_TYPES.contains(queryType)) {
+    if (excludedNativeQueryTypes.contains(queryType)) {
       return;
     }
 
