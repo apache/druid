@@ -124,7 +124,7 @@ public class S3InputSource extends CloudObjectInputSource
       }
       return ServerSideEncryptingAmazonS3.builder(
           awsCredentialsProvider,
-          null,
+          s3ClientBuilder.getS3StorageConfig(),
           awsProxyConfig,
           awsEndpointConfig,
           awsClientConfig,

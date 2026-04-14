@@ -303,7 +303,7 @@ public class ServerSideEncryptingAmazonS3
 
   public static ServerSideEncryptingAmazonS3.Builder builder(
       AwsCredentialsProvider awsCredentialsProvider,
-      @Nullable S3StorageConfig s3StorageConfig,
+      S3StorageConfig s3StorageConfig,
       @Nullable AWSProxyConfig awsProxyConfig,
       @Nullable AWSEndpointConfig awsEndpointConfig,
       @Nullable AWSClientConfig awsClientConfig,
@@ -365,7 +365,9 @@ public class ServerSideEncryptingAmazonS3
                    .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                    .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
       asyncClientBuilder.forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
-                        .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
+                        .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
+                        .httpClientBuilder(AsyncHttpClientType.fromString(s3StorageConfig.getS3TransferConfig().getAsyncHttpClientType()).buildBuilder(awsClientConfig))
+                        .multipartEnabled(true);
     }
 
     // Configure HTTP client with proxy if needed
@@ -376,13 +378,6 @@ public class ServerSideEncryptingAmazonS3
       }
     }
     clientBuilder.httpClientBuilder(httpClientBuilder);
-
-    // Create async client supplier for S3TransferManager
-    if (s3StorageConfig != null) {
-      AsyncHttpClientType asyncHttpClientType =
-          AsyncHttpClientType.fromString(s3StorageConfig.getS3TransferConfig().getAsyncHttpClientType());
-      asyncClientBuilder.httpClientBuilder(asyncHttpClientType.buildBuilder(awsClientConfig)).multipartEnabled(true);
-    }
 
     // Configure credentials
     AwsCredentialsProvider credentialsProvider;
@@ -406,12 +401,10 @@ public class ServerSideEncryptingAmazonS3
     asyncClientBuilder.credentialsProvider(credentialsProvider);
 
     // Build and wrap in ServerSideEncryptingAmazonS3
-    ServerSideEncryptingAmazonS3.Builder builder = ServerSideEncryptingAmazonS3.builder()
-                                                                               .setS3ClientSupplier(clientBuilder::build);
-    if (s3StorageConfig != null) {
-      builder.setS3AsyncClientSupplier(asyncClientBuilder::build).setS3StorageConfig(s3StorageConfig);
-    }
-    return builder;
+    return ServerSideEncryptingAmazonS3.builder()
+                                       .setS3ClientSupplier(clientBuilder::build)
+                                       .setS3AsyncClientSupplier(asyncClientBuilder::build)
+                                       .setS3StorageConfig(s3StorageConfig);
   }
 
   @Nonnull

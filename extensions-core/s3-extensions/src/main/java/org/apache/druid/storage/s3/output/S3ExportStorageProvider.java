@@ -37,6 +37,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -70,6 +71,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3Client;
 
+  @JacksonInject
+  S3StorageConfig s3StorageConfig;
   @JacksonInject
   AWSProxyConfig awsProxyConfig;
   @JacksonInject
@@ -128,7 +131,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3OutputConfig,
         ServerSideEncryptingAmazonS3.builder(
             baseCredentialsProvider,
-            null,
+            s3StorageConfig,
             awsProxyConfig,
             awsEndpointConfig,
             awsClientConfig,
