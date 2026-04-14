@@ -752,4 +752,12 @@
     ]]></notes>
     <vulnerabilityName>CVE-2024-11407</vulnerabilityName> <!-- This CVE is a false positive for java. The CVE is related to their cpp library, not java -->
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: grpc-*.jar (all grpc-java artifacts, any version)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
+    <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
 </suppressions>
