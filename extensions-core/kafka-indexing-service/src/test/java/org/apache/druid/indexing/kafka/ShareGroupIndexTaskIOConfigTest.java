@@ -95,6 +95,7 @@ public class ShareGroupIndexTaskIOConfigTest
   public void testDeserializationFromJson() throws IOException
   {
     final String json = "{"
+                        + "\"type\": \"kafka_share_group\","
                         + "\"topic\": \"events\","
                         + "\"groupId\": \"druid-share\","
                         + "\"consumerProperties\": {\"bootstrap.servers\": \"broker:9092\"},"
