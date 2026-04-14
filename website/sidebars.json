@@ -146,7 +146,8 @@
         },
         "items": [
            "data-management/automatic-compaction",
-           "data-management/manual-compaction"
+           "data-management/manual-compaction",
+           "data-management/cascading-reindexing"
          ]
        }
     ]},

@@ -20,9 +20,9 @@
 package org.apache.druid.segment.writeout;
 
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +33,7 @@ public class LazilyAllocatingHeapWriteOutBytesTest
   private Closer closer;
   private HeapByteBufferWriteOutBytes heapByteBufferWriteOutBytes;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     closer = Closer.create();
@@ -47,31 +47,31 @@ public class LazilyAllocatingHeapWriteOutBytesTest
   @Test
   public void testWritingToBuffer() throws IOException
   {
-    Assert.assertNull(target.getTmpBuffer());
+    Assertions.assertNull(target.getTmpBuffer());
 
     target.write(ByteBuffer.allocate(512));
-    Assert.assertNotNull(target.getTmpBuffer());
-    Assert.assertEquals(4096, target.getTmpBuffer().limit());
-    Assert.assertNull(target.getDelegate());
+    Assertions.assertNotNull(target.getTmpBuffer());
+    Assertions.assertEquals(4096, target.getTmpBuffer().limit());
+    Assertions.assertNull(target.getDelegate());
 
     target.write(ByteBuffer.allocate(16385));
-    Assert.assertNull(target.getTmpBuffer());
-    Assert.assertNotNull(target.getDelegate());
-    Assert.assertEquals(16385 + 512, target.getDelegate().size());
+    Assertions.assertNull(target.getTmpBuffer());
+    Assertions.assertNotNull(target.getDelegate());
+    Assertions.assertEquals(16385 + 512, target.getDelegate().size());
   }
 
   @Test
   public void testClosingWriteOutBytes() throws IOException
   {
-    Assert.assertNull(target.getTmpBuffer());
+    Assertions.assertNull(target.getTmpBuffer());
 
     target.writeInt(5);
-    Assert.assertNotNull(target.getTmpBuffer());
-    Assert.assertEquals(128, target.getTmpBuffer().limit());
-    Assert.assertNull(target.getDelegate());
+    Assertions.assertNotNull(target.getTmpBuffer());
+    Assertions.assertEquals(128, target.getTmpBuffer().limit());
+    Assertions.assertNull(target.getDelegate());
 
     closer.close();
 
-    Assert.assertNull(target.getTmpBuffer());
+    Assertions.assertNull(target.getTmpBuffer());
   }
 }

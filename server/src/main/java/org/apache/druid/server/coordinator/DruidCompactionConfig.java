@@ -42,6 +42,9 @@ public class DruidCompactionConfig
   private static final DruidCompactionConfig EMPTY_INSTANCE
       = new DruidCompactionConfig(List.of(), null, null, null, null, null, null);
 
+  private static final DruidCompactionConfig LEGACY_RUN_AS_COORDINATOR_DUTY =
+      new DruidCompactionConfig(List.of(), null, null, null, false, CompactionEngine.NATIVE, null);
+
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final ClusterCompactionConfig clusterConfig;
 
@@ -77,6 +80,11 @@ public class DruidCompactionConfig
   public static DruidCompactionConfig empty()
   {
     return EMPTY_INSTANCE;
+  }
+
+  public static DruidCompactionConfig legacy()
+  {
+    return LEGACY_RUN_AS_COORDINATOR_DUTY;
   }
 
   @JsonCreator

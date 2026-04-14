@@ -30,8 +30,8 @@ import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -65,7 +65,7 @@ public class WindowPercentileProcessorTest
         new WindowPercentileProcessor("10292", 10292)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "10292"),
         processor.getOutputColumnNames()
     );

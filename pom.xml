@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>37.0.0-SNAPSHOT</version>
+    <version>38.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -77,8 +77,8 @@
         <apache.curator.version>5.8.0</apache.curator.version>
         <apache.kafka.version>3.9.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
-        and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
-        <apache.ranger.version>2.7.0</apache.ranger.version>
+        and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
+        <apache.ranger.version>2.8.0</apache.ranger.version>
         <antlr4.version>4.5.3</antlr4.version>
         <gson.version>2.13.2</gson.version>
         <scala.library.version>2.13.16</scala.library.version>
@@ -96,21 +96,21 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.35.1</errorprone.version>
+        <errorprone.version>2.41.0</errorprone.version>
         <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <jetty.version>12.0.30</jetty.version>
+        <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.19.2</jackson.version>
+        <jackson.version>2.20.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.25.3</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.2.6.Final</netty4.version>
+        <netty4.version>4.2.12.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -416,6 +416,11 @@
                 <version>2.8.4</version>
             </dependency>
             <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>aws-crt-client</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
                 <version>2.5.2</version>
@@ -455,12 +460,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.82</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.82</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -483,6 +488,21 @@
               <groupId>com.squareup.okhttp3</groupId>
               <artifactId>logging-interceptor</artifactId>
               <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>3.16.4</version>
+            </dependency>
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>7.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fppt</groupId>
+                <artifactId>jedis-mock</artifactId>
+                <version>1.1.12</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
@@ -1015,6 +1035,16 @@
                 <version>${httpclient.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>5.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5</artifactId>
+                <version>5.3.6</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.16</version>
@@ -1083,7 +1113,17 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.9.49</version>
+                <version>1.6.13</version>
+            </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>2.5</version>
+            </dependency>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>aircompressor</artifactId>
+                <version>2.0.3</version>
             </dependency>
             <dependency>
                 <groupId>org.checkerframework</groupId>
@@ -1146,6 +1186,16 @@
                 <version>1.1.1</version>
             </dependency>
             <dependency>
+                <groupId>com.sun.activation</groupId>
+                <artifactId>jakarta.activation</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.activation</groupId>
+                <artifactId>jakarta.activation-api</artifactId>
+                <version>1.2.2</version>
+            </dependency>
+            <dependency>
                 <groupId>commons-pool</groupId>
                 <artifactId>commons-pool</artifactId>
                 <version>1.6</version>
@@ -1153,7 +1203,7 @@
             <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
-                <version>3.1.0</version>
+                <version>3.6.1</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
@@ -1407,7 +1457,7 @@
             <dependency>
                 <groupId>org.reflections</groupId>
                 <artifactId>reflections</artifactId>
-                <version>0.9.12</version>
+                <version>0.10.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1831,35 +1881,14 @@
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
-                                       <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
-                                       <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
-                                       <exclude>jakarta.activation:jakarta.activation-api</exclude>
                                        <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
                                        <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
                                        <exclude>com.google.inject:guice</exclude>
-                                       <exclude>redis.clients:jedis</exclude>
-                                       <exclude>org.reflections:reflections</exclude>
-                                       <exclude>org.roaringbitmap:RoaringBitmap</exclude>
-                                       <exclude>io.airlift:aircompressor</exclude>
-                                       <exclude>com.squareup.okio:okio</exclude>
-                                       <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
-                                       <exclude>com.sun.activation:jakarta.activation</exclude>
-                                       <exclude>org.yaml:snakeyaml</exclude>
-                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
-                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
-                                       <exclude>io.netty:netty-handler-proxy</exclude>
-                                       <exclude>io.netty:netty-handler</exclude>
                                        <exclude>com.google.http-client:google-http-client-jackson2</exclude>
                                        <exclude>com.google.http-client:google-http-client</exclude>
                                        <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
-                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
-                                       <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
-                                       <exclude>com.google.errorprone:error_prone_annotations</exclude>
                                     </excludes>
                                     <excludedScopes>
                                        <excludedScope>provided</excludedScope>
@@ -2103,7 +2132,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>3.14.1</version>
                     <inherited>true</inherited>
                     <configuration>
                         <release>${maven.compiler.release}</release>
@@ -2154,6 +2183,7 @@
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JavaxInjectOnFinalField -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:CheckedExceptionNotThrown:ERROR</arg>
                                 <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
+                                <arg>--should-stop=ifError=FLOW</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>

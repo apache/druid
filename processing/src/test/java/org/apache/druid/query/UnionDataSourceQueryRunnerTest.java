@@ -20,11 +20,11 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.Iterables;
-import junit.framework.Assert;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +43,7 @@ public class UnionDataSourceQueryRunnerTest
       public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         // verify that table datasource is passed to baseQueryRunner
-        Assert.assertTrue(queryPlus.getQuery().getDataSource() instanceof TableDataSource);
+        Assertions.assertTrue(queryPlus.getQuery().getDataSource() instanceof TableDataSource);
         String dsName = Iterables.getOnlyElement(queryPlus.getQuery().getDataSource().getTableNames());
         if ("ds1".equals(dsName)) {
           ds1.compareAndSet(false, true);
@@ -73,9 +73,9 @@ public class UnionDataSourceQueryRunnerTest
     ResponseContext responseContext = ResponseContext.createEmpty();
     Sequence<?> result = runner.run(QueryPlus.wrap(q), responseContext);
     List res = result.toList();
-    Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);
-    Assert.assertEquals(true, ds1.get());
-    Assert.assertEquals(true, ds2.get());
+    Assertions.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);
+    Assertions.assertEquals(true, ds1.get());
+    Assertions.assertEquals(true, ds2.get());
   }
 
 }

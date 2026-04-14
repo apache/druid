@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NoRestrictionPolicyTest
 {
@@ -39,7 +39,7 @@ public class NoRestrictionPolicyTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Policy deserialized = jsonMapper.readValue("{\"type\":\"noRestriction\"}", Policy.class);
-    Assert.assertEquals(NoRestrictionPolicy.instance(), deserialized);
+    Assertions.assertEquals(NoRestrictionPolicy.instance(), deserialized);
   }
 
   @Test
@@ -48,19 +48,19 @@ public class NoRestrictionPolicyTest
     final NoRestrictionPolicy policy = NoRestrictionPolicy.instance();
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Policy deserialized = jsonMapper.readValue(jsonMapper.writeValueAsString(policy), Policy.class);
-    Assert.assertEquals(policy, deserialized);
+    Assertions.assertEquals(policy, deserialized);
   }
 
   @Test
   public void testVisit()
   {
     final NoRestrictionPolicy policy = NoRestrictionPolicy.instance();
-    Assert.assertEquals(CursorBuildSpec.FULL_SCAN, policy.visit(CursorBuildSpec.FULL_SCAN));
+    Assertions.assertEquals(CursorBuildSpec.FULL_SCAN, policy.visit(CursorBuildSpec.FULL_SCAN));
   }
 
   @Test
   public void testCreateSegmentPruner_noRestriction()
   {
-    Assert.assertNull(NoRestrictionPolicy.instance().createSegmentPruner());
+    Assertions.assertNull(NoRestrictionPolicy.instance().createSegmentPruner());
   }
 }

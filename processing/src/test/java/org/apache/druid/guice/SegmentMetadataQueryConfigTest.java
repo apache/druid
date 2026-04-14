@@ -28,8 +28,8 @@ import com.google.inject.Provides;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -81,11 +81,11 @@ public class SegmentMetadataQueryConfigTest
     }
     expectedDefaultAnalysisAsStringBuilder.append(']');
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedDefaultAnalysisAsStringBuilder.toString(),
         actualDefaultAnalysis
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         props.getProperty("druid.query.segmentMetadata.defaultHistory"),
         config.getDefaultHistory().toString()
     );

@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
@@ -42,6 +41,7 @@ import org.apache.druid.msq.dart.controller.QueryInfoAndReport;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.querykit.MultiQueryKit;
@@ -82,7 +82,6 @@ public class DartSqlEngine implements SqlEngine
 {
   public static final String NAME = "msq-dart";
   private static final Logger log = new Logger(DartSqlEngine.class);
-
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
@@ -256,7 +255,7 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public GetQueriesResponse getRunningQueries(
+  public GetQueriesResponse getQueries(
       boolean selfOnly,
       boolean includeComplete,
       AuthenticationResult authenticationResult,
@@ -276,7 +275,7 @@ public class DartSqlEngine implements SqlEngine
           Futures.successfulAsList(
               Iterables.transform(
                   sqlClients.getAllClients(),
-                  client -> client.getRunningQueries(true, includeComplete)
+                  client -> client.getQueries(true, includeComplete)
               )
           ),
           true

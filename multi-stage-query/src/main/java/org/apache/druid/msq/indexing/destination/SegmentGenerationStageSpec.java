@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -148,6 +149,7 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
         final VirtualColumn vc = outputToVc.get(column.columnName());
         if (vc != null) {
           clusterByVirtualColumns.put(column.columnName(), vc);
+          addRequiredVirtualColumns(groupByQuery.getVirtualColumns(), vc, clusterByVirtualColumns);
         }
       }
     } else if (query instanceof ScanQuery scanQuery) {
@@ -155,9 +157,33 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
         final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(column.columnName());
         if (vc != null) {
           clusterByVirtualColumns.put(column.columnName(), vc);
+          addRequiredVirtualColumns(scanQuery.getVirtualColumns(), vc, clusterByVirtualColumns);
         }
       }
     }
     return clusterByVirtualColumns;
+  }
+
+  /**
+   * Recursively adds any {@link VirtualColumn#requiredColumns()} which are also virtual columns. This handles cases
+   * where a cluster-by virtual column depends on other virtual columns, such as when clustering by something like
+   * {@code LOWER(JSON_VALUE(obj, '$.path'))} which creates an ExpressionVirtualColumn that references a
+   * NestedFieldVirtualColumn.
+   */
+  private static void addRequiredVirtualColumns(
+      VirtualColumns allVirtualColumns,
+      VirtualColumn vc,
+      Map<String, VirtualColumn> collected
+  )
+  {
+    for (String requiredColumn : vc.requiredColumns()) {
+      if (!collected.containsKey(requiredColumn)) {
+        final VirtualColumn requiredVc = allVirtualColumns.getVirtualColumn(requiredColumn);
+        if (requiredVc != null) {
+          collected.put(requiredColumn, requiredVc);
+          addRequiredVirtualColumns(allVirtualColumns, requiredVc, collected);
+        }
+      }
+    }
   }
 }

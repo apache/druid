@@ -38,6 +38,13 @@ public class S3TransferConfig
   @Min(1)
   private long multipartUploadThreshold = 20 * 1024 * 1024L;
 
+  /**
+   * Async HTTP client implementation to use with the S3 transfer manager.
+   * Accepted values: {@code "crt"} (Amazon CRT, default) or {@code "netty"} (Netty NIO).
+   */
+  @JsonProperty
+  private String asyncHttpClientType = "crt";
+
   public void setUseTransferManager(boolean useTransferManager)
   {
     this.useTransferManager = useTransferManager;
@@ -53,6 +60,11 @@ public class S3TransferConfig
     this.multipartUploadThreshold = multipartUploadThreshold;
   }
 
+  public void setAsyncHttpClientType(String asyncHttpClientType)
+  {
+    this.asyncHttpClientType = asyncHttpClientType;
+  }
+
   public boolean isUseTransferManager()
   {
     return useTransferManager;
@@ -66,6 +78,11 @@ public class S3TransferConfig
   public long getMultipartUploadThreshold()
   {
     return multipartUploadThreshold;
+  }
+
+  public String getAsyncHttpClientType()
+  {
+    return asyncHttpClientType;
   }
 
 }

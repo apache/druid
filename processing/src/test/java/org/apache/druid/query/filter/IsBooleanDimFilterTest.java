@@ -26,8 +26,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -41,11 +41,11 @@ public class IsBooleanDimFilterTest extends InitializedNullHandlingTest
 
     IsTrueDimFilter trueFilter = IsTrueDimFilter.of(baseFilter);
     String s = mapper.writeValueAsString(trueFilter);
-    Assert.assertEquals(trueFilter, mapper.readValue(s, IsTrueDimFilter.class));
+    Assertions.assertEquals(trueFilter, mapper.readValue(s, IsTrueDimFilter.class));
 
     IsFalseDimFilter falseFilter = IsFalseDimFilter.of(baseFilter);
     s = mapper.writeValueAsString(falseFilter);
-    Assert.assertEquals(falseFilter, mapper.readValue(s, IsFalseDimFilter.class));
+    Assertions.assertEquals(falseFilter, mapper.readValue(s, IsFalseDimFilter.class));
 
   }
 
@@ -58,27 +58,27 @@ public class IsBooleanDimFilterTest extends InitializedNullHandlingTest
     IsFalseDimFilter f1_4 = IsFalseDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", null));
     IsTrueDimFilter f2 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "world", null));
     IsTrueDimFilter f3 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", new FilterTuning(true, null, null)));
-    Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-    Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f1_3.getCacheKey()));
-    Assert.assertArrayEquals(f1_3.getCacheKey(), f1_4.getCacheKey());
-    Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-    Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+    Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+    Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f1_3.getCacheKey()));
+    Assertions.assertArrayEquals(f1_3.getCacheKey(), f1_4.getCacheKey());
+    Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+    Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
   }
 
   @Test
   public void testInvalidParameters()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new IsTrueDimFilter(null)
     );
-    Assert.assertEquals("IS TRUE operator requires a non-null filter for field", t.getMessage());
-    t = Assert.assertThrows(
+    Assertions.assertEquals("IS TRUE operator requires a non-null filter for field", t.getMessage());
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> new IsFalseDimFilter(null)
     );
-    Assert.assertEquals("IS FALSE operator requires a non-null filter for field", t.getMessage());
+    Assertions.assertEquals("IS FALSE operator requires a non-null filter for field", t.getMessage());
   }
 
   @Test
