@@ -99,7 +99,7 @@
         <errorprone.version>2.45.0</errorprone.version>
         <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>32.1.3-jre</guava.version>
+        <guava.version>33.1.0-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
         <jetty.version>12.1.8</jetty.version>
@@ -128,11 +128,11 @@
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.3.2</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
-        <checkerframework.version>3.48.1</checkerframework.version>
+        <checkerframework.version>3.49.0</checkerframework.version>
         <com.google.apis.client.version>2.9.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>2.1.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
@@ -650,6 +650,11 @@
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-storage-api</artifactId>
                 <version>2.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.value</groupId>
+                <artifactId>auto-value-annotations</artifactId>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -1183,6 +1188,16 @@
                 <version>${codehaus.jackson.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-annotations</artifactId>
+                <version>1.26</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.woodstox</groupId>
+                <artifactId>stax2-api</artifactId>
+                <version>4.2.2</version>
+            </dependency>
+            <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
                 <version>4.0.1</version>
@@ -1438,7 +1453,7 @@
             <dependency>
                 <groupId>com.google.j2objc</groupId>
                 <artifactId>j2objc-annotations</artifactId>
-                <version>2.8</version>
+                <version>3.1</version>
             </dependency>
             <dependency>
                 <groupId>io.github.resilience4j</groupId>
@@ -1579,6 +1594,11 @@
                         <artifactId>jaxb-api</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.woodstox</groupId>
+                <artifactId>woodstox-core</artifactId>
+                <version>7.0.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

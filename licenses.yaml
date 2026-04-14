@@ -444,7 +444,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 32.1.3-jre
+version: 33.1.0-jre
 libraries:
   - com.google.guava: guava
 
@@ -454,7 +454,7 @@ name: Failureaccess
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.0.1
+version: 1.0.2
 libraries:
   - com.google.guava: failureaccess
 
@@ -1972,7 +1972,7 @@ name: Apache HttpClient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.13
+version: 4.5.14
 libraries:
   - org.apache.httpcomponents: httpclient
 notices:
@@ -2995,7 +2995,7 @@ libraries:
 
 name: org.codehaus.woodstox stax2-api
 license_category: binary
-version: 4.2.1
+version: 4.2.2
 module: druid-kerberos
 license_name: BSD-3-Clause License
 libraries:
@@ -3525,7 +3525,7 @@ name: j2objc
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8
+version: 3.1
 libraries:
   - com.google.j2objc: j2objc-annotations
 
@@ -3535,7 +3535,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 3.48.1
+version: 3.49.0
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -4636,7 +4636,7 @@ name: Woodstox
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 6.2.4
+version: 7.0.0
 libraries:
   - com.fasterxml.woodstox: woodstox-core
 
