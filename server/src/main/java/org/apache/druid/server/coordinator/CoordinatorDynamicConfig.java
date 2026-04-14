@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
@@ -180,7 +181,17 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
+
     this.historicalTierAliases = Configs.valueOrDefault(historicalTierAliases, Map.of());
+    final Set<String> aliasKeys = this.historicalTierAliases.keySet();
+    for (Set<String> mappedTiers : this.historicalTierAliases.values()) {
+      if (!Sets.intersection(mappedTiers, aliasKeys).isEmpty()) {
+        throw InvalidInput.exception(
+            "historicalTierAliases [%s] is invalid. A virtual tier alias cannot be a physical tier.",
+            this.historicalTierAliases
+        );
+      }
+    }
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)

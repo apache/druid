@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -651,9 +652,9 @@ public class CoordinatorDynamicConfigTest
   public void testHistoricalTierAliases() throws Exception
   {
     // Basic set and get via builder
-    Map<String, Set<String>> aliases = ImmutableMap.of(
-        "hot", ImmutableSet.of("hot_1", "hot_2"),
-        "cold", ImmutableSet.of("cold_1")
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("hot_1", "hot_2"),
+        "cold", Set.of("cold_1")
     );
     CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
                                                               .withHistoricalTierAliases(aliases)
@@ -674,11 +675,27 @@ public class CoordinatorDynamicConfigTest
         mapper.writeValueAsString(mapper.readValue(jsonWithDupes, CoordinatorDynamicConfig.class)),
         CoordinatorDynamicConfig.class
     );
-    Assert.assertEquals(ImmutableSet.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
+    Assert.assertEquals(Set.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
 
     // Absent field defaults to empty map
     CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
     Assert.assertEquals(Map.of(), defaultConfig.getHistoricalTierAliases());
+  }
+
+  @Test
+  public void testHistoricalTierAliasesNoCycle()
+  {
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("hot", "hot_2"),
+        "cold", Set.of("cold_1"),
+        "another", Set.of("hot")
+    );
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> CoordinatorDynamicConfig.builder().withHistoricalTierAliases(aliases).build()
+    );
+    Assert.assertTrue("Throws correct virtual tier alias message", exception.getMessage().contains("A virtual tier alias cannot be a physical tier."));
   }
 
   @Test
