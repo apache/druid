@@ -119,3 +119,4 @@ jobs:
             **/TEST-*.xml
             **/target/jacoco*.exec
             **/target/ci-debug/**
+            distribution/target/apache-druid-*/log/**

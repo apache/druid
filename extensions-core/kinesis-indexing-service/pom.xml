@@ -116,7 +116,6 @@
             <version>${aws.sdk.v2.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <!-- KCL v2 for deaggregation support -->
         <dependency>
             <groupId>software.amazon.kinesis</groupId>

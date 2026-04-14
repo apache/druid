@@ -133,8 +133,20 @@
             <version>${project.parent.version}</version>
             <exclusions>
                 <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-bundle</artifactId>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>bundle</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <exclusions>
+                <!-- Hadoop 3.5.0 introduced jakarta.ws.rs-api (JAX-RS 2.x),
+                     which conflicts with Jersey 1.x's UriBuilderImpl. -->
+                <exclusion>
+                    <groupId>jakarta.ws.rs</groupId>
+                    <artifactId>jakarta.ws.rs-api</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

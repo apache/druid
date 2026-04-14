@@ -168,6 +168,12 @@
           <groupId>com.sun.jersey</groupId>
           <artifactId>jersey-server</artifactId>
         </exclusion>
+        <!-- Hadoop 3.5.0 introduced jakarta.ws.rs-api (JAX-RS 2.x) via hadoop-hdfs-client,
+             which conflicts with Jersey 1.x's UriBuilderImpl that only implements JAX-RS 1.x. -->
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.apache.curator</groupId>
           <artifactId>curator-client</artifactId>

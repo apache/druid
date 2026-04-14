@@ -7001,3 +7001,110 @@ version: 1.4.5
 copyright: Ecwid
 libraries:
   - com.ecwid.consul: consul-api
+
+---
+
+name: Apache Commons Text
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Apache License version 2.0
+version: 1.14.0
+libraries:
+  - org.apache.commons: commons-text
+
+---
+
+name: Apache Hadoop
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Apache License version 2.0
+version: 3.5.0
+libraries:
+  - org.apache.hadoop: hadoop-auth
+  - org.apache.hadoop: hadoop-common
+  - org.apache.hadoop: hadoop-client-api
+
+---
+
+name: DNS Java
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: BSD-3-Clause License
+version: 3.6.1
+libraries:
+  - dnsjava: dnsjava
+
+---
+
+name: Jakarta Servlet JSP API
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Eclipse Public License 2.0
+version: 2.3.6
+libraries:
+  - jakarta.servlet.jsp: jakarta.servlet.jsp-api
+
+---
+
+name: Hadoop shaded
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Apache License version 2.0
+version: 1.5.0
+libraries:
+  - org.apache.hadoop.thirdparty: hadoop-shaded-protobuf_3_25
+  - org.apache.hadoop.thirdparty: hadoop-shaded-guava
+
+---
+
+name: Kerby
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Apache License version 2.0
+version: 2.0.3
+libraries:
+  - org.apache.kerby: kerb-core
+  - org.apache.kerby: kerb-crypto
+  - org.apache.kerby: kerb-util
+  - org.apache.kerby: kerby-asn1
+  - org.apache.kerby: kerby-config
+  - org.apache.kerby: kerby-pkix
+  - org.apache.kerby: kerby-util
+
+---
+
+name: HK2
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Eclipse Public License 2.0
+version: 2.6.1
+libraries:
+  - org.glassfish.hk2: hk2-api
+  - org.glassfish.hk2: hk2-locator
+  - org.glassfish.hk2: hk2-utils
+  - org.glassfish.hk2.external: aopalliance-repackaged
+
+---
+
+name: Jersey
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Eclipse Public License 2.0
+version: '2.46'
+libraries:
+  - org.glassfish.jersey.containers: jersey-container-servlet
+  - org.glassfish.jersey.containers: jersey-container-servlet-core
+  - org.glassfish.jersey.core: jersey-client
+  - org.glassfish.jersey.core: jersey-common
+  - org.glassfish.jersey.core: jersey-server
+  - org.glassfish.jersey.inject: jersey-hk2
+
+---
+
+name: Javassist
+license_category: binary
+module: extensions-core/druid-kerberos
+license_name: Apache License version 2.0
+version: 3.30.2-GA
+libraries:
+  - org.javassist: javassist
