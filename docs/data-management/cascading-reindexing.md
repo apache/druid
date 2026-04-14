@@ -109,7 +109,7 @@ You can submit a cascading reindexing supervisor through the web console or the 
 
 ### Web console
 
-In the web console, go to the **Datasources** view and click **Edit compaction config** for a datasource. If your cluster has compaction supervisors enabled, the dialog includes a **Template type** dropdown. Select **Cascading reindexing** to configure the template, including default partitioning, skip offsets, and reindexing rules.
+In the web console, go to the **Datasources** view and click **Edit compaction config** for a datasource. If your cluster has compaction supervisors enabled, the dialog includes a **Template type** drop-down. Select **Cascading reindexing** to configure the template, including default partitioning, skip offsets, and reindexing rules.
 
 ### API
 
