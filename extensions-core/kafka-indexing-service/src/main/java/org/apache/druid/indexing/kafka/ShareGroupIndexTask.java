@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -38,6 +39,7 @@ import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,7 +85,7 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
         null,
         taskResource,
         dataSchema.getDataSource(),
-        context,
+        addConcurrentLocksContext(context),
         IngestionMode.APPEND
     );
     this.dataSchema = dataSchema;
@@ -157,5 +159,15 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
   ObjectMapper getConfigMapper()
   {
     return configMapper;
+  }
+
+  private static Map<String, Object> addConcurrentLocksContext(@Nullable Map<String, Object> context)
+  {
+    final Map<String, Object> merged = new HashMap<>();
+    if (context != null) {
+      merged.putAll(context);
+    }
+    merged.putIfAbsent(Tasks.USE_CONCURRENT_LOCKS, true);
+    return merged;
   }
 }
