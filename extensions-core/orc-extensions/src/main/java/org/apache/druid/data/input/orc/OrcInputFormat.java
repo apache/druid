@@ -57,7 +57,7 @@ public class OrcInputFormat extends NestedInputFormat
 
   private void initialize(Configuration conf)
   {
-    //Initializing seperately since during eager initialization, resolving
+    //Initializing separately since during eager initialization, resolving
     //namenode hostname throws an error if nodes are ephemeral
 
     // Ensure that FileSystem class level initialization happens with correct CL

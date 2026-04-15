@@ -43,7 +43,7 @@ public class AzureUtils
   static final String BLOB = "blob";
 
   // This logic is copied from RequestRetryOptions in the azure client. We still need this logic because some classes like
-  // RetryingInputEntity need a predicate function to tell whether to retry, seperate from the Azure client retries.
+  // RetryingInputEntity need a predicate function to tell whether to retry, separate from the Azure client retries.
   public static final Predicate<Throwable> AZURE_RETRY = e -> {
     if (e == null) {
       return false;
