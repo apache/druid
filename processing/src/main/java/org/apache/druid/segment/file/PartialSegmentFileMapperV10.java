@@ -21,6 +21,7 @@ package org.apache.druid.segment.file;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -521,16 +522,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
                actualHeaderSize,
                remainingBytes
            )) {
-        final byte[] buf = new byte[8192];
-        long toWrite = remainingBytes;
-        while (toWrite > 0) {
-          final int read = remainingStream.read(buf, 0, (int) Math.min(buf.length, toWrite));
-          if (read < 0) {
-            break;
-          }
-          out.write(buf, 0, read);
-          toWrite -= read;
-        }
+        ByteStreams.limit(remainingStream, remainingBytes).transferTo(out);
       }
       return null;
     });
