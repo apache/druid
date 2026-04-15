@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -50,7 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Phase 1: Single-threaded, no supervisor, no dedup cache.
  * The task polls, parses, builds segments, publishes, ACKs, and commits.
  */
-public class ShareGroupIndexTask extends AbstractTask
+public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   private static final Logger log = new Logger(ShareGroupIndexTask.class);
   private static final String TYPE = "index_kafka_share_group";
@@ -140,6 +141,12 @@ public class ShareGroupIndexTask extends AbstractTask
   public ShareGroupIndexTaskIOConfig getIOConfig()
   {
     return ioConfig;
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getTaskResource().getAvailabilityGroup();
   }
 
   boolean isStopRequested()
