@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.monomorphicprocessing;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.HashSet;
@@ -67,7 +67,7 @@ public class StringRuntimeShapeTest
   public void testStringRuntimeShape()
   {
     String barRuntimeShape = StringRuntimeShape.of(new Bar());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "org.apache.druid.query.monomorphicprocessing.StringRuntimeShapeTest$Bar {\n"
         + "  foo: org.apache.druid.query.monomorphicprocessing.StringRuntimeShapeTest$Foo {\n"
         + "    flag1: true,\n"

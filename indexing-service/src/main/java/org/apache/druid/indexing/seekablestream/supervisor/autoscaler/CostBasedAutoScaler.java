@@ -174,11 +174,27 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
-    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
+    int currentTaskCount = supervisor.getIoConfig().getTaskCount();
+
+    // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
+    // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
+    final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
+                                     || currentTaskCount > config.getTaskCountMax();
+    if (isTaskCountOutOfBounds) {
+      currentTaskCount = Math.min(config.getTaskCountMax(), Math.max(config.getTaskCountMin(), currentTaskCount));
+    }
 
     // Perform scale-up actions; scale-down actions only if configured.
     final int taskCount;
-    if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
+
+    // If task count is out of bounds, scale to the configured boundary
+    // regardless of optimal task count, to get back to a safe state.
+    if (isScaleActionAllowed() && isTaskCountOutOfBounds) {
+      taskCount = currentTaskCount;
+      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
+      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
+               supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount);
+    } else if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
       lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
       log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);
@@ -192,6 +208,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     } else {
       taskCount = -1;
       log.debug("No scaling required for supervisor[%s]", supervisorId);
+
+      // Emit metrics for scaling skip reasons; in case of min == max, signaling reaching
+      // max task count has bigger priority for the external observers / trackers
+      if (optimalTaskCount >= config.getTaskCountMax() || currentTaskCount == config.getTaskCountMax()) {
+        emitter.emit(getMetricBuilder()
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at max task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
+      } else if (optimalTaskCount == config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
+        emitter.emit(getMetricBuilder()
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at min task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
+      }
     }
     return taskCount;
   }
@@ -400,12 +434,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * This metric indicates how much time the consumer spends idle waiting for data.
    *
    * @param taskStats the stats map from supervisor.getStats()
-   * @return the average poll-idle-ratio across all tasks, or 0 if no valid metrics are available
+   * @return the average poll-idle-ratio across all tasks, or -1 if no valid metrics are available
    */
   static double extractPollIdleRatio(Map<String, Map<String, Object>> taskStats)
   {
     if (taskStats == null || taskStats.isEmpty()) {
-      return 0.;
+      return -1.;
     }
 
     double sum = 0;
@@ -425,7 +459,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    return count > 0 ? sum / count : 0.;
+    return count > 0 ? sum / count : -1.;
   }
 
   /**
@@ -543,7 +577,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     if (metrics == null) {
       return Either.error("No metrics collected");
-    } else if (metrics.getAvgProcessingRate() < 0 || metrics.getPollIdleRatio() < 0) {
+    } else if (metrics.getAvgProcessingRate() < 0) {
       return Either.error("Task metrics not available");
     } else if (metrics.getCurrentTaskCount() <= 0 || metrics.getPartitionCount() <= 0) {
       return Either.error("Supervisor metrics not available");

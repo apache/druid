@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TripleTest
 {
@@ -29,20 +29,20 @@ public class TripleTest
   {
     Triple one = new Triple("first", "second", "third");
     Triple second = new Triple("first", "second", "third");
-    Assert.assertEquals(second, one);
-    Assert.assertEquals(second.hashCode(), one.hashCode());
-    Assert.assertEquals("Triple{first=first, second=second, third=third}", one.toString());
+    Assertions.assertEquals(second, one);
+    Assertions.assertEquals(second.hashCode(), one.hashCode());
+    Assertions.assertEquals("Triple{first=first, second=second, third=third}", one.toString());
   }
 
   @Test
   public void testUnequals()
   {
     Triple left = new Triple("first", "second", "third");
-    Assert.assertNotEquals(new Triple<>(null, "second", "third"), left);
-    Assert.assertNotEquals(new Triple<>("abc", "second", "third"), left);
-    Assert.assertNotEquals(new Triple<>("first", null, "third"), left);
-    Assert.assertNotEquals(new Triple<>("first", "abc", "third"), left);
-    Assert.assertNotEquals(new Triple<>("first", "second", null), left);
-    Assert.assertNotEquals(new Triple<>("first", "second", "abc"), left);
+    Assertions.assertNotEquals(new Triple<>(null, "second", "third"), left);
+    Assertions.assertNotEquals(new Triple<>("abc", "second", "third"), left);
+    Assertions.assertNotEquals(new Triple<>("first", null, "third"), left);
+    Assertions.assertNotEquals(new Triple<>("first", "abc", "third"), left);
+    Assertions.assertNotEquals(new Triple<>("first", "second", null), left);
+    Assertions.assertNotEquals(new Triple<>("first", "second", "abc"), left);
   }
 }

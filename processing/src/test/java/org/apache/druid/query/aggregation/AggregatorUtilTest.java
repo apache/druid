@@ -19,13 +19,21 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class AggregatorUtilTest
 {
@@ -199,4 +208,89 @@ public class AggregatorUtilTest
     );
   }
 
+  @Test
+  public void testCanVectorizeFieldNameWithNumericCapabilities()
+  {
+    ColumnInspector inspector = makeInspector(
+        Map.of("col", ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG))
+    );
+    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
+  }
+
+  @Test
+  public void testCanVectorizeFieldNameWithNullCapabilities()
+  {
+    // null capabilities (unknown column) is treated as vectorizable
+    ColumnInspector inspector = makeInspector(Map.of());
+    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, "unknown_col", null, Suppliers.ofInstance(null)));
+  }
+
+  @Test
+  public void testCanVectorizeFieldNameWithStringCapabilities()
+  {
+    ColumnInspector inspector = makeInspector(
+        Map.of("col", ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities())
+    );
+    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
+  }
+
+  @Test
+  public void testCanVectorizeExpressionOnNumericColumns()
+  {
+    ColumnInspector inspector = makeInspector(
+        Map.of(
+            "long1", ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
+            "long2", ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG)
+        )
+    );
+    String expression = "long1 + long2";
+    Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
+    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+  }
+
+  @Test
+  public void testCanVectorizeExpressionWithIncompleteInputs()
+  {
+    // string column with unknown multi-valuedness results in INCOMPLETE_INPUTS which blocks vectorization,
+    // even though the expression itself supports vectorization
+    ColumnInspector inspector = makeInspector(
+        Map.of(
+            "string_unknown", new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+        )
+    );
+    String expression = "concat(string_unknown, 'x')";
+    Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
+    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+  }
+
+  @Test
+  public void testCanVectorizeExpressionWithNeedsApplied()
+  {
+    // multi-valued string column used in scalar context results in NEEDS_APPLIED which blocks vectorization
+    ColumnInspector inspector = makeInspector(
+        Map.of(
+            "multi_string", new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                                        .setDictionaryEncoded(true)
+                                                        .setHasBitmapIndexes(true)
+                                                        .setDictionaryValuesUnique(true)
+                                                        .setDictionaryValuesSorted(true)
+                                                        .setHasMultipleValues(true)
+        )
+    );
+    String expression = "concat(multi_string, 'x')";
+    Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
+    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+  }
+
+  @Test
+  public void testCanVectorizeNeitherFieldNameNorExpression()
+  {
+    ColumnInspector inspector = makeInspector(Map.of());
+    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, null, Suppliers.ofInstance(null)));
+  }
+
+  private static ColumnInspector makeInspector(Map<String, ColumnCapabilities> capabilitiesMap)
+  {
+    return capabilitiesMap::get;
+  }
 }

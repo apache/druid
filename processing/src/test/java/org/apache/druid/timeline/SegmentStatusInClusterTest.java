@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -78,31 +78,31 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(16, objectMap.size());
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals("proj1,proj2", objectMap.get("projections"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
-    Assert.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
-    Assert.assertNull(objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
-    Assert.assertEquals(TOTAL_ROWS, objectMap.get("totalRows"));  // From DataSegment
-    Assert.assertEquals(REALTIME, objectMap.get("realtime"));
+    Assertions.assertEquals(16, objectMap.size());
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals("proj1,proj2", objectMap.get("projections"));
+    Assertions.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assertions.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
+    Assertions.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
+    Assertions.assertNull(objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
+    Assertions.assertEquals(TOTAL_ROWS, objectMap.get("totalRows"));  // From DataSegment
+    Assertions.assertEquals(REALTIME, objectMap.get("realtime"));
 
     final SegmentStatusInCluster deserializedSegment = MAPPER.readValue(
         MAPPER.writeValueAsString(SEGMENT),
         SegmentStatusInCluster.class
     );
 
-    Assert.assertEquals(SEGMENT.getDataSegment().toString(), deserializedSegment.getDataSegment().toString());
-    Assert.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
-    Assert.assertEquals(REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
+    Assertions.assertEquals(SEGMENT.getDataSegment().toString(), deserializedSegment.getDataSegment().toString());
+    Assertions.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
+    Assertions.assertEquals(REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
   }
 
   // Previously, the implementation of SegmentStatusInCluster had @JsonCreator/@JsonProperty and @JsonUnwrapped
@@ -113,7 +113,7 @@ public class SegmentStatusInClusterTest
   {
     String json = MAPPER.writeValueAsString(SEGMENT);
     SegmentStatusInCluster segment = MAPPER.readValue(json, SegmentStatusInCluster.class);
-    Assert.assertEquals(SEGMENT, segment);
-    Assert.assertEquals(json, MAPPER.writeValueAsString(segment));
+    Assertions.assertEquals(SEGMENT, segment);
+    Assertions.assertEquals(json, MAPPER.writeValueAsString(segment));
   }
 }

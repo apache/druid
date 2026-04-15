@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.allocation;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AppendableMemoryTest
 {
@@ -42,19 +42,19 @@ public class AppendableMemoryTest
     AppendableMemory appendableMemory = AppendableMemory.create(memoryAllocator, 10);
 
     // Reserves a chunk of 10 bytes. The call should return true since the allocator can allocate 100 bytes
-    Assert.assertTrue(appendableMemory.reserveAdditional(10));
+    Assertions.assertTrue(appendableMemory.reserveAdditional(10));
 
     // Last block is empty, the appendable memory is essentially empty
-    Assert.assertEquals(100, appendableMemory.availableToReserve());
+    Assertions.assertEquals(100, appendableMemory.availableToReserve());
 
     // Advance the cursor so that it is not treated as empty chunk
     appendableMemory.advanceCursor(4);
 
     // We should be able to use the remaining 90 bytes from the allocator
-    Assert.assertEquals(90, appendableMemory.availableToReserve());
+    Assertions.assertEquals(90, appendableMemory.availableToReserve());
 
     // Reserve a chunk of 80 bytes, and advance the cursor so that it is not treated as an empty chunk
-    Assert.assertTrue(appendableMemory.reserveAdditional(80));
+    Assertions.assertTrue(appendableMemory.reserveAdditional(80));
     appendableMemory.advanceCursor(4);
 
     // At this point, we have 2 chunks with the following (used:free) / total statistics
@@ -64,10 +64,10 @@ public class AppendableMemoryTest
 
     // Even though the allocator has only 10 bytes, the last chunk has 76 free bytes which can be used. That would take precedence
     // since that is a larger number
-    Assert.assertEquals(76, appendableMemory.availableToReserve());
+    Assertions.assertEquals(76, appendableMemory.availableToReserve());
 
     // This assertion must always be true irrespective of the internal implementation
-    Assert.assertTrue(appendableMemory.reserveAdditional(appendableMemory.availableToReserve()));
+    Assertions.assertTrue(appendableMemory.reserveAdditional(appendableMemory.availableToReserve()));
   }
 
 }

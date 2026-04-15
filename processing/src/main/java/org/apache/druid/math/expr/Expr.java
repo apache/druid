@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,6 +48,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -131,6 +133,26 @@ public interface Expr extends Cacheable
   }
 
   /**
+   * Replaces {@link IdentifierExpr} whose {@link IdentifierExpr#binding} are present as a key in the supplied map with
+   * the map value.
+   */
+  default Expr rewriteBindings(Map<String, String> rewriteMap)
+  {
+    return visit(expr -> {
+      if (expr instanceof IdentifierExpr identifier) {
+        final String replacement = rewriteMap.get(identifier.binding);
+        if (replacement != null) {
+          if (Objects.equals(identifier.identifier, identifier.binding)) {
+            return new IdentifierExpr(replacement, replacement);
+          }
+          return new IdentifierExpr(identifier.identifier, replacement);
+        }
+      }
+      return expr;
+    });
+  }
+
+  /**
    * Evaluate the {@link Expr} with the bindings which supply {@link IdentifierExpr} with their values, producing an
    * {@link ExprEval} with the result.
    */
@@ -181,8 +203,14 @@ public interface Expr extends Cacheable
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
-   *
-   * @param inspector
+   * <p>
+   * Note that this method is insufficient by itself for determining to use vector processors, as it only checks whether
+   * the expression tree itself supports vectorization, but ignores schema-level constraints that
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner} enforces.
+   * <p>
+   * Most callers should instead prefer to use
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner#plan(ColumnInspector, Expr)} and check for
+   * {@link org.apache.druid.segment.virtual.ExpressionPlan.Trait#VECTORIZABLE} on the resulting plan.
    */
   default boolean canVectorize(InputBindingInspector inspector)
   {

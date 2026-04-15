@@ -20,11 +20,8 @@
 package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.ImmutableList;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
@@ -39,8 +36,8 @@ public class YieldingSequenceBaseTest
         false
     );
 
-    Assert.assertEquals(ImmutableList.of(1, 2, 3), sequence.accumulate(new ArrayList<>(), Accumulators.list()));
-    Assert.assertEquals("Closes resources", 1, sequence.getCloseCount());
+    Assertions.assertEquals(ImmutableList.of(1, 2, 3), sequence.accumulate(new ArrayList<>(), Accumulators.list()));
+    Assertions.assertEquals(1, sequence.getCloseCount(), "Closes resources");
   }
 
   @Test
@@ -52,15 +49,13 @@ public class YieldingSequenceBaseTest
         false
     );
 
-    try {
-      sequence.accumulate(new ArrayList<>(), Accumulators.list());
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("get")));
-    }
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> sequence.accumulate(new ArrayList<>(), Accumulators.list())
+    );
+    Assertions.assertTrue(e.getMessage().contains("get"));
 
-    Assert.assertEquals("Closes resources", 1, sequence.getCloseCount());
+    Assertions.assertEquals(1, sequence.getCloseCount(), "Closes resources");
   }
 
   @Test
@@ -72,20 +67,14 @@ public class YieldingSequenceBaseTest
         true
     );
 
-    try {
-      sequence.accumulate(new ArrayList<>(), Accumulators.list());
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(
-          e,
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> sequence.accumulate(new ArrayList<>(), Accumulators.list())
+    );
+    // Wrapped one level deep because it's an IOException
+    Assertions.assertTrue(e.getCause().getMessage().contains("close"));
 
-          // Wrapped one level deep because it's an IOException
-          ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("close")))
-      );
-    }
-
-    Assert.assertEquals("Closes resources", 1, sequence.getCloseCount());
+    Assertions.assertEquals(1, sequence.getCloseCount(), "Closes resources");
   }
 
   @Test
@@ -97,14 +86,12 @@ public class YieldingSequenceBaseTest
         true
     );
 
-    try {
-      sequence.accumulate(new ArrayList<>(), Accumulators.list());
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("get")));
-    }
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> sequence.accumulate(new ArrayList<>(), Accumulators.list())
+    );
+    Assertions.assertTrue(e.getMessage().contains("get"));
 
-    Assert.assertEquals("Closes resources", 1, sequence.getCloseCount());
+    Assertions.assertEquals(1, sequence.getCloseCount(), "Closes resources");
   }
 }

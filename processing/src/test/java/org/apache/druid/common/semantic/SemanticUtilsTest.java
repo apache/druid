@@ -21,8 +21,8 @@ package org.apache.druid.common.semantic;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.CloseableShapeshifter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,7 +34,7 @@ public class SemanticUtilsTest
   @Test
   public void testInvalidParameters()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> SemanticUtils.makeAsMap(InvalidShapeshifter.class)
     );
@@ -44,7 +44,7 @@ public class SemanticUtilsTest
   public void testValidParameters()
   {
     TestShapeshifter testShapeshifter = new TestShapeshifter();
-    Assert.assertTrue(testShapeshifter.as(A.class) instanceof A);
+    Assertions.assertInstanceOf(A.class, testShapeshifter.as(A.class));
   }
 
   @Test
@@ -56,8 +56,8 @@ public class SemanticUtilsTest
         (testShapeshifter) -> new OverrideClass()
     );
     TestShapeshifter testShapeshifter = new TestShapeshifter();
-    Assert.assertTrue(testShapeshifter.as(A.class) instanceof A);
-    Assert.assertTrue(testShapeshifter.as(OverrideClass.class) instanceof OverrideClass);
+    Assertions.assertInstanceOf(A.class, testShapeshifter.as(A.class));
+    Assertions.assertInstanceOf(OverrideClass.class, testShapeshifter.as(OverrideClass.class));
   }
 
   @Test
@@ -69,7 +69,7 @@ public class SemanticUtilsTest
         (testShapeshifter) -> new OverrideClass()
     );
     TestShapeshifter testShapeshifter = new TestShapeshifter();
-    Assert.assertTrue(testShapeshifter.as(A.class) instanceof OverrideClass);
+    Assertions.assertInstanceOf(OverrideClass.class, testShapeshifter.as(A.class));
   }
 
   static class TestShapeshifter implements CloseableShapeshifter

@@ -25,8 +25,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SqlTaskStatusTest
 {
@@ -47,11 +47,11 @@ public class SqlTaskStatusTest
 
     final SqlTaskStatus status2 = mapper.readValue(mapper.writeValueAsString(status), SqlTaskStatus.class);
 
-    Assert.assertEquals(status.getTaskId(), status2.getTaskId());
-    Assert.assertEquals(status.getState(), status2.getState());
-    Assert.assertNotNull(status.getError());
-    Assert.assertNotNull(status2.getError());
-    Assert.assertEquals(status.getError().getAsMap(), status2.getError().getAsMap());
+    Assertions.assertEquals(status.getTaskId(), status2.getTaskId());
+    Assertions.assertEquals(status.getState(), status2.getState());
+    Assertions.assertNotNull(status.getError());
+    Assertions.assertNotNull(status2.getError());
+    Assertions.assertEquals(status.getError().getAsMap(), status2.getError().getAsMap());
   }
 
   @Test

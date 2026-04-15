@@ -24,7 +24,7 @@ import React, { useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import type { DartQueryEntry } from '../../../druid-models';
+import { compareForDisplay, type DartQueryEntry } from '../../../druid-models';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
@@ -65,9 +65,10 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, signal) => {
-      return (
-        await Api.instance.get('/druid/v2/sql/queries?includeComplete', { signal })
-      ).data.queries.reverse() as DartQueryEntry[];
+      const queries = (await Api.instance.get('/druid/v2/sql/queries?includeComplete', { signal }))
+        .data.queries as DartQueryEntry[];
+      queries.sort(compareForDisplay);
+      return queries;
     },
   });
 

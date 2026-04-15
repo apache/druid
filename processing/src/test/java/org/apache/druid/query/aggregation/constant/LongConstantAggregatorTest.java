@@ -20,16 +20,16 @@
 package org.apache.druid.query.aggregation.constant;
 
 import org.apache.commons.lang3.RandomUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class LongConstantAggregatorTest
 {
   private long randomVal;
   private LongConstantAggregator aggregator;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     randomVal = RandomUtils.nextLong();
@@ -39,25 +39,25 @@ public class LongConstantAggregatorTest
   @Test
   public void testLong()
   {
-    Assert.assertEquals(randomVal, aggregator.getLong());
+    Assertions.assertEquals(randomVal, aggregator.getLong());
   }
 
   @Test
   public void testAggregate()
   {
     aggregator.aggregate();
-    Assert.assertEquals(randomVal, aggregator.getLong());
+    Assertions.assertEquals(randomVal, aggregator.getLong());
   }
 
   @Test
   public void testFloat()
   {
-    Assert.assertEquals(randomVal, aggregator.getFloat(), 0.0001f);
+    Assertions.assertEquals(randomVal, aggregator.getFloat(), 0.0001f);
   }
 
   @Test
   public void testGet()
   {
-    Assert.assertEquals(randomVal, aggregator.get());
+    Assertions.assertEquals(randomVal, aggregator.get());
   }
 }

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 
@@ -44,17 +44,17 @@ public class DoubleSumAggregatorTest
     double expectedFirst = values[0];
     double expectedSecond = values[1] + expectedFirst;
 
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
+    Assertions.assertEquals(0.0d, agg.get());
+    Assertions.assertEquals(0.0d, agg.get());
+    Assertions.assertEquals(0.0d, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(expectedFirst, agg.get());
-    Assert.assertEquals(expectedFirst, agg.get());
-    Assert.assertEquals(expectedFirst, agg.get());
+    Assertions.assertEquals(expectedFirst, agg.get());
+    Assertions.assertEquals(expectedFirst, agg.get());
+    Assertions.assertEquals(expectedFirst, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(expectedSecond, agg.get());
-    Assert.assertEquals(expectedSecond, agg.get());
-    Assert.assertEquals(expectedSecond, agg.get());
+    Assertions.assertEquals(expectedSecond, agg.get());
+    Assertions.assertEquals(expectedSecond, agg.get());
+    Assertions.assertEquals(expectedSecond, agg.get());
   }
 
   @Test
@@ -68,9 +68,9 @@ public class DoubleSumAggregatorTest
 
     Comparator comp = new DoubleSumAggregatorFactory("null", "null").getComparator();
 
-    Assert.assertEquals(-1, comp.compare(first, agg.get()));
-    Assert.assertEquals(0, comp.compare(first, first));
-    Assert.assertEquals(0, comp.compare(agg.get(), agg.get()));
-    Assert.assertEquals(1, comp.compare(agg.get(), first));
+    Assertions.assertEquals(-1, comp.compare(first, agg.get()));
+    Assertions.assertEquals(0, comp.compare(first, first));
+    Assertions.assertEquals(0, comp.compare(agg.get(), agg.get()));
+    Assertions.assertEquals(1, comp.compare(agg.get(), first));
   }
 }

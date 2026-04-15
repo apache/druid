@@ -47,8 +47,7 @@ FROM test_unnest,
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "scan",
@@ -154,8 +153,7 @@ FROM
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "scan",
@@ -288,8 +286,7 @@ GROUP BY c;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",

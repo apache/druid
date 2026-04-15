@@ -19,8 +19,6 @@
 
 package org.apache.druid.compressedbigdecimal.aggregator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Resources;
 import org.apache.druid.compressedbigdecimal.ArrayCompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalGroupByQueryConfig;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
@@ -28,7 +26,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.hamcrest.collection.IsCollectionWithSize;
@@ -47,7 +44,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -99,32 +95,21 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   @Test
   public void testIngestAndGroupByAllQuery() throws IOException, Exception
   {
-
-    String groupByQueryJson = Resources.asCharSource(
-        this.getClass().getResource("/" + cbdGroupByQueryConfig.getJsonQueryFile()),
-        StandardCharsets.UTF_8
-    ).read();
-
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
         CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
         CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
-        Resources.asCharSource(
-            this.getClass().getResource("/" + cbdGroupByQueryConfig.getJsonAggregatorsFile()),
-            StandardCharsets.UTF_8
-        ).read(),
+        cbdGroupByQueryConfig.getIngestionAggregators(),
         0,
         Granularities.NONE,
         5,
-        groupByQueryJson
+        cbdGroupByQueryConfig.getQuery()
     );
 
     List<ResultRow> results = seq.toList();
     Assert.assertThat(results, IsCollectionWithSize.hasSize(1));
     ResultRow row = results.get(0);
-    ObjectMapper mapper = helper.getObjectMapper();
-    GroupByQuery groupByQuery = mapper.readValue(groupByQueryJson, GroupByQuery.class);
-    MapBasedRow mapBasedRow = row.toMapBasedRow(groupByQuery);
+    MapBasedRow mapBasedRow = row.toMapBasedRow(cbdGroupByQueryConfig.getQuery());
     Map<String, Object> event = mapBasedRow.getEvent();
     Assert.assertEquals(
         new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),

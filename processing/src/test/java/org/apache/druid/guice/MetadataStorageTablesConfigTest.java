@@ -27,8 +27,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Properties;
@@ -62,35 +62,35 @@ public class MetadataStorageTablesConfigTest
     Properties props = injector.getInstance(Properties.class);
     MetadataStorageTablesConfig config = injector.getInstance(MetadataStorageTablesConfig.class);
 
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.base"), config.getBase());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segments"), config.getSegmentsTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segmentSchemas"), config.getSegmentSchemasTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.rules"), config.getRulesTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.config"), config.getConfigTable());
-    Assert.assertEquals(
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.base"), config.getBase());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.segments"), config.getSegmentsTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.segmentSchemas"), config.getSegmentSchemasTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.rules"), config.getRulesTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.config"), config.getConfigTable());
+    Assertions.assertEquals(
         props.getProperty("druid.metadata.storage.tables.tasks"),
         config.getTasksTable()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         props.getProperty("druid.metadata.storage.tables.taskLock"),
         config.getTaskLockTable()
     );
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.upgradeSegments"), config.getUpgradeSegmentsTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());
+    Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.upgradeSegments"), config.getUpgradeSegmentsTable());
   }
 
   @Test
   public void testReadConfig()
   {
     MetadataStorageTablesConfig fromBase = MetadataStorageTablesConfig.fromBase("druid.metadata.storage.tables");
-    Assert.assertEquals("druid.metadata.storage.tables_segments", fromBase.getSegmentsTable());
-    Assert.assertEquals("druid.metadata.storage.tables_segmentSchemas", fromBase.getSegmentSchemasTable());
-    Assert.assertEquals("druid.metadata.storage.tables_tasklocks", fromBase.getTaskLockTable());
-    Assert.assertEquals("druid.metadata.storage.tables_rules", fromBase.getRulesTable());
-    Assert.assertEquals("druid.metadata.storage.tables_config", fromBase.getConfigTable());
-    Assert.assertEquals("druid.metadata.storage.tables_dataSource", fromBase.getDataSourceTable());
-    Assert.assertEquals("druid.metadata.storage.tables_supervisors", fromBase.getSupervisorTable());
-    Assert.assertEquals("druid.metadata.storage.tables_upgradeSegments", fromBase.getUpgradeSegmentsTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_segments", fromBase.getSegmentsTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_segmentSchemas", fromBase.getSegmentSchemasTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_tasklocks", fromBase.getTaskLockTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_rules", fromBase.getRulesTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_config", fromBase.getConfigTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_dataSource", fromBase.getDataSourceTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_supervisors", fromBase.getSupervisorTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_upgradeSegments", fromBase.getUpgradeSegmentsTable());
   }
 }

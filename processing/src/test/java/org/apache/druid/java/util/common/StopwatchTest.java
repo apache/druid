@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.testing.FakeTicker;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
@@ -33,14 +33,14 @@ public class StopwatchTest
   public void testDuplicateStartThrowsException()
   {
     Stopwatch stopwatch = Stopwatch.createStarted();
-    Assert.assertThrows(IllegalStateException.class, stopwatch::start);
+    Assertions.assertThrows(IllegalStateException.class, stopwatch::start);
   }
 
   @Test
   public void testDuplicateStopThrowsException()
   {
     Stopwatch stopwatch = Stopwatch.createUnstarted();
-    Assert.assertThrows(IllegalStateException.class, stopwatch::stop);
+    Assertions.assertThrows(IllegalStateException.class, stopwatch::stop);
   }
 
   @Test
@@ -51,7 +51,7 @@ public class StopwatchTest
     fakeTicker.advance(100, TimeUnit.MILLISECONDS);
     stopwatch.stop();
 
-    Assert.assertEquals(100, stopwatch.millisElapsed());
+    Assertions.assertEquals(100, stopwatch.millisElapsed());
   }
 
   @Test
@@ -62,9 +62,9 @@ public class StopwatchTest
     fakeTicker.advance(100, TimeUnit.MILLISECONDS);
     stopwatch.stop();
 
-    Assert.assertTrue(stopwatch.hasElapsed(Duration.millis(50)));
-    Assert.assertTrue(stopwatch.hasElapsed(Duration.millis(100)));
-    Assert.assertTrue(stopwatch.hasNotElapsed(Duration.millis(101)));
-    Assert.assertTrue(stopwatch.hasNotElapsed(Duration.millis(500)));
+    Assertions.assertTrue(stopwatch.hasElapsed(Duration.millis(50)));
+    Assertions.assertTrue(stopwatch.hasElapsed(Duration.millis(100)));
+    Assertions.assertTrue(stopwatch.hasNotElapsed(Duration.millis(101)));
+    Assertions.assertTrue(stopwatch.hasNotElapsed(Duration.millis(500)));
   }
 }

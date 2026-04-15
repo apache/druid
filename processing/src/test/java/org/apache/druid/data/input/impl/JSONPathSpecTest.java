@@ -24,8 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public class JSONPathSpecTest
         jsonMapper.writeValueAsString(flattenSpec),
         JSONPathSpec.class
     );
-    Assert.assertTrue(serde.isUseFieldDiscovery());
+    Assertions.assertTrue(serde.isUseFieldDiscovery());
     List<JSONPathFieldSpec> serdeFields = serde.getFields();
     JSONPathFieldSpec foobar1 = serdeFields.get(0);
     JSONPathFieldSpec baz0 = serdeFields.get(1);
@@ -65,36 +65,36 @@ public class JSONPathSpecTest
     JSONPathFieldSpec jqBaz0 = serdeFields.get(6);
     JSONPathFieldSpec jqHey0barx = serdeFields.get(7);
 
-    Assert.assertEquals(JSONPathFieldType.PATH, foobar1.getType());
-    Assert.assertEquals("foobar1", foobar1.getName());
-    Assert.assertEquals("$.foo.bar1", foobar1.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.PATH, foobar1.getType());
+    Assertions.assertEquals("foobar1", foobar1.getName());
+    Assertions.assertEquals("$.foo.bar1", foobar1.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.PATH, baz0.getType());
-    Assert.assertEquals("baz0", baz0.getName());
-    Assert.assertEquals("$.baz[0]", baz0.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.PATH, baz0.getType());
+    Assertions.assertEquals("baz0", baz0.getName());
+    Assertions.assertEquals("$.baz[0]", baz0.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.PATH, hey0barx.getType());
-    Assert.assertEquals("hey0barx", hey0barx.getName());
-    Assert.assertEquals("$.hey[0].barx", hey0barx.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.PATH, hey0barx.getType());
+    Assertions.assertEquals("hey0barx", hey0barx.getName());
+    Assertions.assertEquals("$.hey[0].barx", hey0barx.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.JQ, jqFoobar1.getType());
-    Assert.assertEquals("foobar1", jqFoobar1.getName());
-    Assert.assertEquals(".foo.bar1", jqFoobar1.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.JQ, jqFoobar1.getType());
+    Assertions.assertEquals("foobar1", jqFoobar1.getName());
+    Assertions.assertEquals(".foo.bar1", jqFoobar1.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.JQ, jqBaz0.getType());
-    Assert.assertEquals("baz0", jqBaz0.getName());
-    Assert.assertEquals(".baz[0]", jqBaz0.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.JQ, jqBaz0.getType());
+    Assertions.assertEquals("baz0", jqBaz0.getName());
+    Assertions.assertEquals(".baz[0]", jqBaz0.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.JQ, jqHey0barx.getType());
-    Assert.assertEquals("hey0barx", jqHey0barx.getName());
-    Assert.assertEquals(".hey[0].barx", jqHey0barx.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.JQ, jqHey0barx.getType());
+    Assertions.assertEquals("hey0barx", jqHey0barx.getName());
+    Assertions.assertEquals(".hey[0].barx", jqHey0barx.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.ROOT, timestamp.getType());
-    Assert.assertEquals("timestamp", timestamp.getName());
-    Assert.assertEquals("timestamp", timestamp.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.ROOT, timestamp.getType());
+    Assertions.assertEquals("timestamp", timestamp.getName());
+    Assertions.assertEquals("timestamp", timestamp.getExpr());
 
-    Assert.assertEquals(JSONPathFieldType.ROOT, foodotbar1.getType());
-    Assert.assertEquals("foo.bar1", foodotbar1.getName());
-    Assert.assertEquals("foo.bar1", foodotbar1.getExpr());
+    Assertions.assertEquals(JSONPathFieldType.ROOT, foodotbar1.getType());
+    Assertions.assertEquals("foo.bar1", foodotbar1.getName());
+    Assertions.assertEquals("foo.bar1", foodotbar1.getExpr());
   }
 }
