@@ -69,7 +69,7 @@ public class FrameBasedInlineDataSourceSerializer extends StdSerializer<FrameBas
       }
       catch (IOException e) {
         // Ideally, this shouldn't be reachable.
-        // Wrap the IO exception in the runtime exception and propogate it forward
+        // Wrap the IO exception in the runtime exception and propagate it forward
         List<String> elements = new ArrayList<>();
         for (Object o : row) {
           elements.add(o.toString());
