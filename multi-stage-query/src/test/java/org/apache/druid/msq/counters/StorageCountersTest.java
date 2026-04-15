@@ -115,7 +115,7 @@ public class StorageCountersTest
     final ObjectMapper mapper =
         TestHelper.makeJsonMapper().registerModules(new MSQIndexingModule().getJacksonModules());
 
-    final StorageCounters.Snapshot snapshot = new StorageCounters.Snapshot(1000, 300, 5, 2500, 3, 1500);
+    final StorageCounters.Snapshot snapshot = new StorageCounters.Snapshot(1000L, 300, 5, 2500, 3, 1500);
 
     final String json = mapper.writeValueAsString(snapshot);
     final StorageCounters.Snapshot deserialized = mapper.readValue(json, StorageCounters.Snapshot.class);
@@ -129,7 +129,7 @@ public class StorageCountersTest
     final ObjectMapper mapper =
         TestHelper.makeJsonMapper().registerModules(new MSQIndexingModule().getJacksonModules());
 
-    final StorageCounters.Snapshot snapshot = new StorageCounters.Snapshot(1000, 300, 5, 2500, 3, 1500);
+    final StorageCounters.Snapshot snapshot = new StorageCounters.Snapshot(1000L, 300, 5, 2500, 3, 1500);
     final CounterSnapshotsTree tree = new CounterSnapshotsTree();
     tree.put(0, 0, new CounterSnapshots(ImmutableMap.of(CounterNames.storage(), snapshot)));
 
