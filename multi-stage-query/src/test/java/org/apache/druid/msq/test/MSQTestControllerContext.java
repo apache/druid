@@ -445,6 +445,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
         taskLauncherConfig
     );
   }
@@ -470,6 +471,18 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   public WorkerClient newWorkerClient()
   {
     return new MSQTestWorkerClient(inMemoryWorkers, mapper);
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return NUM_WORKERS;
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    return 1;
   }
 
   @Override

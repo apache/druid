@@ -231,6 +231,7 @@ public class IndexerControllerContext implements ControllerContext
         makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
+        task.getQuerySpec().getTuningConfig().getMaxNumWorkers(),
         new MSQWorkerTaskLauncherConfig()
     );
   }
@@ -239,6 +240,23 @@ public class IndexerControllerContext implements ControllerContext
   public File taskTempDir()
   {
     return toolbox.getIndexingTmpDir();
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return task.getQuerySpec().getTuningConfig().getMaxNumWorkers();
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+    // Create one partition per processor per worker, for maximum parallelism.
+    return MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+        taskQuerySpecContext,
+        memoryIntrospector.numProcessingThreads()
+    );
   }
 
   /**

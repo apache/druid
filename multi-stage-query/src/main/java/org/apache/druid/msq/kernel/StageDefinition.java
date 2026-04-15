@@ -176,6 +176,49 @@ public class StageDefinition
   }
 
   /**
+   * Returns a new {@link StageDefinition} with runtime bounds applied. See {@link QueryDefinition#withRuntimeBounds}
+   * for details on the logic.
+   */
+  public StageDefinition withRuntimeBounds(
+      final int maxWorkerCount,
+      final int maxNonLeafWorkerCount,
+      final int targetPartitionsPerWorker
+  )
+  {
+    final int adjustedMaxWorkerCount;
+    final ShuffleSpec adjustedShuffleSpec;
+
+    if (InputSpecs.hasLeafInputs(inputSpecs, getBroadcastInputNumbers())) {
+      // Leaf stage.
+      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, maxWorkerCount);
+    } else {
+      // Nonleaf stage.
+      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, Math.min(maxWorkerCount, maxNonLeafWorkerCount));
+    }
+
+    if (shuffleSpec != null && shuffleSpec.isAdjustable()) {
+      adjustedShuffleSpec = shuffleSpec.withPartitionCount(adjustedMaxWorkerCount * targetPartitionsPerWorker);
+    } else {
+      adjustedShuffleSpec = shuffleSpec;
+    }
+
+    if (adjustedMaxWorkerCount == this.maxWorkerCount && Objects.equals(adjustedShuffleSpec, shuffleSpec)) {
+      return this;
+    }
+
+    return new StageDefinition(
+        id,
+        inputSpecs,
+        broadcastInputNumbers,
+        processor,
+        signature,
+        adjustedShuffleSpec,
+        adjustedMaxWorkerCount,
+        shuffleCheckHasMultipleValues
+    );
+  }
+
+  /**
    * Returns a unique stage identifier.
    */
   @JsonProperty

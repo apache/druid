@@ -26,21 +26,31 @@ import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class SortStage extends AbstractShuffleStage
 {
   protected final List<KeyColumn> keyColumns;
 
-  public SortStage(LogicalStage inputStage, List<KeyColumn> keyColumns)
+  /**
+   * Non-null when this sort feeds a downstream {@link OffsetLimitStage}, in which case the shuffle output
+   * is funneled into a single sorted partition with a {@code limitHint} derived from the offset and limit.
+   */
+  @Nullable
+  protected final OffsetLimit offsetLimit;
+
+  public SortStage(LogicalStage inputStage, List<KeyColumn> keyColumns, @Nullable OffsetLimit offsetLimit)
   {
     super(
         QueryKitUtils.sortableSignature(inputStage.getLogicalRowSignature(), keyColumns),
         LogicalInputSpec.of(inputStage)
     );
     this.keyColumns = keyColumns;
+    this.offsetLimit = offsetLimit;
   }
 
   @Override
@@ -53,7 +63,26 @@ public class SortStage extends AbstractShuffleStage
   public ShuffleSpec buildShuffleSpec()
   {
     final ClusterBy clusterBy = new ClusterBy(keyColumns, 0);
-    return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
+    if (offsetLimit != null) {
+      // Funnel everything through a single sorted partition so the downstream OffsetLimitStage can apply the
+      // offset and limit.
+      return ShuffleSpecFactories.singlePartitionWithLimit(computeLimitHint(offsetLimit)).build(clusterBy, false);
+    } else {
+      return ShuffleSpecFactories.globalSortWithTargetPartitions().build(clusterBy, false);
+    }
+  }
+
+  /**
+   * Computes the {@link ShuffleSpec#limitHint()} that the upstream sort can use to short-circuit work when the
+   * downstream stage applies an offset and limit.
+   */
+  private static long computeLimitHint(OffsetLimit offsetLimit)
+  {
+    if (offsetLimit.hasLimit() && offsetLimit.getOffset() + offsetLimit.getLimit() > 0 /* overflow check */) {
+      return offsetLimit.getOffset() + offsetLimit.getLimit();
+    } else {
+      return ShuffleSpec.UNLIMITED;
+    }
   }
 
   @Override

@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
@@ -267,14 +267,13 @@ public class DataSourcePlan
   /**
    * Figure for {@link StageDefinition#getMaxWorkerCount()} that should be used when processing.
    */
-  public int getMaxWorkerCount(final QueryKitSpec queryKitSpec)
+  public int getMaxWorkerCount()
   {
     if (isSingleWorker()) {
       return 1;
-    } else if (InputSpecs.hasLeafInputs(inputSpecs, broadcastInputs)) {
-      return queryKitSpec.getMaxLeafWorkerCount();
     } else {
-      return queryKitSpec.getMaxNonLeafWorkerCount();
+      // Use MAX_WORKERS as a high upper bound; capped at runtime by QueryDefinition.withRuntimeBounds.
+      return Limits.MAX_WORKERS;
     }
   }
 
@@ -431,7 +430,7 @@ public class DataSourcePlan
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
         dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
-        ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle()),
+        ShuffleSpecFactories.globalSortWithTargetPartitions(),
         minStageNumber
     );
 
@@ -669,10 +668,10 @@ public class DataSourcePlan
         ((StageInputSpec) Iterables.getOnlyElement(leftPlan.getInputSpecs())).getStageNumber()
     );
 
-    final int hashPartitionCount = queryKitSpec.getNumPartitionsForShuffle();
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
-    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), hashPartitionCount));
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), 1, true));
     leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
+    leftBuilder.maxWorkerCount(Limits.MAX_WORKERS);
 
     // Build up the right stage.
     final StageDefinitionBuilder rightBuilder = subQueryDefBuilder.getStageBuilder(
@@ -680,8 +679,9 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
-    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), hashPartitionCount));
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), 1, true));
     rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
+    rightBuilder.maxWorkerCount(Limits.MAX_WORKERS);
 
     // Compute join signature.
     final RowSignature.Builder joinSignatureBuilder = RowSignature.builder();
@@ -708,7 +708,7 @@ public class DataSourcePlan
                                Iterables.getOnlyElement(rightPlan.getInputSpecs())
                            )
                        )
-                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
+                       .maxWorkerCount(Limits.MAX_WORKERS)
                        .signature(joinSignatureBuilder.build())
                        .processor(
                            new SortMergeJoinStageProcessor(

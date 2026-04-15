@@ -15,8 +15,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -77,8 +76,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -142,8 +140,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     }, {
       "type" : "stage",
       "stage" : 0
@@ -266,8 +263,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -331,8 +327,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -393,8 +388,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -578,8 +572,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -640,8 +633,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     }, {
       "type" : "stage",
       "stage" : 0
@@ -716,8 +708,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
