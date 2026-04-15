@@ -134,6 +134,109 @@ Share group ingestion provides **at-least-once** delivery. On task failure, reco
 - No deduplication cache. Redelivered records after task failure may produce duplicates.
 - Delivery order within a partition is not guaranteed.
 
+## Demo: end-to-end validation with Druid UI
+
+### Prerequisites
+
+- Java 17
+- Kafka 4.2.0 (with share groups enabled)
+- Druid 31.0.0 release (downloaded)
+
+### Step 1: Start Kafka with share groups
+
+```bash
+cd kafka_2.13-4.2.0
+
+KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+bin/kafka-storage.sh format --standalone -t $KAFKA_CLUSTER_ID -c config/server.properties
+
+# Enable share groups
+echo "group.share.enable=true" >> config/server.properties
+echo "group.share.record.lock.duration.ms=30000" >> config/server.properties
+
+bin/kafka-server-start.sh config/server.properties
+```
+
+### Step 2: Create topic and produce messages
+
+```bash
+cd kafka_2.13-4.2.0
+
+bin/kafka-topics.sh --create --topic druid-share-test --partitions 4 --bootstrap-server localhost:9092
+
+bin/kafka-console-producer.sh --topic druid-share-test --bootstrap-server localhost:9092
+```
+
+Paste these JSON records:
+
+```json
+{"__time":"2025-06-01T00:00:00.000Z","item":"widget_a","value":100,"category":"electronics"}
+{"__time":"2025-06-01T01:00:00.000Z","item":"widget_b","value":250,"category":"clothing"}
+{"__time":"2025-06-01T02:00:00.000Z","item":"widget_c","value":50,"category":"electronics"}
+{"__time":"2025-06-01T03:00:00.000Z","item":"widget_d","value":175,"category":"food"}
+{"__time":"2025-06-01T04:00:00.000Z","item":"widget_e","value":320,"category":"electronics"}
+```
+
+### Step 3: Build the extension and set up Druid
+
+```bash
+# Build the kafka-indexing-service extension
+cd /path/to/druid
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn package \
+  -pl extensions-core/kafka-indexing-service -am \
+  -Pskip-static-checks -Dmaven.test.skip=true -T1C -q
+
+# Download and extract Druid release
+cd ~/Downloads
+curl -O https://dlcdn.apache.org/druid/31.0.0/apache-druid-31.0.0-bin.tar.gz
+tar -xzf apache-druid-31.0.0-bin.tar.gz
+cd apache-druid-31.0.0
+
+# Replace the kafka extension with our build
+rm extensions/druid-kafka-indexing-service/*.jar
+cp /path/to/druid/extensions-core/kafka-indexing-service/target/druid-kafka-indexing-service-*.jar \
+   extensions/druid-kafka-indexing-service/
+cp ~/.m2/repository/org/apache/kafka/kafka-clients/4.2.0/kafka-clients-4.2.0.jar \
+   extensions/druid-kafka-indexing-service/
+
+# Start Druid
+bin/start-druid
+```
+
+### Step 4: Submit task via Druid console
+
+Open `http://localhost:8888`, go to the **Ingestion** tab, click **Submit JSON task**, and paste:
+
+```json
+{
+  "type": "index_kafka_share_group",
+  "dataSchema": {
+    "dataSource": "share_group_demo",
+    "timestampSpec": {"column": "__time", "format": "auto"},
+    "dimensionsSpec": {"useSchemaDiscovery": true},
+    "granularitySpec": {"segmentGranularity": "DAY", "queryGranularity": "NONE"}
+  },
+  "ioConfig": {
+    "type": "kafka_share_group",
+    "topic": "druid-share-test",
+    "groupId": "druid-demo-share-group",
+    "consumerProperties": {"bootstrap.servers": "localhost:9092"},
+    "inputFormat": {"type": "json"},
+    "pollTimeout": 2000
+  },
+  "tuningConfig": {"type": "KafkaTuningConfig"}
+}
+```
+
+### Step 5: Query data
+
+Go to the **Query** tab and run:
+
+```sql
+SELECT COUNT(*) AS total_rows FROM share_group_demo;
+SELECT category, COUNT(*) AS cnt, SUM(value) AS total FROM share_group_demo GROUP BY category;
+```
+
 ## Running tests
 
 Unit tests:
