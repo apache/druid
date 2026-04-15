@@ -482,8 +482,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       File headerFile
   ) throws IOException
   {
-    // read the fixed header to determine the metadata size
-    final byte[] fixedHeader = new byte[SegmentFileMetadataReader.HEADER_SIZE];
+    // read the fixed header to determine the metadata size, plus extra int possibly containing compressed length if
+    // compression is enabled, else worst case only a few extra bytes
+    final byte[] fixedHeader = new byte[SegmentFileMetadataReader.HEADER_SIZE + Integer.BYTES];
     try (InputStream headerStream = rangeReader.readRange(targetFilename, 0, fixedHeader.length)) {
       int offset = 0;
       while (offset < fixedHeader.length) {
@@ -499,23 +500,25 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     final int metaLength = headerBuf.getInt(2);
     final CompressionStrategy compressionStrategy = CompressionStrategy.forId(headerBuf.get(1));
 
-    // compute the remaining bytes after the fixed header
+    // compute the remaining bytes, either metaLength, or if compressed, read the extra int we read
     final long remainingBytes;
+    final int actualHeaderSize;
     if (CompressionStrategy.NONE == compressionStrategy) {
       remainingBytes = metaLength;
+      actualHeaderSize = SegmentFileMetadataReader.HEADER_SIZE;
     } else {
-      // upper bound: compressed length int + uncompressed size (compressed will be <= uncompressed)
-      remainingBytes = Integer.BYTES + metaLength;
+      remainingBytes = headerBuf.getInt(SegmentFileMetadataReader.HEADER_SIZE);
+      actualHeaderSize = fixedHeader.length;
     }
 
     // write fixed header + remaining metadata bytes to a local file atomically (write to temp, then rename)
     // to avoid leaving a partial file on disk if the process crashes mid-write
     FileUtils.mkdirp(headerFile.getParentFile());
     FileUtils.writeAtomically(headerFile, out -> {
-      out.write(fixedHeader);
+      out.write(fixedHeader, 0, actualHeaderSize);
       try (InputStream remainingStream = rangeReader.readRange(
                targetFilename,
-               SegmentFileMetadataReader.HEADER_SIZE,
+               actualHeaderSize,
                remainingBytes
            )) {
         final byte[] buf = new byte[8192];

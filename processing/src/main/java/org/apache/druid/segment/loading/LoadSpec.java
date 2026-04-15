@@ -48,7 +48,7 @@ public interface LoadSpec
    * (e.g. if the segment is stored in a compressed archive format that does not support random access). When
    * {@code null} is returned, callers should fall back to downloading the full segment via {@link #loadSegment(File)}.
    * <p>
-   * The caller is responsible for closing the returned reader when done.
+   * The caller is responsible for closing any streams opened by the returned reader when done.
    *
    * @return a {@link SegmentRangeReader} for this segment, or {@code null} if range reads are not supported
    */
