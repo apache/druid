@@ -77,10 +77,10 @@ public class IndexSpecTest
     final String json = "{ \"stringColumnFormatSpec\" : { \"maxStringLength\" : 50 } }";
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
-    Assert.assertNotNull(spec.getStringColumnFormatSpec());
-    Assert.assertEquals(Integer.valueOf(50), spec.getStringColumnFormatSpec().getMaxStringLength());
+    Assertions.assertNotNull(spec.getStringColumnFormatSpec());
+    Assertions.assertEquals(Integer.valueOf(50), spec.getStringColumnFormatSpec().getMaxStringLength());
 
-    Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
+    Assertions.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
 
   @Test
