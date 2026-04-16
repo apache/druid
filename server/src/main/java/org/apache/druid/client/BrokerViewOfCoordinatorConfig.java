@@ -130,13 +130,13 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
     }
 
     // Preserve the comparator from the input map so the tier selection strategy's ordering is respected.
-    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filtered =
+    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals =
         new Int2ObjectRBTreeMap<>(historicalServers.comparator());
 
-    final Set<QueryableDruidServer> deprioritizedTurboServers = new HashSet<>();
+    final Set<QueryableDruidServer> deprioritizedTurboHistoricals = new HashSet<>();
 
     for (int priority : historicalServers.keySet()) {
-      final Set<QueryableDruidServer> kept = new HashSet<>();
+      final Set<QueryableDruidServer> preferredHistoricals = new HashSet<>();
       for (QueryableDruidServer server : historicalServers.get(priority)) {
         final String host = server.getServer().getHost();
         if (serversToIgnore.contains(host)) {
@@ -146,27 +146,27 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
         if (turboNodes.contains(host)) {
           // Turbo-loading servers are demoted to a dead-last bucket so queries prefer
           // non-turbo replicas, but still fall back to turbo replicas when no alternative exists.
-          deprioritizedTurboServers.add(server);
+          deprioritizedTurboHistoricals.add(server);
           continue;
         }
-        kept.add(server);
+        preferredHistoricals.add(server);
       }
-      if (!kept.isEmpty()) {
-        filtered.put(priority, kept);
+      if (!preferredHistoricals.isEmpty()) {
+        filteredHistoricals.put(priority, preferredHistoricals);
       }
     }
 
-    if (!deprioritizedTurboServers.isEmpty()) {
+    if (!deprioritizedTurboHistoricals.isEmpty()) {
       final int deadLastPriority = computeDeadLastPriority(historicalServers.comparator());
       // If a real tier already occupies MIN/MAX_VALUE, merge rather than overwrite.
-      filtered.merge(deadLastPriority, deprioritizedTurboServers, (existing, toAdd) -> {
+      filteredHistoricals.merge(deadLastPriority, deprioritizedTurboHistoricals, (existing, toAdd) -> {
         final Set<QueryableDruidServer> merged = new HashSet<>(existing);
         merged.addAll(toAdd);
         return merged;
       });
     }
 
-    return filtered;
+    return filteredHistoricals;
   }
 
   /**
