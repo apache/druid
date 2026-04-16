@@ -178,10 +178,10 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
     switch (cloneQueryMode) {
       case PREFERCLONES:
         // Remove servers being cloned targets, so that clones are queried.
-        return sourceCloneServers;
+        return sourceCloneServers == null ? Set.of() : sourceCloneServers;
       case EXCLUDECLONES:
         // Remove clones, so that only source servers are queried.
-        return targetCloneServers;
+        return targetCloneServers == null ? Set.of() : targetCloneServers;
       case INCLUDECLONES:
         // Don't remove either.
         return Set.of();
