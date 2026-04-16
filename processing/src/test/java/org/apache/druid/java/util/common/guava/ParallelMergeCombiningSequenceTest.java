@@ -542,7 +542,7 @@ public class ParallelMergeCombiningSequenceTest
                         "You can increase query timeout or tune the performance of query.", t.getMessage());
 
 
-    // JDK 11-23: pool may not clean up reliably after a timeout (flaky), so we skip the assertion.
+    // JDK 11-19: pool may not clean up reliably after a timeout (flaky), so we skip the assertion.
     // JDK 20-24: ForkJoinPool.managedBlock counts sleeping workers as inactive, so isQuiescent()
     //            returns true once all ForkJoin tasks complete even if managed-blocking workers are
     //            still sleeping — pool appears quiescent quickly after the timeout exception.
