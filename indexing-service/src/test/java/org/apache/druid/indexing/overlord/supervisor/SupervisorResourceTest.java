@@ -191,6 +191,39 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testSpecPost_returnsBadRequest_whenValidateSpecThrows()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
+    {
+      @Override
+      public List<String> getDataSources()
+      {
+        return Collections.singletonList("datasource1");
+      }
+
+      @Override
+      public void validateSpec()
+      {
+        throw org.apache.druid.error.DruidException
+            .forPersona(org.apache.druid.error.DruidException.Persona.USER)
+            .ofCategory(org.apache.druid.error.DruidException.Category.INVALID_INPUT)
+            .build("nope");
+      }
+    };
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    setupMockRequest();
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    replayAll();
+
+    Response response = supervisorResource.specPost(spec, false, request);
+    verifyAll();
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "nope"), response.getEntity());
+  }
+
+  @Test
   public void testSpecPost_whenSkipRestartIfUnmodifiedIsTrue()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
