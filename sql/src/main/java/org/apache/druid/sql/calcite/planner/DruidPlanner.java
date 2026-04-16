@@ -129,9 +129,10 @@ public class DruidPlanner implements Closeable
     engine.validateContext(plannerContext.queryContextMap());
     planner.skipParse();
     final SqlNode parsed = plannerContext.getSqlNode();
-    // Work around CALCITE-6391 (fixed in Calcite 1.38) by rewriting any
-    // INTERVAL ... WEEK literals before they reach Calcite's buggy
-    // SqlIntervalQualifier.evaluateIntervalLiteralAsWeek path.
+    // Work around CALCITE-6581 (fixed in Calcite 1.38) by rewriting any
+    // INTERVAL ... WEEK and INTERVAL ... QUARTER literals before they reach
+    // Calcite's buggy SqlIntervalQualifier.evaluateIntervalLiteralAs{Week,Quarter}
+    // paths.
     final SqlNode weekRewritten = parsed.accept(new SqlIntervalWeekRewriteShuttle());
     final SqlNode root = rewriteParameters(weekRewritten == null ? parsed : weekRewritten);
     hook.captureSqlNode(root);

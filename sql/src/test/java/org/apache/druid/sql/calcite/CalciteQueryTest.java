@@ -6683,6 +6683,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * Regression test for the companion bug to {@link #testIntervalWeekResolution()}:
+   * {@code INTERVAL '1' QUARTER} previously folded to one month instead of three months
+   * because Calcite 1.37.0 mishandles the QUARTER qualifier (packages the value into a
+   * year-month array without multiplying by three). The interval narrowing below proves
+   * the fix lands the equality on {@code 2000-04-01} (three months after
+   * {@code 2000-01-01}) and {@code 2000-07-01} (six months after {@code 2000-01-01}).
+   */
+  @Test
+  public void testIntervalQuarterResolution()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE "
+        + "__time = TIMESTAMP '2000-01-01 00:00:00' OR "
+        + "__time = TIMESTAMP '2000-01-01 00:00:00' + INTERVAL '1' QUARTER OR "
+        + "__time = TIMESTAMP '2000-01-01 00:00:00' + INTERVAL 2 QUARTER",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(
+                      querySegmentSpec(
+                          Intervals.of("2000-01-01/2000-01-01T00:00:00.001"),
+                          Intervals.of("2000-04-01/2000-04-01T00:00:00.001"),
+                          Intervals.of("2000-07-01/2000-07-01T00:00:00.001")
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
   @Test
   public void testCountStarWithComplexDisjointTimeFilter()
   {
