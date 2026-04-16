@@ -161,7 +161,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, false);
   }
 
   @Override
