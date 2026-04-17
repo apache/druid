@@ -70,7 +70,7 @@ export type StageInput =
   | {
       type: 'table';
       dataSource: string;
-      intervals: string[];
+      intervals?: string[];
     }
   | {
       type: 'external';

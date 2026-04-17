@@ -76,7 +76,7 @@ function summarizeTableInput(tableStageInput: StageInput): string {
   if (tableStageInput.type !== 'table') return '';
   return assemble(
     `Datasource: ${tableStageInput.dataSource}`,
-    `Interval: ${tableStageInput.intervals.join('; ')}`,
+    tableStageInput.intervals && `Interval: ${tableStageInput.intervals.join('; ')}`,
   ).join('\n');
 }
 
