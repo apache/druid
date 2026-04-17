@@ -24,12 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,14 +41,14 @@ import java.util.List;
 
 public class LoggingEmitterTest
 {
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;
   private LoggingEmitter emitter;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     serializedObjects = new ArrayList<>();
@@ -82,7 +81,7 @@ public class LoggingEmitterTest
     return emitter;
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (emitter != null) {
@@ -103,7 +102,7 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
     emitter.emit(ServiceMetricEvent.builder().setMetric("some/random/metric", 1).build("test", "localhost"));
 
-    Assert.assertEquals("All events should be serialized (logged)", 3, serializedObjects.size());
+    Assertions.assertEquals(3, serializedObjects.size(), "All events should be serialized (logged)");
   }
 
   /**
@@ -121,7 +120,7 @@ public class LoggingEmitterTest
     // "some/unlisted/metric" is NOT in the default list
     emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
 
-    Assert.assertEquals("Only the allowed metric should be serialized", 1, serializedObjects.size());
+    Assertions.assertEquals(1, serializedObjects.size(), "Only the allowed metric should be serialized");
   }
 
   /**
@@ -137,7 +136,7 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
     emitter.emit(ServiceMetricEvent.builder().setMetric("query/bytes", 2048).build("test", "localhost"));
 
-    Assert.assertEquals("Only allowed metrics should be serialized", 2, serializedObjects.size());
+    Assertions.assertEquals(2, serializedObjects.size(), "Only allowed metrics should be serialized");
   }
 
   /**
@@ -153,7 +152,7 @@ public class LoggingEmitterTest
     // This is NOT a ServiceMetricEvent, so it should bypass the allowlist filter
     emitter.emit(new UnitEvent("alerts", 42));
 
-    Assert.assertEquals("Non-metric events should bypass the allowlist filter", 1, serializedObjects.size());
+    Assertions.assertEquals(1, serializedObjects.size(), "Non-metric events should bypass the allowlist filter");
   }
 
   /**
@@ -169,7 +168,7 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
     emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
 
-    Assert.assertEquals("Fallback to default should allow listed metrics only", 1, serializedObjects.size());
+    Assertions.assertEquals(1, serializedObjects.size(), "Fallback to default should allow listed metrics only");
   }
 
   /**
@@ -184,7 +183,7 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
     emitter.emit(new UnitEvent("alerts", 42));
 
-    Assert.assertEquals("Only non-metric event should pass through", 1, serializedObjects.size());
+    Assertions.assertEquals(1, serializedObjects.size(), "Only non-metric event should pass through");
   }
 
   /**
@@ -199,12 +198,12 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
     emitter.emit(ServiceMetricEvent.builder().setMetric("jvm/mem/used", 512).build("test", "localhost"));
 
-    Assert.assertEquals("All events should pass when filtering is disabled", 2, serializedObjects.size());
+    Assertions.assertEquals(2, serializedObjects.size(), "All events should pass when filtering is disabled");
   }
 
   private File createAllowlistFile(String jsonContent) throws IOException
   {
-    final File file = tempFolder.newFile("allowedMetrics.json");
+    final File file = new File(tempFolder, "allowedMetrics.json");
     try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
       writer.write(jsonContent);
     }

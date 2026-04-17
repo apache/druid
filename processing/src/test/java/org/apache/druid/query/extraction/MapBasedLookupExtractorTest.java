@@ -24,8 +24,8 @@ import com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -55,30 +55,30 @@ public abstract class MapBasedLookupExtractorTest
   public void test_unapplyAll_simple()
   {
     final LookupExtractor lookup = makeLookupExtractor(simpleLookupMap);
-    Assert.assertEquals(Collections.singletonList("foo"), unapply(lookup, "bar"));
-    Assert.assertEquals(Collections.emptySet(), Sets.newHashSet(unapply(lookup, null)));
-    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(lookup, "")));
-    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(unapply(lookup, "empty_string")));
-    Assert.assertEquals("not existing value returns empty list", Collections.emptyList(), unapply(lookup, "not There"));
+    Assertions.assertEquals(Collections.singletonList("foo"), unapply(lookup, "bar"));
+    Assertions.assertEquals(Collections.emptySet(), Sets.newHashSet(unapply(lookup, null)));
+    Assertions.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(lookup, "")));
+    Assertions.assertEquals(Sets.newHashSet(""), Sets.newHashSet(unapply(lookup, "empty_string")));
+    Assertions.assertEquals(Collections.emptyList(), unapply(lookup, "not There"), "not existing value returns empty list");
   }
 
   @Test
   public void test_asMap_simple()
   {
     final LookupExtractor lookup = makeLookupExtractor(simpleLookupMap);
-    Assert.assertTrue(lookup.supportsAsMap());
-    Assert.assertEquals(simpleLookupMap, lookup.asMap());
+    Assertions.assertTrue(lookup.supportsAsMap());
+    Assertions.assertEquals(simpleLookupMap, lookup.asMap());
   }
 
   @Test
   public void test_apply_simple()
   {
     final LookupExtractor lookup = makeLookupExtractor(simpleLookupMap);
-    Assert.assertEquals("bar", lookup.apply("foo"));
-    Assert.assertEquals("", lookup.apply("null"));
-    Assert.assertEquals("", lookup.apply("empty String"));
-    Assert.assertEquals("empty_string", lookup.apply(""));
-    Assert.assertNull(lookup.apply(null));
+    Assertions.assertEquals("bar", lookup.apply("foo"));
+    Assertions.assertEquals("", lookup.apply("null"));
+    Assertions.assertEquals("", lookup.apply("empty String"));
+    Assertions.assertEquals("empty_string", lookup.apply(""));
+    Assertions.assertNull(lookup.apply(null));
   }
 
   @Test
@@ -88,9 +88,9 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put(null, "nv");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertNull(lookup.apply("missing"));
-    Assert.assertNull(lookup.apply(""));
-    Assert.assertNull(lookup.apply(null));
+    Assertions.assertNull(lookup.apply("missing"));
+    Assertions.assertNull(lookup.apply(""));
+    Assertions.assertNull(lookup.apply(null));
   }
 
   @Test
@@ -100,12 +100,12 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put(null, "nv");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         unapply(lookup, "nv")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         unapply(lookup, null)
     );
@@ -118,7 +118,7 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("nk", null);
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertNull(lookup.apply("nk"));
+    Assertions.assertNull(lookup.apply("nk"));
   }
 
   @Test
@@ -128,7 +128,7 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("nk", null);
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList("nk"),
         unapply(lookup, null)
     );
@@ -141,7 +141,7 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("nk", "");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "",
         lookup.apply("nk")
     );
@@ -154,12 +154,12 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("nk", "");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         unapply(lookup, null)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList("nk"),
         unapply(lookup, "")
     );
@@ -173,9 +173,9 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("", "empty");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertNull(lookup.apply("missing"));
-    Assert.assertEquals("empty", lookup.apply(""));
-    Assert.assertNull(lookup.apply(null));
+    Assertions.assertNull(lookup.apply("missing"));
+    Assertions.assertEquals("empty", lookup.apply(""));
+    Assertions.assertNull(lookup.apply(null));
   }
 
   @Test
@@ -186,12 +186,12 @@ public abstract class MapBasedLookupExtractorTest
     mapWithNullKey.put("", "empty");
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(""),
         unapply(lookup, "empty")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         unapply(lookup, "nv")
     );
@@ -200,8 +200,8 @@ public abstract class MapBasedLookupExtractorTest
   @Test
   public void test_estimateHeapFootprint()
   {
-    Assert.assertEquals(0L, makeLookupExtractor(Collections.emptyMap()).estimateHeapFootprint());
-    Assert.assertEquals(388L, makeLookupExtractor(simpleLookupMap).estimateHeapFootprint());
+    Assertions.assertEquals(0L, makeLookupExtractor(Collections.emptyMap()).estimateHeapFootprint());
+    Assertions.assertEquals(388L, makeLookupExtractor(simpleLookupMap).estimateHeapFootprint());
   }
 
   protected List<String> unapply(final LookupExtractor lookup, @Nullable final String s)

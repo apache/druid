@@ -20,8 +20,8 @@
 package org.apache.druid.segment.nested;
 
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,7 +38,7 @@ public class StructuredDataBuilderTest
         array,
         1
     );
-    Assert.assertEquals(StructuredData.wrap(array), new StructuredDataBuilder(childArrayElement).build());
+    Assertions.assertEquals(StructuredData.wrap(array), new StructuredDataBuilder(childArrayElement).build());
 
     // [null, [1, 2]]
     StructuredDataBuilder.Element arrayElement = new StructuredDataBuilder.Element(
@@ -46,7 +46,7 @@ public class StructuredDataBuilderTest
         array,
         0
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StructuredData.wrap(Arrays.asList(null, array)),
         new StructuredDataBuilder(arrayElement).build()
     );
@@ -56,7 +56,7 @@ public class StructuredDataBuilderTest
         null,
         0
     );
-    Assert.assertEquals(StructuredData.wrap(Map.of()), new StructuredDataBuilder(nullElement).build());
+    Assertions.assertEquals(StructuredData.wrap(Map.of()), new StructuredDataBuilder(nullElement).build());
 
     // {"x": "hi"}
     StructuredDataBuilder.Element mapElement = new StructuredDataBuilder.Element(
@@ -64,7 +64,7 @@ public class StructuredDataBuilderTest
         "hi",
         0
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StructuredData.wrap(Map.of("x", "hi")),
         new StructuredDataBuilder(mapElement, nullElement).build()
     );
@@ -79,7 +79,7 @@ public class StructuredDataBuilderTest
         "root-val",
         0
     );
-    Assert.assertEquals(StructuredData.wrap("root-val"), new StructuredDataBuilder(rootElement).build());
+    Assertions.assertEquals(StructuredData.wrap("root-val"), new StructuredDataBuilder(rootElement).build());
   }
 
   @Test
@@ -98,7 +98,7 @@ public class StructuredDataBuilderTest
         0
     );
     List<Object> expected = List.of(List.of(1), Arrays.asList(null, array));
-    Assert.assertEquals(StructuredData.wrap(expected), new StructuredDataBuilder(element1, element2).build());
+    Assertions.assertEquals(StructuredData.wrap(expected), new StructuredDataBuilder(element1, element2).build());
   }
 
   @Test
@@ -121,7 +121,7 @@ public class StructuredDataBuilderTest
         0
     );
     Map<String, Object> expected = Map.of("x", Map.of("y", "hi-xy", "z", "hi-xz"), "yz", Map.of("z", "hi-yz"));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StructuredData.wrap(expected),
         new StructuredDataBuilder(xyElement, xzElement, yzElement).build()
     );
@@ -151,7 +151,7 @@ public class StructuredDataBuilderTest
         "x",
         Map.of("y", "hi-xy", "array", Arrays.asList("hi-x-array-0", null, "hi-x-array-2"))
     );
-    Assert.assertEquals(StructuredData.wrap(expected), new StructuredDataBuilder(xyElement, xArray, xArray2).build());
+    Assertions.assertEquals(StructuredData.wrap(expected), new StructuredDataBuilder(xyElement, xArray, xArray2).build());
   }
 
   @Test
@@ -172,29 +172,29 @@ public class StructuredDataBuilderTest
         1,
         0
     );
-    DruidException e1 = Assert.assertThrows(
+    DruidException e1 = Assertions.assertThrows(
         DruidException.class,
         () -> new StructuredDataBuilder(rootElement, mapElement).build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Error building structured data from paths[[Element{path=[], value=root-val, depth=0}, Element{path=[NestedPathField{field='x'}], value=hi, depth=0}]], "
         + "cannot have map or array elements when root value is set",
         e1.getMessage()
     );
-    DruidException e2 = Assert.assertThrows(
+    DruidException e2 = Assertions.assertThrows(
         DruidException.class,
         () -> new StructuredDataBuilder(rootElement, arrayElement).build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Error building structured data from paths[[Element{path=[], value=root-val, depth=0}, Element{path=[NestedPathArrayElement{index=0}], value=1, depth=0}]], "
         + "cannot have map or array elements when root value is set",
         e2.getMessage()
     );
-    DruidException e3 = Assert.assertThrows(
+    DruidException e3 = Assertions.assertThrows(
         DruidException.class,
         () -> new StructuredDataBuilder(mapElement, arrayElement).build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Error building structured data from paths[[Element{path=[NestedPathField{field='x'}], value=hi, depth=0}, Element{path=[NestedPathArrayElement{index=0}], value=1, depth=0}]], "
         + "cannot have both map and array elements at the same level",
         e3.getMessage()

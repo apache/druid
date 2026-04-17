@@ -24,9 +24,9 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import java.io.ByteArrayInputStream;
@@ -52,7 +52,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
 
   private SwitchingTaskLogs taskLogs;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     taskLogs = new SwitchingTaskLogs(defaultTaskLogs, reportTaskLogs, streamerTaskLogs, pusherTaskLogs);
@@ -69,8 +69,8 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     replayAll();
 
     Optional<InputStream> actualLogStream = taskLogs.streamTaskLog(taskId, offset);
-    Assert.assertTrue(actualLogStream.isPresent());
-    Assert.assertEquals(logStream, actualLogStream.get());
+    Assertions.assertTrue(actualLogStream.isPresent());
+    Assertions.assertEquals(logStream, actualLogStream.get());
 
     verifyAll();
   }
@@ -85,8 +85,8 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     replayAll();
 
     Optional<InputStream> actualReportStream = taskLogs.streamTaskReports(taskId);
-    Assert.assertTrue(actualReportStream.isPresent());
-    Assert.assertEquals(reportStream, actualReportStream.get());
+    Assertions.assertTrue(actualReportStream.isPresent());
+    Assertions.assertEquals(reportStream, actualReportStream.get());
 
     verifyAll();
   }
@@ -101,8 +101,8 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     replayAll();
 
     Optional<InputStream> actualStatusStream = taskLogs.streamTaskStatus(taskId);
-    Assert.assertTrue(actualStatusStream.isPresent());
-    Assert.assertEquals(statusStream, actualStatusStream.get());
+    Assertions.assertTrue(actualStatusStream.isPresent());
+    Assertions.assertEquals(statusStream, actualStatusStream.get());
 
     verifyAll();
   }
@@ -117,8 +117,8 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     replayAll();
 
     Optional<InputStream> actualPayloadStream = taskLogs.streamTaskPayload(taskId);
-    Assert.assertTrue(actualPayloadStream.isPresent());
-    Assert.assertEquals(payloadStream, actualPayloadStream.get());
+    Assertions.assertTrue(actualPayloadStream.isPresent());
+    Assertions.assertEquals(payloadStream, actualPayloadStream.get());
 
     verifyAll();
   }
