@@ -223,7 +223,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.4.1
+version: 2.21.1
 libraries:
   - com.fasterxml.jackson.core: jackson-core
 notice: |
@@ -254,7 +254,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.4
+version: 2.21.1
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
@@ -296,7 +296,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.18.4
+version: 2.21.1
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -2894,7 +2894,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.18.4
+version: 2.21.1
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
