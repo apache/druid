@@ -101,19 +101,33 @@
   "segment/moved/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/nuked/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
 
-  "segment/assigned/count" : { "dimensions" : ["tier"], "type" : "count" },
-  "segment/moved/count" : { "dimensions" : ["tier"], "type" : "count" },
-  "segment/dropped/count" : { "dimensions" : ["tier"], "type" : "count" },
-  "segment/deleted/count" : { "dimensions" : ["tier"], "type" : "count" },
-  "segment/unneeded/count" : { "dimensions" : ["tier"], "type" : "count" },
+  "segment/assigned/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
+  "segment/moved/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
+  "segment/dropped/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
+  "segment/deleted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "segment/unneeded/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
   "segment/unavailable/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/underReplicated/count" : { "dimensions" : ["dataSource", "tier"], "type" : "gauge" },
   "segment/loadQueue/size" : { "dimensions" : ["server"], "type" : "gauge" },
-  "segment/loadQueue/failed" : { "dimensions" : ["server"], "type" : "gauge" },
   "segment/loadQueue/count" : { "dimensions" : ["server"], "type" : "gauge" },
   "segment/dropQueue/count" : { "dimensions" : ["server"], "type" : "gauge" },
   "segment/size" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/overShadowed/count" : { "dimensions" : [], "type" : "gauge" },
+  "segment/assignSkipped/count" : { "dimensions" : ["dataSource", "server", "tier", "description"], "type" : "count" },
+  "segment/dropSkipped/count" : { "dimensions" : ["dataSource", "server", "tier", "description"], "type" : "count" },
+  "segment/moveSkipped/count" : { "dimensions" : ["dataSource", "server", "tier", "description"], "type" : "count" },
+
+  "segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/availableDeepStorageOnly/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/unneededEternityTombstone/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/clone/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "segment/clone/dropped/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "segment/loading/rateKbps" : { "dimensions" : ["server"], "type" : "gauge" },
+  "segment/loadQueue/assigned" : { "dimensions" : ["dataSource", "description"], "type" : "gauge" },
+  "segment/loadQueue/success" : { "dimensions" : ["dataSource", "description"], "type" : "gauge" },
+  "segment/loadQueue/failed" : { "dimensions" : ["dataSource", "description"], "type" : "gauge" },
+  "segment/loadQueue/cancelled" : { "dimensions" : ["dataSource", "description"], "type" : "gauge" },
 
   "segment/metadataCache/sync/time": { "dimensions": [ "host", "service" ], "type" : "timer" },
 
@@ -178,9 +192,17 @@
   "tier/replication/factor" : { "dimensions" : ["tier"], "type" : "gauge" },
   "tier/historical/count" : { "dimensions" : ["tier"], "type" : "count" },
 
+  "tier/storage/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
+  "tier/historical/clone/count" : { "dimensions" : ["tier"], "type" : "count" },
+
   "compact/task/count" : { "dimensions" : [], "type" : "count" },
   "compactTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
   "compactTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
+
+  "compact/createJobs/time" : { "dimensions" : [], "type" : "timer" },
+  "compact/createJobs/count" : { "dimensions" : [], "type" : "count" },
+  "compact/runScheduler/time" : { "dimensions" : [], "type" : "timer" },
+  "compactTask/cancelled/count" : { "dimensions" : [], "type" : "count" },
 
   "segment/waitCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
@@ -199,7 +221,22 @@
 
   "service/heartbeat" : { "dimensions" : ["leader", "workerVersion", "category", "status", "taskId", "groupId", "dataSource", "taskStatus" ], "type" : "count" },
 
+  "metadata/kill/compaction/count" : { "dimensions" : [], "type" : "count" },
+  "metadata/kill/supervisor/count" : { "dimensions" : [], "type" : "count" },
+  "metadata/kill/rule/count" : { "dimensions" : [], "type" : "count" },
+  "metadata/kill/segmentSchema/count" : { "dimensions" : [], "type" : "count" },
+  "metadata/kill/audit/count" : { "dimensions" : [], "type" : "count" },
+  "metadata/kill/datasource/count" : { "dimensions" : [], "type" : "count" },
+  "kill/eligibleUnusedSegments/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "kill/pendingSegments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
   "killTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
   "killTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
-  "killTask/task/count" : { "dimensions" : [], "type" : "count" }
+  "kill/task/count" : { "dimensions" : [], "type" : "count" },
+
+  "segment/balancer/compute/error" : { "dimensions" : ["tier", "dataSource", "description"], "type" : "count" },
+
+  "config/brokerSync/time" : { "dimensions" : [], "type" : "timer" },
+  "config/brokerSync/total/time" : { "dimensions" : [], "type" : "timer" },
+  "config/brokerSync/error" : { "dimensions" : [], "type" : "count" }
 }
