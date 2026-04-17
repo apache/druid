@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -78,10 +79,11 @@ public class PostJoinCursor implements Cursor
   private void advanceToMatch()
   {
     if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches(false)) {
+      while (!isDoneOrInterrupted() && !valueMatcher.matches(false)) {
         baseCursor.advance();
       }
     }
+    BaseQuery.checkInterrupted();
   }
 
   @Override
@@ -100,8 +102,6 @@ public class PostJoinCursor implements Cursor
   public void advance()
   {
     baseCursor.advance();
-    // Relies on baseCursor.advance() call inside this for BaseQuery.checkInterrupted() checks -- unlike other cursors
-    // which call advanceInterruptibly() and hence have to explicitly provision for interrupts.
     advanceToMatch();
   }
 
