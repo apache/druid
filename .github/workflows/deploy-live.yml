@@ -1,0 +1,477 @@
+name: Deploy to Live
+run-name: "Deploy ${{ inputs.version }} to Live"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to deploy (e.g., v1.2.3)"
+        required: true
+        type: string
+      change_request_id:
+        description: "Change Request ID (optional)"
+        required: false
+        type: string
+      confirm_production_deploy:
+        description: "Type CONFIRM to deploy to live"
+        required: true
+        type: string
+      deploy_gcp_live:
+        description: "Deploy to GCP Live"
+        required: false
+        type: boolean
+        default: false
+      deploy_gb1_live:
+        description: "Deploy to GB1 Live"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-live
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  REGISTRY: ghcr.io
+  HELM_VERSION: "3.12.0"
+  KUBECTL_VERSION: "1.28.0"
+  HELM_TIMEOUT: 20m
+
+jobs:
+  validate-inputs:
+    name: Validate Deployment Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate manual deployment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ inputs.deploy_gcp_live }}" == "false" && "${{ inputs.deploy_gb1_live }}" == "false" ]]; then
+            echo "❌ Error: At least one environment must be selected"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.confirm_production_deploy }}" != "CONFIRM" ]]; then
+            echo "❌ Error: You must type CONFIRM to deploy to live"
+            exit 1
+          fi
+
+          if [[ ! "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9._-]+)?$ ]]; then
+            echo "❌ Error: version must look like v1.2.3"
+            exit 1
+          fi
+
+          CR_ID="${{ inputs.change_request_id }}"
+          if [[ -z "$CR_ID" ]]; then
+            CR_ID="N/A"
+          fi
+
+          echo "✅ Validation passed"
+          echo "Version: ${{ inputs.version }}"
+          echo "Change Request: $CR_ID"
+          echo "GCP Live: ${{ inputs.deploy_gcp_live }}"
+          echo "GB1 Live: ${{ inputs.deploy_gb1_live }}"
+
+      - name: Verify GitHub release exists
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ inputs.version }}'
+            });
+            core.info('Release exists');
+
+  deploy-gcp-live:
+    name: GCP Live Deploy
+    if: inputs.deploy_gcp_live == true
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: gcp-live
+    env:
+      NAMESPACE: druid
+      RELEASE_NAME: druid-live
+      CHART_PATH: druid-helm-template/druid/gcp
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine image reference
+        id: image_info
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORG_LOWER="${{ github.repository_owner }}"
+          ORG_LOWER="${ORG_LOWER,,}"
+          IMAGE_REPO="${{ env.REGISTRY }}/${ORG_LOWER}/druid"
+          IMAGE_REF="${IMAGE_REPO}:${{ inputs.version }}"
+          echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          echo "Deploying image: ${IMAGE_REF}"
+
+      - name: Verify image exists
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.image_info.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+          docker manifest inspect "$IMAGE_REF" > /dev/null 2>&1 || {
+            echo "❌ Image not found: $IMAGE_REF"
+            exit 1
+          }
+          echo "✅ Image exists: $IMAGE_REF"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Validate kubeconfig secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${{ secrets.GCP_LIVE_KUBECONFIG }}" ]]; then
+            echo "❌ Missing GCP_LIVE_KUBECONFIG secret"
+            exit 1
+          fi
+
+      - name: Configure kubectl for GCP Live
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.kube
+          echo "${{ secrets.GCP_LIVE_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Helm lint and template render
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+
+          helm lint .
+
+          helm template "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_info.outputs.image_repo }}" \
+            --set image.tag="${{ inputs.version }}" \
+            --set image.pullPolicy=IfNotPresent \
+            > /tmp/druid-gcp-live.yaml
+
+          echo "✅ Helm lint and render passed"
+
+      - name: Server-side manifest validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl create namespace "${{ env.NAMESPACE }}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply --dry-run=server -f /tmp/druid-gcp-live.yaml
+          echo "✅ Server-side manifest validation passed"
+
+      - name: Deploy with Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+
+          helm upgrade --install "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_info.outputs.image_repo }}" \
+            --set image.tag="${{ inputs.version }}" \
+            --set image.pullPolicy=IfNotPresent \
+            --wait \
+            --atomic \
+            --timeout "${{ env.HELM_TIMEOUT }}"
+
+      - name: Verify rollout status
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Deployments:"
+          kubectl get deployments -n "${{ env.NAMESPACE }}"
+          echo ""
+          echo "StatefulSets:"
+          kubectl get statefulsets -n "${{ env.NAMESPACE }}" || true
+          echo ""
+          echo "Pods:"
+          kubectl get pods -n "${{ env.NAMESPACE }}"
+
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-broker -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-coordinator -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-router -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+
+          if kubectl get deployment/${{ env.RELEASE_NAME }}-overlord -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status deployment/${{ env.RELEASE_NAME }}-overlord -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+          if kubectl get statefulset/${{ env.RELEASE_NAME }}-historical -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status statefulset/${{ env.RELEASE_NAME }}-historical -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+          if kubectl get statefulset/${{ env.RELEASE_NAME }}-middlemanager -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status statefulset/${{ env.RELEASE_NAME }}-middlemanager -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+      - name: Post-deploy health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl run druid-healthcheck-gcp \
+            --rm -i --restart=Never -n "${{ env.NAMESPACE }}" \
+            --image=curlimages/curl:8.9.1 \
+            -- curl -fsS "http://${{ env.RELEASE_NAME }}-router:8888/status/health"
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          CR_ID="${{ inputs.change_request_id }}"
+          if [[ -z "$CR_ID" ]]; then
+            CR_ID="N/A"
+          fi
+
+          {
+            echo "## GCP Live Deployment"
+            echo ""
+            echo "- Version: ${{ inputs.version }}"
+            echo "- Image: ${{ steps.image_info.outputs.image_ref }}"
+            echo "- Change Request: $CR_ID"
+            echo "- Release: ${{ env.RELEASE_NAME }}"
+            echo "- Namespace: ${{ env.NAMESPACE }}"
+            echo "- Status: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-gb1-live:
+    name: GB1 Live Deploy
+    if: inputs.deploy_gb1_live == true
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: gb1-live
+    env:
+      NAMESPACE: druid
+      RELEASE_NAME: druid
+      CHART_PATH: druid-helm-template/druid/onprem
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine image reference
+        id: image_info
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORG_LOWER="${{ github.repository_owner }}"
+          ORG_LOWER="${ORG_LOWER,,}"
+          IMAGE_REPO="${{ env.REGISTRY }}/${ORG_LOWER}/druid"
+          IMAGE_REF="${IMAGE_REPO}:${{ inputs.version }}"
+          echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          echo "Deploying image: ${IMAGE_REF}"
+
+      - name: Verify image exists
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.image_info.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+          docker manifest inspect "$IMAGE_REF" > /dev/null 2>&1 || {
+            echo "❌ Image not found: $IMAGE_REF"
+            exit 1
+          }
+          echo "✅ Image exists: $IMAGE_REF"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Validate kubeconfig secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${{ secrets.GB1_LIVE_KUBECONFIG }}" ]]; then
+            echo "❌ Missing GB1_LIVE_KUBECONFIG secret"
+            exit 1
+          fi
+
+      - name: Configure kubectl for GB1 Live
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.kube
+          echo "${{ secrets.GB1_LIVE_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Helm lint and template render
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+
+          helm lint .
+
+          helm template "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_info.outputs.image_repo }}" \
+            --set image.tag="${{ inputs.version }}" \
+            --set image.pullPolicy=IfNotPresent \
+            > /tmp/druid-gb1-live.yaml
+
+          echo "✅ Helm lint and render passed"
+
+      - name: Server-side manifest validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl create namespace "${{ env.NAMESPACE }}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply --dry-run=server -f /tmp/druid-gb1-live.yaml
+          echo "✅ Server-side manifest validation passed"
+
+      - name: Deploy with Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+
+          helm upgrade --install "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_info.outputs.image_repo }}" \
+            --set image.tag="${{ inputs.version }}" \
+            --set image.pullPolicy=IfNotPresent \
+            --wait \
+            --atomic \
+            --timeout "${{ env.HELM_TIMEOUT }}"
+
+      - name: Verify rollout status
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Deployments:"
+          kubectl get deployments -n "${{ env.NAMESPACE }}"
+          echo ""
+          echo "StatefulSets:"
+          kubectl get statefulsets -n "${{ env.NAMESPACE }}" || true
+          echo ""
+          echo "Pods:"
+          kubectl get pods -n "${{ env.NAMESPACE }}"
+
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-broker -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-coordinator -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+          kubectl rollout status deployment/${{ env.RELEASE_NAME }}-router -n "${{ env.NAMESPACE }}" --timeout=1200s || true
+
+          if kubectl get deployment/${{ env.RELEASE_NAME }}-overlord -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status deployment/${{ env.RELEASE_NAME }}-overlord -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+          if kubectl get statefulset/${{ env.RELEASE_NAME }}-historical -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status statefulset/${{ env.RELEASE_NAME }}-historical -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+          if kubectl get statefulset/${{ env.RELEASE_NAME }}-middlemanager -n "${{ env.NAMESPACE }}" >/dev/null 2>&1; then
+            kubectl rollout status statefulset/${{ env.RELEASE_NAME }}-middlemanager -n "${{ env.NAMESPACE }}" --timeout=1200s
+          fi
+
+      - name: Post-deploy health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl run druid-healthcheck-gb1 \
+            --rm -i --restart=Never -n "${{ env.NAMESPACE }}" \
+            --image=curlimages/curl:8.9.1 \
+            -- curl -fsS "http://${{ env.RELEASE_NAME }}-router:8888/status/health"
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          CR_ID="${{ inputs.change_request_id }}"
+          if [[ -z "$CR_ID" ]]; then
+            CR_ID="N/A"
+          fi
+
+          {
+            echo "## GB1 Live Deployment"
+            echo ""
+            echo "- Version: ${{ inputs.version }}"
+            echo "- Image: ${{ steps.image_info.outputs.image_ref }}"
+            echo "- Change Request: $CR_ID"
+            echo "- Release: ${{ env.RELEASE_NAME }}"
+            echo "- Namespace: ${{ env.NAMESPACE }}"
+            echo "- Status: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  update-release-notes:
+    name: Update Release Notes
+    needs: [deploy-gcp-live, deploy-gb1-live]
+    if: always() && (needs.deploy-gcp-live.result == 'success' || needs.deploy-gb1-live.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update release notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: '${{ inputs.version }}'
+              });
+
+              const marker = `<!-- live-deploy:${'${{ inputs.version }}'} -->`;
+              const existingBody = release.data.body || '';
+              const crId = '${{ inputs.change_request_id }}' || 'N/A';
+
+              if (existingBody.includes(marker)) {
+                core.info('Release notes already contain a live deployment entry for this version.');
+                return;
+              }
+
+              let deploymentNote = `\n\n${marker}\n## Live Deployment\n`;
+              deploymentNote += `- Deployed on ${new Date().toISOString()}\n`;
+              deploymentNote += `- Change Request: ${crId}\n`;
+              deploymentNote += `\n### Environments:\n`;
+
+              if ('${{ needs.deploy-gcp-live.result }}' === 'success') {
+                deploymentNote += `- ✅ GCP Live: Deployed successfully\n`;
+              }
+              if ('${{ needs.deploy-gb1-live.result }}' === 'success') {
+                deploymentNote += `- ✅ GB1 Live: Deployed successfully\n`;
+              }
+
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.data.id,
+                body: existingBody + deploymentNote
+              });
+
+              core.info('Release notes updated successfully');
+            } catch (error) {
+              core.warning(`Could not update release notes: ${error.message}`);
+            }

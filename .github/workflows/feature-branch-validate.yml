@@ -1,0 +1,215 @@
+name: Feature Branch Validation
+run-name: "Validate ${{ github.event.head_commit.message || github.ref_name }}"
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: feature-branch-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  HELM_VERSION: "3.12.0"
+
+jobs:
+  validate-build:
+    name: Validate Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Extract repository info
+        id: repo_info
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_FULL="${{ github.repository }}"
+          REPO_NAME="${REPO_FULL#*/}"
+          REPO_NAME_LOWER="${REPO_NAME,,}"
+          ORG_NAME="${{ github.repository_owner }}"
+          ORG_NAME_LOWER="${ORG_NAME,,}"
+          echo "name=${REPO_NAME}" >> "$GITHUB_OUTPUT"
+          echo "name_lower=${REPO_NAME_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "org_lower=${ORG_NAME_LOWER}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (validation only)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./distribution/docker/Dockerfile
+          platforms: linux/amd64
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ steps.repo_info.outputs.org_lower }}/${{ steps.repo_info.outputs.name_lower }}:validation-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_FROM_SOURCE=true
+            JDK_VERSION=17
+
+      - name: Build validation summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "✅ Docker build validation passed"
+          echo "Image would be: ${{ env.REGISTRY }}/${{ steps.repo_info.outputs.org_lower }}/${{ steps.repo_info.outputs.name_lower }}:validation-${{ github.sha }}"
+
+  validate-helm-gcp:
+    name: Validate Helm Chart (GCP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CHART_PATH: druid-helm-template/druid/gcp
+      RELEASE_NAME: druid-live
+      NAMESPACE: druid
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image repository
+        id: image_repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORG_LOWER="${{ github.repository_owner }}"
+          ORG_LOWER="${ORG_LOWER,,}"
+          echo "repo=ghcr.io/${ORG_LOWER}/druid" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Lint Helm chart
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm lint .
+
+      - name: Template Helm chart
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm template "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_repo.outputs.repo }}" \
+            --set image.tag=test-validation \
+            > /tmp/druid-gcp-rendered.yaml
+
+          echo "✅ Helm template rendered successfully"
+          echo "Total resources: $(grep -c '^kind:' /tmp/druid-gcp-rendered.yaml)"
+
+      - name: Dry-run validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm upgrade --install "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_repo.outputs.repo }}" \
+            --set image.tag=test-validation \
+            --dry-run --debug
+
+  validate-helm-gb1:
+    name: Validate Helm Chart (GB1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CHART_PATH: druid-helm-template/druid/onprem
+      RELEASE_NAME: druid
+      NAMESPACE: druid
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image repository
+        id: image_repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORG_LOWER="${{ github.repository_owner }}"
+          ORG_LOWER="${ORG_LOWER,,}"
+          echo "repo=ghcr.io/${ORG_LOWER}/druid" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Lint Helm chart
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm lint .
+
+      - name: Template Helm chart
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm template "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_repo.outputs.repo }}" \
+            --set image.tag=test-validation \
+            > /tmp/druid-gb1-rendered.yaml
+
+          echo "✅ Helm template rendered successfully"
+          echo "Total resources: $(grep -c '^kind:' /tmp/druid-gb1-rendered.yaml)"
+
+      - name: Dry-run validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ env.CHART_PATH }}"
+          helm upgrade --install "${{ env.RELEASE_NAME }}" . \
+            --namespace "${{ env.NAMESPACE }}" \
+            --values values.yaml \
+            --set image.repository="${{ steps.image_repo.outputs.repo }}" \
+            --set image.tag=test-validation \
+            --dry-run --debug
+
+  validation-summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-build, validate-helm-gcp, validate-helm-gb1]
+    if: always()
+    steps:
+      - name: Check validation results
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Validation Results"
+            echo ""
+            echo "- Docker Build: ${{ needs.validate-build.result }}"
+            echo "- Helm GCP: ${{ needs.validate-helm-gcp.result }}"
+            echo "- Helm GB1: ${{ needs.validate-helm-gb1.result }}"
+            echo ""
+            echo "⚠️ **Note**: This is validation only. No images are pushed, no deployments are made."
+            echo ""
+            echo "To deploy to production, create a GitHub release."
+          } >> "$GITHUB_STEP_SUMMARY"
