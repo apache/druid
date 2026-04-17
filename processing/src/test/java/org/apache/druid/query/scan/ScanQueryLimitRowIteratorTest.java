@@ -31,15 +31,16 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
 {
   private static final int NUM_ELEMENTS = 1000;
@@ -58,7 +59,6 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
     this.limit = limit;
   }
 
-  @Parameterized.Parameters(name = "{0} {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<Integer> batchSizes = ImmutableList.of(1, 33);

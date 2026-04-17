@@ -21,13 +21,13 @@ package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class SwitchingTaskLogsTest extends EasyMockSupport
 {
   @Mock

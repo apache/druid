@@ -31,6 +31,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ import static org.apache.druid.query.aggregation.any.StringAnyVectorAggregator.N
 import static org.mockito.ArgumentMatchers.anyInt;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int MAX_STRING_BYTES = 32;
