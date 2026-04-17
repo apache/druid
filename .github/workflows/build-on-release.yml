@@ -5,18 +5,122 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: build-on-release
+  cancel-in-progress: false
+
 permissions:
-  contents: write
+  contents: read
   packages: write
-  actions: read
-  pull-requests: write
-  id-token: write
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   build-production:
     name: Build Production Image
-    uses: THG-Fulfil/shared-workflows/.github/workflows/release-build.yml@rowan-changes
-    with:
-      build_type: java
-      java_version: '8|11'
-    secrets: inherit
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image_ref: ${{ steps.image_info.outputs.image_ref }}
+    steps:
+      - name: Extract repository info
+        id: repo_info
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_FULL="${{ github.repository }}"
+          REPO_NAME="${REPO_FULL#*/}"
+          REPO_NAME_LOWER="${REPO_NAME,,}"
+          ORG_NAME="${{ github.repository_owner }}"
+          ORG_NAME_LOWER="${ORG_NAME,,}"
+          echo "name=${REPO_NAME}" >> "$GITHUB_OUTPUT"
+          echo "name_lower=${REPO_NAME_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "org_lower=${ORG_NAME_LOWER}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate version from release tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ github.event.release.tag_name }}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Generated version: ${VERSION}"
+
+      - name: Validate release tag format
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9._-]+)?$ ]]; then
+            echo "❌ Invalid release tag: $VERSION"
+            echo "Expected format like v1.2.3"
+            exit 1
+          fi
+
+      - name: Determine image info
+        id: image_info
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORG_LOWER="${{ steps.repo_info.outputs.org_lower }}"
+          REPO_LOWER="${{ steps.repo_info.outputs.name_lower }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          IMAGE_NAME="${{ env.REGISTRY }}/${ORG_LOWER}/${REPO_LOWER}"
+          IMAGE_REF="${IMAGE_NAME}:${VERSION}"
+
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          echo "Image: ${IMAGE_REF}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./distribution/docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.image_info.outputs.image_ref }}
+            ${{ steps.image_info.outputs.image_name }}:latest
+          labels: |
+            org.opencontainers.image.title=${{ steps.repo_info.outputs.name }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.created=${{ github.event.release.published_at }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_FROM_SOURCE=true
+            JDK_VERSION=17
+
+      - name: Verify pushed image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "${{ steps.image_info.outputs.image_ref }}"
+
+      - name: Output image details
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Built and pushed production image: ${{ steps.image_info.outputs.image_ref }}"
+          echo "Version: ${{ steps.version.outputs.version }}"
