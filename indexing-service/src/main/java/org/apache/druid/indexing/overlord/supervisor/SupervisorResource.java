@@ -166,7 +166,7 @@ public class SupervisorResource
           }
 
           if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+            return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
@@ -183,7 +183,7 @@ public class SupervisorResource
                         .build()
           );
 
-          return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", true)).build();
         }
     );
   }

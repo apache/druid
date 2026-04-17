@@ -178,7 +178,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -248,7 +248,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", false), response.getEntity());
 
     resetAll();
 
@@ -269,7 +269,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
   }
 
   @Test
@@ -300,7 +300,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
