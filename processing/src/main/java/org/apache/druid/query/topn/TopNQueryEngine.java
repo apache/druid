@@ -26,6 +26,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.QueryContexts;
@@ -35,6 +36,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
+import org.apache.druid.query.topn.vector.VectorTopNEngine;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -96,12 +98,33 @@ public class TopNQueryEngine
       if (cursorHolder.isPreAggregated()) {
         query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
       }
+
+      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+
+      final boolean canVectorize = cursorHolder.canVectorize()
+                                   && VectorTopNEngine.canVectorize(query, cursorFactory);
+      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);
+
+      if (shouldVectorize) {
+        final ResourceHolder<ByteBuffer> bufHolder = bufferPool.take();
+        try {
+          final Closer resourceCloser = Closer.create();
+          resourceCloser.register(bufHolder);
+          resourceCloser.register(cursorHolder);
+          return Sequences.filter(
+              VectorTopNEngine.process(query, timeBoundaryInspector, cursorHolder, bufHolder.get()),
+              Predicates.notNull()
+          ).withBaggage(resourceCloser);
+        }
+        catch (Throwable t) {
+          throw CloseableUtils.closeAndWrapInCatch(t, bufHolder);
+        }
+      }
+
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         return Sequences.withBaggage(Sequences.empty(), cursorHolder);
       }
-
-      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
 
       final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
