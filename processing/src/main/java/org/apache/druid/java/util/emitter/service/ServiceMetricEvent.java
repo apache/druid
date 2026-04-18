@@ -93,7 +93,7 @@ public class ServiceMetricEvent implements Event
     return serviceDims.get(HOST);
   }
 
-  public ImmutableMap<String, String> getServiceDims()
+  public Map<String, String> getServiceDims()
   {
     return serviceDims;
   }
