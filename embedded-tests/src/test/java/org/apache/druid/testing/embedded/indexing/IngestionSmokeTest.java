@@ -297,7 +297,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    Assertions.assertEquals(Map.of("id", supervisorId, "restarted", "true"), startSupervisorResult);
 
     waitForSegmentsToBeQueryable(1);
 

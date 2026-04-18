@@ -287,7 +287,7 @@ public class OverlordClientImplTest
     );
 
     Assert.assertEquals(
-        Map.of("id", supervisorId, "restarted", true),
+        Map.of("id", supervisorId, "restarted", "true"),
         overlordClient.postSupervisor(supervisorSpec).get()
     );
   }
