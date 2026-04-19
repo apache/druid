@@ -46,6 +46,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.|< 1s|
+|`router/http/numRequestsQueued`|Total number of outbound HTTP requests currently queued across all destinations on the Router's HTTP client.|None.|0; sustained high values indicate backpressure toward downstream Brokers.|
 
 ### Broker
 
