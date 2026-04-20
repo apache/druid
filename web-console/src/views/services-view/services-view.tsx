@@ -38,7 +38,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
-import type { QueryWithContext } from '../../druid-models';
+import type { CoordinatorDynamicConfig, QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
@@ -170,6 +170,7 @@ interface ServiceResultRow {
 
 interface CloneStatusInfo {
   readonly sourceServer: string;
+  readonly targetServer: string;
   readonly state: string;
   readonly segmentLoadsRemaining: number;
   readonly segmentDropsRemaining: number;
@@ -282,10 +283,10 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
 
       const parts: string[] = [];
       if (serverModeInfo.decommissioningNodes.has(service)) {
-        parts.push('DECOMMISSIONING');
+        parts.push('Decommissioning');
       }
       if (serverModeInfo.turboLoadingNodes.has(service)) {
-        parts.push('TURBO SEGMENT LOADING');
+        parts.push('Turbo Loading');
       }
       if (loadQueueInfo) {
         parts.push(formatLoadQueueInfo(loadQueueInfo));
@@ -325,16 +326,56 @@ interface AggregatedDetailCellProps {
 
 function AggregatedDetailCell({ subRows }: AggregatedDetailCellProps) {
   const loadQueueInfoContext = useContext(LoadQueueInfoContext);
-  const originalRows = subRows.map(r => r._original);
-  if (!originalRows.some(r => r.service_type === 'historical')) return null;
+  const cloneStatusContext = useContext(CloneStatusContext);
+  const serverModeInfo = useContext(ServerModeContext);
+  const historicalRows = subRows.map(r => r._original).filter(r => r.service_type === 'historical');
+  if (!historicalRows.length) return null;
+
+  const parts: string[] = [];
+
+  const decommissioningCount = historicalRows.filter(r =>
+    serverModeInfo.decommissioningNodes.has(r.service),
+  ).length;
+  if (decommissioningCount) {
+    parts.push(`${decommissioningCount} decommissioning`);
+  }
+
+  const turboLoadingCount = historicalRows.filter(r =>
+    serverModeInfo.turboLoadingNodes.has(r.service),
+  ).length;
+  if (turboLoadingCount) {
+    parts.push(`${turboLoadingCount} turbo loading`);
+  }
 
   const loadQueueInfos: LoadQueueInfo[] = filterMap(
-    originalRows,
+    historicalRows,
     r => loadQueueInfoContext[r.service],
   );
+  if (loadQueueInfos.length) {
+    parts.push(formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos)));
+  }
 
-  if (!loadQueueInfos.length) return null;
-  return <>{formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))}</>;
+  let clonedCount = 0;
+  let cloningCount = 0;
+  let cloningErrorCount = 0;
+  for (const row of historicalRows) {
+    const cloneInfo = cloneStatusContext[row.service];
+    if (!cloneInfo) continue;
+    if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
+      cloningErrorCount++;
+    } else if (cloneInfo.segmentLoadsRemaining > 0 || cloneInfo.segmentDropsRemaining > 0) {
+      cloningCount++;
+    } else {
+      clonedCount++;
+    }
+  }
+  const cloneParts: string[] = [];
+  if (clonedCount) cloneParts.push(`${clonedCount} cloned`);
+  if (cloningCount) cloneParts.push(`${cloningCount} cloning`);
+  if (cloningErrorCount) cloneParts.push(pluralIfNeeded(cloningErrorCount, 'cloning error'));
+  if (cloneParts.length) parts.push(cloneParts.join(', '));
+
+  return <>{parts.join('; ') || null}</>;
 }
 
 function defaultDisplayFn(value: any): string {
@@ -486,15 +527,29 @@ ORDER BY
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             const [cloneStatusResp, configResp] = await Promise.all([
-              getApiArrayFromKey<CloneStatusInfo & { targetServer: string }>(
+              getApiArrayFromKey<CloneStatusInfo>(
                 '/druid/coordinator/v1/config/cloneStatus',
                 'cloneStatus',
                 signal,
-              ).catch(() => [] as (CloneStatusInfo & { targetServer: string })[]),
+              ).catch(() => {
+                AppToaster.show({
+                  icon: IconNames.ERROR,
+                  intent: Intent.DANGER,
+                  message: 'There was an error getting the clone status',
+                });
+                return [] as CloneStatusInfo[];
+              }),
               Api.instance
-                .get('/druid/coordinator/v1/config', { signal })
+                .get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', { signal })
                 .then(r => r.data)
-                .catch(() => null),
+                .catch(() => {
+                  AppToaster.show({
+                    icon: IconNames.ERROR,
+                    intent: Intent.DANGER,
+                    message: 'There was an error getting the coordinator dynamic config',
+                  });
+                  return null;
+                }),
             ]);
 
             const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
