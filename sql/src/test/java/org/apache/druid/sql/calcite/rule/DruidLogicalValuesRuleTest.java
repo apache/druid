@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -93,9 +94,13 @@ public class DruidLogicalValuesRuleTest
 
     private static RexLiteral makeLiteral(Comparable<?> val, SqlTypeName typeName, Class<?> javaType)
     {
+      final RelDataType type =
+          typeName == SqlTypeName.DECIMAL
+          ? DruidTypeSystem.TYPE_FACTORY.createSqlType(typeName, 10, 2)
+          : DruidTypeSystem.TYPE_FACTORY.createSqlType(typeName);
       return (RexLiteral) new RexBuilder(DruidTypeSystem.TYPE_FACTORY).makeLiteral(
           typeName == SqlTypeName.DECIMAL && val != null ? new BigDecimal(String.valueOf(val)) : val,
-          DruidTypeSystem.TYPE_FACTORY.createSqlType(typeName),
+          type,
           false
       );
     }

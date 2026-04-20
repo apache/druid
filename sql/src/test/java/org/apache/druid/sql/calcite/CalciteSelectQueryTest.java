@@ -2171,7 +2171,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                             dimensions(
                                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                                         .setDimFilter(
-                                            range("m1", ColumnType.DOUBLE, null, -1.0, false, true))
+                                            range("m1", ColumnType.FLOAT, null, -1.0, false, true))
                                         .build())
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
@@ -2210,7 +2210,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                             dimensions(
                                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                                         .setDimFilter(
-                                            range("m1", ColumnType.DOUBLE, null, 111.0, false, true))
+                                            range("m1", ColumnType.FLOAT, null, 111.0, false, true))
                                         .build())
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
@@ -2387,12 +2387,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSqlToRelInConversion()
   {
-    assertEquals(
-        "1.37.0",
-        RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
-    );
-
     testBuilder()
         .sql(
             "SELECT channel FROM wikipedia\n"
@@ -2411,16 +2405,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRejectHavingWithWindowExpression()
   {
-    assertEquals(
-        "1.37.0",
-        RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6473 is fixed and remove:\n * this assertion\n * DruidSqlValidator#validateHavingClause"
-    );
-
     testQueryThrows(
         "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
         DruidException.class,
-        invalidSqlContains("Window functions are not allowed in HAVING")
+        invalidSqlContains("not permitted in the HAVING clause")
     );
   }
 }

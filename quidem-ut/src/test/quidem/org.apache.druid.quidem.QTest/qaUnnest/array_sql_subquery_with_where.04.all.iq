@@ -158,8 +158,14 @@ WHERE s_int IN
     (SELECT col
      FROM (
            VALUES(0),(999)) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A1_B32_C3
@@ -185,8 +191,14 @@ FROM
        (SELECT col
         FROM (
               VALUES(0),(999)) AS t(col)));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A1_B32_C5
@@ -238,8 +250,14 @@ WHERE s_int IN
     (SELECT col
      FROM (
            VALUES(0),(999)) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A1_B32_C9
@@ -264,8 +282,14 @@ WHERE s_int IN
     (SELECT col
      FROM (
            VALUES(0),(999)) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A1_B33_C1

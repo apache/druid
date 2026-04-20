@@ -2195,6 +2195,17 @@ public interface Function extends NamedFunction
       validationHelperCheckMinArgumentCount(args, 2);
     }
 
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // Only the WHEN args must be scalars. The THEN and ELSE args can be arrays.
+      final ImmutableSet.Builder<Expr> conditions = ImmutableSet.builder();
+      for (int i = 0; i + 1 < args.size(); i += 2) {
+        conditions.add(args.get(i));
+      }
+      return conditions.build();
+    }
+
     @Nullable
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
