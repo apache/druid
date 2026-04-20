@@ -535,9 +535,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 }
               } else {
                 final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
+                final Query<?> query = queryWithMetrics.getQuery();
                 // report accumulated metrics
                 for (Map.Entry<String, SegmentMetrics> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
                   queryMetrics.segment(segmentAndMetrics.getKey());
+                  // Raw cast is safe: queryType() only calls query.getType(), defined on base Query interface.
+                  //noinspection rawtypes
+                  ((QueryMetrics) queryMetrics).queryType(query);
 
                   for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : METRICS_TO_REPORT.entrySet()) {
                     final String metricName = reportMetric.getKey();
