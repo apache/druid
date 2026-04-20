@@ -337,14 +337,14 @@ function AggregatedDetailCell({ subRows }: AggregatedDetailCellProps) {
     serverModeInfo.decommissioningNodes.has(r.service),
   ).length;
   if (decommissioningCount) {
-    parts.push(`${decommissioningCount} decommissioning`);
+    parts.push(`${decommissioningCount} Decommissioning`);
   }
 
   const turboLoadingCount = historicalRows.filter(r =>
     serverModeInfo.turboLoadingNodes.has(r.service),
   ).length;
   if (turboLoadingCount) {
-    parts.push(`${turboLoadingCount} turbo loading`);
+    parts.push(`${turboLoadingCount} Turbo Loading`);
   }
 
   const loadQueueInfos: LoadQueueInfo[] = filterMap(
@@ -535,7 +535,7 @@ ORDER BY
                 AppToaster.show({
                   icon: IconNames.ERROR,
                   intent: Intent.DANGER,
-                  message: 'There was an error getting the clone status',
+                  message: 'There was an error getting the clone status map',
                 });
                 return [] as CloneStatusInfo[];
               }),
