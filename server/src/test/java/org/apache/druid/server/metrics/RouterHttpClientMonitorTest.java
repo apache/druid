@@ -69,7 +69,9 @@ public class RouterHttpClientMonitorTest
   @Test
   public void testMultipleDestinationsQueueCountSummed()
   {
-    Mockito.when(httpClient.getDestinations()).thenReturn(Arrays.asList(mockDest(3), mockDest(5)));
+    HttpDestination dest1 = mockDest(3);
+    HttpDestination dest2 = mockDest(5);
+    Mockito.when(httpClient.getDestinations()).thenReturn(Arrays.asList(dest1, dest2));
     final StubServiceEmitter emitter = new StubServiceEmitter("router", "localhost");
     monitor.doMonitor(emitter);
 
@@ -81,7 +83,8 @@ public class RouterHttpClientMonitorTest
   public void testNonHttpDestinationIsSkipped()
   {
     Destination plainDest = Mockito.mock(Destination.class);
-    Mockito.when(httpClient.getDestinations()).thenReturn(Arrays.asList(plainDest, mockDest(4)));
+    HttpDestination httpDest = mockDest(4);
+    Mockito.when(httpClient.getDestinations()).thenReturn(Arrays.asList(plainDest, httpDest));
     final StubServiceEmitter emitter = new StubServiceEmitter("router", "localhost");
     monitor.doMonitor(emitter);
 
