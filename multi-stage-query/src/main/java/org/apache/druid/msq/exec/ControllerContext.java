@@ -29,6 +29,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
@@ -123,4 +124,15 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
+
+  /**
+   * Maximum number of workers for non-leaf stages.
+   */
+  int maxNonLeafWorkerCount();
+
+  /**
+   * Target number of partitions per worker for shuffle stages. Used at runtime to adjust
+   * shuffle specs that have {@link ShuffleSpec#isAdjustable()} set to true.
+   */
+  int targetPartitionsPerWorker();
 }

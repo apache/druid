@@ -29,25 +29,20 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.column.ColumnType;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class DimFilterHavingSpecTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSimple()
   {
@@ -61,8 +56,8 @@ public class DimFilterHavingSpecTest
                     .build()
     );
 
-    Assert.assertTrue(havingSpec.eval(ResultRow.of("bar")));
-    Assert.assertFalse(havingSpec.eval(ResultRow.of("baz")));
+    Assertions.assertTrue(havingSpec.eval(ResultRow.of("bar")));
+    Assertions.assertFalse(havingSpec.eval(ResultRow.of("baz")));
   }
 
   @Test
@@ -78,12 +73,13 @@ public class DimFilterHavingSpecTest
                     .build()
     );
 
-    Assert.assertTrue(havingSpec.eval(ResultRow.of(1L)));
-    Assert.assertFalse(havingSpec.eval(ResultRow.of(2L)));
+    Assertions.assertTrue(havingSpec.eval(ResultRow.of(1L)));
+    Assertions.assertFalse(havingSpec.eval(ResultRow.of(2L)));
   }
 
-  @Test(timeout = 60_000L)
-  @Ignore // Doesn't always pass. The check in "eval" is best effort and not guaranteed to detect concurrent usage.
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Disabled("Doesn't always pass. The check in \"eval\" is best effort and not guaranteed to detect concurrent usage.")
   public void testConcurrentUsage() throws Exception
   {
     final ExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "DimFilterHavingSpecTest-%d"));
@@ -104,23 +100,14 @@ public class DimFilterHavingSpecTest
       );
     }
 
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.<IllegalStateException>instanceOf(IllegalStateException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("concurrent 'eval' calls not permitted"))
-    );
-
-    try {
+    ExecutionException ex = Assertions.assertThrows(ExecutionException.class, () -> {
       for (Future<?> future : futures) {
         future.get();
       }
-    }
-    finally {
-      exec.shutdownNow();
-    }
-
-    // Not reached
-    Assert.assertTrue(false);
+    });
+    exec.shutdownNow();
+    Assertions.assertInstanceOf(IllegalStateException.class, ex.getCause());
+    Assertions.assertTrue(ex.getCause().getMessage().contains("concurrent 'eval' calls not permitted"));
   }
 
   @Test
@@ -128,7 +115,7 @@ public class DimFilterHavingSpecTest
   {
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(new SelectorDimFilter("foo", "1", null), false);
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         havingSpec,
         objectMapper.readValue(objectMapper.writeValueAsBytes(havingSpec), HavingSpec.class)
     );

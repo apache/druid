@@ -297,7 +297,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    validateSupervisorUpdateResponse(startSupervisorResult, supervisorId);
 
     waitForSegmentsToBeQueryable(1);
 
@@ -415,6 +415,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/broker")
     );
+  }
+
+  protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
+  {
+    Assertions.assertEquals(Map.of("id", supervisorId, "restarted", "true"), startSupervisorResult);
   }
 
   protected void waitForNextCoordinatorCacheSync()

@@ -88,15 +88,18 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
-    this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+    boolean isAutoScalerAvailable = autoScalerConfig != null;
+    this.autoScalerEnabled = isAutoScalerAvailable && autoScalerConfig.getEnableTaskAutoScaler();
     if (autoScalerEnabled) {
       // Priority: taskCountStart > taskCount > taskCountMin
       this.taskCount = Configs.valueOrDefault(
           autoScalerConfig.getTaskCountStart(),
           Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
       );
+    } else if (isAutoScalerAvailable) {
+      this.taskCount = Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin());
     } else {
-      this.taskCount = taskCount != null ? taskCount : 1;
+      this.taskCount = Configs.valueOrDefault(taskCount, 1);
     }
     Preconditions.checkArgument(stopTaskCount == null || stopTaskCount > 0,
                                 "stopTaskCount must be greater than 0");

@@ -35,6 +35,7 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
@@ -405,10 +406,10 @@ public class Projections
   )
   {
     // check to see if we have an equivalent virtual column defined in the projection, if so we can
-    final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(
-        queryCursorBuildSpec.getVirtualColumns(),
-        queryVirtualColumn
-    );
+    final VirtualColumns.Node queryNode =
+        queryCursorBuildSpec.getVirtualColumns().getNode(queryVirtualColumn.getOutputName());
+    final VirtualColumn projectionEquivalent =
+        queryNode != null ? projection.getVirtualColumns().findEquivalent(queryNode) : null;
     if (projectionEquivalent != null) {
       final String remapColumnName;
       if (Objects.equals(projectionEquivalent.getOutputName(), projection.getTimeColumnName())) {

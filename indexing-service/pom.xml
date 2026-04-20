@@ -278,6 +278,11 @@
             <version>2.48.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mozilla</groupId>
+            <artifactId>rhino-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

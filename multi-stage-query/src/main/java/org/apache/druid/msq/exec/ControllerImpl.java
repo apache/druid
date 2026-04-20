@@ -728,7 +728,7 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getContext();
 
-    final QueryDefinition queryDef;
+    QueryDefinition queryDef;
     if (legacyQuery != null) {
       QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(
           querySpec,
@@ -762,15 +762,21 @@ public class ControllerImpl implements Controller
       }
     }
 
-    QueryValidator.validateQueryDef(queryDef);
-    queryDefRef.set(queryDef);
-
     workerManager = context.newWorkerManager(
         context.queryId(),
         querySpec,
         queryKernelConfig,
         getWorkerFailureListener()
     );
+
+    queryDef = queryDef.withRuntimeBounds(
+        workerManager.getMaxWorkerCount(),
+        context.maxNonLeafWorkerCount(),
+        context.targetPartitionsPerWorker()
+    );
+
+    QueryValidator.validateQueryDef(queryDef);
+    queryDefRef.set(queryDef);
 
     if (queryKernelConfig.isFaultTolerant() && !(workerManager instanceof RetryCapableWorkerManager)) {
       // Not expected to happen, since all WorkerManager impls are currently retry-capable. Defensive check

@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.segment.VirtualColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,7 +37,7 @@ public class BuildingDimensionRangeShardSpecTest
   @Test
   public void testConvert()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DimensionRangeShardSpec(
             Arrays.asList("dim1", "dim2"),
             VirtualColumns.EMPTY,
@@ -59,7 +59,7 @@ public class BuildingDimensionRangeShardSpecTest
   @Test
   public void testConvert_withSingleDimension()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new SingleDimensionShardSpec("dim", "start", "end", 5, 10),
         new BuildingDimensionRangeShardSpec(
             1,
@@ -74,7 +74,7 @@ public class BuildingDimensionRangeShardSpecTest
   @Test
   public void testCreateChunk()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
         new BuildingDimensionRangeShardSpec(
             1,
@@ -103,10 +103,10 @@ public class BuildingDimensionRangeShardSpecTest
     );
     final String json = mapper.writeValueAsString(original);
     ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
-    Assert.assertEquals(ShardSpec.Type.BUILDING_RANGE, shardSpec.getType());
+    Assertions.assertEquals(ShardSpec.Type.BUILDING_RANGE, shardSpec.getType());
 
     final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) shardSpec;
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   @Test

@@ -111,8 +111,8 @@
       <scope>runtime</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-bundle</artifactId>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

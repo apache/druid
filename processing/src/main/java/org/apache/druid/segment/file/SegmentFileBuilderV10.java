@@ -181,16 +181,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       final FileChannel channel = closer.register(outputStream.getChannel());
       final ByteBuffer intBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
 
-      outputStream.write(new byte[]{IndexIO.V10_VERSION, metadataCompression.getId()});
-      // write uncompressed metadata length
-      intBuffer.putInt(metadataBytes.length);
-      intBuffer.flip();
-      outputStream.write(intBuffer.array());
-
-      if (CompressionStrategy.NONE == metadataCompression) {
-        // no compression, just write the plain metadata bytes
-        outputStream.write(metadataBytes);
-      } else {
+      // compress the data if specified, however we throw it out if compression is larger than uncompressed
+      final ByteBuffer compressed;
+      if (CompressionStrategy.NONE != metadataCompression) {
         // compress the data using the strategy, write the compressed length, then the compressed blob
         final CompressionStrategy.Compressor compressor = metadataCompression.getCompressor();
         final ByteBuffer inBuffer = compressor.allocateInBuffer(metadataBytes.length, closer)
@@ -200,8 +193,25 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
         final ByteBuffer outBuffer = compressor.allocateOutBuffer(metadataBytes.length, closer)
                                                .order(ByteOrder.nativeOrder());
-        final ByteBuffer compressed = compressor.compress(inBuffer, outBuffer);
+        compressed = compressor.compress(inBuffer, outBuffer);
+      } else {
+        compressed = null;
+      }
+      final boolean shouldCompress = compressed != null && (4 + compressed.remaining()) < metadataBytes.length;
 
+      outputStream.write(new byte[]{
+          IndexIO.V10_VERSION,
+          shouldCompress ? metadataCompression.getId() : CompressionStrategy.NONE.getId()
+      });
+      // write uncompressed metadata length
+      intBuffer.putInt(metadataBytes.length);
+      intBuffer.flip();
+      outputStream.write(intBuffer.array());
+
+      if (CompressionStrategy.NONE == metadataCompression || !shouldCompress) {
+        // no compression, just write the plain metadata bytes
+        outputStream.write(metadataBytes);
+      } else {
         // write compression length
         intBuffer.position(0);
         intBuffer.putInt(compressed.remaining());

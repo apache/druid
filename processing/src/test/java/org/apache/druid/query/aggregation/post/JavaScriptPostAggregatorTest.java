@@ -28,10 +28,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,8 +37,6 @@ import java.util.Map;
 public class JavaScriptPostAggregatorTest
 {
   private static final String ABS_PERCENT_FUNCTION = "function(delta, total) { return 100 * Math.abs(delta) / total; }";
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testCompute()
@@ -58,7 +54,7 @@ public class JavaScriptPostAggregatorTest
         JavaScriptConfig.getEnabledInstance()
     );
 
-    Assert.assertEquals(10.0, javaScriptPostAggregator.compute(metricValues));
+    Assertions.assertEquals(10.0, javaScriptPostAggregator.compute(metricValues));
   }
 
   @Test
@@ -71,9 +67,11 @@ public class JavaScriptPostAggregatorTest
         new JavaScriptConfig(false)
     );
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    aggregator.compute(new HashMap<>());
+    final IllegalStateException e = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> aggregator.compute(new HashMap<>())
+    );
+    Assertions.assertTrue(e.getMessage().contains("JavaScript is disabled"));
   }
 
   @Test
@@ -98,7 +96,7 @@ public class JavaScriptPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("total", ColumnType.LONG)

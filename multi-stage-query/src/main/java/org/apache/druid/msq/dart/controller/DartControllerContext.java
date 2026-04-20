@@ -236,4 +236,22 @@ public class DartControllerContext implements ControllerContext
   {
     throw DruidException.defensive("TaskLockType is not used with class[%s]", getClass().getName());
   }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return context.getInt(
+        DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
+        DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
+    );
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    return MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+        context,
+        DEFAULT_TARGET_PARTITIONS_PER_WORKER
+    );
+  }
 }

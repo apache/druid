@@ -22,8 +22,8 @@ package org.apache.druid.indexer;
 
 import com.google.common.net.HostAndPort;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -34,13 +34,13 @@ public class TaskLocationTest
   @SuppressWarnings("HttpUrlsUsage")
   public void testMakeURL() throws MalformedURLException
   {
-    Assert.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, 0, null).makeURL("/foo"));
-    Assert.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, -1, null).makeURL("/foo"));
-    Assert.assertEquals(new URL("https://abc:443/foo"), new TaskLocation("abc", 80, 443, null).makeURL("/foo"));
-    Assert.assertThrows(
-        "URL that does not start with '/'",
+    Assertions.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, 0, null).makeURL("/foo"));
+    Assertions.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, -1, null).makeURL("/foo"));
+    Assertions.assertEquals(new URL("https://abc:443/foo"), new TaskLocation("abc", 80, 443, null).makeURL("/foo"));
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new TaskLocation("abc", 80, 443, null).makeURL("foo")
+        () -> new TaskLocation("abc", 80, 443, null).makeURL("foo"),
+        "URL that does not start with '/'"
     );
   }
 
@@ -48,27 +48,27 @@ public class TaskLocationTest
   public void testTlsForPeonJobs()
   {
     TaskLocation noTls = TaskLocation.create("foo", 1, 2, false);
-    Assert.assertEquals(-1, noTls.getTlsPort());
-    Assert.assertEquals(1, noTls.getPort());
+    Assertions.assertEquals(-1, noTls.getTlsPort());
+    Assertions.assertEquals(1, noTls.getPort());
     TaskLocation tls = TaskLocation.create("foo", 1, 2, true);
-    Assert.assertEquals(-1, tls.getPort());
-    Assert.assertEquals(2, tls.getTlsPort());
+    Assertions.assertEquals(-1, tls.getPort());
+    Assertions.assertEquals(2, tls.getTlsPort());
   }
 
   @Test
   public void testDefaultK8sJobName()
   {
     TaskLocation noK8sJobName = TaskLocation.create("foo", 1, 2, false);
-    Assert.assertNull(noK8sJobName.getK8sPodName());
+    Assertions.assertNull(noK8sJobName.getK8sPodName());
     noK8sJobName = TaskLocation.create("foo", 1, 2);
-    Assert.assertNull(noK8sJobName.getK8sPodName());
+    Assertions.assertNull(noK8sJobName.getK8sPodName());
   }
 
   @Test
   public void testK8sJobNameSet()
   {
     TaskLocation k8sJobName = TaskLocation.create("foo", 1, 2, false, "job-name");
-    Assert.assertEquals("job-name", k8sJobName.getK8sPodName());
+    Assertions.assertEquals("job-name", k8sJobName.getK8sPodName());
   }
 
   @Test
@@ -81,41 +81,41 @@ public class TaskLocationTest
   public void testGetLocationWithK8sPodNameShouldReturnK8sPodName()
   {
     TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, false, "job-name");
-    Assert.assertEquals("job-name", taskLocation.getLocation());
+    Assertions.assertEquals("job-name", taskLocation.getLocation());
   }
 
   @Test
   public void testGetLocationWithK8sPodNameAndTlsShouldReturnK8sPodName()
   {
     TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, true, "job-name");
-    Assert.assertEquals("job-name", taskLocation.getLocation());
+    Assertions.assertEquals("job-name", taskLocation.getLocation());
   }
 
   @Test
   public void testGetLocationWithK8sPodNameAndNoHostShouldReturnK8sPodName()
   {
     TaskLocation taskLocation = TaskLocation.create(null, 1, 2, true, "job-name");
-    Assert.assertEquals("job-name", taskLocation.getLocation());
+    Assertions.assertEquals("job-name", taskLocation.getLocation());
   }
 
   @Test
   public void testGetLocationWithoutK8sPodNameAndHostShouldReturnNull()
   {
     TaskLocation taskLocation = TaskLocation.create(null, 1, 2, false);
-    Assert.assertNull(taskLocation.getLocation());
+    Assertions.assertNull(taskLocation.getLocation());
   }
 
   @Test
   public void testGetLocationWithoutK8sPodNameAndNoTlsPortShouldReturnLocation()
   {
     TaskLocation taskLocation = TaskLocation.create("foo", 1, -1, false);
-    Assert.assertEquals(HostAndPort.fromParts("foo", 1).toString(), taskLocation.getLocation());
+    Assertions.assertEquals(HostAndPort.fromParts("foo", 1).toString(), taskLocation.getLocation());
   }
 
   @Test
   public void testGetLocationWithoutK8sPodNameAndNonZeroTlsPortShouldReturnLocation()
   {
     TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, true);
-    Assert.assertEquals(HostAndPort.fromParts("foo", 2).toString(), taskLocation.getLocation());
+    Assertions.assertEquals(HostAndPort.fromParts("foo", 2).toString(), taskLocation.getLocation());
   }
 }

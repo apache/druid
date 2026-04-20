@@ -161,6 +161,17 @@ public class CompactionJobQueue
     final String supervisorId = supervisor.getSpec().getId();
     try {
       if (supervisor.shouldCreateJobs() && !activeSupervisors.contains(supervisorId)) {
+        final CompactionConfigValidationResult validationResult =
+            supervisor.getSpec().getSpec().validate(clusterCompactionConfig);
+        if (!validationResult.isValid()) {
+          log.warn(
+              "Skipping job creation for invalid supervisor[%s]: %s",
+              supervisorId,
+              validationResult.getReason()
+          );
+          return;
+        }
+
         // Queue fresh jobs
         final List<CompactionJob> jobs = supervisor.createJobs(source, jobParams);
         jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate()));

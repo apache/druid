@@ -116,7 +116,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
     public DartTestWorkerClient()
     {
-      super(workerMap, jsonMapper);
+      super(workerMap, jsonMapper, true);
     }
 
     @Override

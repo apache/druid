@@ -31,8 +31,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -79,7 +79,7 @@ public class DataSegmentsWithSchemasTest
 
     DataSegmentsWithSchemas deserialized = mapper.readValue(bytes, DataSegmentsWithSchemas.class);
 
-    Assert.assertEquals(deserialized, dataSegmentsWithSchemas);
+    Assertions.assertEquals(deserialized, dataSegmentsWithSchemas);
   }
 
   @Test
@@ -118,6 +118,6 @@ public class DataSegmentsWithSchemasTest
 
     DataSegmentsWithSchemas emptySegmentWithSchemas = new DataSegmentsWithSchemas(0);
 
-    Assert.assertNotEquals(dataSegmentsWithSchemas, emptySegmentWithSchemas);
+    Assertions.assertNotEquals(dataSegmentsWithSchemas, emptySegmentWithSchemas);
   }
 }
