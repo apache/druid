@@ -33,11 +33,11 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Properties;
@@ -56,14 +56,14 @@ public class BuiltInTypesModuleTest
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
   }
   
-  @After
+  @AfterEach
   public void teardownEach()
   {
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
     BuiltInTypesModule.setMaxStringLength(null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown()
   {
     if (DEFAULT_HANDLER_PROVIDER == null) {
