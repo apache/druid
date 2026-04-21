@@ -532,6 +532,9 @@
 
     <resources>
       <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
         <directory>
           ${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib
         </directory>
