@@ -543,6 +543,9 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
+        <includes>
+          <include>loggingEmitterAllowedMetrics.json</include>
+        </includes>
       </resource>
       <resource>
         <directory>
