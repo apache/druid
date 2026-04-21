@@ -219,8 +219,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   @Test
   public void testEstimateWrongArgTypes()
   {
-    Expr expr = Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE);
-    IAE e = Assertions.assertThrows(IAE.class, () -> expr.eval(inputBindings));
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE));
     Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_estimate] requires a hyper-log-log collector as input"));
   }
 
