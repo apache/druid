@@ -259,6 +259,12 @@ public class IndexerControllerContext implements ControllerContext
     );
   }
 
+  @Override
+  public boolean isDebug()
+  {
+    return taskQuerySpecContext.isDebug();
+  }
+
   /**
    * Helper method for {@link #queryKernelConfig(MSQSpec)}. Also used in tests.
    */

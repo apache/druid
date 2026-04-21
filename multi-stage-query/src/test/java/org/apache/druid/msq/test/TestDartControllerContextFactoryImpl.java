@@ -108,6 +108,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       {
         serviceEmitter.emit(metricBuilder.build("controller", queryId()));
       }
+
+      @Override
+      public boolean isDebug()
+      {
+        return true;
+      }
     };
   }
 
