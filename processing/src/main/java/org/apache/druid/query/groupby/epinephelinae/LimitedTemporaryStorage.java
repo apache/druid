@@ -56,6 +56,7 @@ public class LimitedTemporaryStorage implements Closeable
 
   private final AtomicLong bytesUsed = new AtomicLong();
   private final Set<File> files = new TreeSet<>();
+  private int nextFileIndex = 0;
 
   private volatile boolean closed = false;
 
@@ -105,7 +106,7 @@ public class LimitedTemporaryStorage implements Closeable
         createdStorageDirectory = true;
       }
 
-      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", files.size()));
+      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", nextFileIndex++));
       final EnumSet<StandardOpenOption> openOptions = EnumSet.of(
           StandardOpenOption.CREATE_NEW,
           StandardOpenOption.WRITE

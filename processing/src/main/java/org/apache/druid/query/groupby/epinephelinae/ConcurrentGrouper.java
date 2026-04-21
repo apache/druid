@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -452,7 +453,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);
-      throw new RuntimeException(e.getCause());
+      Throwable cause = e.getCause();
+      Throwables.throwIfUnchecked(cause);
+      throw new RuntimeException(cause);
     }
   }
 
