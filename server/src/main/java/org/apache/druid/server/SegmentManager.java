@@ -36,6 +36,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.indexing.TimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
@@ -70,12 +71,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
+  private final TimelineConfig timelineConfig;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
+    this(cacheManager, new TimelineConfig(false));
+  }
+
+
+  @Inject
+  public SegmentManager(SegmentCacheManager cacheManager, TimelineConfig timelineConfig)
+  {
     this.cacheManager = cacheManager;
+    this.timelineConfig = timelineConfig;
   }
 
   @VisibleForTesting
@@ -290,7 +300,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(timelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -465,14 +475,19 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    @Inject
+    public DataSourceState(TimelineConfig timelineConfig)
+    {
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, timelineConfig.isFastIntervalSearch());
+    }
 
     private void addSegment(DataSegment segment, long numOfRows)
     {

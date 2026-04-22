@@ -95,56 +95,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
   private final boolean skipObjectsWithNoData;
 
-  // 0 Legacy functionality
-  // 1 Use IntervalTree only for basic segment timeline
-  // 2 Use IntervalTree for querying segments as well
-  private enum IntervalTreeMatchMode
-  {
-    NONE,
-    ENTRIES_ONLY(Capability.ENTRIES),
-    ALL(Capability.ENTRIES, Capability.QUERY);
-
-    private enum Capability
-    {
-      ENTRIES, QUERY
-    }
-
-    final Set<Capability> capabilities;
-
-    IntervalTreeMatchMode(Capability... capabilities)
-    {
-      this.capabilities = Set.of(capabilities);
-    }
-
-    public boolean isEnabled(Capability capability)
-    {
-      return capabilities.contains(capability);
-    }
-  }
-
-  private static IntervalTreeMatchMode intervalTreeMatchMode = IntervalTreeMatchMode.NONE;
-
-  static {
-    String mode = System.getProperty("experimental.timeline.intervalTreeMatchMode");
-    if (mode != null) {
-      try {
-        intervalTreeMatchMode = IntervalTreeMatchMode.valueOf(mode);
-      }
-      catch (IllegalArgumentException e) {
-        logger.warn(e, "Unrecognized interval tree match mode specified [%s]", mode);
-      }
-    }
-  }
-
-  {
-    if (intervalTreeMatchMode.isEnabled(IntervalTreeMatchMode.Capability.QUERY)) {
-      this.completePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
-      this.incompletePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
-    } else {
-      this.completePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
-      this.incompletePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
-    }
-  }
+  // Set this to true to use an interval tree index for the segment intervals
+  private final boolean fastIntervalSearch;
 
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
@@ -153,8 +105,21 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData)
   {
+    this(versionComparator, skipObjectsWithNoData, false);
+  }
+
+  public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData, boolean fastIntervalSearch)
+  {
     this.versionComparator = versionComparator;
     this.skipObjectsWithNoData = skipObjectsWithNoData;
+    this.fastIntervalSearch = fastIntervalSearch;
+    if (fastIntervalSearch) {
+      this.completePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+      this.incompletePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+    } else {
+      this.completePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
+      this.incompletePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
+    }
   }
 
   public static <VersionType, ObjectType extends Overshadowable<ObjectType>> Iterable<ObjectType> getAllObjects(
@@ -260,7 +225,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
           TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<>(versionComparator);
           versionEntry.put(version, entry);
           allTimelineEntries.put(interval, versionEntry);
-          if (intervalTreeMatchMode.isEnabled(IntervalTreeMatchMode.Capability.ENTRIES)) {
+          if (fastIntervalSearch) {
             allTimeIntervals.put(interval, versionEntry);
           }
           numObjects.incrementAndGet();
@@ -322,7 +287,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         versionEntries.remove(version);
         if (versionEntries.isEmpty()) {
           allTimelineEntries.remove(interval);
-          if (intervalTreeMatchMode.isEnabled(IntervalTreeMatchMode.Capability.ENTRIES)) {
+          if (fastIntervalSearch) {
             allTimeIntervals.remove(interval);
           }
         }
@@ -358,7 +323,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       // If an exact interval match is not found search for an encapsulating interval
 
       // If tree search is enabled use it else revert to checking all intervals
-      if (intervalTreeMatchMode.isEnabled(IntervalTreeMatchMode.Capability.ENTRIES)) {
+      if (fastIntervalSearch) {
         Map<Interval, TreeMap<VersionType, TimelineEntry>> possibleMatches = allTimeIntervals.findEncompassing(interval);
         for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : possibleMatches.entrySet()) {
           Interval eninterval = entry.getKey();
@@ -830,7 +795,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       timeline = completePartitionsTimeline;
     }
 
-    if (intervalTreeMatchMode.isEnabled(IntervalTreeMatchMode.Capability.QUERY)) {
+    if (fastIntervalSearch) {
       IntervalTree<TimelineEntry> tree = (IntervalTree<TimelineEntry>) timeline;
       tree.forEachMatching(timelineInterval -> timelineInterval.overlaps(interval),
           (timelineInterval, val) -> {
