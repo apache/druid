@@ -2683,6 +2683,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         true,
         null,
         null,
+        null,
+        null,
         null
     );
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig, null);
@@ -2758,6 +2760,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         true,
+        null,
+        null,
         null,
         null,
         0.4
