@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -177,7 +178,7 @@ public class KubernetesPeonJvmConfigDockerTest extends BaseKubernetesTaskRunnerD
     Exception lastException = null;
     while (System.currentTimeMillis() < deadline) {
       try {
-        final URL url = new URL("http://localhost:" + localPort + "/status/properties");
+        final URL url = URI.create("http://localhost:" + localPort + "/status/properties").toURL();
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(2_000);
         conn.setReadTimeout(2_000);
