@@ -483,7 +483,7 @@ template:
 
 Any runtime property or JVM config used by the peon process can also be passed. E.G. below is an example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
 
-The peon container startup script (`peon.sh`) reads `jvm.config` from the directory mounted as `nodetype-config-volume` and prepends its contents to the peon's `JAVA_OPTS` before launching the JVM. If an option is set both in `jvm.config` and in `JAVA_OPTS` (for example via `druid.indexer.runner.javaOptsArray` when using the `overlordSingleContainer` or `overlordMultiContainer` adapters, which inject `JAVA_OPTS` as a container env var), the `JAVA_OPTS` value takes precedence under OpenJDK.
+The peon container startup script (`peon.sh`) reads `jvm.config` from the directory mounted as `nodetype-config-volume` and prepends its contents to the peon's `JAVA_OPTS` before launching the JVM. If an option is set both in `jvm.config` and in `JAVA_OPTS` (for example via `druid.indexer.runner.javaOptsArray` when using the `overlordSingleContainer` or `overlordMultiContainer` adapters, which inject `JAVA_OPTS` as a container environment variable), the `JAVA_OPTS` value takes precedence under OpenJDK.
 
 <details>
 <summary>Example ConfigMap</summary>
