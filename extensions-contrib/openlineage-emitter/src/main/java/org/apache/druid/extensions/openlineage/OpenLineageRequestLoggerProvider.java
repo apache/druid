@@ -68,14 +68,27 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private Set<String> excludedNativeQueryTypes = Set.of(
       "segmentMetadata",
-      "dataSourceMetadata",
-      "timeBoundary"
+      "dataSourceMetadata"
   );
+
+  @JsonProperty
+  private int emitQueueCapacity = OpenLineageRequestLogger.DEFAULT_EMIT_QUEUE_CAPACITY;
+
+  @JsonProperty
+  private int emitThreadCount = OpenLineageRequestLogger.DEFAULT_EMIT_THREAD_COUNT;
 
   @Override
   public RequestLogger get()
   {
     log.debug("Creating OpenLineageRequestLogger [namespace=%s, transport=%s]", namespace, transportType);
-    return new OpenLineageRequestLogger(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes);
+    return new OpenLineageRequestLogger(
+        jsonMapper,
+        namespace,
+        transportType,
+        transportUrl,
+        excludedNativeQueryTypes,
+        emitQueueCapacity,
+        emitThreadCount
+    );
   }
 }

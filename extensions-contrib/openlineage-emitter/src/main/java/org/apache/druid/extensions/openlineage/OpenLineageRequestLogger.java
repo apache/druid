@@ -64,8 +64,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * OpenLineage RunEvents for completed Druid queries.
@@ -96,8 +98,11 @@ public class OpenLineageRequestLogger implements RequestLogger
       .withQuotedCasing(Casing.UNCHANGED)
       .withQuoting(Quoting.DOUBLE_QUOTE);
 
-  private static final int EMIT_QUEUE_CAPACITY = 1000;
-  private static final int EMIT_THREAD_COUNT = 1;
+  static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
+  static final int DEFAULT_EMIT_THREAD_COUNT = 1;
+  private static final int DISCARD_WARNING_INTERVAL = 1000;
+
+  static final String UNKNOWN_QUERY_ID = "unknown-query-id";
 
   private final ObjectMapper jsonMapper;
   private final String namespace;
@@ -109,6 +114,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   private final HttpClient httpClient;
   @Nullable
   private final ExecutorService emitExecutor;
+  private final AtomicLong discardedEventCount = new AtomicLong(0);
 
   public OpenLineageRequestLogger(
       ObjectMapper jsonMapper,
@@ -118,7 +124,8 @@ public class OpenLineageRequestLogger implements RequestLogger
       Set<String> excludedNativeQueryTypes
   )
   {
-    this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes, null);
+    this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
+         DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT);
   }
 
   public OpenLineageRequestLogger(
@@ -127,6 +134,22 @@ public class OpenLineageRequestLogger implements RequestLogger
       OpenLineageRequestLoggerProvider.TransportType transportType,
       @Nullable String transportUrl,
       Set<String> excludedNativeQueryTypes,
+      int emitQueueCapacity,
+      int emitThreadCount
+  )
+  {
+    this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
+         emitQueueCapacity, emitThreadCount, null);
+  }
+
+  public OpenLineageRequestLogger(
+      ObjectMapper jsonMapper,
+      String namespace,
+      OpenLineageRequestLoggerProvider.TransportType transportType,
+      @Nullable String transportUrl,
+      Set<String> excludedNativeQueryTypes,
+      int emitQueueCapacity,
+      int emitThreadCount,
       @Nullable HttpClient httpClient
   )
   {
@@ -137,16 +160,16 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.excludedNativeQueryTypes = excludedNativeQueryTypes;
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
       this.httpClient = httpClient != null ? httpClient : HttpClientBuilder.create().build();
-      // Bounded queue: if the queue is full, silently drop the event rather than blocking
-      // the query thread. Uses Druid's Execs for daemon thread naming conventions.
+      // Bounded queue: if the queue is full, drop the event rather than blocking the query thread.
+      // A warning is logged on the first drop and every DISCARD_WARNING_INTERVAL drops thereafter.
       this.emitExecutor = new ThreadPoolExecutor(
-          EMIT_THREAD_COUNT,
-          EMIT_THREAD_COUNT,
+          emitThreadCount,
+          emitThreadCount,
           60L,
           TimeUnit.SECONDS,
-          new ArrayBlockingQueue<>(EMIT_QUEUE_CAPACITY),
+          new ArrayBlockingQueue<>(emitQueueCapacity),
           Execs.makeThreadFactory("OpenLineageEmitter-%d"),
-          new ThreadPoolExecutor.DiscardPolicy()
+          new DiscardWithWarningPolicy(discardedEventCount)
       );
     } else {
       this.httpClient = null;
@@ -216,7 +239,8 @@ public class OpenLineageRequestLogger implements RequestLogger
     List<String> inputs = new ArrayList<>(new LinkedHashSet<>(requestLogLine.getQuery().getDataSource().getTableNames()));
     String queryId = requestLogLine.getQuery().getId();
     if (queryId == null) {
-      queryId = UUID.randomUUID().toString();
+      log.debug("Native query reached OpenLineage logger without a query ID");
+      queryId = UNKNOWN_QUERY_ID;
     }
 
     emit(buildRunEvent(queryId, null, queryType, requestLogLine, inputs, null));
@@ -450,7 +474,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
         emitExecutor.submit(() -> emitHttp(json));
       } else {
-        log.info("OpenLineage event: %s", json);
+        log.debug("OpenLineage event: %s", json);
       }
     }
     catch (IOException e) {
@@ -480,7 +504,8 @@ public class OpenLineageRequestLogger implements RequestLogger
     if (id != null) {
       return id.toString();
     }
-    return UUID.randomUUID().toString();
+    log.debug("SQL query reached OpenLineage logger without a query ID");
+    return UNKNOWN_QUERY_ID;
   }
 
   private void putLongStat(ObjectNode node, String targetKey, Map<String, Object> stats, String... sourceKeys)
@@ -498,6 +523,29 @@ public class OpenLineageRequestLogger implements RequestLogger
   {
     String v = OpenLineageRequestLogger.class.getPackage().getImplementationVersion();
     return v != null ? v : "unknown";
+  }
+
+  /**
+   * Rejection handler that discards events when the emit queue is full, but logs a warning
+   * on the first drop and every {@link #DISCARD_WARNING_INTERVAL} drops thereafter.
+   */
+  private static class DiscardWithWarningPolicy implements RejectedExecutionHandler
+  {
+    private final AtomicLong discardedCount;
+
+    DiscardWithWarningPolicy(AtomicLong discardedCount)
+    {
+      this.discardedCount = discardedCount;
+    }
+
+    @Override
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+    {
+      long count = discardedCount.incrementAndGet();
+      if (count == 1 || count % DISCARD_WARNING_INTERVAL == 0) {
+        log.warn("OpenLineage emit queue full, discarded [%,d] events total", count);
+      }
+    }
   }
 
 }
