@@ -526,7 +526,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
 
           // 2) Make sure we wait for any pending completion tasks to finish.
-          // At this point there could be 2 generations of tasks: pending completion tasks (old generation), running tasks (current generation), and (after our scale) pending tasks (new generation).
+          // At this point there could be 3 generations of tasks: pending completion tasks (old generation), running tasks (current generation), and (after our scale) pending tasks (new generation).
           // We want to avoid killing any old generation tasks preemptively, as that might cause the current generation tasks' offsets to become invalid.
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             // There are expected to be pending tasks if this scaling is happening on task rollover
@@ -1461,6 +1461,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
+  }
+
+  @VisibleForTesting
+  void handleDynamicAllocationTasksNotice(
+      Callable<Integer> scaleAction,
+      Runnable onSuccessfulScale,
+      ServiceEmitter emitter
+  )
+  {
+    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter).handle();
   }
 
   private Runnable buildRunTask()
