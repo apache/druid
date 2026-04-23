@@ -397,8 +397,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    // Use taskCountMax=10 so both the scaler and the supervisor's bounds agree and multiple
+    // scale-out iterations have headroom before hitting max (which is what lets us observe the
+    // "Scale cooldown not elapsed yet" skip reason emitted by the supervisor on later iterations).
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true, 10)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -652,10 +655,41 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleInThresholdGreaterThanPartitions() throws InterruptedException
   {
+    // Verifies that when the operator misconfigures taskCountMin above partitionCount, the
+    // supervisor's partition-count ceiling brings both bounds down to partitionCount and any
+    // scale action settles at partitionCount.
+    final Map<String, Object> misconfiguredProps = getScaleInProperties();
+    misconfiguredProps.put("taskCountMax", 20);
+    misconfiguredProps.put("taskCountMin", 15);
+    final AutoScalerConfig misconfiguredAutoScalerConfig =
+        mapper.convertValue(misconfiguredProps, AutoScalerConfig.class);
+
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
+    // Use an ioConfig whose autoScalerConfig matches the test's intent (min=15, max=20) so the
+    // supervisor's bounds and the scaler's bounds agree.
+    EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        null,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        misconfiguredAutoScalerConfig,
+        LagAggregator.DEFAULT,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    }).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -671,33 +705,29 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
-    Map<String, Object> modifiedScaleInProps = getScaleInProperties();
-
-    modifiedScaleInProps.put("taskCountMax", 20);
-    modifiedScaleInProps.put("taskCountMin", 15);
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
         mapper.convertValue(
-            modifiedScaleInProps,
+            misconfiguredProps,
             LagBasedAutoScalerConfig.class
         ),
         spec,
         emitter
     );
 
-    // enable autoscaler so that taskcount config will be ignored and the init value of taskCount will use taskCountMin.
-    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    // Initial taskCount comes from the ioConfig's autoScalerConfig.taskCountMin (15) since
+    // taskCount was passed null in the ioConfig above.
+    Assert.assertEquals(15, (int) supervisor.getIoConfig().getTaskCount());
     supervisor.getIoConfig().setTaskCount(2);
 
-    // When
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
 
     Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
-    // Then
+    // Supervisor caps min/max at partitionCount=10, so the first scale settles at partitionCount.
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
 
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
@@ -1437,6 +1467,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
   private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)
   {
+    return getIOConfig(taskCount, scaleOut, 2);
+  }
+
+  private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut, int maxTaskCount)
+  {
     if (scaleOut) {
       return new SeekableStreamSupervisorIOConfig(
           "stream",
@@ -1450,7 +1485,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
+          mapper.convertValue(getScaleOutProperties(maxTaskCount), AutoScalerConfig.class),
           LagAggregator.DEFAULT,
           null,
           null,

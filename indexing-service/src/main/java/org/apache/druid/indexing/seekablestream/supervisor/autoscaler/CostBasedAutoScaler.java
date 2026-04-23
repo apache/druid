@@ -164,73 +164,47 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
+  /**
+   * Returns the task count the scaler wants to reach — the "optimal" count computed from current
+   * metrics, unclamped by the autoscaler's min/max bounds. The supervisor is responsible for
+   * clamping the return value to {@code [taskCountMin, taskCountMax]} and for deciding whether
+   * to actually scale.
+   * <p>
+   * Contract:
+   * <ul>
+   *   <li>Returns {@code -1} only for pathological cases (metrics unavailable / optimal cannot be
+   *       computed). This signals to the supervisor that there is no useful hint for operators.</li>
+   *   <li>Returns the current task count when scale-down is configured to happen on rollover only
+   *       and the optimal would otherwise be a scale-down — the scaler's "preferred" count in that
+   *       mode is to stay put.</li>
+   *   <li>Otherwise returns the optimal task count unchanged.</li>
+   * </ul>
+   */
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
-    int currentTaskCount = supervisor.getIoConfig().getTaskCount();
-
-    // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
-    // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
-    final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
-                                           || currentTaskCount > config.getTaskCountMax();
-    if (isTaskCountOutOfBounds) {
-      currentTaskCount = Math.min(config.getTaskCountMax(), Math.max(config.getTaskCountMin(), currentTaskCount));
+    if (optimalTaskCount <= 0) {
+      // computeOptimalTaskCount returns -1 for pathological metrics states; propagate it.
+      return -1;
     }
 
-    // Perform scale-up actions; scale-down actions only if configured.
-    final int taskCount;
+    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
 
-    // If task count is out of bounds, scale to the configured boundary
-    // regardless of optimal task count, to get back to a safe state.
-    if (isTaskCountOutOfBounds) {
-      taskCount = currentTaskCount;
-      log.info(
-          "Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
-          supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount
-      );
-    } else if (optimalTaskCount > currentTaskCount) {
-      taskCount = optimalTaskCount;
-      log.info(
-          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).",
-          supervisorId,
-          currentTaskCount,
-          taskCount
-      );
-    } else if (!config.isScaleDownOnTaskRolloverOnly()
-               && optimalTaskCount < currentTaskCount
-               && optimalTaskCount > 0) {
-      taskCount = optimalTaskCount;
-      log.info(
-          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).",
-          supervisorId,
-          currentTaskCount,
-          taskCount
-      );
-    } else {
-      taskCount = -1;
-      log.debug("No scaling required for supervisor[%s]", supervisorId);
-
-      // Emit metrics for scaling skip reasons; in case of min == max, signaling reaching
-      // max task count has bigger priority for the external observers / trackers
-      if (optimalTaskCount >= config.getTaskCountMax() || currentTaskCount == config.getTaskCountMax()) {
-        emitter.emit(getMetricBuilder()
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at max task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
-      } else if (optimalTaskCount == config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
-        emitter.emit(getMetricBuilder()
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at min task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
-      }
+    if (config.isScaleDownOnTaskRolloverOnly() && optimalTaskCount < currentTaskCount) {
+      // In rollover-only scale-down mode, the scaler's preferred count is the current count — it
+      // explicitly does not want a proactive scale-down here.
+      return currentTaskCount;
     }
-    return taskCount;
+
+    log.info(
+        "CostBasedAutoScaler for supervisor[%s] wants taskCount[%d] (current[%d]).",
+        supervisorId,
+        optimalTaskCount,
+        currentTaskCount
+    );
+    return optimalTaskCount;
   }
 
   public CostBasedAutoScalerConfig getConfig()
