@@ -142,6 +142,13 @@ public abstract class SeekableStreamSupervisorTestBase
       return null;
     }
 
+    @Nullable
+    @Override
+    protected Map<String, Long> getReplicaLag()
+    {
+      return null;
+    }
+
     @Override
     protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
         int groupId,
