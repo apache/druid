@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.worker;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -83,6 +84,7 @@ import java.util.stream.Collectors;
  */
 public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 {
+  public static final String STATE_FILE = "workerState.json";
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
   private final ObjectMapper jsonMapper;
@@ -105,6 +107,11 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
+  /**
+   * Whether this worker is disabled (i.e., not accepting new tasks). Persisted to
+   * {@link #STATE_FILE} under {@link #storageDir} so the flag survives
+   * process restarts.
+   */
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
   private final OverlordClient overlordClient;
@@ -138,6 +145,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
       try {
         log.debug("Starting...");
         cleanupAndMakeTmpTaskDir();
+        loadStateFile();
         registerLocationListener();
         restoreRestorableTasks();
         initAssignedTasks();
@@ -340,6 +348,51 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return new File(storageDir, "assignedTasks");
   }
 
+  /**
+   * Full path to {@link #STATE_FILE}.
+   */
+  public File getStateFile()
+  {
+    return new File(storageDir, STATE_FILE);
+  }
+
+  /**
+   * Read {@link #STATE_FILE} and initialize {@link #disabled}.
+   */
+  private void loadStateFile()
+  {
+    final File stateFile = getStateFile();
+    if (stateFile.exists()) {
+      try {
+        final WorkerState state = jsonMapper.readValue(stateFile, WorkerState.class);
+        disabled.set(state.disabled());
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to read disabled state from[%s]. Starting as enabled.", stateFile);
+      }
+    }
+  }
+
+  /**
+   * Write {@link #disabled} to {@link #STATE_FILE}.
+   */
+  private void writeStateFile()
+  {
+    final File stateFile = getStateFile();
+    try {
+      FileUtils.writeAtomically(
+          stateFile,
+          out -> {
+            jsonMapper.writeValue(out, new WorkerState(disabled.get()));
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to persist state file[%s].", stateFile);
+    }
+  }
+
   private void initAssignedTasks() throws IOException
   {
     File assignedTaskDir = getAssignedTaskDir();
@@ -517,18 +570,20 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   public void workerEnabled()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
-
-    if (disabled.compareAndSet(true, false)) {
-      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(false));
-    }
+    setDisabled(false);
   }
 
   public void workerDisabled()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+    setDisabled(true);
+  }
 
-    if (disabled.compareAndSet(false, true)) {
-      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(true));
+  private void setDisabled(boolean newValue)
+  {
+    if (disabled.compareAndSet(!newValue, newValue)) {
+      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(newValue));
+      writeStateFile();
     }
   }
 
@@ -654,6 +709,10 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return getNumTasksPerDatasource(completedTasks.entrySet().stream()
             .filter(entry -> entry.getValue().getTaskStatus().isSuccess())
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
+  }
+
+  record WorkerState(@JsonProperty("disabled") boolean disabled)
+  {
   }
 
   private static class TaskDetails
