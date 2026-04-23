@@ -276,7 +276,7 @@ public class CostBasedAutoScalerConfigTest
           CostBasedAutoScalerConfig.class
       );
       Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(defaultUp, config.getMinScaleUpDelay());
+      Assert.assertEquals(Duration.millis(900_000L), config.getMinScaleUpDelay());
       Assert.assertEquals(defaultDown, config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
@@ -333,7 +333,7 @@ public class CostBasedAutoScalerConfigTest
           CostBasedAutoScalerConfig.class
       );
       Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(defaultUp, config.getMinScaleUpDelay());
+      Assert.assertEquals(Duration.millis(900_000L), config.getMinScaleUpDelay());
       Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }

@@ -99,7 +99,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.useTaskCountBoundaries = Configs.valueOrDefault(useTaskCountBoundaries, false);
     this.highLagThreshold = Configs.valueOrDefault(highLagThreshold, -1);
-    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS));
+    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, Duration.millis(this.minTriggerScaleActionFrequencyMillis));
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
 
