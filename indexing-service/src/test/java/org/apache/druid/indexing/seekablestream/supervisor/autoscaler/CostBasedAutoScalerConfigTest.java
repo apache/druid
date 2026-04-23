@@ -251,7 +251,7 @@ public class CostBasedAutoScalerConfigTest
   @SuppressWarnings("deprecation")
   public void testMinTriggerScaleActionFrequencyMillisSerdeCompat() throws Exception
   {
-    final long defaultMinTriggerMillis = DEFAULT_SCALE_ACTION_PERIOD_MILLIS / 2;
+    final long defaultMinTriggerMillis = DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
     final Duration defaultUp = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS);
     final Duration defaultDown = DEFAULT_MIN_SCALE_DELAY;
 

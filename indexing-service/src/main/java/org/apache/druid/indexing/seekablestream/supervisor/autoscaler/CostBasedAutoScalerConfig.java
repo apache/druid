@@ -91,7 +91,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
                                    : DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
     this.minTriggerScaleActionFrequencyMillis = Configs.valueOrDefault(
         minTriggerScaleActionFrequencyMillis,
-        DEFAULT_SCALE_ACTION_PERIOD_MILLIS / 2
+        DEFAULT_SCALE_ACTION_PERIOD_MILLIS
     );
 
     // Cost function weights with defaults
