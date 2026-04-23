@@ -19,15 +19,51 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 
+import javax.annotation.Nullable;
+
+/**
+ * Configuration for {@link DiskNormalizedCostBalancerStrategy}.
+ * <p>
+ * Bound to the prefix
+ * {@code druid.coordinator.balancer.diskNormalized}.
+ */
 public class DiskNormalizedCostBalancerStrategyConfig
 {
+  /**
+   * Minimum fractional cost reduction required to move a segment off a server
+   * that is already projected to hold it. For example, a value of {@code 0.05} means the
+   * destination must be at least 5% cheaper than the source before a move
+   * fires.
+   */
   @JsonProperty
-  private double diskUtilThresholdTolerance = DiskNormalizedCostBalancerStrategy.DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE;
+  private final double moveCostSavingsThreshold;
 
-  public double getDiskUtilThresholdTolerance()
+  public DiskNormalizedCostBalancerStrategyConfig()
   {
-    return diskUtilThresholdTolerance;
+    this(null);
+  }
+
+  @JsonCreator
+  public DiskNormalizedCostBalancerStrategyConfig(
+      @JsonProperty("moveCostSavingsThreshold") @Nullable Double moveCostSavingsThreshold
+  )
+  {
+    this.moveCostSavingsThreshold = Configs.valueOrDefault(moveCostSavingsThreshold, DiskNormalizedCostBalancerStrategy.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+
+    Preconditions.checkArgument(
+        this.moveCostSavingsThreshold >= 0.0 && this.moveCostSavingsThreshold < 1.0,
+        "'druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold'[%s] must be in [0.0, 1.0)",
+        this.moveCostSavingsThreshold
+    );
+  }
+
+  public double getMoveCostSavingsThreshold()
+  {
+    return moveCostSavingsThreshold;
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
@@ -36,29 +37,40 @@ import org.apache.druid.timeline.DataSegment;
  * to {@link CostBalancerStrategy}. When historicals have different disk capacities,
  * this naturally accounts for both fill level and total capacity.
  * <p>
- * To prevent oscillation when servers have similar utilization, a segment that is
- * already placed on a server receives a 5% cost discount ({@link #MOVE_THRESHOLD}).
- * This means a move only occurs when the destination is meaningfully cheaper.
+ * To prevent oscillation when servers have similar utilization, any server that
+ * is already projected to hold the segment (the source on a move, or a currently
+ * serving node on a drop) receives a cost discount equal to
+ * {@link #DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
+ * the destination saves at least this fraction of the source's cost. The default
+ * is configurable via
+ * {@code druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold}.
  */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
   /**
-   * Default cost multiplier applied when a segment is already on the server.
-   * Configurable via {@code druid.coordinator.balancer.diskNormalized.diskUtilThresholdTolerance}.
+   * Default minimum fractional cost reduction required before a segment will
+   * be moved off a server that is already projected to hold it. A value of
+   * {@code 0.05} means the destination must be at least 5% cheaper than the
+   * source for the move to happen.
    */
-  static final double DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE = 0.95;
+  static final double DEFAULT_MOVE_COST_SAVINGS_THRESHOLD = 0.05;
 
-  private final double diskUtilThresholdTolerance;
+  private final double sourceCostMultiplier;
 
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
-    this(exec, DEFAULT_DISK_UTIL_THRESHOLD_TOLERANCE);
+    this(exec, DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
   }
 
-  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double diskUtilThresholdTolerance)
+  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
   {
     super(exec);
-    this.diskUtilThresholdTolerance = diskUtilThresholdTolerance;
+    Preconditions.checkArgument(
+        moveCostSavingsThreshold >= 0.0 && moveCostSavingsThreshold < 1.0,
+        "moveCostSavingsThreshold[%s] must be in [0.0, 1.0)",
+        moveCostSavingsThreshold
+    );
+    this.sourceCostMultiplier = 1.0 - moveCostSavingsThreshold;
   }
 
   @Override
@@ -73,14 +85,22 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
       return cost;
     }
 
-    double usageRatio = (double) server.getSizeUsed() / server.getMaxSize();
+    // Guard against NaN propagation in the cost comparator if a server
+    // somehow reports a non-positive maxSize. Such a server cannot hold
+    // anything and will be rejected by canLoadSegment, so returning the
+    // raw cost is safe.
+    final long maxSize = server.getMaxSize();
+    if (maxSize <= 0) {
+      return cost;
+    }
+
+    double usageRatio = (double) server.getSizeUsed() / maxSize;
     double normalizedCost = cost * usageRatio;
 
     if (server.isProjectedSegment(proposalSegment)) {
-      normalizedCost *= diskUtilThresholdTolerance;
+      normalizedCost *= sourceCostMultiplier;
     }
 
     return normalizedCost;
   }
 }
-

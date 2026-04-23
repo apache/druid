@@ -44,7 +44,7 @@ public class DiskNormalizedCostBalancerStrategyFactory extends BalancerStrategyF
   {
     return new DiskNormalizedCostBalancerStrategy(
         getOrCreateBalancerExecutor(numBalancerThreads),
-        config.getDiskUtilThresholdTolerance()
+        config.getMoveCostSavingsThreshold()
     );
   }
 }
