@@ -132,7 +132,7 @@
         <okhttp.version>5.3.2</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
-        <checkerframework.version>3.48.1</checkerframework.version>
+        <checkerframework.version>3.49.2</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
@@ -1288,7 +1288,7 @@
             <dependency>
                 <groupId>net.hydromatic</groupId>
                 <artifactId>quidem</artifactId>
-                <version>0.11</version>
+                <version>0.12</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
