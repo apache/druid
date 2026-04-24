@@ -106,6 +106,7 @@ public class DruidExceptionFault extends BaseMSQFault
     return DruidException.forPersona(personaEnum)
                          .ofCategory(categoryEnum)
                          .withErrorCode(druidErrorCode)
+                         .wasDeserialized()
                          .build(getErrorMessage())
                          .withContext(context);
   }

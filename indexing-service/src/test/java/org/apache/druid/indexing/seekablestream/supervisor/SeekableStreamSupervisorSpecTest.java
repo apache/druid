@@ -441,7 +441,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
-            .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+            .anyMatch("Scale cooldown not elapsed yet"::equals));
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
     autoScaler.reset();
     autoScaler.stop();

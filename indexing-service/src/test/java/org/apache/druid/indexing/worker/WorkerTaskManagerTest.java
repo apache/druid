@@ -72,6 +72,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,8 +115,13 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
+    return createWorkerTaskManager(FileUtils.createTempDir());
+  }
+
+  private WorkerTaskManager createWorkerTaskManager(File baseDir)
+  {
     TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(FileUtils.createTempDir().toString())
+        .setBaseDir(baseDir.toString())
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
         .build();
 
@@ -549,5 +555,75 @@ public class WorkerTaskManagerTest
             "wikipedia", 2L
     ));
     Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
+  }
+
+  @Test
+  public void test_disabledState_persistsAcrossRestart() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final File baseTaskDir = FileUtils.createTempDir();
+
+    workerTaskManager = createWorkerTaskManager(baseTaskDir);
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    workerTaskManager.workerDisabled();
+    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assert.assertTrue(workerTaskManager.getStateFile().exists());
+    workerTaskManager.stop();
+
+    workerTaskManager = createWorkerTaskManager(baseTaskDir);
+    workerTaskManager.start();
+    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
+
+    final ChangeRequestsSnapshot<WorkerHistoryItem> history =
+        workerTaskManager.getChangesSince(new ChangeRequestHistory.Counter(-1, 0)).get();
+    Assert.assertTrue(((WorkerHistoryItem.Metadata) history.getRequests().get(0)).isDisabled());
+  }
+
+  @Test
+  public void test_disabledState_reEnablePersistsAcrossRestart() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final File baseTaskDir = FileUtils.createTempDir();
+
+    workerTaskManager = createWorkerTaskManager(baseTaskDir);
+    workerTaskManager.start();
+    workerTaskManager.workerDisabled();
+    workerTaskManager.workerEnabled();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    workerTaskManager.stop();
+
+    workerTaskManager = createWorkerTaskManager(baseTaskDir);
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+  }
+
+  @Test
+  public void test_disabledState_defaultsToEnabledWhenNoFile() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+  }
+
+  @Test
+  public void test_disabledState_malformedFileToleratedAndStartsEnabled() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    workerTaskManager = createWorkerTaskManager();
+    final File stateFile = workerTaskManager.getStateFile();
+    FileUtils.mkdirp(stateFile.getParentFile());
+    Files.write(stateFile.toPath(), "not valid json".getBytes(StandardCharsets.UTF_8));
+
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
   }
 }

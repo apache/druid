@@ -17,34 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.balancer;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-
-public class DiskNormalizedCostBalancerStrategyFactory extends BalancerStrategyFactory
+public enum ScaleDirection
 {
-  private final DiskNormalizedCostBalancerStrategyConfig config;
+  SCALE_UP("scale-up"), SCALE_DOWN("scale-down");
 
-  public DiskNormalizedCostBalancerStrategyFactory()
-  {
-    this(new DiskNormalizedCostBalancerStrategyConfig());
-  }
+  private final String label;
 
-  @JsonCreator
-  public DiskNormalizedCostBalancerStrategyFactory(
-      @JacksonInject DiskNormalizedCostBalancerStrategyConfig config
-  )
+  ScaleDirection(String label)
   {
-    this.config = config;
+    this.label = label;
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
+  public String toString()
   {
-    return new DiskNormalizedCostBalancerStrategy(
-        getOrCreateBalancerExecutor(numBalancerThreads),
-        config.getMoveCostSavingsThreshold()
-    );
+    return label;
   }
 }
