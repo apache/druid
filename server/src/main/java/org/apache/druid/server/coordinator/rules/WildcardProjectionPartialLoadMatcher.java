@@ -30,38 +30,38 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Selects projections whose names match any of the configured glob patterns, minus any names listed in
- * {@code excludes}. Matching uses {@link FilenameUtils#wildcardMatch(String, String)}; supported glob metacharacters
- * are {@code *} (any sequence of characters) and {@code ?} (single character), all other characters literal. Excludes
- * are literal projection names and let an operator carve out specific names from a broad pattern, for example, a
- * long-retention rule {@code patterns=["user_*"]} combined with {@code excludes=["user_daily"]} keeps every
- * {@code user_*} projection except {@code user_daily}, which the operator intends to retain only via a
- * shorter-retention exact-match rule.
+ * Selects projections whose names match any of the configured glob patterns, minus any names matching an entry in
+ * {@code excludePatterns}. Matching uses {@link FilenameUtils#wildcardMatch(String, String)}; supported glob
+ * metacharacters are {@code *} (any sequence of characters) and {@code ?} (single character), all other characters
+ * literal. A literal projection name is also a valid glob (with no wildcards it matches exactly itself), so the same
+ * field covers both "exclude this specific name" and "exclude anything matching this pattern."
+ * <p>
+ * For example, a long-retention rule {@code patterns=["user_*"], excludePatterns=["user_daily"]} keeps every
+ * {@code user_*} projection except {@code user_daily} (which is expected to live on a shorter-retention rule). A
+ * broad rule {@code patterns=["*"], excludePatterns=["user_*"]} loads every projection except those handled by a
+ * more specific {@code user_*} rule elsewhere in the cascade.
  */
 public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadMatcher
 {
   public static final String TYPE = "globProjection";
 
   private final List<String> patterns;
-  private final List<String> excludes;
-  private final Set<String> excludeSet;
+  private final List<String> excludePatterns;
 
   @JsonCreator
   public WildcardProjectionPartialLoadMatcher(
       @JsonProperty("patterns") List<String> patterns,
-      @JsonProperty("excludes") @Nullable List<String> excludes
+      @JsonProperty("excludePatterns") @Nullable List<String> excludePatterns
   )
   {
     if (patterns == null || patterns.isEmpty()) {
       throw InvalidInput.exception("patterns must not be null or empty for globProjection matcher");
     }
     this.patterns = List.copyOf(patterns);
-    this.excludes = excludes == null ? List.of() : List.copyOf(excludes);
-    this.excludeSet = this.excludes.isEmpty() ? Set.of() : Set.copyOf(this.excludes);
+    this.excludePatterns = excludePatterns == null ? List.of() : List.copyOf(excludePatterns);
   }
 
   @JsonProperty
@@ -71,9 +71,9 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
   }
 
   @JsonProperty
-  public List<String> getExcludes()
+  public List<String> getExcludePatterns()
   {
-    return excludes;
+    return excludePatterns;
   }
 
   @Override
@@ -85,17 +85,24 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
     }
     final TreeSet<String> matched = new TreeSet<>();
     for (String name : segmentProjections) {
-      if (excludeSet.contains(name)) {
+      if (matchesAny(name, excludePatterns)) {
         continue;
       }
-      for (String pattern : patterns) {
-        if (FilenameUtils.wildcardMatch(name, pattern)) {
-          matched.add(name);
-          break;
-        }
+      if (matchesAny(name, patterns)) {
+        matched.add(name);
       }
     }
     return new ArrayList<>(matched);
+  }
+
+  private static boolean matchesAny(String name, List<String> patterns)
+  {
+    for (String pattern : patterns) {
+      if (FilenameUtils.wildcardMatch(name, pattern)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -108,18 +115,18 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
       return false;
     }
     WildcardProjectionPartialLoadMatcher that = (WildcardProjectionPartialLoadMatcher) o;
-    return Objects.equals(patterns, that.patterns) && Objects.equals(excludes, that.excludes);
+    return Objects.equals(patterns, that.patterns) && Objects.equals(excludePatterns, that.excludePatterns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(patterns, excludes);
+    return Objects.hash(patterns, excludePatterns);
   }
 
   @Override
   public String toString()
   {
-    return "WildcardProjectionPartialLoadMatcher{patterns=" + patterns + ", excludes=" + excludes + "}";
+    return "WildcardProjectionPartialLoadMatcher{patterns=" + patterns + ", excludePatterns=" + excludePatterns + "}";
   }
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;

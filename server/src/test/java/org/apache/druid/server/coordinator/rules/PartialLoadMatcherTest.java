@@ -293,10 +293,11 @@ public class PartialLoadMatcherTest
   }
 
   @Test
-  void testWildcardExcludeRemovesMatchedName()
+  void testWildcardExcludeLiteralRemovesMatchedName()
   {
-    // Long-retention rule that loads all user_* projections except user_daily — the latter is
-    // intended to live only on a shorter-retention exact-match rule.
+    // Long-retention rule that loads all user_* projections except user_daily — the latter is intended to live only on
+    // a shorter-retention exact-match rule. A literal name is a zero-wildcard glob, so the same excludePatterns field
+    // covers this case.
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("user_*"),
         List.of("user_daily")
@@ -313,12 +314,31 @@ public class PartialLoadMatcherTest
   }
 
   @Test
-  void testWildcardExcludeNameNotMatchedByPatternIsNoop()
+  void testWildcardExcludePatternRemovesMatchingNames()
   {
-    // Excluding a name that wouldn't have matched anyway is a no-op.
+    // Broad rule that loads everything except names handled by a different, more specific rule.
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("*"),
+        List.of("user_*")
+    );
+    DataSegment segment = segmentWithProjections(
+        List.of("user_daily", "user_hourly", "session_daily", "other")
+    );
+    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(
+        List.of("other", "session_daily"),
+        result.wrappedLoadSpec().get("projections")
+    );
+  }
+
+  @Test
+  void testWildcardExcludeNotMatchedIsNoop()
+  {
+    // Excluding a pattern that doesn't match anything in the segment is a no-op.
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("user_*"),
-        List.of("session_daily")
+        List.of("session_*")
     );
     DataSegment segment = segmentWithProjections(
         List.of("user_daily", "user_hourly", "session_daily")
@@ -334,10 +354,10 @@ public class PartialLoadMatcherTest
   @Test
   void testWildcardExcludeAllMatchedReturnsNull()
   {
-    // If excludes consume every match the result is empty; the matcher reports "does not match".
+    // If excludePatterns consume every match the result is empty; the matcher reports "does not match".
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("user_*"),
-        List.of("user_daily", "user_hourly")
+        List.of("user_*")
     );
     DataSegment segment = segmentWithProjections(List.of("user_daily", "user_hourly"));
     Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
@@ -359,18 +379,18 @@ public class PartialLoadMatcherTest
   }
 
   @Test
-  void testWildcardSerdeWithExcludes() throws Exception
+  void testWildcardSerdeWithExcludePatterns() throws Exception
   {
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        List.of("user_daily")
+        List.of("*"),
+        List.of("user_*")
     );
     String json = OBJECT_MAPPER.writeValueAsString(matcher);
     PartialLoadMatcher reread = OBJECT_MAPPER.readValue(json, PartialLoadMatcher.class);
     Assertions.assertEquals(matcher, reread);
     Assertions.assertEquals(
-        List.of("user_daily"),
-        ((WildcardProjectionPartialLoadMatcher) reread).getExcludes()
+        List.of("user_*"),
+        ((WildcardProjectionPartialLoadMatcher) reread).getExcludePatterns()
     );
   }
 
@@ -378,7 +398,6 @@ public class PartialLoadMatcherTest
   void testWildcardEquals()
   {
     EqualsVerifier.forClass(WildcardProjectionPartialLoadMatcher.class)
-                  .withIgnoredFields("excludeSet")
                   .usingGetClass()
                   .verify();
   }
