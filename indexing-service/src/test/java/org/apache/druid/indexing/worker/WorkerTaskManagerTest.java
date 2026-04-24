@@ -141,7 +141,6 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                null,
                 notifierFactory,
                 null,
                 null,

@@ -454,7 +454,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              task.newTaskRecordSupplier(toolbox)) {
       this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
-        toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       }
       appenderator = task.newAppenderator(toolbox, segmentGenerationMetrics, rowIngestionMeters, parseExceptionHandler);
@@ -949,7 +948,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         toolbox.removeMonitor(metricsMonitor);
         if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
-          toolbox.getDataSegmentServerAnnouncer().unannounce();
         }
         rejectionPeriodUpdaterExec.shutdown();
       }
