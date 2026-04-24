@@ -79,7 +79,9 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid sets the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|The minimum number of ingestion tasks. When you enable the autoscaler, Druid computes the initial number of tasks to launch by checking the configs in the following order: `taskCountStart`, then `taskCount` (in `ioConfig`), then `taskCountMin`.|Yes||
 |`taskCountStart`|Optional config to specify the number of ingestion tasks to start with. When you enable the autoscaler, Druid computes the initial number of tasks to launch by checking the configs in the following order: `taskCountStart`, then `taskCount` (in `ioConfig`), then `taskCountMin`.|No|`taskCount` or `taskCountMin`|
-|`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
+|`minScaleUpDelay`|Minimum cooldown duration between scale-up actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
+|`minScaleDownDelay`|Minimum cooldown duration between scale-down actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
+|`minTriggerScaleActionFrequencyMillis`|**Deprecated.** Use `minScaleUpDelay` and `minScaleDownDelay` instead. Minimum time interval in milliseconds between scale actions, used as the fallback when the Duration-based fields are not set.|No|600000|
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 |`stopTaskCountRatio`|A variable version of `ioConfig.stopTaskCount` with a valid range of (0.0, 1.0]. Allows the maximum number of stoppable tasks in steady state to be proportional to the number of tasks currently running.|No||
 
@@ -161,7 +163,8 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
       "enableTaskAutoScaler": true,
       "taskCountMax": 6,
       "taskCountMin": 2,
-      "minTriggerScaleActionFrequencyMillis": 600000,
+      "minScaleUpDelay": "PT10M",
+      "minScaleDownDelay": "PT10M",
       "autoScalerStrategy": "lagBased",
       "lagCollectionIntervalMillis": 30000,
       "lagCollectionRangeMillis": 600000,
@@ -210,10 +213,11 @@ The following table outlines the configuration properties related to the `costBa
 |`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
 |`useTaskCountBoundaries`|Enables the bounded partitions-per-task window when selecting task counts.|No| `false` |
 |`highLagThreshold`|Average partition lag threshold that triggers burst scale-up when set to a value greater than `0`. Set to a negative value to disable burst scale-up.|No|-1|
-|`minScaleDownDelay`|Minimum duration between successful scale actions, specified as an ISO-8601 duration string.|No|`PT30M`|
+|`minScaleUpDelay`|Minimum cooldown duration after a scale-up action before the next scale-up is allowed, specified as an ISO-8601 duration string.|No||
+|`minScaleDownDelay`|Minimum cooldown duration after a scale-down action before the next scale-down is allowed, specified as an ISO-8601 duration string.|No|`PT30M`|
 |`scaleDownDuringTaskRolloverOnly`|Indicates whether task scaling down is limited to periods during task rollovers only.|No|`false`|
 
-The following example shows a supervisor spec with `lagBased` autoscaler:
+The following example shows a supervisor spec with `costBased` autoscaler:
 
 <details>
   <summary>Click to view the example</summary>
@@ -227,9 +231,10 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
       "autoScalerStrategy": "costBased",
       "taskCountMin": 1,
       "taskCountMax": 10,
-      "minTriggerScaleActionFrequencyMillis": 600000,
+      "minScaleUpDelay": "PT10M",
+      "minScaleDownDelay": "PT30M",
       "lagWeight": 0.1,
-      "idleWeight": 0.9,
+      "idleWeight": 0.9
     }
   }
 }

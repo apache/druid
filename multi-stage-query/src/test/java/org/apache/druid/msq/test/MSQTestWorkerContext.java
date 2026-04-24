@@ -207,6 +207,12 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
+  public boolean isDebug()
+  {
+    return true;
+  }
+
+  @Override
   public void close()
   {
     try {

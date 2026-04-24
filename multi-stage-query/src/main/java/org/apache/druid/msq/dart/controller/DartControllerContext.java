@@ -254,4 +254,10 @@ public class DartControllerContext implements ControllerContext
         DEFAULT_TARGET_PARTITIONS_PER_WORKER
     );
   }
+
+  @Override
+  public boolean isDebug()
+  {
+    return context.isDebug();
+  }
 }

@@ -375,6 +375,25 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testSpecGetAllWithPartialAuthorizationForReadAccess()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(SUPERVISOR_IDS).atLeastOnce();
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.of(SPEC1));
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC2.getId())).andReturn(Optional.of(SPEC2));
+    setupMockRequestForUser("notDruid");
+    replayAll();
+
+    Response response = supervisorResource.specGetAll(null, null, null, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    // Only id1 (datasource1) should be returned since user lacks READ access to datasource2
+    Set<String> returnedIds = (Set<String>) response.getEntity();
+    Assert.assertEquals(ImmutableSet.of("id1"), returnedIds);
+  }
+
+  @Test
   public void testSpecGetAllFull()
   {
     SupervisorStateManager.State state1 = SupervisorStateManager.BasicState.RUNNING;

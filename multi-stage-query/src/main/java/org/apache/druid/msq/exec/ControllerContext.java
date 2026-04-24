@@ -135,4 +135,9 @@ public interface ControllerContext
    * shuffle specs that have {@link ShuffleSpec#isAdjustable()} set to true.
    */
   int targetPartitionsPerWorker();
+
+  /**
+   * Whether the controller should log full stack traces on error.
+   */
+  boolean isDebug();
 }

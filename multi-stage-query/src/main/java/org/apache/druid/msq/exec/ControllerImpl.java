@@ -487,11 +487,11 @@ public class ControllerImpl implements Controller
 
       // Log the errors we encountered.
       if (controllerError != null) {
-        log.warn("Controller: %s", MSQTasks.errorReportToLogMessage(controllerError));
+        log.warn("Controller: %s", MSQTasks.errorReportToLogMessage(controllerError, context.isDebug()));
       }
 
       if (workerError != null) {
-        log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError));
+        log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError, context.isDebug()));
       }
     }
     if (queryKernel != null && queryKernel.isSuccess()) {

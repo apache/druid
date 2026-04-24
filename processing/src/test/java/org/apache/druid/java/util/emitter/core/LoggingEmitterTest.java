@@ -107,8 +107,8 @@ public class LoggingEmitterTest
 
   /**
    * With filtering enabled and no custom path, the default classpath resource
-   * (defaultMetrics.json) should be loaded. Metrics in the default list
-   * are emitted; unlisted metrics are dropped.
+   * (loggingEmitterAllowedMetrics.json) should be loaded. Metrics in the default
+   * list are emitted; unlisted metrics are dropped.
    */
   @Test
   public void testFilterWithDefaultResource()
