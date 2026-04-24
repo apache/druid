@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 
@@ -101,6 +102,9 @@ public class AggregateProjectionSpec
   {
     if (name == null || name.isEmpty()) {
       throw InvalidInput.exception("projection name cannot be null or empty");
+    }
+    if (Projections.BASE_TABLE_PROJECTION_NAME.equals(name)) {
+      throw InvalidInput.exception("projection cannot use reserved name[%s]", Projections.BASE_TABLE_PROJECTION_NAME);
     }
     this.name = name;
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
