@@ -4839,7 +4839,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongSumAggregatorFactory("a5", "v1"),
                           not(equality("dim1", "1", ColumnType.STRING)),
                           "a5",
-                          0
+                          0L
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a6", "cnt"),
@@ -4856,7 +4856,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongSumAggregatorFactory("a8", "cnt"),
                           not(equality("dim1", "1", ColumnType.STRING)),
                           "a8",
-                          0
+                          0L
                       ),
                       new FilteredAggregatorFactory(
                           new LongMaxAggregatorFactory("a9", "cnt"),
@@ -4926,7 +4926,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new LongSumAggregatorFactory("a0", "v0"),
                                 not(equality("dim1", "1", ColumnType.STRING)),
                                 "a0",
-                                0
+                                0L
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         ))
@@ -4973,7 +4973,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new LongSumAggregatorFactory("a0", "v0"),
                                 not(equality("dim1", "1", ColumnType.STRING)),
                                 "a0",
-                                0
+                                0L
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         )
@@ -9244,7 +9244,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                             true
                                                         ),
                                                         "a0",
-                                                        0
+                                                        0L
                                                     ),
                                                     new GroupingAggregatorFactory(
                                                         "a1",

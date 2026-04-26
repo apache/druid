@@ -64,9 +64,8 @@ public class FilteredVectorAggregator implements VectorAggregator
   {
     if (elseValue != null) {
       buf.put(position, (byte) 0);
-    } else {
-      delegate.init(buf, position + valueOffset);
     }
+    delegate.init(buf, position + valueOffset);
   }
 
   @Override
