@@ -39,6 +39,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -64,21 +65,20 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
 
-  static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
-  static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+  /**
+   * The maximum number of partitions a single task can handle before requiring a new task
+   * to be created during auto-scaling operations.
+   * <p>
+   * This constant is used to enforce an upper boundary on the partitions-per-task ratio,
+   * ensuring operational efficiency and preventing excessive burden on individual tasks.
+   */
+  static final int BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK = 2;
 
   /**
-   * If average partition lag crosses this value and the processing rate is
+   * If the average partition lag crosses this value and the processing rate is
    * still zero, scaling actions are skipped and an alert is raised.
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
-
-  /**
-   * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
-   * This controls how aggressive the scaling is relative to partition count.
-   * That value was chosen by carefully analyzing the math model behind the implementation.
-   */
-  static final double K_PARTITION_DIVISOR = 6.4;
 
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
@@ -274,8 +274,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         partitionCount,
         currentTaskCount,
         config.getTaskCountMin(),
-        config.getTaskCountMax(),
-        config.shouldUseTaskCountBoundariesOnScaleUp() && config.shouldUseTaskCountBoundariesOnScaleDown()
+        config.getTaskCountMax()
     );
 
     if (validTaskCounts.length == 0) {
@@ -302,7 +301,26 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     // Find the task count which reduces cost
     final CostResult[] costResults = new CostResult[validTaskCounts.length];
-    for (int i = 0; i < validTaskCounts.length; ++i) {
+    Arrays.fill(costResults, CostResult.INFINITE_COST);
+
+    int startIndex = 0;
+    int endIndex = validTaskCounts.length - 1;
+
+    if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
+      int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
+      endIndex = currentTaskCountIndex >= 0
+                 ? currentTaskCountIndex + BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK
+                 : endIndex;
+    }
+
+    if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
+      int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
+      startIndex = currentTaskCountIndex >= 0
+                   ? currentTaskCountIndex - BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK
+                   : startIndex;
+    }
+
+    for (int i = startIndex; i <= endIndex; ++i) {
       final int taskCount = validTaskCounts[i];
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
@@ -341,8 +359,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       int partitionCount,
       int currentTaskCount,
       int taskCountMin,
-      int taskCountMax,
-      boolean isTaskCountBoundariesEnabled
+      int taskCountMax
   )
   {
     if (partitionCount <= 0 || currentTaskCount <= 0) {
@@ -350,23 +367,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     IntSet result = new IntArraySet();
-    final int currentPartitionsPerTask = partitionCount / currentTaskCount;
 
     // Minimum partitions per task correspond to the maximum number of tasks (scale up) and vice versa.
     int minPartitionsPerTask = Math.min(1, partitionCount / taskCountMax);
     int maxPartitionsPerTask = Math.max(partitionCount, partitionCount / taskCountMin);
-
-    if (isTaskCountBoundariesEnabled) {
-      maxPartitionsPerTask = Math.min(
-          partitionCount,
-          currentPartitionsPerTask + MAX_DECREASE_IN_PARTITIONS_PER_TASK
-      );
-      minPartitionsPerTask = Math.max(
-          minPartitionsPerTask,
-          currentPartitionsPerTask - MAX_INCREASE_IN_PARTITIONS_PER_TASK
-      );
-    }
-
     for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask
                                                        && partitionsPerTask != 0; partitionsPerTask--) {
       final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;

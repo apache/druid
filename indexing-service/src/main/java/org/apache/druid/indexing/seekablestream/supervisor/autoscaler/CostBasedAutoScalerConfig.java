@@ -44,8 +44,8 @@ import java.util.Objects;
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
   static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
-  static final double DEFAULT_LAG_WEIGHT = 0.35;
-  static final double DEFAULT_IDLE_WEIGHT = 0.65;
+  static final double DEFAULT_LAG_WEIGHT = 0.4;
+  static final double DEFAULT_IDLE_WEIGHT = 0.6;
   static final Duration DEFAULT_MIN_SCALE_DELAY = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS * 3);
 
   private final boolean enableTaskAutoScaler;
@@ -97,7 +97,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, false);
-    this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, false);
+    this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, true);
     this.minScaleUpDelay = Configs.valueOrDefault(
         minScaleUpDelay,
         Duration.millis(this.minTriggerScaleActionFrequencyMillis)

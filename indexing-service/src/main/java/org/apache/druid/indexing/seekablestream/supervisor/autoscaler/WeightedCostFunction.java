@@ -34,11 +34,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
+
   /**
    * Multiplier for a lag amplification factor; it was carefully chosen
    * during extensive testing as the most balanced multiplier for high-lag recovery.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.05;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.4;
 
   /**
    * Minimum rate of processing for any task in records per second. This is used
@@ -87,7 +88,7 @@ public class WeightedCostFunction
   )
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
-      return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+      return CostResult.INFINITE_COST;
     }
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
@@ -135,7 +136,7 @@ public class WeightedCostFunction
    *   <li>idle = ideal: baseline cost only ({@code taskCount * idealIdleRatio})</li>
    *   <li>idle &gt; ideal: over-provisioning penalty — wasted cycles</li>
    * </ul>
-   *
+   * <p>
    * The {@code idealIdleRatio} baseline keeps cost non-zero at the optimum so the optimizer
    * always has a finite trade-off against lag cost.
    */

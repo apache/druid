@@ -25,6 +25,12 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
  */
 public class CostResult
 {
+  static final CostResult INFINITE_COST = new CostResult(
+      Double.POSITIVE_INFINITY,
+      Double.POSITIVE_INFINITY,
+      Double.POSITIVE_INFINITY
+  );
+
   private final double totalCost;
   private final double lagCost;
   private final double idleCost;

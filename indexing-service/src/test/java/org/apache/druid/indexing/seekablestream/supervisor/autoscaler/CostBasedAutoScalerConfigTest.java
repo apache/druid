@@ -101,7 +101,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
-    Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleDown());
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
   }
