@@ -28,35 +28,52 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Aggregates an underlying {@link #delegate} into a buffer when {@link #matcher} matches.
+ *
+ * <p>If {@link #elseValue} is set, an extra byte is added to the beginning of the buffer to track whether we've
+ * seen an unmatched row.
+ */
 public class FilteredVectorAggregator implements VectorAggregator
 {
   private final VectorValueMatcher matcher;
   private final VectorAggregator delegate;
   private final int[] delegatePositions;
+  @Nullable
+  private final Number elseValue;
+  private final int valueOffset;
 
   @Nullable
   private VectorMatch maskScratch = null;
 
   public FilteredVectorAggregator(
       final VectorValueMatcher matcher,
-      final VectorAggregator delegate
+      final VectorAggregator delegate,
+      @Nullable final Number elseValue
   )
   {
     this.matcher = matcher;
     this.delegate = delegate;
     this.delegatePositions = new int[matcher.getMaxVectorSize()];
+    this.elseValue = elseValue;
+    this.valueOffset = elseValue != null ? Byte.BYTES : 0;
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    delegate.init(buf, position);
+    if (elseValue != null) {
+      buf.put(position, (byte) 0);
+    } else {
+      delegate.init(buf, position + valueOffset);
+    }
   }
 
   @Override
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final ReadableVectorMatch mask;
+    final int maskSize = endRow - startRow;
 
     if (startRow == 0) {
       mask = VectorMatch.allTrue(endRow);
@@ -65,7 +82,6 @@ public class FilteredVectorAggregator implements VectorAggregator
         maskScratch = VectorMatch.wrap(new int[matcher.getMaxVectorSize()]);
       }
 
-      final int maskSize = endRow - startRow;
       final int[] maskArray = maskScratch.getSelection();
       for (int i = 0; i < maskSize; i++) {
         maskArray[i] = startRow + i;
@@ -76,12 +92,18 @@ public class FilteredVectorAggregator implements VectorAggregator
     }
 
     final ReadableVectorMatch match = matcher.match(mask, false);
+    final int matchedSize = match.getSelectionSize();
 
     if (match.isAllTrue(matcher.getCurrentVectorSize())) {
-      delegate.aggregate(buf, position, startRow, endRow);
+      delegate.aggregate(buf, position + valueOffset, startRow, endRow);
     } else if (!match.isAllFalse()) {
-      Arrays.fill(delegatePositions, 0, match.getSelectionSize(), position);
-      delegate.aggregate(buf, match.getSelectionSize(), delegatePositions, match.getSelection(), 0);
+      Arrays.fill(delegatePositions, 0, matchedSize, position + valueOffset);
+      delegate.aggregate(buf, matchedSize, delegatePositions, match.getSelection(), 0);
+    }
+
+    // Set the unmatched-row flag if any row in this slice did not match the filter.
+    if (elseValue != null && matchedSize < maskSize) {
+      markUnmatched(buf, position);
     }
   }
 
@@ -106,10 +128,34 @@ public class FilteredVectorAggregator implements VectorAggregator
     final int[] selection = match.getSelection();
 
     if (rows == null) {
+      if (elseValue != null) {
+        // Mark "saw an unmatched row" for any input row not present in the matcher's selection.
+        int matchIdx = 0;
+        for (int i = 0; i < numRows; i++) {
+          if (matchIdx < match.getSelectionSize() && selection[matchIdx] == i) {
+            matchIdx++;
+          } else {
+            markUnmatched(buf, positions[i] + positionOffset);
+          }
+        }
+      }
+
       for (int i = 0; i < match.getSelectionSize(); i++) {
-        delegatePositions[i] = positions[selection[i]];
+        delegatePositions[i] = valueOffset + positions[selection[i]];
       }
     } else {
+      if (elseValue != null) {
+        // Mark "saw an unmatched row" for any input row whose original-row id is not in the selection.
+        int matchIdx = 0;
+        for (int i = 0; i < numRows; i++) {
+          if (matchIdx < match.getSelectionSize() && rows[i] == selection[matchIdx]) {
+            matchIdx++;
+          } else {
+            markUnmatched(buf, positions[i] + positionOffset);
+          }
+        }
+      }
+
       // i iterates over the match; j iterates over the "rows" array
       for (int i = 0, j = 0; i < match.getSelectionSize(); i++) {
         for (; rows[j] < selection[i]; j++) {
@@ -120,7 +166,7 @@ public class FilteredVectorAggregator implements VectorAggregator
           throw new ISE("Selection contained phantom row[%d]", selection[i]);
         }
 
-        delegatePositions[i] = positions[j];
+        delegatePositions[i] = valueOffset + positions[j];
       }
     }
 
@@ -128,9 +174,15 @@ public class FilteredVectorAggregator implements VectorAggregator
   }
 
   @Override
+  @Nullable
   public Object get(final ByteBuffer buf, final int position)
   {
-    return delegate.get(buf, position);
+    final Object delegateVal = delegate.get(buf, position + valueOffset);
+    if (elseValue != null && delegateVal == null && hasUnmatched(buf, position)) {
+      return elseValue;
+    } else {
+      return delegateVal;
+    }
   }
 
   @Override
@@ -148,6 +200,16 @@ public class FilteredVectorAggregator implements VectorAggregator
       final ByteBuffer newBuffer
   )
   {
-    delegate.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+    delegate.relocate(oldPosition + valueOffset, newPosition + valueOffset, oldBuffer, newBuffer);
+  }
+
+  private static void markUnmatched(final ByteBuffer buf, final int position)
+  {
+    buf.put(position, (byte) 1);
+  }
+
+  private static boolean hasUnmatched(final ByteBuffer buf, final int position)
+  {
+    return buf.get(position) == 1;
   }
 }

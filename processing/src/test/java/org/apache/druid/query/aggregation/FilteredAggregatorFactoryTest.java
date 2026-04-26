@@ -34,16 +34,19 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
     Assertions.assertEquals("overrideName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("foo"),
         TrueDimFilter.instance(),
-        "overrideName"
+        "overrideName",
+        null
     ).getName());
     Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
-        ""
+        "",
+        null
     ).getName());
     Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
+        null,
         null
     ).getName());
   }
@@ -54,16 +57,19 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
     Assertions.assertEquals("overrideName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("foo"),
         TrueDimFilter.instance(),
-        "overrideName"
+        "overrideName",
+        null
     ).getCombiningFactory().getName());
     Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
-        ""
+        "",
+        null
     ).getCombiningFactory().getName());
     Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
+        null,
         null
     ).getCombiningFactory().getName());
   }

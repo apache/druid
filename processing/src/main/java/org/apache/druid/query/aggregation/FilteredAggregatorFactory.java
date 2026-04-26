@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -28,6 +29,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.IntervalDimFilter;
@@ -41,7 +43,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -56,20 +57,30 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Nullable
   private final String name;
 
+  /**
+   * Optional value substituted in place of {@code null} when the filter has seen at least one row and
+   * matched none. This is intended to help implement SQL functions like
+   * {@code SUM(CASE WHEN cond THEN expr ELSE 0 END)}. For this particular function, the aggregation should
+   * return NULL if there are no rows at all, but return zero if there are some rows yet none of them match.
+   */
+  @Nullable
+  private final Number elseValue;
+
   // Constructor for backwards compat only
   public FilteredAggregatorFactory(
       AggregatorFactory delegate,
       DimFilter filter
   )
   {
-    this(delegate, filter, null);
+    this(delegate, filter, null, null);
   }
 
   @JsonCreator
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("name") @Nullable String name
+      @JsonProperty("name") @Nullable String name,
+      @JsonProperty("elseValue") @Nullable Number elseValue
   )
   {
     Preconditions.checkNotNull(delegate, "aggregator");
@@ -79,6 +90,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     this.dimFilter = dimFilter;
     this.filterSupplier = Suppliers.memoize(dimFilter::toFilter);
     this.name = name;
+    this.elseValue = elseValue;
   }
 
   @Override
@@ -87,7 +99,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     final ValueMatcher valueMatcher = filterSupplier.get().makeMatcher(columnSelectorFactory);
     return new FilteredAggregator(
         valueMatcher,
-        delegate.factorize(columnSelectorFactory)
+        delegate.factorize(columnSelectorFactory),
+        elseValue
     );
   }
 
@@ -97,7 +110,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     final ValueMatcher valueMatcher = filterSupplier.get().makeMatcher(columnSelectorFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
-        delegate.factorizeBuffered(columnSelectorFactory)
+        delegate.factorizeBuffered(columnSelectorFactory),
+        elseValue
     );
   }
 
@@ -108,7 +122,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     final VectorValueMatcher valueMatcher = filterSupplier.get().makeVectorMatcher(columnSelectorFactory);
     return new FilteredVectorAggregator(
         valueMatcher,
-        delegate.factorizeVector(columnSelectorFactory)
+        delegate.factorizeVector(columnSelectorFactory),
+        elseValue
     );
   }
 
@@ -177,7 +192,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new FilteredAggregatorFactory(delegate.withName(newName), dimFilter, newName);
+    return new FilteredAggregatorFactory(delegate.withName(newName), dimFilter, newName, elseValue);
   }
 
   @Override
@@ -192,13 +207,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] filterCacheKey = dimFilter.getCacheKey();
-    byte[] aggregatorCacheKey = delegate.getCacheKey();
-    return ByteBuffer.allocate(1 + filterCacheKey.length + aggregatorCacheKey.length)
-                     .put(AggregatorUtil.FILTERED_AGG_CACHE_TYPE_ID)
-                     .put(filterCacheKey)
-                     .put(aggregatorCacheKey)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.FILTERED_AGG_CACHE_TYPE_ID)
+        .appendCacheable(dimFilter)
+        .appendCacheable(delegate)
+        .appendString(String.valueOf(elseValue)) // String so we don't need individual handling for all Number types
+        .build();
   }
 
   @Override
@@ -216,7 +229,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return delegate.getMaxIntermediateSizeWithNulls();
+    final int size = delegate.getMaxIntermediateSizeWithNulls();
+    return elseValue != null ? size + Byte.BYTES : size;
   }
 
   @Override
@@ -256,13 +270,15 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         }
       }
 
-      // we can skip applying this filter, everything in the segment will match
       if (segmentIsCovered) {
+        // we can skip applying this filter, everything in the segment will match
         return delegate;
       }
 
-      // we can skip this filter, nothing in the segment would match
-      if (excludedFilterIntervals.size() == filterIntervals.size()) {
+      // nothing in the segment would match
+      if (excludedFilterIntervals.size() == filterIntervals.size() && elseValue == null) {
+        // Nothing in the segment would match. Skip this filter if no elseValue is set. (If an elseValue is set,
+        // we need to emit the elseValue.)
         return new SuppressedAggregatorFactory(delegate);
       }
 
@@ -274,7 +290,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
               intervalDimFilter.getExtractionFn(),
               intervalDimFilter.getFilterTuning()
           ),
-          this.name
+          this.name,
+          this.elseValue
       );
     } else {
       return this;
@@ -293,6 +310,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return dimFilter;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Number getElseValue()
+  {
+    return elseValue;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -305,14 +330,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     final FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
     return Objects.equals(delegate, that.delegate) &&
            Objects.equals(dimFilter, that.dimFilter) &&
-           Objects.equals(name, that.name);
+           Objects.equals(name, that.name) &&
+           Objects.equals(elseValue, that.elseValue);
   }
 
   @Override
   public int hashCode()
   {
-
-    return Objects.hash(delegate, dimFilter, name);
+    return Objects.hash(delegate, dimFilter, name, elseValue);
   }
 
   @Override
@@ -322,6 +347,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
            "delegate=" + delegate +
            ", dimFilter=" + dimFilter +
            ", name='" + name + '\'' +
+           ", elseValue=" + elseValue +
            '}';
   }
 }

@@ -109,7 +109,8 @@ public class MSQDataSketchesTest extends MSQTestBase
                             new FilteredAggregatorFactory(
                                 new HllSketchBuildAggregatorFactory("a0", "dim2", 12, "HLL_4", null, true, true),
                                 equality("dim1", "nonexistent", ColumnType.STRING),
-                                "a0"
+                                "a0",
+                                null
                             )
                         )
                     )
