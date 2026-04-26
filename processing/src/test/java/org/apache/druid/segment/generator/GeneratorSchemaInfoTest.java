@@ -21,8 +21,8 @@ package org.apache.druid.segment.generator;
 
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -39,7 +39,7 @@ public class GeneratorSchemaInfoTest
     );
 
     final DataSegment dataSegment = schemaInfo.makeSegmentDescriptor("foo");
-    Assert.assertEquals("foo", dataSegment.getDataSource());
-    Assert.assertEquals(Intervals.ETERNITY, dataSegment.getInterval());
+    Assertions.assertEquals("foo", dataSegment.getDataSource());
+    Assertions.assertEquals(Intervals.ETERNITY, dataSegment.getInterval());
   }
 }

@@ -135,6 +135,30 @@ public class NestedObjectVirtualColumn extends SpecializedExpressionVirtualColum
   }
 
   @Override
+  public boolean supportsRequiredRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public VirtualColumn rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    final Map<String, TypedExpression> rewrittenKeyExprMap = new HashMap<>();
+    for (Map.Entry<String, TypedExpression> entry : keyExprMap.entrySet()) {
+      final TypedExpression rewrittenExpr = new TypedExpression(
+          Parser.parse(entry.getValue().expression, macroTable).rewriteBindings(columnRewrites).stringify(),
+          entry.getValue().getType()
+      );
+      rewrittenKeyExprMap.put(entry.getKey(), rewrittenExpr);
+    }
+    return new NestedObjectVirtualColumn(
+        delegate.getOutputName(),
+        rewrittenKeyExprMap,
+        macroTable
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "NestedObjectVirtualColumn{" +

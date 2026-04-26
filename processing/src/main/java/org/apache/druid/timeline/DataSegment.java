@@ -60,6 +60,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   public static final String TOMBSTONE_LOADSPEC_TYPE = "tombstone";
 
+  public static Interner<String> stringInterner()
+  {
+    return STRING_INTERNER;
+  }
+
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
    * metadata only, while org.apache.druid.segment.Segment represents the actual body of segment data, queryable.

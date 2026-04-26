@@ -68,6 +68,9 @@ public class WorkerConfig
   @JsonProperty
   private int numConcurrentMerges = Math.max(1, capacity / 2);
 
+  @JsonProperty
+  private boolean startAlwaysEnabled = false;
+
   public String getIp()
   {
     return ip;
@@ -130,6 +133,11 @@ public class WorkerConfig
     return numConcurrentMerges;
   }
 
+  public boolean isStartAlwaysEnabled()
+  {
+    return startAlwaysEnabled;
+  }
+
   public Builder cloneBuilder()
   {
     return new Builder(this);
@@ -148,6 +156,7 @@ public class WorkerConfig
     private Period intermediaryPartitionTimeout;
     private long globalIngestionHeapLimitBytes;
     private int numConcurrentMerges;
+    private boolean startAlwaysEnabled;
 
     private Builder(WorkerConfig input)
     {
@@ -162,6 +171,7 @@ public class WorkerConfig
       this.intermediaryPartitionTimeout = input.intermediaryPartitionTimeout;
       this.globalIngestionHeapLimitBytes = input.globalIngestionHeapLimitBytes;
       this.numConcurrentMerges = input.numConcurrentMerges;
+      this.startAlwaysEnabled = input.startAlwaysEnabled;
     }
 
     public Builder setIp(String ip)
@@ -230,6 +240,12 @@ public class WorkerConfig
       return this;
     }
 
+    public Builder setStartAlwaysEnabled(boolean startAlwaysEnabled)
+    {
+      this.startAlwaysEnabled = startAlwaysEnabled;
+      return this;
+    }
+
     public WorkerConfig build()
     {
       final WorkerConfig retVal = new WorkerConfig();
@@ -244,6 +260,7 @@ public class WorkerConfig
       retVal.intermediaryPartitionTimeout = this.intermediaryPartitionTimeout;
       retVal.globalIngestionHeapLimitBytes = this.globalIngestionHeapLimitBytes;
       retVal.numConcurrentMerges = this.numConcurrentMerges;
+      retVal.startAlwaysEnabled = this.startAlwaysEnabled;
       return retVal;
     }
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
@@ -30,12 +31,22 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -95,58 +106,77 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024},",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"non_existing_sketch\", \"fieldName\": \"non_existing_sketch\"}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, null),
+            new ArrayOfDoublesSketchAggregatorFactory("non_existing_sketch", "non_existing_sketch", null, null, null)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024},",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"non_existing_sketch\", \"fieldName\": \"non_existing_sketch\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimateAndBounds\", \"name\": \"estimateAndBounds\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, \"numStdDevs\": 2},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToString\", \"name\": \"summary\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToVariances\", \"name\": \"variances\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, null),
+                        new ArrayOfDoublesSketchAggregatorFactory("non_existing_sketch", "non_existing_sketch", null, null, null)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
+                            "estimateAndBounds",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            2
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            null,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToStringPostAggregator(
+                            "summary",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToVariancesPostAggregator(
+                            "variances",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -195,61 +225,66 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "sketch")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {",
-            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
-            "      \"name\": \"means\",",
-            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
-            "    }",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            null,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToMeansPostAggregator(
+                            "means",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -288,53 +323,62 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "key", 1024, List.of("value"), null)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"size\": 1024}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", null, null, null)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            null,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -367,61 +411,66 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "value1", "value2")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\" ], \"nominalEntries\": 1024}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "key", 1024, List.of("value1", "value2"), null)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {",
-            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
-            "      \"name\": \"means\",",
-            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
-            "    }",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            2,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToMeansPostAggregator(
+                            "means",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -467,61 +516,66 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value1", "value2")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key_num\", \"metricColumns\": [ \"value1\", \"value2\" ], \"nominalEntries\": 1024}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "key_num", 1024, List.of("value1", "value2"), null)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {",
-            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
-            "      \"name\": \"means\",",
-            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
-            "    }",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            2,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToMeansPostAggregator(
+                            "means",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -564,62 +618,72 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "value1", "value2", "value3")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"value3\" ], \"nominalEntries\": 1024}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "key", 1024, List.of("value1", "value2", "value3"), null)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 3}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {",
-            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
-            "      \"name\": \"means\",",
-            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
-            "    },",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 3)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            2,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToMeansPostAggregator(
+                            "means",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch-with-nulls",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            3,
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -672,54 +736,63 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
         ),
         0, // minTimestamp
         Granularities.NONE,
         40, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024},",
-            "    {\"type\": \"count\", \"name\":\"cnt\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "key", 1024, List.of("value"), null),
+                        new CountAggregatorFactory("cnt")
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            null,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -758,54 +831,63 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
         ),
         0, // minTimestamp
         Granularities.NONE,
         40, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key_num\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024},",
-            "    {\"type\": \"count\", \"name\":\"cnt\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "key_num", 1024, List.of("value"), null),
+                        new CountAggregatorFactory("cnt")
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            null,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, null,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -844,53 +926,63 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
         ),
         0, // minTimestamp
         Granularities.NONE,
         40, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"timeseries\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024},",
-            "    {\"type\": \"count\", \"name\":\"cnt\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test_datasource")
+              .granularity(Granularities.ALL)
+              .intervals("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+              .aggregators(
+                  new ArrayOfDoublesSketchAggregatorFactory("sketch", "key", 1024, List.of("value"), null),
+                  new CountAggregatorFactory("cnt")
+              )
+              .postAggregators(
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "estimate",
+                      new FieldAccessPostAggregator("sketch", "sketch")
+                  ),
+                  new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                      "quantiles-sketch",
+                      new FieldAccessPostAggregator("sketch", "sketch"),
+                      null,
+                      null
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "union",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "union", "UNION", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "intersection",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "intersection", "INTERSECT", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "anotb",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "anotb", "NOT", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  )
+              )
+              .build()
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -929,53 +1021,63 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "key_num", "value")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("value", "value")
         ),
         0, // minTimestamp
         Granularities.NONE,
         40, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"timeseries\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key_num\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024},",
-            "    {\"type\": \"count\", \"name\":\"cnt\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test_datasource")
+              .granularity(Granularities.ALL)
+              .intervals("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+              .aggregators(
+                  new ArrayOfDoublesSketchAggregatorFactory("sketch", "key_num", 1024, List.of("value"), null),
+                  new CountAggregatorFactory("cnt")
+              )
+              .postAggregators(
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "estimate",
+                      new FieldAccessPostAggregator("sketch", "sketch")
+                  ),
+                  new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                      "quantiles-sketch",
+                      new FieldAccessPostAggregator("sketch", "sketch"),
+                      null,
+                      null
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "union",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "union", "UNION", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "intersection",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "intersection", "INTERSECT", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  ),
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "anotb",
+                      new ArrayOfDoublesSketchSetOpPostAggregator(
+                          "anotb", "NOT", 1024, null,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch", "sketch"),
+                              new FieldAccessPostAggregator("sketch", "sketch")
+                          )
+                      )
+                  )
+              )
+              .build()
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -1010,45 +1112,40 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "label", "userid", "parameter")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"parameter\", \"fieldName\": \"parameter\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("parameter", "parameter")
         ),
         0, // minTimestamp
         Granularities.NONE,
         2000, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {",
-            "      \"type\": \"filtered\",",
-            "      \"filter\": {\"type\": \"selector\", \"dimension\": \"label\", \"value\": \"test\"},",
-            "      \"aggregator\": {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch-test\", \"fieldName\": \"userid\", \"metricColumns\": [\"parameter\"]}",
-            "    },",
-            "    {",
-            "      \"type\": \"filtered\",",
-            "      \"filter\": {\"type\": \"selector\", \"dimension\": \"label\", \"value\": \"control\"},",
-            "      \"aggregator\": {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch-control\", \"fieldName\": \"userid\", \"metricColumns\": [\"parameter\"]}",
-            "    }",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchTTest\",",
-            "      \"name\": \"p-value\", \"fields\": [",
-            "        {\"type\": \"fieldAccess\", \"fieldName\": \"sketch-test\"},",
-            "        {\"type\": \"fieldAccess\", \"fieldName\": \"sketch-control\"}",
-            "      ]",
-            "    }",
-            "  ],",
-            "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new FilteredAggregatorFactory(
+                            new ArrayOfDoublesSketchAggregatorFactory(
+                                "sketch-test", "userid", null, List.of("parameter"), null
+                            ),
+                            new SelectorDimFilter("label", "test", null)
+                        ),
+                        new FilteredAggregatorFactory(
+                            new ArrayOfDoublesSketchAggregatorFactory(
+                                "sketch-control", "userid", null, List.of("parameter"), null
+                            ),
+                            new SelectorDimFilter("label", "control", null)
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchTTestPostAggregator(
+                            "p-value",
+                            ImmutableList.of(
+                                new FieldAccessPostAggregator("sketch-test", "sketch-test"),
+                                new FieldAccessPostAggregator("sketch-control", "sketch-control")
+                            )
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -1080,68 +1177,94 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "key", "value1", "value2", "value3")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"doubleSum\", \"name\": \"value1\", \"fieldName\": \"value1\"},",
-            "  {\"type\": \"doubleSum\", \"name\": \"value2\", \"fieldName\": \"value2\"},",
-            "  {\"type\": \"doubleSum\", \"name\": \"value3\", \"fieldName\": \"value3\"}",
-            "]"
+        List.of(
+            new DoubleSumAggregatorFactory("value1", "value1"),
+            new DoubleSumAggregatorFactory("value2", "value2"),
+            new DoubleSumAggregatorFactory("value3", "value3")
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"virtualColumns\": [{\"type\": \"expression\",\"name\": \"nonulls3\",\"expression\": \"nvl(value3, 0.0)\",\"outputType\": \"DOUBLE\"}],",
-            "  \"aggregations\": [",
-            "   {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"value3\" ], \"nominalEntries\": 1024},",
-            "   {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketchNoNulls\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"nonulls3\" ], \"nominalEntries\": 1024}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimateNoNulls\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchNoNulls\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"union\",",
-            "      \"operation\": \"UNION\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"anotb\",",
-            "      \"operation\": \"NOT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 3,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }},",
-            "    {",
-            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
-            "      \"name\": \"means\",",
-            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
-            "    },",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-no-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchNoNulls\"}}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "nonulls3", "nvl(value3, 0.0)", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory(
+                            "sketch", "key", 1024, List.of("value1", "value2", "value3"), null
+                        ),
+                        new ArrayOfDoublesSketchAggregatorFactory(
+                            "sketchNoNulls", "key", 1024, List.of("value1", "value2", "nonulls3"), null
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimate",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "estimateNoNulls",
+                            new FieldAccessPostAggregator("sketchNoNulls", "sketchNoNulls")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            2,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "union",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "union", "UNION", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToEstimatePostAggregator(
+                            "anotb",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "anotb", "NOT", 1024, 3,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new FieldAccessPostAggregator("sketch", "sketch")
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToMeansPostAggregator(
+                            "means",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch-with-nulls",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            3,
+                            null
+                        ),
+                        new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
+                            "quantiles-sketch-with-no-nulls",
+                            new FieldAccessPostAggregator("sketchNoNulls", "sketchNoNulls"),
+                            3,
+                            null
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -1190,6 +1313,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   @Test
   public void testConstantAndBase64WithEstimateSumPostAgg() throws Exception
   {
+    final String externalSketchBase64 =
+        "AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAPA/AAAAAAAAAEAAAAAAAADwPwAAAAAAAABA";
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
             .getFile()),
@@ -1201,47 +1326,50 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "sketch")
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "]"
+        List.of(
+            new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
         ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"arrayOfDoublesSketchToMetricsSumEstimate\", \"name\": \"estimateSum\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-            "    {\"type\": \"arrayOfDoublesSketchToMetricsSumEstimate\", \"name\": \"intersection\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"arrayOfDoublesSketchConstant\", \"name\": \"external_sketch\", \"value\": \"AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAPA/AAAAAAAAAEAAAAAAAADwPwAAAAAAAABA\"}]",
-            "    }},",
-            "    {\"type\": \"arrayOfDoublesSketchToBase64String\", \"name\": \"intersectionString\", \"field\": {",
-            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
-            "      \"name\": \"intersection\",",
-            "      \"operation\": \"INTERSECT\",",
-            "      \"nominalEntries\": 1024,",
-            "      \"numberOfValues\": 2,",
-            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"arrayOfDoublesSketchConstant\", \"name\": \"external_sketch\", \"value\": \"AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAPA/AAAAAAAAAEAAAAAAAADwPwAAAAAAAABA\"}]",
-            "    }}",
-            "  ],",
-            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval("2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z")
+                    .setAggregatorSpecs(
+                        new ArrayOfDoublesSketchAggregatorFactory("sketch", "sketch", 1024, null, 2)
+                    )
+                    .setPostAggregatorSpecs(
+                        new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
+                            "estimateSum",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
+                            "intersection",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new ArrayOfDoublesSketchConstantPostAggregator(
+                                        "external_sketch", externalSketchBase64
+                                    )
+                                )
+                            )
+                        ),
+                        new ArrayOfDoublesSketchToBase64StringPostAggregator(
+                            "intersectionString",
+                            new ArrayOfDoublesSketchSetOpPostAggregator(
+                                "intersection", "INTERSECT", 1024, 2,
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator("sketch", "sketch"),
+                                    new ArrayOfDoublesSketchConstantPostAggregator(
+                                        "external_sketch", externalSketchBase64
+                                    )
+                                )
+                            )
+                        )
+                    )
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());

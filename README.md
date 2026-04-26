@@ -102,7 +102,7 @@ Find articles written by community members and a calendar of upcoming events on 
 
 ### Building from source
 
-Please note that JDK 17 or JDK 21 is required to build Druid.
+Please note that JDK 21 or JDK 25 is required to build Druid.
 
 See the latest [build guide](https://druid.apache.org/docs/latest/development/build.html) for instructions on building Apache Druid from source.
 

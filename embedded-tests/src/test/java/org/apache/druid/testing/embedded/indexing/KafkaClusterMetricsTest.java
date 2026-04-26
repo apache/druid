@@ -153,7 +153,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(20)
+  @Timeout(120)
   public void test_ingest10kRows_ofSelfClusterMetrics_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;

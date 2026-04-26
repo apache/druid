@@ -62,6 +62,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -372,6 +373,7 @@ public class ForkingTaskRunner
 
                         command.addSystemProperty("druid.indexer.task.baseTaskDir", storageSlot.getDirectory().getAbsolutePath());
                         command.addSystemProperty("druid.indexer.task.tmpStorageBytesPerTask", storageSlot.getNumBytes());
+                        command.addSystemProperty(MetricsModule.PROPERTY_PEON_MANAGED, true);
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");

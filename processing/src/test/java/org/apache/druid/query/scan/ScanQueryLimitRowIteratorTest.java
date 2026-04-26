@@ -28,18 +28,19 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
 {
   private static final int NUM_ELEMENTS = 1000;
@@ -58,7 +59,6 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
     this.limit = limit;
   }
 
-  @Parameterized.Parameters(name = "{0} {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<Integer> batchSizes = ImmutableList.of(1, 33);
@@ -69,7 +69,7 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
     );
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     singleEventScanResultValues = new ArrayList<>();
@@ -128,14 +128,14 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);
       if (events.size() != batchSize) {
         if (expectedNumRows - count > batchSize) {
-          Assert.fail("Batch size is incorrect");
+          Assertions.fail("Batch size is incorrect");
         } else {
-          Assert.assertEquals(expectedNumRows - count, events.size());
+          Assertions.assertEquals(expectedNumRows - count, events.size());
         }
       }
       count += events.size();
     }
-    Assert.assertEquals(expectedNumRows, count);
+    Assertions.assertEquals(expectedNumRows, count);
   }
 
   /**
@@ -167,14 +167,14 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);
       if (events.size() != batchSize) {
         if (expectedNumRows - count >= batchSize) {
-          Assert.fail("Batch size is incorrect");
+          Assertions.fail("Batch size is incorrect");
         } else {
-          Assert.assertEquals(expectedNumRows - count, events.size());
+          Assertions.assertEquals(expectedNumRows - count, events.size());
         }
       }
       count += events.size();
     }
-    Assert.assertEquals(expectedNumRows, count);
+    Assertions.assertEquals(expectedNumRows, count);
   }
 
   /**
@@ -206,9 +206,9 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
     while (itr.hasNext()) {
       ScanResultValue curr = itr.next();
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);
-      Assert.assertEquals(1, events.size());
+      Assertions.assertEquals(1, events.size());
       count += events.size();
     }
-    Assert.assertEquals(expectedNumRows, count);
+    Assertions.assertEquals(expectedNumRows, count);
   }
 }

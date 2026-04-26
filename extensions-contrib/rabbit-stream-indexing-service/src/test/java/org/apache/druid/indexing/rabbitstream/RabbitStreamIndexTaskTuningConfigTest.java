@@ -163,6 +163,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "longEncoding=null, " +
                     "complexMetricCompression=null, " +
                     "autoColumnFormatSpec=null, " +
+                    "stringColumnFormatSpec=null, " +
                     "jsonCompression=null, " +
                     "segmentLoader=null" +
                     "}, " +

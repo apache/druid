@@ -19,11 +19,32 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public class DiskNormalizedCostBalancerStrategyFactory extends BalancerStrategyFactory
 {
+  private final DiskNormalizedCostBalancerStrategyConfig config;
+
+  public DiskNormalizedCostBalancerStrategyFactory()
+  {
+    this(new DiskNormalizedCostBalancerStrategyConfig());
+  }
+
+  @JsonCreator
+  public DiskNormalizedCostBalancerStrategyFactory(
+      @JacksonInject DiskNormalizedCostBalancerStrategyConfig config
+  )
+  {
+    this.config = config;
+  }
+
   @Override
   public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
   {
-    return new DiskNormalizedCostBalancerStrategy(getOrCreateBalancerExecutor(numBalancerThreads));
+    return new DiskNormalizedCostBalancerStrategy(
+        getOrCreateBalancerExecutor(numBalancerThreads),
+        config.getMoveCostSavingsThreshold()
+    );
   }
 }

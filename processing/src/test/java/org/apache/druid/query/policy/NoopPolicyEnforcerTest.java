@@ -27,8 +27,8 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NoopPolicyEnforcerTest
 {
@@ -39,7 +39,7 @@ public class NoopPolicyEnforcerTest
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     String expected = "{\"type\":\"none\"}";
-    Assert.assertEquals(expected, jsonMapper.writeValueAsString(policyEnforcer));
+    Assertions.assertEquals(expected, jsonMapper.writeValueAsString(policyEnforcer));
   }
 
   @Test
@@ -51,7 +51,7 @@ public class NoopPolicyEnforcerTest
         jsonMapper.writeValueAsString(policyEnforcer),
         PolicyEnforcer.class
     );
-    Assert.assertEquals(policyEnforcer, deserialized);
+    Assertions.assertEquals(policyEnforcer, deserialized);
   }
 
   @Test
@@ -62,14 +62,14 @@ public class NoopPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertTrue(policyEnforcer.validate(null));
-    Assert.assertTrue(policyEnforcer.validate(policy));
+    Assertions.assertTrue(policyEnforcer.validate(null));
+    Assertions.assertTrue(policyEnforcer.validate(policy));
     policyEnforcer.validateOrElseThrow(table, null);
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
 
     Segment segment = new TestSegmentUtils.SegmentForTesting("table", Intervals.ETERNITY, "1");
-    Assert.assertTrue(policyEnforcer.validate(null));
-    Assert.assertTrue(policyEnforcer.validate(policy));
+    Assertions.assertTrue(policyEnforcer.validate(null));
+    Assertions.assertTrue(policyEnforcer.validate(policy));
     policyEnforcer.validateOrElseThrow(segment, null);
     policyEnforcer.validateOrElseThrow(segment, policy);
 

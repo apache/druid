@@ -24,7 +24,10 @@ import org.apache.druid.messages.client.MessageListener;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -62,7 +65,25 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
     for (final ControllerHolder holder : controllerRegistry.getAllControllers()) {
       final Controller controller = holder.getController();
       final WorkerId workerId = WorkerId.fromDruidNode(node, controller.queryId());
-      holder.workerOffline(workerId);
+      final String workerIdString = workerId.toString();
+
+      // Close the worker client for this server.
+      final ControllerContext controllerContext = controller.getControllerContext();
+      if (controllerContext instanceof DartControllerContext) {
+        ((DartControllerContext) controllerContext).newWorkerClient().closeClient(workerId.getHostAndPort());
+      }
+
+      // Notify the controller that the worker has gone offline.
+      if (controller.hasWorker(workerIdString)) {
+        controller.workerError(
+            MSQErrorReport.fromFault(
+                workerIdString,
+                workerId.getHostAndPort(),
+                null,
+                new WorkerFailedFault(workerIdString, "Worker went offline")
+            )
+        );
+      }
     }
   }
 }

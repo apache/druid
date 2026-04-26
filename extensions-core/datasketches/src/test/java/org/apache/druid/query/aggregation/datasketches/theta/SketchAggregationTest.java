@@ -19,11 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 import org.apache.datasketches.common.Family;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Sketch;
@@ -37,22 +35,30 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.IntervalDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -63,7 +69,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -115,8 +120,72 @@ public class SketchAggregationTest
   @Test
   public void testSketchDataIngestAndGpByQuery() throws Exception
   {
-    final GroupByQuery groupByQuery =
-        readQueryFromClasspath("sketch_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+        .setAggregatorSpecs(
+            new SketchMergeAggregatorFactory("sids_sketch_count", "sids_sketch", 16384, null, null, null),
+            new SketchMergeAggregatorFactory("sids_sketch_count_with_err", "sids_sketch", 16384, null, null, 2),
+            new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+        )
+        .setPostAggregatorSpecs(
+            new SketchEstimatePostAggregator(
+                "sketchEstimatePostAgg",
+                new FieldAccessPostAggregator("sketchEstimatePostAgg", "sids_sketch_count"),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchEstimatePostAggWithErrorBounds",
+                new FieldAccessPostAggregator("sketchEstimatePostAggWithErrorBounds", "sids_sketch_count"),
+                2
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchIntersectionPostAgg",
+                    "INTERSECT",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count")
+                    )
+                ),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchAnotBPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchAnotBUnionPostAgg",
+                    "NOT",
+                    null,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count")
+                    )
+                ),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchUnionPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchUnionPostAgg",
+                    "UNION",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count"),
+                        new FieldAccessPostAggregator("sids_sketch_count", "sids_sketch_count")
+                    )
+                ),
+                null
+            ),
+            new SketchToStringPostAggregator(
+                "sketchSummary",
+                new FieldAccessPostAggregator("sketchSummary", "sids_sketch_count")
+            )
+        )
+        .setContext(ImmutableMap.of("vectorize", vectorize.toString()))
+        .build();
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
@@ -126,7 +195,10 @@ public class SketchAggregationTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "sketch")),
-        readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
+        List.of(
+            new SketchMergeAggregatorFactory("sids_sketch", "sketch", 16384, null, true, null),
+            new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, true, null)
+        ),
         0,
         Granularities.NONE,
         1000,
@@ -180,8 +252,17 @@ public class SketchAggregationTest
   @Test
   public void testEmptySketchAggregateCombine() throws Exception
   {
-    final GroupByQuery groupByQuery =
-        readQueryFromClasspath("empty_sketch_group_by_query.json", helper.getObjectMapper(), vectorize);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval("2019-07-14T00:00:00.000Z/2019-07-15T00:00:00.000Z")
+        .setDimensions(new DefaultDimensionSpec("product", "product"))
+        .setDimFilter(new SelectorDimFilter("product", "product_b", null))
+        .setAggregatorSpecs(
+            new SketchMergeAggregatorFactory("sketch_count", "product_sketch", 16384, null, null, null)
+        )
+        .setContext(ImmutableMap.of("vectorize", vectorize.toString()))
+        .build();
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("empty_sketch_data.tsv").getFile()),
@@ -191,7 +272,7 @@ public class SketchAggregationTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "product_code", "product_sketch")),
-        readFileFromClasspathAsString("empty_sketch_test_data_aggregators.json"),
+        List.of(new SketchMergeAggregatorFactory("product_sketch", "product_sketch", 16384, null, true, null)),
         0,
         Granularities.NONE,
         5,
@@ -219,8 +300,72 @@ public class SketchAggregationTest
   @Test
   public void testThetaCardinalityOnSimpleColumn() throws Exception
   {
-    final GroupByQuery groupByQuery =
-        readQueryFromClasspath("simple_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+        .setDimensions(new DefaultDimensionSpec("product", "product"))
+        .setAggregatorSpecs(
+            new SketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null, null, null),
+            new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+        )
+        .setPostAggregatorSpecs(
+            new SketchEstimatePostAggregator(
+                "sketchEstimatePostAgg",
+                new FieldAccessPostAggregator("sketchEstimatePostAgg", "sketch_count"),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchIntersectionPostAgg",
+                    "INTERSECT",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                    )
+                ),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchAnotBPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchAnotBUnionPostAgg",
+                    "NOT",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                    )
+                ),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchUnionPostAggEstimate",
+                new SketchSetPostAggregator(
+                    "sketchUnionPostAgg",
+                    "UNION",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                        new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                    )
+                ),
+                null
+            )
+        )
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(
+                    new OrderByColumnSpec("sketchEstimatePostAgg", OrderByColumnSpec.Direction.ASCENDING),
+                    new OrderByColumnSpec("product", OrderByColumnSpec.Direction.ASCENDING)
+                ),
+                null
+            )
+        )
+        .setContext(ImmutableMap.of("vectorize", vectorize.toString()))
+        .build();
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
@@ -230,12 +375,7 @@ public class SketchAggregationTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
-        "["
-        + "  {"
-        + "    \"type\": \"count\","
-        + "    \"name\": \"count\""
-        + "  }"
-        + "]",
+        List.of(new CountAggregatorFactory("count")),
         0,
         Granularities.NONE,
         1000,
@@ -450,8 +590,71 @@ public class SketchAggregationTest
   @Test
   public void testRetentionDataIngestAndGpByQuery() throws Exception
   {
-    final GroupByQuery groupByQuery =
-        readQueryFromClasspath("retention_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+        .setDataSource("test_datasource")
+        .setGranularity(Granularities.ALL)
+        .setInterval("2014-10-19T00:00:00.000Z/2014-10-23T00:00:00.000Z")
+        .setDimensions(new DefaultDimensionSpec("product", "product"))
+        .setDimFilter(new SelectorDimFilter("product", "product_1", null))
+        .setAggregatorSpecs(
+            new FilteredAggregatorFactory(
+                new SketchMergeAggregatorFactory("p1_unique_country_day_1", "pty_country", null, null, null, null),
+                new AndDimFilter(ImmutableList.of(
+                    new SelectorDimFilter("product", "product_1", null),
+                    new IntervalDimFilter("__time", ImmutableList.of(Intervals.of("2014-10-20T00:00:00.000Z/2014-10-21T00:00:00.000Z")), null)
+                ))
+            ),
+            new FilteredAggregatorFactory(
+                new SketchMergeAggregatorFactory("p1_unique_country_day_2", "pty_country", null, null, null, null),
+                new AndDimFilter(ImmutableList.of(
+                    new SelectorDimFilter("product", "product_1", null),
+                    new IntervalDimFilter("__time", ImmutableList.of(Intervals.of("2014-10-21T00:00:00.000Z/2014-10-22T00:00:00.000Z")), null)
+                ))
+            ),
+            new FilteredAggregatorFactory(
+                new SketchMergeAggregatorFactory("p1_unique_country_day_3", "pty_country", null, null, null, null),
+                new AndDimFilter(ImmutableList.of(
+                    new SelectorDimFilter("product", "product_1", null),
+                    new IntervalDimFilter("__time", ImmutableList.of(Intervals.of("2014-10-22T00:00:00.000Z/2014-10-23T00:00:00.000Z")), null)
+                ))
+            ),
+            new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+        )
+        .setPostAggregatorSpecs(
+            new SketchEstimatePostAggregator(
+                "sketchEstimatePostAgg",
+                new FieldAccessPostAggregator("sketchEstimatePostAgg", "p1_unique_country_day_1"),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate1",
+                new SketchSetPostAggregator(
+                    "sketchIntersectionPostAgg",
+                    "INTERSECT",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("p1_unique_country_day_1", "p1_unique_country_day_1"),
+                        new FieldAccessPostAggregator("p1_unique_country_day_2", "p1_unique_country_day_2")
+                    )
+                ),
+                null
+            ),
+            new SketchEstimatePostAggregator(
+                "sketchIntersectionPostAggEstimate2",
+                new SketchSetPostAggregator(
+                    "sketchIntersectionPostAgg2",
+                    "INTERSECT",
+                    16384,
+                    ImmutableList.of(
+                        new FieldAccessPostAggregator("p1_unique_country_day_1", "p1_unique_country_day_1"),
+                        new FieldAccessPostAggregator("p1_unique_country_day_3", "p1_unique_country_day_3")
+                    )
+                ),
+                null
+            )
+        )
+        .setContext(ImmutableMap.of("vectorize", vectorize.toString()))
+        .build();
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
@@ -461,7 +664,10 @@ public class SketchAggregationTest
             ColumnsFilter.all()
         ),
         DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country")),
-        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+        List.of(
+            new SketchMergeAggregatorFactory("pty_country", "pty_country", null, null, null, null),
+            new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", null, null, null, null)
+        ),
         0,
         Granularities.NONE,
         5,
@@ -623,24 +829,4 @@ public class SketchAggregationTest
     );
   }
 
-  public static <T, Q extends Query<T>> Q readQueryFromClasspath(
-      final String fileName,
-      final ObjectMapper objectMapper,
-      final QueryContexts.Vectorize vectorize
-  ) throws IOException
-  {
-    final String queryString = readFileFromClasspathAsString(fileName);
-
-    //noinspection unchecked
-    return (Q) objectMapper.readValue(queryString, Query.class)
-                           .withOverriddenContext(ImmutableMap.of("vectorize", vectorize.toString()));
-  }
-
-  public static String readFileFromClasspathAsString(String fileName) throws IOException
-  {
-    return Files.asCharSource(
-        new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
-        StandardCharsets.UTF_8
-    ).read();
-  }
 }

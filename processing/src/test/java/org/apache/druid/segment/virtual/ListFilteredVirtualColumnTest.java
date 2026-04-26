@@ -26,8 +26,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ListFilteredVirtualColumnTest
 {
@@ -43,8 +43,8 @@ public class ListFilteredVirtualColumnTest
         true
     );
     ListFilteredVirtualColumn roundTrip = MAPPER.readValue(MAPPER.writeValueAsString(virtualColumn), ListFilteredVirtualColumn.class);
-    Assert.assertEquals(virtualColumn, roundTrip);
-    Assert.assertArrayEquals(virtualColumn.getCacheKey(), roundTrip.getCacheKey());
+    Assertions.assertEquals(virtualColumn, roundTrip);
+    Assertions.assertArrayEquals(virtualColumn.getCacheKey(), roundTrip.getCacheKey());
   }
 
   @Test
@@ -57,8 +57,8 @@ public class ListFilteredVirtualColumnTest
         false
     );
     ListFilteredVirtualColumn roundTrip = MAPPER.readValue(MAPPER.writeValueAsString(virtualColumn), ListFilteredVirtualColumn.class);
-    Assert.assertEquals(virtualColumn, roundTrip);
-    Assert.assertArrayEquals(virtualColumn.getCacheKey(), roundTrip.getCacheKey());
+    Assertions.assertEquals(virtualColumn, roundTrip);
+    Assertions.assertArrayEquals(virtualColumn.getCacheKey(), roundTrip.getCacheKey());
   }
 
   @Test

@@ -32,6 +32,7 @@ import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -70,6 +71,7 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -381,6 +383,27 @@ public class OverlordCompactionSchedulerTest
         "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
         result.getReason()
     );
+  }
+
+  @Test
+  public void test_validateCompactionConfig_delegatesToCascadingReindexingTemplate()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertTrue(result.isValid());
   }
 
   @Test

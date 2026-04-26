@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StupidResourceHolderTest
 {
@@ -32,7 +32,7 @@ public class StupidResourceHolderTest
     String expected = "String";
     resourceHolder = StupidResourceHolder.create(expected);
     String actual = resourceHolder.get();
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
     resourceHolder.close();
   }
 }

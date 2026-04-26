@@ -49,6 +49,7 @@ import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
 import org.apache.druid.security.basic.authentication.endpoint.DefaultBasicAuthenticatorResourceHandler;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import org.apache.druid.security.basic.authorization.ReadOnlyAuthorizer;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 import org.apache.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheNotifier;
@@ -216,6 +217,7 @@ public class BasicSecurityDruidModule implements DruidModule
             BasicHTTPAuthenticator.class,
             BasicHTTPEscalator.class,
             BasicRoleBasedAuthorizer.class,
+            ReadOnlyAuthorizer.class,
             NettyHttpClient.class
         )
     );

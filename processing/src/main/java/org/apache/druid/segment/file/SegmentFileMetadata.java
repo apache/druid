@@ -22,11 +22,13 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,11 +76,24 @@ public class SegmentFileMetadata
   )
   {
     this.containers = containers;
-    this.files = files;
+    this.files = internKeys(files);
     this.interval = interval;
-    this.columnDescriptors = columnDescriptors;
+    this.columnDescriptors = internKeys(columnDescriptors);
     this.projections = projections;
     this.bitmapEncoding = bitmapEncoding;
+  }
+
+  @Nullable
+  private static <V> Map<String, V> internKeys(@Nullable Map<String, V> map)
+  {
+    if (map == null) {
+      return null;
+    }
+    final Map<String, V> interned = new HashMap<>();
+    for (Map.Entry<String, V> entry : map.entrySet()) {
+      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), entry.getValue());
+    }
+    return interned;
   }
 
   @JsonProperty

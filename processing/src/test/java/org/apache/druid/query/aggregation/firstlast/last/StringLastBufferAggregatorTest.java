@@ -23,8 +23,8 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -77,8 +77,8 @@ public class StringLastBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", Long.valueOf(1526725900L), sp.lhs);
+    Assertions.assertEquals("DDDD", sp.rhs, "expected last string value");
+    Assertions.assertEquals(Long.valueOf(1526725900L), sp.lhs, "last string timestamp is the biggest");
 
   }
 
@@ -115,8 +115,8 @@ public class StringLastBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", Long.valueOf(1526725900L), sp.lhs);
+    Assertions.assertEquals("DDDD", sp.rhs, "expected last string value");
+    Assertions.assertEquals(Long.valueOf(1526725900L), sp.lhs, "last string timestamp is the biggest");
   }
 
   @Test
@@ -153,8 +153,8 @@ public class StringLastBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expected last string value", strings[2], sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", Long.valueOf(timestamps[2]), sp.lhs);
+    Assertions.assertEquals(strings[2], sp.rhs, "expected last string value");
+    Assertions.assertEquals(Long.valueOf(timestamps[2]), sp.lhs, "last string timestamp is the biggest");
 
   }
 
@@ -191,7 +191,7 @@ public class StringLastBufferAggregatorTest
 
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
-    Assert.assertEquals(1526724600L, (long) sp.lhs);
-    Assert.assertEquals("2.0", sp.rhs);
+    Assertions.assertEquals(1526724600L, (long) sp.lhs);
+    Assertions.assertEquals("2.0", sp.rhs);
   }
 }

@@ -41,3 +41,21 @@ export async function retryIfJestAssertionError(
     }
   }
 }
+
+export async function retryOnAnyError(callback: () => Promise<void>, msec = 1000, maxTries = 60) {
+  let i = 0;
+
+  while (true) {
+    try {
+      await callback();
+      return;
+    } catch (e) {
+      i++;
+      if (i < maxTries) {
+        await sleep(msec);
+      } else {
+        throw e;
+      }
+    }
+  }
+}

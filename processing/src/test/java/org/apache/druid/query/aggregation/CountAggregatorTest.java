@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 
@@ -33,17 +33,17 @@ public class CountAggregatorTest
   {
     CountAggregator agg = new CountAggregator();
 
-    Assert.assertEquals(0L, agg.get());
-    Assert.assertEquals(0L, agg.get());
-    Assert.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
     agg.aggregate();
-    Assert.assertEquals(1L, agg.get());
-    Assert.assertEquals(1L, agg.get());
-    Assert.assertEquals(1L, agg.get());
+    Assertions.assertEquals(1L, agg.get());
+    Assertions.assertEquals(1L, agg.get());
+    Assertions.assertEquals(1L, agg.get());
     agg.aggregate();
-    Assert.assertEquals(2L, agg.get());
-    Assert.assertEquals(2L, agg.get());
-    Assert.assertEquals(2L, agg.get());
+    Assertions.assertEquals(2L, agg.get());
+    Assertions.assertEquals(2L, agg.get());
+    Assertions.assertEquals(2L, agg.get());
   }
 
   @Test
@@ -56,18 +56,18 @@ public class CountAggregatorTest
 
     Comparator comp = new CountAggregatorFactory("null").getComparator();
 
-    Assert.assertEquals(-1, comp.compare(first, agg.get()));
-    Assert.assertEquals(0, comp.compare(first, first));
-    Assert.assertEquals(0, comp.compare(agg.get(), agg.get()));
-    Assert.assertEquals(1, comp.compare(agg.get(), first));
+    Assertions.assertEquals(-1, comp.compare(first, agg.get()));
+    Assertions.assertEquals(0, comp.compare(first, first));
+    Assertions.assertEquals(0, comp.compare(agg.get(), agg.get()));
+    Assertions.assertEquals(1, comp.compare(agg.get(), first));
   }
 
   @Test
   public void testWithName()
   {
     CountAggregatorFactory factory = new CountAggregatorFactory("test");
-    Assert.assertEquals(factory, factory.withName("test"));
+    Assertions.assertEquals(factory, factory.withName("test"));
 
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

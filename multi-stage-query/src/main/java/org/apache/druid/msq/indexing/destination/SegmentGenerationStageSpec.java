@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -137,27 +138,44 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
   {
     final Map<String, VirtualColumn> clusterByVirtualColumns = new LinkedHashMap<>();
     if (query instanceof GroupByQuery groupByQuery) {
-      final Map<String, VirtualColumn> outputToVc = new LinkedHashMap<>();
+      final Map<String, VirtualColumns.Node> outputToVc = new LinkedHashMap<>();
       for (DimensionSpec spec : groupByQuery.getDimensions()) {
-        final VirtualColumn vc = groupByQuery.getVirtualColumns().getVirtualColumn(spec.getDimension());
+        final VirtualColumns.Node vc = groupByQuery.getVirtualColumns().getNode(spec.getDimension());
         if (vc != null) {
           outputToVc.put(spec.getOutputName(), vc);
         }
       }
       for (KeyColumn column : queryClusterBy.getColumns()) {
-        final VirtualColumn vc = outputToVc.get(column.columnName());
+        final VirtualColumns.Node vc = outputToVc.get(column.columnName());
         if (vc != null) {
-          clusterByVirtualColumns.put(column.columnName(), vc);
+          clusterByVirtualColumns.put(column.columnName(), vc.getVirtualColumn());
+          addRequiredFromNode(vc, clusterByVirtualColumns);
         }
       }
     } else if (query instanceof ScanQuery scanQuery) {
       for (KeyColumn column : queryClusterBy.getColumns()) {
-        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(column.columnName());
+        final VirtualColumns.Node vc = scanQuery.getVirtualColumns().getNode(column.columnName());
         if (vc != null) {
-          clusterByVirtualColumns.put(column.columnName(), vc);
+          clusterByVirtualColumns.put(column.columnName(), vc.getVirtualColumn());
+          addRequiredFromNode(vc, clusterByVirtualColumns);
         }
       }
     }
     return clusterByVirtualColumns;
+  }
+
+  /**
+   * Adds all transitive virtual column dependencies of {@code vc} into {@code collected}. This handles cases where a
+   * cluster-by virtual column depends on other virtual columns, such as when clustering by something like
+   * {@code LOWER(JSON_VALUE(obj, '$.path'))} which creates an ExpressionVirtualColumn that references a
+   * NestedFieldVirtualColumn.
+   */
+  private static void addRequiredFromNode(VirtualColumns.Node node, Map<String, VirtualColumn> collected)
+  {
+    for (VirtualColumns.Node dep : node.getDependencies()) {
+      if (collected.putIfAbsent(dep.getVirtualColumn().getOutputName(), dep.getVirtualColumn()) == null) {
+        addRequiredFromNode(dep, collected);
+      }
+    }
   }
 }

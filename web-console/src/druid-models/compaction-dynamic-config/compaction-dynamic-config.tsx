@@ -19,12 +19,24 @@
 import { Code } from '@blueprintjs/core';
 
 import type { Field } from '../../components';
-import { deepGet } from '../../utils';
+import { deepGet, deepSet } from '../../utils';
+
+export type CompactionPolicy =
+  | { type: 'newestSegmentFirst'; priorityDatasource?: string | null }
+  | {
+      type: 'mostFragmentedFirst';
+      priorityDatasource?: string | null;
+      minUncompactedCount?: number;
+      minUncompactedBytes?: number;
+      maxAverageUncompactedBytesPerSegment?: number;
+      minUncompactedBytesPercentForFullCompaction?: number;
+      minUncompactedRowsPercentForFullCompaction?: number;
+    };
 
 export interface CompactionDynamicConfig {
   compactionTaskSlotRatio: number;
   maxCompactionTaskSlots: number;
-  compactionPolicy: { type: 'newestSegmentFirst'; priorityDatasource?: string | null };
+  compactionPolicy: CompactionPolicy;
   useSupervisors: boolean;
   engine: 'native' | 'msq';
   storeCompactionStatePerSegment: boolean;
@@ -74,24 +86,115 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
     name: 'compactionPolicy.type',
     label: 'Compaction search policy',
     type: 'string',
-    suggestions: ['newestSegmentFirst'],
+    suggestions: ['newestSegmentFirst', 'mostFragmentedFirst'],
     info: (
       <>
-        Currently, the only supported policy is <Code>newestSegmentFirst</Code>, which prioritizes
-        segments with more recent intervals for compaction.
+        <p>
+          <Code>newestSegmentFirst</Code> prioritizes segments with more recent intervals for
+          compaction.
+        </p>
+        <p>
+          <Code>mostFragmentedFirst</Code> (experimental) prioritizes intervals with the largest
+          number of small uncompacted segments, favoring cluster stability over query performance on
+          newer intervals.
+        </p>
       </>
     ),
+    adjustment: config => {
+      const policyType = deepGet(config, 'compactionPolicy.type');
+      const priorityDatasource = deepGet(config, 'compactionPolicy.priorityDatasource');
+      const newPolicy: Record<string, any> = { type: policyType };
+      if (priorityDatasource) {
+        newPolicy.priorityDatasource = priorityDatasource;
+      }
+      return deepSet(config, 'compactionPolicy', newPolicy);
+    },
   },
   {
     name: 'compactionPolicy.priorityDatasource',
     type: 'string',
-    defined: config => deepGet(config, 'compactionPolicy.type') === 'newestSegmentFirst',
+    defined: config =>
+      deepGet(config, 'compactionPolicy.type') === 'newestSegmentFirst' ||
+      deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
     placeholder: '(none)',
     info: (
       <>
         Datasource to prioritize for compaction. The intervals of this datasource are chosen for
         compaction before the intervals of any other datasource. Within this datasource, the
         intervals are prioritized based on the chosen compaction policy.
+      </>
+    ),
+  },
+  {
+    name: 'compactionPolicy.minUncompactedCount',
+    label: 'Min uncompacted segment count',
+    type: 'number',
+    defaultValue: 100,
+    min: 1,
+    defined: config => deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
+    info: (
+      <>
+        Minimum number of uncompacted segments that must be present in an interval to make it
+        eligible for compaction.
+      </>
+    ),
+  },
+  {
+    name: 'compactionPolicy.minUncompactedBytes',
+    label: 'Min uncompacted bytes',
+    type: 'size-bytes',
+    defaultValue: 10485760,
+    defined: config => deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
+    info: (
+      <>
+        Minimum total bytes of uncompacted segments that must be present in an interval to make it
+        eligible for compaction. Default: 10 MiB.
+      </>
+    ),
+  },
+  {
+    name: 'compactionPolicy.maxAverageUncompactedBytesPerSegment',
+    label: 'Max avg uncompacted segment size',
+    type: 'size-bytes',
+    defaultValue: 2147483648,
+    defined: config => deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
+    info: (
+      <>
+        Maximum average size of uncompacted segments in an interval eligible for compaction.
+        Intervals where the average uncompacted segment is larger than this are skipped. Default: 2
+        GiB.
+      </>
+    ),
+  },
+  {
+    name: 'compactionPolicy.minUncompactedBytesPercentForFullCompaction',
+    label: 'Min uncompacted bytes % for full compaction',
+    type: 'number',
+    defaultValue: 0,
+    min: 0,
+    max: 99,
+    defined: config => deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
+    info: (
+      <>
+        Threshold percentage of uncompacted bytes to total bytes. When the ratio of uncompacted
+        bytes falls below this threshold, minor compaction is used instead of full compaction. Set
+        to 0 (default) to always use full compaction.
+      </>
+    ),
+  },
+  {
+    name: 'compactionPolicy.minUncompactedRowsPercentForFullCompaction',
+    label: 'Min uncompacted rows % for full compaction',
+    type: 'number',
+    defaultValue: 0,
+    min: 0,
+    max: 99,
+    defined: config => deepGet(config, 'compactionPolicy.type') === 'mostFragmentedFirst',
+    info: (
+      <>
+        Threshold percentage of uncompacted rows to total rows. When the ratio of uncompacted rows
+        falls below this threshold, minor compaction is used instead of full compaction. Set to 0
+        (default) to always use full compaction.
       </>
     ),
   },

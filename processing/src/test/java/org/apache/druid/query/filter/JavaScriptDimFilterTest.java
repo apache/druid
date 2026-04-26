@@ -23,11 +23,8 @@ import com.google.common.collect.Sets;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.filter.JavaScriptFilter;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -36,19 +33,16 @@ public class JavaScriptDimFilterTest
   private static final String FN1 = "function(x) { return x }";
   private static final String FN2 = "function(x) { return x + x }";
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testGetCacheKey()
   {
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", FN2, null, JavaScriptConfig.getEnabledInstance());
-    Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("dim", FN1, regexFn, JavaScriptConfig.getEnabledInstance());
-    Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter3.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter3.getCacheKey()));
   }
 
   @Test
@@ -57,14 +51,14 @@ public class JavaScriptDimFilterTest
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", FN2, null, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", FN2, null, JavaScriptConfig.getEnabledInstance());
-    Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter2);
-    Assert.assertEquals(javaScriptDimFilter2, javaScriptDimFilter3);
+    Assertions.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter2);
+    Assertions.assertEquals(javaScriptDimFilter2, javaScriptDimFilter3);
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", FN1, regexFn, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", FN1, regexFn, JavaScriptConfig.getEnabledInstance());
-    Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter3);
-    Assert.assertEquals(javaScriptDimFilter4, javaScriptDimFilter5);
+    Assertions.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter3);
+    Assertions.assertEquals(javaScriptDimFilter4, javaScriptDimFilter5);
   }
 
   @Test
@@ -73,14 +67,14 @@ public class JavaScriptDimFilterTest
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", FN2, null, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", FN2, null, JavaScriptConfig.getEnabledInstance());
-    Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter2.hashCode());
-    Assert.assertEquals(javaScriptDimFilter2.hashCode(), javaScriptDimFilter3.hashCode());
+    Assertions.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter2.hashCode());
+    Assertions.assertEquals(javaScriptDimFilter2.hashCode(), javaScriptDimFilter3.hashCode());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", FN1, regexFn, JavaScriptConfig.getEnabledInstance());
     JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", FN1, regexFn, JavaScriptConfig.getEnabledInstance());
-    Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter3.hashCode());
-    Assert.assertEquals(javaScriptDimFilter4.hashCode(), javaScriptDimFilter5.hashCode());
+    Assertions.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter3.hashCode());
+    Assertions.assertEquals(javaScriptDimFilter4.hashCode(), javaScriptDimFilter5.hashCode());
   }
 
   @Test
@@ -93,7 +87,7 @@ public class JavaScriptDimFilterTest
         JavaScriptConfig.getEnabledInstance()
     );
     final Filter filter = javaScriptDimFilter.toFilter();
-    Assert.assertThat(filter, CoreMatchers.instanceOf(JavaScriptFilter.class));
+    Assertions.assertInstanceOf(JavaScriptFilter.class, filter);
   }
 
   @Test
@@ -101,17 +95,18 @@ public class JavaScriptDimFilterTest
   {
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, new JavaScriptConfig(false));
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    javaScriptDimFilter.toFilter();
-    Assert.assertTrue(false);
+    IllegalStateException e = Assertions.assertThrows(
+        IllegalStateException.class,
+        javaScriptDimFilter::toFilter
+    );
+    Assertions.assertTrue(e.getMessage().contains("JavaScript is disabled"));
   }
 
   @Test
   public void testGetRequiredColumns()
   {
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, new JavaScriptConfig(false));
-    Assert.assertEquals(javaScriptDimFilter.getRequiredColumns(), Sets.newHashSet("dim"));
+    Assertions.assertEquals(javaScriptDimFilter.getRequiredColumns(), Sets.newHashSet("dim"));
   }
 
   @Test
@@ -124,9 +119,9 @@ public class JavaScriptDimFilterTest
             null,
             JavaScriptConfig.getEnabledInstance()
     );
-    Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("123").matches(false));
-    Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("456").matches(false));
-    Assert.assertFalse(javaScriptDimFilter.getPredicateFactory().applyObject("789").matches(false));
+    Assertions.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("123").matches(false));
+    Assertions.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("456").matches(false));
+    Assertions.assertFalse(javaScriptDimFilter.getPredicateFactory().applyObject("789").matches(false));
 
     // test for return java.lang.Boolean
     JavaScriptDimFilter javaScriptDimFilter1 = new JavaScriptDimFilter(
@@ -135,9 +130,9 @@ public class JavaScriptDimFilterTest
             null,
             JavaScriptConfig.getEnabledInstance()
     );
-    Assert.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("123").matches(false));
-    Assert.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("456").matches(false));
-    Assert.assertFalse(javaScriptDimFilter1.getPredicateFactory().applyObject("789").matches(false));
+    Assertions.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("123").matches(false));
+    Assertions.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("456").matches(false));
+    Assertions.assertFalse(javaScriptDimFilter1.getPredicateFactory().applyObject("789").matches(false));
 
     // test for return other type
     JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter(
@@ -146,7 +141,7 @@ public class JavaScriptDimFilterTest
             null,
             JavaScriptConfig.getEnabledInstance()
     );
-    Assert.assertTrue(javaScriptDimFilter2.getPredicateFactory().applyObject("123").matches(false));
+    Assertions.assertTrue(javaScriptDimFilter2.getPredicateFactory().applyObject("123").matches(false));
 
     // test for return null
     JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter(
@@ -155,6 +150,6 @@ public class JavaScriptDimFilterTest
             null,
             JavaScriptConfig.getEnabledInstance()
     );
-    Assert.assertFalse(javaScriptDimFilter3.getPredicateFactory().applyObject("123").matches(false));
+    Assertions.assertFalse(javaScriptDimFilter3.getPredicateFactory().applyObject("123").matches(false));
   }
 }

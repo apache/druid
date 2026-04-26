@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.indexing.StorageCountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
@@ -431,20 +432,28 @@ public class RunWorkOrder
       case LOCAL_STORAGE:
         final File fileChannelDirectory =
             frameContext.tempDir(StringUtils.format("output_stage_%06d", workOrder.getStageNumber()));
-        outputChannelFactory = new FileOutputChannelFactory(
-            fileChannelDirectory,
-            frameSize,
-            null,
-            frameContext.wireTransferableContext()
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            new FileOutputChannelFactory(
+                fileChannelDirectory,
+                frameSize,
+                null,
+                frameContext.wireTransferableContext()
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            false
         );
         break;
 
       case DURABLE_STORAGE_INTERMEDIATE:
       case DURABLE_STORAGE_QUERY_RESULTS:
-        outputChannelFactory = makeDurableStorageOutputChannelFactory(
-            frameContext.tempDir("durable"),
-            frameSize,
-            outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            makeDurableStorageOutputChannelFactory(
+                frameContext.tempDir("durable"),
+                frameSize,
+                outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            true
         );
         break;
 
@@ -469,11 +478,15 @@ public class RunWorkOrder
     final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tempDir, StringUtils.format("intermediate-stage-%06d", workOrder.getStageNumber()));
-    final FileOutputChannelFactory fileOutputChannelFactory = new FileOutputChannelFactory(
-        fileChannelDirectory,
-        frameSize,
-        intermediateByteTracker,
-        frameContext.wireTransferableContext()
+    final OutputChannelFactory fileOutputChannelFactory = new StorageCountingOutputChannelFactory(
+        new FileOutputChannelFactory(
+            fileChannelDirectory,
+            frameSize,
+            intermediateByteTracker,
+            frameContext.wireTransferableContext()
+        ),
+        counterTracker.storage(intermediateByteTracker),
+        false
     );
 
     if (workOrder.getOutputChannelMode().isDurable()
@@ -483,7 +496,11 @@ public class RunWorkOrder
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,
-              makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults)
+              new StorageCountingOutputChannelFactory(
+                  makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults),
+                  counterTracker.storage(intermediateByteTracker),
+                  true
+              )
           ),
           frameSize
       );

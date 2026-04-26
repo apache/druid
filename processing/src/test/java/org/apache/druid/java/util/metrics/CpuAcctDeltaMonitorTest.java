@@ -26,12 +26,10 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Cpu;
 import org.apache.druid.java.util.metrics.cgroups.CpuSet;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,19 +38,17 @@ import java.nio.file.Path;
 
 public class CpuAcctDeltaMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
   private File procDir;
   private File cgroupDir;
   private File cpuacctDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpuacctDir = new File(
         cgroupDir,
@@ -74,7 +70,7 @@ public class CpuAcctDeltaMonitorTest
     monitor.doMonitor(emitter);
     monitor.doMonitor(emitter);
     monitor.doMonitor(emitter);
-    Assert.assertTrue(emitter.getEvents().isEmpty());
+    Assertions.assertTrue(emitter.getEvents().isEmpty());
   }
 
   @Test
@@ -117,12 +113,12 @@ public class CpuAcctDeltaMonitorTest
         }
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
-    Assert.assertFalse(monitor.doMonitor(emitter));
+    Assertions.assertFalse(monitor.doMonitor(emitter));
     // First should just cache
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
-    Assert.assertTrue(cpuacct.delete());
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(cpuacct.delete());
     TestUtils.copyResource("/cpuacct.usage_all", cpuacct);
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(2 * 128 + 1, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(2 * 128 + 1, emitter.getNumEmittedEvents());
   }
 }

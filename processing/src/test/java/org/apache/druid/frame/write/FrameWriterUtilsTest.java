@@ -20,8 +20,8 @@
 package org.apache.druid.frame.write;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -39,8 +39,8 @@ public class FrameWriterUtilsTest
     FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4);
     byte[] outputArray = new byte[4];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 4);
-    Assert.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
-    Assert.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
+    Assertions.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
+    Assertions.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
   }
 
   @Test
@@ -53,8 +53,8 @@ public class FrameWriterUtilsTest
     FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(inputBuffer, WRITABLE_MEMORY, 0, 4);
     byte[] outputArray = new byte[4];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 4);
-    Assert.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
-    Assert.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
+    Assertions.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
+    Assertions.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
   }
 
   @Test
@@ -64,14 +64,14 @@ public class FrameWriterUtilsTest
     FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, true);
     byte[] outputArray = new byte[3];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 3);
-    Assert.assertArrayEquals(new byte[]{0x0A, (byte) 0xA4, 0x53}, outputArray);
-    Assert.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
+    Assertions.assertArrayEquals(new byte[]{0x0A, (byte) 0xA4, 0x53}, outputArray);
+    Assertions.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
   }
 
   @Test
   public void test_copyByteBufferToMemory_withDisallowedNullBytes()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         InvalidNullByteException.class,
         () -> FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(
             INPUT_BYTE_BUFFER,

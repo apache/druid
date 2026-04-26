@@ -22,9 +22,11 @@ package org.apache.druid.testing.embedded.compact;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -73,8 +75,8 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
     overlord.start();
 
     // Verify that compaction config already exist. This config was inserted manually into the database using SQL script.
-    DruidCompactionConfig coordinatorCompactionConfig = DruidCompactionConfig.empty()
-        .withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
+    DruidCompactionConfig coordinatorCompactionConfig =
+        DruidCompactionConfig.empty().withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
     DataSourceCompactionConfig foundDataSourceCompactionConfig
         = coordinatorCompactionConfig.findConfigForDatasource(dataSource).orNull();
     Assertions.assertNotNull(foundDataSourceCompactionConfig);
@@ -132,18 +134,16 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
    */
   private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector)
   {
-    final String configJson = StringUtils.format(
-        "{\"compactionConfigs\":[{\"dataSource\":\"%s\"}]}",
-        dataSource
-    );
-
+    DataSourceCompactionConfig dataSourceCompactionConfig =
+        new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null);
+    DruidCompactionConfig config = DruidCompactionConfig.legacy().withDatasourceConfig(dataSourceCompactionConfig);
     sqlConnector.retryWithHandle(
         handle -> handle.insert(
             StringUtils.format(
                 "INSERT INTO %s (name, payload) VALUES ('coordinator.compaction.config',?)",
                 sqlConnector.getMetadataTablesConfig().getConfigTable()
             ),
-            configJson.getBytes(StandardCharsets.UTF_8)
+            new DefaultObjectMapper().writeValueAsString(config).getBytes(StandardCharsets.UTF_8)
         )
     );
   }

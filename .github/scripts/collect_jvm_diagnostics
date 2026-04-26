@@ -16,13 +16,16 @@
 # limitations under the License.
 #--------------------------------------------------------------------
 
-echo "@ capturing threaddumps every minute for all java processes" >&2
+echo "@ capturing jvm diagnostics every minute for all java processes" >&2
+
+mkdir -p target/ci-debug
 
 while :;do
 	sleep 60
 	t=`date +%s`
-	echo "@ capturing threaddumps $t" >&2
+	echo "@ capturing jvm diagnostics $t" >&2
 	pgrep java | while read pid;do
-		jstack $pid > target/jstack.$pid.$t
+		jstack $pid > target/ci-debug/jstack.$pid.$t
+		jcmd $pid GC.heap_info > target/ci-debug/heap.$pid.$t 2>&1
 	done
 done

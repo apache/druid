@@ -23,37 +23,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.StringDimensionHandler;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class StringDimensionSchema extends DimensionSchema
 {
   private static final boolean DEFAULT_CREATE_BITMAP_INDEX = true;
 
   @Nullable
-  public static Integer getDefaultMaxStringLength()
-  {
-    return BuiltInTypesModule.getMaxStringLength();
-  }
-
-  @Nullable
-  private static Integer validateMaxStringLength(String name, @Nullable Integer maxStringLength)
-  {
-    if (maxStringLength != null && maxStringLength < 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("maxStringLength for column [%s] must be >= 0, got [%s]", name, maxStringLength);
-    }
-    return maxStringLength != null ? maxStringLength : getDefaultMaxStringLength();
-  }
-
-  @Nullable
-  private final Integer maxStringLength;
+  private final StringColumnFormatSpec columnFormatSpec;
 
   @JsonCreator
   public static StringDimensionSchema create(String name)
@@ -66,11 +50,11 @@ public class StringDimensionSchema extends DimensionSchema
       @JsonProperty("name") String name,
       @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling,
       @JsonProperty("createBitmapIndex") Boolean createBitmapIndex,
-      @JsonProperty("maxStringLength") @Nullable Integer maxStringLength
+      @JsonProperty("columnFormatSpec") @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     super(name, multiValueHandling, createBitmapIndex == null ? DEFAULT_CREATE_BITMAP_INDEX : createBitmapIndex);
-    this.maxStringLength = validateMaxStringLength(name, maxStringLength);
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   public StringDimensionSchema(
@@ -87,12 +71,29 @@ public class StringDimensionSchema extends DimensionSchema
     this(name, null, DEFAULT_CREATE_BITMAP_INDEX, null);
   }
 
+  @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
-  public Integer getMaxStringLength()
+  public StringColumnFormatSpec getColumnFormatSpec()
   {
-    return maxStringLength;
+    return columnFormatSpec;
+  }
+
+  @Override
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    // If there's no per-column or job-level string format config, nothing to resolve
+    if (columnFormatSpec == null && indexSpec.getStringColumnFormatSpec() == null) {
+      return this;
+    }
+    StringColumnFormatSpec effective =
+        StringColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec);
+    return new StringDimensionSchema(
+        getName(),
+        getMultiValueHandling(),
+        hasBitmapIndex(),
+        effective
+    );
   }
 
   @Override
@@ -117,6 +118,40 @@ public class StringDimensionSchema extends DimensionSchema
   @Override
   public DimensionHandler getDimensionHandler()
   {
-    return new StringDimensionHandler(getName(), getMultiValueHandling(), hasBitmapIndex(), false, maxStringLength);
+    MultiValueHandling mvh = getMultiValueHandling();
+    boolean bitmap = hasBitmapIndex();
+    Integer maxStringLength = null;
+    if (columnFormatSpec != null) {
+      if (columnFormatSpec.getMultiValueHandling() != null) {
+        mvh = columnFormatSpec.getMultiValueHandling();
+      }
+      if (columnFormatSpec.getIndexType() != null) {
+        bitmap = columnFormatSpec.getIndexType().hasBitmapIndex();
+      }
+      maxStringLength = columnFormatSpec.getMaxStringLength();
+    }
+    return new StringDimensionHandler(getName(), mvh, bitmap, false, maxStringLength);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    StringDimensionSchema that = (StringDimensionSchema) o;
+    return Objects.equals(columnFormatSpec, that.columnFormatSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), columnFormatSpec);
   }
 }

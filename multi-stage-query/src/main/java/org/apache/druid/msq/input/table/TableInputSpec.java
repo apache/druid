@@ -78,13 +78,12 @@ public class TableInputSpec implements InputSpec
     return dataSource;
   }
 
-  @JsonProperty
   public List<Interval> getIntervals()
   {
     return intervals;
   }
 
-  @JsonProperty
+  @JsonProperty("intervals")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   private List<Interval> getIntervalsForSerialization()

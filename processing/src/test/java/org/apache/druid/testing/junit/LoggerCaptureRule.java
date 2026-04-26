@@ -49,7 +49,7 @@ public class LoggerCaptureRule extends ExternalResource
   }
 
   @Override
-  protected void before()
+  public void before()
   {
     inMemoryAppender = new InMemoryAppender(targetClass);
     LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
@@ -59,7 +59,7 @@ public class LoggerCaptureRule extends ExternalResource
   }
 
   @Override
-  protected void after()
+  public void after()
   {
     clearLogEvents();
     targetClassLoggerConfig.removeAppender(InMemoryAppender.NAME);

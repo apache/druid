@@ -76,6 +76,7 @@ import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -197,6 +198,7 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.balancer.diskNormalized", DiskNormalizedCostBalancerStrategyConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
             binder.bind(DruidCoordinatorConfig.class);

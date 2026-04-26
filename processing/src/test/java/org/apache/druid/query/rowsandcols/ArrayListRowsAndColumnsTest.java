@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -91,13 +91,13 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
     ArrayList<RowsAndColumns> childRACs = rac.toClusteredGroupPartitioner()
                                              .partitionOnBoundaries(Collections.singletonList("colA"));
 
-    Assert.assertEquals(2, childRACs.size());
+    Assertions.assertEquals(2, childRACs.size());
     ArrayListRowsAndColumns childRAC = (ArrayListRowsAndColumns) childRACs.get(1);
     ArrayListRowsAndColumns curChildRAC = (ArrayListRowsAndColumns) childRAC.toClusteredGroupPartitioner()
                                                                             .partitionOnBoundaries(Collections.singletonList(
                                                                                 "colB"))
                                                                             .get(0);
 
-    Assert.assertEquals(5, curChildRAC.findColumn("colB").toAccessor().getInt(0));
+    Assertions.assertEquals(5, curChildRAC.findColumn("colB").toAccessor().getInt(0));
   }
 }

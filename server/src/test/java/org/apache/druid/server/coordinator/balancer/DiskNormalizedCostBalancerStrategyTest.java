@@ -55,7 +55,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   {
     List<ServerHolder> serverHolderList = new ArrayList<>();
     // Create 10 servers with current size being 3K & max size being 10K
-    // Each having having 100 segments
+    // Each having 100 segments
     for (int i = 0; i < serverCount; i++) {
       TestLoadQueuePeon fromPeon = new TestLoadQueuePeon();
 
@@ -162,5 +162,171 @@ public class DiskNormalizedCostBalancerStrategyTest
     ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
+  }
+
+  /**
+   * Builds a ServerHolder with {@code segmentCount} same-datasource DAY-interval
+   * segments indexed {@code [baseIndex, baseIndex + segmentCount)}, and
+   * {@code sizeUsed} bytes used out of {@code maxSize}.
+   */
+  private static ServerHolder buildServer(
+      String name,
+      long maxSize,
+      long sizeUsed,
+      int baseIndex,
+      int segmentCount
+  )
+  {
+    List<DataSegment> segments = IntStream.range(baseIndex, baseIndex + segmentCount)
+        .mapToObj(DiskNormalizedCostBalancerStrategyTest::getSegment)
+        .collect(Collectors.toList());
+    ImmutableDruidDataSource ds =
+        new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), segments);
+    return new ServerHolder(
+        new ImmutableDruidServer(
+            new DruidServerMetadata(name, name, null, maxSize, null, ServerType.HISTORICAL, "hot", 1),
+            sizeUsed,
+            ImmutableMap.of("DUMMY", ds),
+            segments.size()
+        ),
+        new TestLoadQueuePeon()
+    );
+  }
+
+  private static BalancerStrategy newCostStrategy()
+  {
+    return new CostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
+    );
+  }
+
+  private static BalancerStrategy newDiskNormalizedStrategy()
+  {
+    return new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
+    );
+  }
+
+  @Test
+  public void testDiskWeightingBeatsRawCost()
+  {
+    final long maxSize = 10_000_000L;
+    // A: 90% usage, 5 overlapping segments -> raw cost ~= 5 * 2K.
+    final ServerHolder fuller = buildServer("A", maxSize, 9_000_000L, 0, 5);
+    // B: 10% usage, 30 overlapping segments -> raw cost ~= 30 * 2K.
+    final ServerHolder emptier = buildServer("B", maxSize, 1_000_000L, 100, 30);
+
+    final DataSegment proposal = getSegment(1000);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(fuller);
+    servers.add(emptier);
+
+    // Pure CostBalancerStrategy picks A (it has the cheapest raw cost).
+    Assert.assertEquals(
+        "Pure CostBalancerStrategy should pick the fuller server",
+        "A",
+        newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
+    );
+
+    // DiskNormalized: A = 10 * 0.9 = 9.0, B = 60 * 0.1 = 6.0.
+    // The emptier server must win.
+    Assert.assertEquals(
+        "DiskNormalizedCostBalancerStrategy must prefer the emptier server",
+        "B",
+        newDiskNormalizedStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
+    );
+  }
+
+  @Test
+  public void testDiskNormalizedFixesSkewThatCostCannotCorrect()
+  {
+    final long maxSize = 10_000_000L;
+    // A: 80% full, 20 same-DS DAY segments (indices 0-19).
+    final ServerHolder heavy = buildServer("A", maxSize, 8_000_000L, 0, 20);
+    // B: 20% full, 20 same-DS DAY segments (indices 100-119 — same
+    // interval/datasource, just different segment ids).
+    final ServerHolder light = buildServer("B", maxSize, 2_000_000L, 100, 20);
+
+    // The move candidate is one of A's segments.
+    final DataSegment segmentToMove = getSegment(0);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(heavy);
+    servers.add(light);
+
+    // CostBalancerStrategy:
+    //   A (source, 20 segs, self-cost subtracted): 38 * K
+    //   B (dest,   20 segs, no self-cost):          40 * K
+    // A is cheaper by 2K, so the cluster stays skewed forever.
+    Assert.assertNull(
+        "Pure CostBalancerStrategy cannot correct the disk skew: no move from A to B",
+        newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers)
+    );
+
+    // DiskNormalizedCostBalancerStrategy (default 5% threshold):
+    //   A: 38K * 0.80 * 0.95 = 28.88K
+    //   B: 40K * 0.20        =  8.00K
+    // B wins decisively and the segment moves, reducing the skew.
+    final ServerHolder diskNormalizedResult =
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
+    Assert.assertNotNull(
+        "DiskNormalized must correct the skew by moving the segment off the heavier server",
+        diskNormalizedResult
+    );
+    Assert.assertEquals("B", diskNormalizedResult.getServer().getName());
+  }
+
+  @Test
+  public void testThresholdBlocksMarginalMove()
+  {
+    final long maxSize = 10_000_000L;
+    final ServerHolder source = buildServer("SOURCE", maxSize, 8_000_000L, 0, 20);
+    final ServerHolder dest = buildServer("DEST", maxSize, 7_400_000L, 100, 20);
+
+    final DataSegment segmentToMove = getSegment(0);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(source);
+    servers.add(dest);
+
+    // Default threshold (5%): dest is not cheap enough to justify the move.
+    Assert.assertNull(
+        "Default threshold must block a marginal move to prevent ping-ponging",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+    );
+
+    // threshold=0 removes the discount; the same marginal difference now
+    // triggers the move. This proves the threshold is what blocks it above.
+    final BalancerStrategy noDiscount = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
+        0.01
+    );
+    final ServerHolder movedTo = noDiscount.findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    Assert.assertNotNull("With threshold=0.01, the marginal move should fire", movedTo);
+    Assert.assertEquals("DEST", movedTo.getServer().getName());
+  }
+
+  @Test
+  public void testRejectsInvalidThreshold()
+  {
+    try {
+      new DiskNormalizedCostBalancerStrategy(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
+          1.0
+      );
+      Assert.fail("Expected IllegalArgumentException for threshold=1.0");
+    }
+    catch (IllegalArgumentException expected) {
+      // expected
+    }
+
+    try {
+      new DiskNormalizedCostBalancerStrategy(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
+          -0.01
+      );
+      Assert.fail("Expected IllegalArgumentException for negative threshold");
+    }
+    catch (IllegalArgumentException expected) {
+      // expected
+    }
   }
 }

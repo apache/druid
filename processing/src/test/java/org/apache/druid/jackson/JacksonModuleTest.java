@@ -21,8 +21,8 @@ package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
 import com.fasterxml.jackson.databind.util.LinkedNode;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -67,9 +67,9 @@ public class JacksonModuleTest
   private void verifyServiceName(DefaultObjectMapper objectMapper, String expectedServiceName)
   {
     LinkedNode<DeserializationProblemHandler> handlers = objectMapper.getDeserializationConfig().getProblemHandlers();
-    Assert.assertNull(handlers.next());
+    Assertions.assertNull(handlers.next());
     DefaultObjectMapper.DefaultDeserializationProblemHandler handler =
         (DefaultObjectMapper.DefaultDeserializationProblemHandler) handlers.value();
-    Assert.assertEquals(expectedServiceName, handler.getServiceName());
+    Assertions.assertEquals(expectedServiceName, handler.getServiceName());
   }
 }

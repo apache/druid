@@ -27,12 +27,12 @@ import org.apache.druid.msq.counters.ChannelCounters;
 
 import java.io.IOException;
 
-public class CountingOutputChannelFactory implements OutputChannelFactory
+public class ChannelCountingOutputChannelFactory implements OutputChannelFactory
 {
   private final OutputChannelFactory baseFactory;
   private final ChannelCounters channelCounters;
 
-  public CountingOutputChannelFactory(
+  public ChannelCountingOutputChannelFactory(
       final OutputChannelFactory baseFactory,
       final ChannelCounters channelCounters
   )

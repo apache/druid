@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +62,7 @@ public class ComplexSequenceTest
   private void check(String expected, Sequence<Integer> complex)
   {
     List<Integer> combined = complex.toList();
-    Assert.assertEquals(expected, combined.toString());
+    Assertions.assertEquals(expected, combined.toString());
 
     Yielder<Integer> yielder = complex.toYielder(
         null,
@@ -83,7 +83,7 @@ public class ComplexSequenceTest
       yielder = yielder.next(null);
     }
 
-    Assert.assertEquals(expected, combinedByYielder.toString());
+    Assertions.assertEquals(expected, combinedByYielder.toString());
   }
 
   private Sequence<Integer> simple(int... values)

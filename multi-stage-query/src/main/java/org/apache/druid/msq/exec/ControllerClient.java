@@ -81,7 +81,7 @@ public interface ControllerClient extends Closeable
   ) throws IOException;
 
   /**
-   * Client side method to inform the controller that the error has occured in the given worker.
+   * Client side method to inform the controller that the error has occurred in the given worker.
    */
   void postWorkerError(MSQErrorReport errorWrapper) throws IOException;
 

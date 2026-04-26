@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.sql.http.GetQueriesResponse;
@@ -87,7 +87,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, false);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(false, false);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
@@ -117,7 +117,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(true, false);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(true, false);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
@@ -147,7 +147,7 @@ public class DartSqlClientImplTest
         jsonMapper.writeValueAsBytes(getQueriesResponse)
     );
 
-    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false, true);
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getQueries(false, true);
     Assertions.assertEquals(getQueriesResponse, result.get());
   }
 }

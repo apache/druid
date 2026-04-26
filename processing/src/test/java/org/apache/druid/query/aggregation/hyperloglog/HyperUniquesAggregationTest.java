@@ -28,6 +28,8 @@ import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -78,25 +80,21 @@ public class HyperUniquesAggregationTest
         )
     ) {
 
-      String metricSpec = "[{"
-                          + "\"type\": \"hyperUnique\","
-                          + "\"name\": \"index_hll\","
-                          + "\"fieldName\": \"market\""
-                          + "}]";
+      List<AggregatorFactory> metricSpec = List.of(
+          new HyperUniquesAggregatorFactory("index_hll", "market")
+      );
 
-      String query = "{"
-                     + "\"queryType\": \"groupBy\","
-                     + "\"dataSource\": \"test_datasource\","
-                     + "\"granularity\": \"ALL\","
-                     + "\"dimensions\": [],"
-                     + "\"aggregations\": ["
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
-                     + "],"
-                     + "\"postAggregations\": ["
-                     + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
-                     + "],"
-                     + "\"intervals\": [ \"1970/2050\" ]"
-                     + "}";
+      GroupByQuery query = GroupByQuery.builder()
+                                       .setDataSource("test_datasource")
+                                       .setGranularity(Granularities.ALL)
+                                       .setInterval("1970/2050")
+                                       .setAggregatorSpecs(
+                                           new HyperUniquesAggregatorFactory("index_hll", "index_hll")
+                                       )
+                                       .setPostAggregatorSpecs(
+                                           new HyperUniqueFinalizingPostAggregator("index_unique_count", "index_hll")
+                                       )
+                                       .build();
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
@@ -132,26 +130,21 @@ public class HyperUniquesAggregationTest
         )
     ) {
 
-      String metricSpec = "[{"
-                          + "\"type\": \"hyperUnique\","
-                          + "\"name\": \"index_hll\","
-                          + "\"fieldName\": \"preComputedHll\","
-                          + "\"isInputHyperUnique\": true"
-                          + "}]";
+      List<AggregatorFactory> metricSpec = List.of(
+          new HyperUniquesAggregatorFactory("index_hll", "preComputedHll", true, false)
+      );
 
-      String query = "{"
-                     + "\"queryType\": \"groupBy\","
-                     + "\"dataSource\": \"test_datasource\","
-                     + "\"granularity\": \"ALL\","
-                     + "\"dimensions\": [],"
-                     + "\"aggregations\": ["
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
-                     + "],"
-                     + "\"postAggregations\": ["
-                     + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
-                     + "],"
-                     + "\"intervals\": [ \"1970/2050\" ]"
-                     + "}";
+      GroupByQuery query = GroupByQuery.builder()
+                                       .setDataSource("test_datasource")
+                                       .setGranularity(Granularities.ALL)
+                                       .setInterval("1970/2050")
+                                       .setAggregatorSpecs(
+                                           new HyperUniquesAggregatorFactory("index_hll", "index_hll")
+                                       )
+                                       .setPostAggregatorSpecs(
+                                           new HyperUniqueFinalizingPostAggregator("index_unique_count", "index_hll")
+                                       )
+                                       .build();
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),

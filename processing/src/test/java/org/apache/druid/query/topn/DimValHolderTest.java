@@ -20,8 +20,8 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DimValHolderTest
 {
@@ -31,39 +31,39 @@ public class DimValHolderTest
     DimValHolder.Builder builder = new DimValHolder.Builder();
 
     builder.withDimValue("1", ColumnType.STRING);
-    Assert.assertEquals("1", builder.build().getDimValue());
+    Assertions.assertEquals("1", builder.build().getDimValue());
     builder.withDimValue("1", ColumnType.LONG);
-    Assert.assertEquals(1L, builder.build().getDimValue());
+    Assertions.assertEquals(1L, builder.build().getDimValue());
     builder.withDimValue("1", ColumnType.FLOAT);
-    Assert.assertEquals(1f, builder.build().getDimValue());
+    Assertions.assertEquals(1f, builder.build().getDimValue());
     builder.withDimValue("1", ColumnType.DOUBLE);
-    Assert.assertEquals(1d, builder.build().getDimValue());
+    Assertions.assertEquals(1d, builder.build().getDimValue());
 
     builder.withDimValue(1L, ColumnType.STRING);
-    Assert.assertEquals("1", builder.build().getDimValue());
+    Assertions.assertEquals("1", builder.build().getDimValue());
     builder.withDimValue(1L, ColumnType.LONG);
-    Assert.assertEquals(1L, builder.build().getDimValue());
+    Assertions.assertEquals(1L, builder.build().getDimValue());
     builder.withDimValue(1L, ColumnType.FLOAT);
-    Assert.assertEquals(1f, builder.build().getDimValue());
+    Assertions.assertEquals(1f, builder.build().getDimValue());
     builder.withDimValue(1L, ColumnType.DOUBLE);
-    Assert.assertEquals(1d, builder.build().getDimValue());
+    Assertions.assertEquals(1d, builder.build().getDimValue());
 
     builder.withDimValue(1f, ColumnType.STRING);
-    Assert.assertEquals("1.0", builder.build().getDimValue());
+    Assertions.assertEquals("1.0", builder.build().getDimValue());
     builder.withDimValue(1f, ColumnType.LONG);
-    Assert.assertEquals(1L, builder.build().getDimValue());
+    Assertions.assertEquals(1L, builder.build().getDimValue());
     builder.withDimValue(1f, ColumnType.FLOAT);
-    Assert.assertEquals(1f, builder.build().getDimValue());
+    Assertions.assertEquals(1f, builder.build().getDimValue());
     builder.withDimValue(1f, ColumnType.DOUBLE);
-    Assert.assertEquals(1d, builder.build().getDimValue());
+    Assertions.assertEquals(1d, builder.build().getDimValue());
 
     builder.withDimValue(1d, ColumnType.STRING);
-    Assert.assertEquals("1.0", builder.build().getDimValue());
+    Assertions.assertEquals("1.0", builder.build().getDimValue());
     builder.withDimValue(1d, ColumnType.LONG);
-    Assert.assertEquals(1L, builder.build().getDimValue());
+    Assertions.assertEquals(1L, builder.build().getDimValue());
     builder.withDimValue(1d, ColumnType.FLOAT);
-    Assert.assertEquals(1f, builder.build().getDimValue());
+    Assertions.assertEquals(1f, builder.build().getDimValue());
     builder.withDimValue(1d, ColumnType.DOUBLE);
-    Assert.assertEquals(1d, builder.build().getDimValue());
+    Assertions.assertEquals(1d, builder.build().getDimValue());
   }
 }

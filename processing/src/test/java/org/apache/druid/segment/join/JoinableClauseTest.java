@@ -23,19 +23,16 @@ import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class JoinableClauseTest
 {
-  public ExpectedException expectedException = ExpectedException.none();
-
   private Joinable joinable;
   private JoinableClause clause;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     joinable = new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable());
@@ -50,31 +47,31 @@ public class JoinableClauseTest
   @Test
   public void test_getPrefix()
   {
-    Assert.assertEquals("j.", clause.getPrefix());
+    Assertions.assertEquals("j.", clause.getPrefix());
   }
 
   @Test
   public void test_getJoinable()
   {
-    Assert.assertEquals(joinable, clause.getJoinable());
+    Assertions.assertEquals(joinable, clause.getJoinable());
   }
 
   @Test
   public void test_getJoinType()
   {
-    Assert.assertEquals(JoinType.LEFT, clause.getJoinType());
+    Assertions.assertEquals(JoinType.LEFT, clause.getJoinType());
   }
 
   @Test
   public void test_getCondition()
   {
-    Assert.assertEquals("\"j.x\" == y", clause.getCondition().getOriginalExpression());
+    Assertions.assertEquals("\"j.x\" == y", clause.getCondition().getOriginalExpression());
   }
 
   @Test
   public void test_getAvailableColumnsPrefixed()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("j.countryNumber", "j.countryIsoCode", "j.countryName"),
         clause.getAvailableColumnsPrefixed()
     );
@@ -83,25 +80,24 @@ public class JoinableClauseTest
   @Test
   public void test_includesColumn_included()
   {
-    Assert.assertTrue(clause.includesColumn("j.countryNumber"));
+    Assertions.assertTrue(clause.includesColumn("j.countryNumber"));
   }
 
   @Test
   public void test_includesColumn_notIncluded()
   {
-    Assert.assertFalse(clause.includesColumn("countryNumber"));
+    Assertions.assertFalse(clause.includesColumn("countryNumber"));
   }
 
   @Test
   public void test_unprefix_included()
   {
-    Assert.assertEquals("countryNumber", clause.unprefix("j.countryNumber"));
+    Assertions.assertEquals("countryNumber", clause.unprefix("j.countryNumber"));
   }
 
   @Test
   public void test_unprefix_notIncluded()
   {
-    expectedException.expect(IllegalArgumentException.class);
     clause.includesColumn("countryNumber");
   }
 

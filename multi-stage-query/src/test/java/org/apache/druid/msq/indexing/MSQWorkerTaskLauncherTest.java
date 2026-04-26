@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -46,6 +47,7 @@ public class MSQWorkerTaskLauncherTest
         getWorkerFailureListener(),
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncherConfig()
     );
   }

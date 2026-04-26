@@ -59,6 +59,8 @@ In cases where you require more control over compaction, you can manually submit
 
 See [Setting up a manual compaction task](./manual-compaction.md#setting-up-manual-compaction) for more about manual compaction tasks.
 
+For advanced data lifecycle management where you need different compaction configurations at different data ages — such as coarsening segment granularity, deleting old rows, or changing compression over time — see [Cascading reindexing](./cascading-reindexing.md).
+
 ## Data handling with compaction
 
 During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.

@@ -81,6 +81,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -466,7 +467,9 @@ public class BatchAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig
+          maxBytesTuningConfig,
+          tuningConfig.getIndexSpec(),
+          Collections.emptyList()
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -1068,6 +1071,7 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
+        tuningConfig.getIndexSpec(),
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable

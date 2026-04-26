@@ -27,8 +27,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -78,7 +78,7 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     }
 
     Set<String> expected = Sets.newLinkedHashSet(ImmutableList.of("the dru", "the das"));
-    Assert.assertEquals(expected, extracted);
+    Assertions.assertEquals(expected, extracted);
   }
 
   @Test
@@ -101,9 +101,9 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     CascadeExtractionFn cascadeExtractionFn3 = new CascadeExtractionFn(fns3);
 
 
-    Assert.assertFalse(Arrays.equals(cascadeExtractionFn1.getCacheKey(), cascadeExtractionFn2.getCacheKey()));
-    Assert.assertFalse(Arrays.equals(cascadeExtractionFn1.getCacheKey(), cascadeExtractionFn3.getCacheKey()));
-    Assert.assertFalse(Arrays.equals(cascadeExtractionFn2.getCacheKey(), cascadeExtractionFn3.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(cascadeExtractionFn1.getCacheKey(), cascadeExtractionFn2.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(cascadeExtractionFn1.getCacheKey(), cascadeExtractionFn3.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(cascadeExtractionFn2.getCacheKey(), cascadeExtractionFn3.getCacheKey()));
   }
 
   @Test
@@ -125,9 +125,9 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     fns3[2] = substringDimExtractionFn;
     CascadeExtractionFn cascadeExtractionFn3 = new CascadeExtractionFn(fns3);
 
-    Assert.assertNotEquals(cascadeExtractionFn1.hashCode(), cascadeExtractionFn2.hashCode());
-    Assert.assertNotEquals(cascadeExtractionFn1.hashCode(), cascadeExtractionFn3.hashCode());
-    Assert.assertNotEquals(cascadeExtractionFn2.hashCode(), cascadeExtractionFn3.hashCode());
+    Assertions.assertNotEquals(cascadeExtractionFn1.hashCode(), cascadeExtractionFn2.hashCode());
+    Assertions.assertNotEquals(cascadeExtractionFn1.hashCode(), cascadeExtractionFn3.hashCode());
+    Assertions.assertNotEquals(cascadeExtractionFn2.hashCode(), cascadeExtractionFn3.hashCode());
   }
 
   @Test
@@ -147,9 +147,9 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     fns3[1] = javascriptExtractionFn;
     CascadeExtractionFn cascadeExtractionFn3 = new CascadeExtractionFn(fns3);
 
-    Assert.assertTrue(cascadeExtractionFn1.preservesOrdering());
-    Assert.assertFalse(cascadeExtractionFn2.preservesOrdering());
-    Assert.assertFalse(cascadeExtractionFn3.preservesOrdering());
+    Assertions.assertTrue(cascadeExtractionFn1.preservesOrdering());
+    Assertions.assertFalse(cascadeExtractionFn2.preservesOrdering());
+    Assertions.assertFalse(cascadeExtractionFn3.preservesOrdering());
   }
 
   @Test
@@ -164,8 +164,8 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     fns2[1] = javascriptExtractionFn;
     CascadeExtractionFn cascadeExtractionFn2 = new CascadeExtractionFn(fns2);
 
-    Assert.assertTrue(cascadeExtractionFn1.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE);
-    Assert.assertTrue(cascadeExtractionFn2.getExtractionType() == ExtractionFn.ExtractionType.MANY_TO_ONE);
+    Assertions.assertTrue(cascadeExtractionFn1.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE);
+    Assertions.assertTrue(cascadeExtractionFn2.getExtractionType() == ExtractionFn.ExtractionType.MANY_TO_ONE);
   }
 
   @Test
@@ -195,11 +195,11 @@ public class CascadeExtractionFnTest extends InitializedNullHandlingTest
     SubstringDimExtractionFn substringDimExtractionFn =
         (SubstringDimExtractionFn) objectMapper.readValue(substringDimExtractionFnJson, ExtractionFn.class);
 
-    Assert.assertEquals(regexDimExtractionFn, cascadeExtractionFn.getExtractionFns()[0]);
-    Assert.assertEquals(javascriptExtractionFn, cascadeExtractionFn.getExtractionFns()[1]);
-    Assert.assertEquals(substringDimExtractionFn, cascadeExtractionFn.getExtractionFns()[2]);
+    Assertions.assertEquals(regexDimExtractionFn, cascadeExtractionFn.getExtractionFns()[0]);
+    Assertions.assertEquals(javascriptExtractionFn, cascadeExtractionFn.getExtractionFns()[1]);
+    Assertions.assertEquals(substringDimExtractionFn, cascadeExtractionFn.getExtractionFns()[2]);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         cascadeExtractionFn,
         objectMapper.readValue(
             objectMapper.writeValueAsBytes(cascadeExtractionFn),

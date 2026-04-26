@@ -770,12 +770,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         failedQueryCount.incrementAndGet();
       }
 
+      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+
       // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
       // We rely on broker to set this for us if the error occurs downstream.
       // Otherwise, if there's a router/client error, we log this as an unknown error.
-      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode);
-
-      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode, authenticationResult);
 
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
@@ -863,8 +863,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       // We rely on broker to set this for us if the error occurs downstream. 
       // Otherwise, if there's a router/client error, we log this as an unknown error.
       final int statusCode = determineStatusCode(false, response.getStatus());
-      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode, authenticationResult);
 
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
@@ -940,7 +940,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         boolean success,
         @Nullable String sqlQueryId,
         @Nullable String queryId,
-        int statusCode
+        int statusCode,
+        AuthenticationResult authenticationResult
     )
     {
       QueryMetrics queryMetrics;
@@ -962,6 +963,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
       queryMetrics.success(success);
       queryMetrics.statusCode(statusCode);
+      queryMetrics.identity(authenticationResult.getIdentity());
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
   }

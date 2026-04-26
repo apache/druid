@@ -27,6 +27,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -213,9 +214,76 @@ class FilterSegmentPrunerTest
   }
 
   @Test
+  void testPruneVirtualColumnWithDependentVirtualColumn()
+  {
+    VirtualColumns shardVirtualColumns = VirtualColumns.create(
+        new NestedFieldVirtualColumn("obj", "$.a", "n0", ColumnType.STRING),
+        new ExpressionVirtualColumn("e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    // same expressions, different names
+    VirtualColumns shardVirtualColumnsDifferentNames = VirtualColumns.create(
+        new NestedFieldVirtualColumn("obj", "$.a", "n1", ColumnType.STRING),
+        new ExpressionVirtualColumn("e1", "lower(\"n1\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    VirtualColumns shardVirtualColumnsDifferent = VirtualColumns.create(
+        new NestedFieldVirtualColumn("obj", "$.b", "n0", ColumnType.STRING),
+        new ExpressionVirtualColumn("e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    String interval1 = "2026-02-18T00:00:00Z/2026-02-19T00:00:00Z";
+    String interval2 = "2026-02-19T00:00:00Z/2026-02-20T00:00:00Z";
+    String interval3 = "2026-02-20T00:00:00Z/2026-02-21T00:00:00Z";
+    DataSegment seg1 = makeDataSegment(
+        interval1,
+        makeRange(List.of("e0"), shardVirtualColumns, 0, null, StringTuple.create("f"))
+    );
+    DataSegment seg2 = makeDataSegment(
+        interval1,
+        makeRange(List.of("e0"), shardVirtualColumns, 1, StringTuple.create("f"), null)
+    );
+    // same partitioning but different names in these segments
+    DataSegment seg3 = makeDataSegment(
+        interval2,
+        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 0, null, StringTuple.create("f"))
+    );
+    DataSegment seg4 = makeDataSegment(
+        interval2,
+        makeRange(List.of("e1"), shardVirtualColumnsDifferentNames, 1, StringTuple.create("f"), null)
+    );
+    DataSegment seg5 = makeDataSegment(
+        interval3,
+        makeRange(List.of("e0"), shardVirtualColumnsDifferent, 0, null, StringTuple.create("f"))
+    );
+    DataSegment seg6 = makeDataSegment(
+        interval3,
+        makeRange(List.of("e0"), shardVirtualColumnsDifferent, 1, StringTuple.create("f"), null)
+    );
+
+    List<DataSegment> segs = List.of(seg1, seg2, seg3, seg4, seg5, seg6);
+
+    // query uses its own names
+    VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new NestedFieldVirtualColumn("obj", "$.a", "v0", ColumnType.STRING),
+        new ExpressionVirtualColumn("v1", "lower(\"v0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    // lower($.a) < "f" should prune the second half of the range (seg2 and seg4)
+    DimFilter filter = new RangeFilter("v1", ColumnType.STRING, null, "f", false, true, null);
+    FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, queryVirtualColumns);
+
+    // prune twice to exercise cache
+    Assertions.assertEquals(Set.of(seg1, seg3, seg5, seg6), pruner.prune(segs, Function.identity()));
+    Assertions.assertEquals(Set.of(seg1, seg3, seg5, seg6), pruner.prune(segs, Function.identity()));
+
+  }
+
+  @Test
   void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(FilterSegmentPruner.class).usingGetClass().withIgnoredFields("rangeCache").verify();
+    EqualsVerifier.forClass(FilterSegmentPruner.class)
+                  .usingGetClass()
+                  .withIgnoredFields("rangeCache", "shardEquivalenceCache")
+                  .verify();
   }
 
   private ShardSpec makeRange(

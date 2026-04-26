@@ -2508,10 +2508,15 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmo
 
   ```json
 {
-    "id": "social_media"
+    "id": "social_media",
+    "restarted": true
 }
   ```
 </details>
+
+The response includes the following fields:
+- `id`: The supervisor ID.
+- `restarted`: A boolean indicating whether the supervisor was restarted. When `skipRestartIfUnmodified` is set to `true` and the supervisor spec is unchanged, this field will be `false`; otherwise, it will be `true`.
 
 ### Suspend a running supervisor
 

@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common;
 
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class FastIntervalStringFormatterTest
@@ -54,14 +54,14 @@ public class FastIntervalStringFormatterTest
     };
 
     for (Interval interval : validIntervals) {
-      Assert.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));
+      Assertions.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));
     }
   }
 
   @Test
   public void testStringFormatterFormat_Eternity()
   {
-    Assert.assertEquals(Intervals.ETERNITY.toString(), FastIntervalStringFormatter.format(Intervals.ETERNITY));
+    Assertions.assertEquals(Intervals.ETERNITY.toString(), FastIntervalStringFormatter.format(Intervals.ETERNITY));
   }
 
   @Test
@@ -79,7 +79,7 @@ public class FastIntervalStringFormatterTest
 
     String out = FastIntervalStringFormatter.format(intervalMock);
 
-    Assert.assertEquals(dummyString, out);
+    Assertions.assertEquals(dummyString, out);
 
     final Interval[] fallbackIntervals = new Interval[]{
         // Boundary values
@@ -99,7 +99,7 @@ public class FastIntervalStringFormatterTest
     };
 
     for (Interval interval : fallbackIntervals) {
-      Assert.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));
+      Assertions.assertEquals(interval.toString(), FastIntervalStringFormatter.format(interval));
     }
   }
 }

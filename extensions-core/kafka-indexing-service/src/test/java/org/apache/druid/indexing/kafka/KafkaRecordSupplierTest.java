@@ -484,6 +484,7 @@ public class KafkaRecordSupplierTest
     emitter.verifyEmitted("kafka/consumer/recordsPerRequestAvg", 1);
     emitter.verifyEmitted("kafka/consumer/incomingBytes", 2);
     emitter.verifyEmitted("kafka/consumer/outgoingBytes", 2);
+    emitter.verifyEmitted("kafka/consumer/pollIdleRatio", 1);
 
     recordSupplier.close();
     Assert.assertFalse(monitor.monitor(emitter));

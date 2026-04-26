@@ -27,8 +27,8 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
@@ -49,8 +49,8 @@ public class InputStreamFullResponseHandlerTest
 
     clientResp = responseHandler.done(clientResp);
 
-    Assert.assertTrue(clientResp.isFinished());
-    Assert.assertEquals("abcdefg", IOUtils.toString(clientResp.getObj().getContent(), StandardCharsets.UTF_8));
+    Assertions.assertTrue(clientResp.isFinished());
+    Assertions.assertEquals("abcdefg", IOUtils.toString(clientResp.getObj().getContent(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -66,6 +66,6 @@ public class InputStreamFullResponseHandlerTest
     Exception ex = new RuntimeException("dummy!");
     responseHandler.exceptionCaught(clientResp, ex);
 
-    Assert.assertTrue(clientResp.isFinished());
+    Assertions.assertTrue(clientResp.isFinished());
   }
 }

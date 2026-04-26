@@ -37,6 +37,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
@@ -141,7 +142,8 @@ public class DartControllerModule implements DruidModule
                   dartControllerConfig.getConcurrentQueries(),
                   "dart-controller-%s"
               )
-          )
+          ),
+          ScheduledExecutors.fixed(1, "dart-controller-timeout-%s")
       );
     }
   }

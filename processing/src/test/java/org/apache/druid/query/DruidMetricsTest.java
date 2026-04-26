@@ -20,22 +20,22 @@
 package org.apache.druid.query;
 
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DruidMetricsTest
 {
   @Test
   public void testComputeStatusCode_nullError()
   {
-    Assert.assertEquals(200, DruidMetrics.computeStatusCode(null));
+    Assertions.assertEquals(200, DruidMetrics.computeStatusCode(null));
   }
 
   @Test
   public void testComputeStatusCode_allDruidExceptionCategories()
   {
     for (DruidException.Category cat : DruidException.Category.values()) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           cat.getExpectedStatus(), DruidMetrics.computeStatusCode(
               DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(cat)
@@ -48,7 +48,7 @@ public class DruidMetricsTest
   @Test
   public void testComputeStatusCode_queryExceptionCategories()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         500,
         DruidMetrics.computeStatusCode(new QueryException(
             null,
@@ -58,7 +58,7 @@ public class DruidMetricsTest
             null
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         504,
         DruidMetrics.computeStatusCode(new QueryException(
             null,
@@ -68,7 +68,7 @@ public class DruidMetricsTest
             null
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         429,
         DruidMetrics.computeStatusCode(new QueryException(
             null,
@@ -78,7 +78,7 @@ public class DruidMetricsTest
             null
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         401,
         DruidMetrics.computeStatusCode(new QueryException(
             null,
@@ -88,7 +88,7 @@ public class DruidMetricsTest
             null
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         400,
         DruidMetrics.computeStatusCode(new QueryException(
             null,
@@ -98,7 +98,7 @@ public class DruidMetricsTest
             null
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         501,
         DruidMetrics.computeStatusCode(new QueryException(
             null,

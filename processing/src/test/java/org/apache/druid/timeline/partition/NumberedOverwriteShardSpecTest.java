@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NumberedOverwriteShardSpecTest
 {
@@ -48,9 +48,9 @@ public class NumberedOverwriteShardSpecTest
     );
     final String json = mapper.writeValueAsString(original);
     ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
-    Assert.assertEquals(ShardSpec.Type.NUMBERED_OVERWRITE, shardSpec.getType());
+    Assertions.assertEquals(ShardSpec.Type.NUMBERED_OVERWRITE, shardSpec.getType());
     final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) shardSpec;
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   @Test
@@ -63,9 +63,9 @@ public class NumberedOverwriteShardSpecTest
         (short) 1,
         (short) 1
     );
-    Assert.assertFalse(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
-    Assert.assertFalse(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
-    Assert.assertFalse(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 }

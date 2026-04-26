@@ -283,11 +283,11 @@ public class OverlordClientImplTest
             .jsonContent(jsonMapper, supervisorSpec),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(Map.of("id", supervisorId))
+        jsonMapper.writeValueAsBytes(Map.of("id", supervisorId, "restarted", true))
     );
 
     Assert.assertEquals(
-        Map.of("id", supervisorId),
+        Map.of("id", supervisorId, "restarted", "true"),
         overlordClient.postSupervisor(supervisorSpec).get()
     );
   }

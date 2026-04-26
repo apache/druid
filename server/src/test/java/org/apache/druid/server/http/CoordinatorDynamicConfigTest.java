@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -279,6 +280,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null
     );
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
@@ -305,6 +307,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null
     );
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
@@ -643,6 +646,56 @@ public class CoordinatorDynamicConfigTest
   private static int getDefaultNumBalancerThreads()
   {
     return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
+  @Test
+  public void testHistoricalTierAliases() throws Exception
+  {
+    // Basic set and get via builder
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("hot_1", "hot_2"),
+        "cold", Set.of("cold_1")
+    );
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
+                                                              .withHistoricalTierAliases(aliases)
+                                                              .build();
+    Assert.assertEquals(aliases, config.getHistoricalTierAliases());
+
+    // build(defaults) propagates aliases when not overridden
+    CoordinatorDynamicConfig updated = CoordinatorDynamicConfig.builder().build(config);
+    Assert.assertEquals(aliases, updated.getHistoricalTierAliases());
+
+    // Serde roundtrip with duplicate values in the JSON array — duplicates must be deduplicated
+    String jsonWithDupes = "{"
+                           + "\"historicalTierAliases\": {"
+                           + "  \"hot\": [\"hot_1\", \"hot_2\", \"hot_1\"]"
+                           + "}"
+                           + "}";
+    CoordinatorDynamicConfig deserialized = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonWithDupes, CoordinatorDynamicConfig.class)),
+        CoordinatorDynamicConfig.class
+    );
+    Assert.assertEquals(Set.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
+
+    // Absent field defaults to empty map
+    CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
+    Assert.assertEquals(Map.of(), defaultConfig.getHistoricalTierAliases());
+  }
+
+  @Test
+  public void testHistoricalTierAliasesNoCycle()
+  {
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("hot", "hot_2"),
+        "cold", Set.of("cold_1"),
+        "another", Set.of("hot")
+    );
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> CoordinatorDynamicConfig.builder().withHistoricalTierAliases(aliases).build()
+    );
+    Assert.assertTrue("Throws correct virtual tier alias message", exception.getMessage().contains("A virtual tier alias cannot be a physical tier."));
   }
 
   @Test

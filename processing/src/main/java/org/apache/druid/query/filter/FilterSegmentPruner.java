@@ -47,6 +47,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
+  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> shardEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -58,6 +59,7 @@ public class FilterSegmentPruner implements SegmentPruner
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
+    this.shardEquivalenceCache = new HashMap<>();
   }
 
 
@@ -77,9 +79,9 @@ public class FilterSegmentPruner implements SegmentPruner
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
       final List<String> dimensions = shard.getDomainDimensions();
       for (String dimension : dimensions) {
-        final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
-        if (shardVirtualColumn != null) {
-          final VirtualColumn queryEquivalent = virtualColumns.findEquivalent(shardVirtualColumn);
+        final VirtualColumns.Node shardNode = shard.getDomainVirtualColumns().getNode(dimension);
+        if (shardNode != null) {
+          final VirtualColumn queryEquivalent = getQueryEquivalent(shardNode);
           if (queryEquivalent != null) {
             if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
               final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
@@ -88,7 +90,7 @@ public class FilterSegmentPruner implements SegmentPruner
                       d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
                   );
               optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                  shardVirtualColumn.getOutputName(),
+                  shardNode.getVirtualColumn().getOutputName(),
                   stringRangeSet
               ));
             }
@@ -160,5 +162,15 @@ public class FilterSegmentPruner implements SegmentPruner
            ", filterFields=" + filterFields +
            ", virtualColumns=" + virtualColumns +
            '}';
+  }
+
+  @Nullable
+  private VirtualColumn getQueryEquivalent(VirtualColumns.Node node)
+  {
+    final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
+        node,
+        n -> Optional.ofNullable(virtualColumns.findEquivalent(n))
+    );
+    return cached.orElse(null);
   }
 }

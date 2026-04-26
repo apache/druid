@@ -28,9 +28,9 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -46,7 +46,7 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
   private double[] doubles = {1.1897d, 0.001d, 86.23d, 166.228d};
   private Double[] objects = {2.1897d, 1.001d, 87.23d, 167.228d};
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     doubleAnyAggFactory = new DoubleAnyAggregatorFactory("billy", "nilly");
@@ -71,9 +71,9 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
 
     Double result = (Double) agg.get();
 
-    Assert.assertEquals((Double) doubles[0], result);
-    Assert.assertEquals((long) doubles[0], agg.getLong());
-    Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
+    Assertions.assertEquals((Double) doubles[0], result);
+    Assertions.assertEquals((long) doubles[0], agg.getLong());
+    Assertions.assertEquals(doubles[0], agg.getDouble(), 0.0001);
   }
 
   @Test
@@ -92,9 +92,9 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
 
     Double result = (Double) agg.get(buffer, 0);
 
-    Assert.assertEquals(doubles[0], result, 0.0001);
-    Assert.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
+    Assertions.assertEquals(doubles[0], result, 0.0001);
+    Assertions.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
+    Assertions.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
   }
 
   @Test
@@ -102,7 +102,7 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
   {
     Double d1 = 3.0;
     Double d2 = 4.0;
-    Assert.assertEquals(d1, doubleAnyAggFactory.combine(d1, d2));
+    Assertions.assertEquals(d1, doubleAnyAggFactory.combine(d1, d2));
   }
 
   @Test
@@ -111,10 +111,10 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
     Double d1 = 3.0;
     Double d2 = null;
     Comparator comparator = doubleAnyAggFactory.getComparator();
-    Assert.assertEquals(1, comparator.compare(d1, d2));
-    Assert.assertEquals(0, comparator.compare(d1, d1));
-    Assert.assertEquals(0, comparator.compare(d2, d2));
-    Assert.assertEquals(-1, comparator.compare(d2, d1));
+    Assertions.assertEquals(1, comparator.compare(d1, d2));
+    Assertions.assertEquals(0, comparator.compare(d1, d1));
+    Assertions.assertEquals(0, comparator.compare(d2, d2));
+    Assertions.assertEquals(-1, comparator.compare(d2, d1));
   }
 
   @Test
@@ -123,9 +123,9 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
     Long n1 = 3L;
     Double n2 = 4.0;
     Comparator comparator = doubleAnyAggFactory.getComparator();
-    Assert.assertEquals(0, comparator.compare(n1, n1));
-    Assert.assertEquals(-1, comparator.compare(n1, n2));
-    Assert.assertEquals(1, comparator.compare(n2, n1));
+    Assertions.assertEquals(0, comparator.compare(n1, n1));
+    Assertions.assertEquals(-1, comparator.compare(n1, n2));
+    Assertions.assertEquals(1, comparator.compare(n2, n1));
   }
 
   @Test
@@ -140,9 +140,9 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
 
     Double result = (Double) agg.get();
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong());
-    Assert.assertEquals(objects[0], agg.getDouble(), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong());
+    Assertions.assertEquals(objects[0], agg.getDouble(), 0.0001);
   }
 
   @Test
@@ -161,9 +161,9 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
 
     Double result = (Double) agg.get(buffer, 0);
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(objects[0], agg.getDouble(buffer, 0), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
+    Assertions.assertEquals(objects[0], agg.getDouble(buffer, 0), 0.0001);
   }
 
   @Test
@@ -171,7 +171,7 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String doubleSpecJson = "{\"type\":\"doubleAny\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(doubleAnyAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    Assertions.assertEquals(doubleAnyAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
   }
 
   private void aggregate(

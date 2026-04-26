@@ -39,6 +39,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -90,6 +91,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -134,6 +136,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -180,6 +183,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -210,6 +214,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );

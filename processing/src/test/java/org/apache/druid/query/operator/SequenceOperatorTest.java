@@ -23,8 +23,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -44,7 +44,7 @@ public class SequenceOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(helper, helper)
-        .withFinalValidation(testReceiver -> Assert.assertEquals(2, testReceiver.getNumPushed()))
+        .withFinalValidation(testReceiver -> Assertions.assertEquals(2, testReceiver.getNumPushed()))
         .runToCompletion(op);
   }
 }

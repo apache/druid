@@ -315,6 +315,8 @@ public class KafkaSupervisorIOConfigTest
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfig.put("minScaleUpDelay", "PT20M");
+    autoScalerConfig.put("minScaleDownDelay", "PT20M");
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", "localhost:8082");

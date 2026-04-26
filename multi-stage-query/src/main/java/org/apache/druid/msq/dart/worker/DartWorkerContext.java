@@ -275,6 +275,12 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
+  public boolean isDebug()
+  {
+    return queryContext.isDebug();
+  }
+
+  @Override
   public DruidNode selfNode()
   {
     return selfNode;

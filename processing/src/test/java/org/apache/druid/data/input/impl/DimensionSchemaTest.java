@@ -21,8 +21,8 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DimensionSchemaTest
 {
@@ -32,7 +32,7 @@ public class DimensionSchemaTest
   public void testStringDimensionSchemaSerde() throws Exception
   {
     final StringDimensionSchema schema1 = new StringDimensionSchema("foo");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         schema1,
         OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema1), DimensionSchema.class)
     );
@@ -42,7 +42,7 @@ public class DimensionSchemaTest
         DimensionSchema.MultiValueHandling.ARRAY,
         false
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         schema2,
         OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema2), DimensionSchema.class)
     );
@@ -52,19 +52,19 @@ public class DimensionSchemaTest
   public void testDeserializeStrictTypeId() throws Exception
   {
     final String invalidType = "{\"type\":\"invalid\",\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
-    InvalidTypeIdException e = Assert.assertThrows(
+    InvalidTypeIdException e = Assertions.assertThrows(
         InvalidTypeIdException.class,
         () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class)
     );
-    Assert.assertTrue(e.getMessage().contains("Could not resolve type id"));
-    Assert.assertTrue(e.getMessage().contains("invalid"));
+    Assertions.assertTrue(e.getMessage().contains("Could not resolve type id"));
+    Assertions.assertTrue(e.getMessage().contains("invalid"));
   }
 
   @Test
   public void testDeserializeDefaultAsString() throws Exception
   {
     final String noType = "{\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new StringDimensionSchema("foo", DimensionSchema.MultiValueHandling.ARRAY, false),
         OBJECT_MAPPER.readValue(noType, DimensionSchema.class)
     );

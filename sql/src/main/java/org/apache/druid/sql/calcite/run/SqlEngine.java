@@ -144,7 +144,7 @@ public interface SqlEngine
    * @param stateReadAuthorization authorization for the STATE READ resource. If this is authorized, implementations
    *                               should allow all queries to be visible
    */
-  default GetQueriesResponse getRunningQueries(
+  default GetQueriesResponse getQueries(
       boolean selfOnly,
       boolean includeComplete,
       AuthenticationResult authenticationResult,

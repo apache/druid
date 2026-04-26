@@ -21,8 +21,8 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -41,20 +41,20 @@ public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase
       MapOfColumnsRowsAndColumns.fromMap(null);
     }
     catch (ISE ex) {
-      Assert.assertEquals("map[null] cannot be null or empty.", ex.getMessage());
+      Assertions.assertEquals("map[null] cannot be null or empty.", ex.getMessage());
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
 
     exceptionThrown = false;
     try {
       MapOfColumnsRowsAndColumns.fromMap(Collections.emptyMap());
     }
     catch (ISE ex) {
-      Assert.assertEquals("map[{}] cannot be null or empty.", ex.getMessage());
+      Assertions.assertEquals("map[{}] cannot be null or empty.", ex.getMessage());
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -68,9 +68,9 @@ public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase
       );
     }
     catch (ISE ex) {
-      Assert.assertEquals("Mismatched numCells, expectedNumCells[1], actual[2] from col[2].", ex.getMessage());
+      Assertions.assertEquals("Mismatched numCells, expectedNumCells[1], actual[2] from col[2].", ex.getMessage());
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 }

@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -143,10 +143,10 @@ public class SkippingSequenceTest
         )
     ).limit(5);
 
-    Assert.assertEquals(10, seq.accumulate(0, new SkippingSequenceTest.IntAdditionAccumulator()).intValue());
-    Assert.assertEquals(10, accumulated.get());
-    Assert.assertEquals(10, seq.accumulate(0, new SkippingSequenceTest.IntAdditionAccumulator()).intValue());
-    Assert.assertEquals(20, accumulated.get());
+    Assertions.assertEquals(10, seq.accumulate(0, new SkippingSequenceTest.IntAdditionAccumulator()).intValue());
+    Assertions.assertEquals(10, accumulated.get());
+    Assertions.assertEquals(10, seq.accumulate(0, new SkippingSequenceTest.IntAdditionAccumulator()).intValue());
+    Assertions.assertEquals(20, accumulated.get());
   }
 
   private static class IntAdditionAccumulator implements Accumulator<Integer, Integer>

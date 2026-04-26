@@ -54,6 +54,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class ExpressionVirtualColumn implements VirtualColumn
@@ -334,6 +335,23 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public List<String> requiredColumns()
   {
     return expressionAnalysis.get().getRequiredBindingsList();
+  }
+
+  @Override
+  public boolean supportsRequiredRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public VirtualColumn rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    final Expr rewritten = expression.parsed.get().rewriteBindings(columnRewrites);
+    return new ExpressionVirtualColumn(
+        name,
+        rewritten,
+        expression.outputType
+    );
   }
 
   @Override

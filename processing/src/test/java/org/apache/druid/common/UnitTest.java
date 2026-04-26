@@ -22,8 +22,8 @@ package org.apache.druid.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class UnitTest
 {
@@ -31,7 +31,7 @@ public class UnitTest
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    Assert.assertSame(
+    Assertions.assertSame(
         Unit.instance(),
         mapper.readValue(mapper.writeValueAsBytes(Unit.instance()), Unit.class)
     );

@@ -25,11 +25,9 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -54,7 +52,7 @@ public class HttpEntityTest
   private URLConnection urlConnection;
   private InputStream inputStreamMock;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     uri = Mockito.mock(URI.class);
@@ -66,9 +64,6 @@ public class HttpEntityTest
     Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
     Mockito.when(inputStreamMock.skip(ArgumentMatchers.anyLong())).then(AdditionalAnswers.returnsFirstArg());
   }
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testOpenInputStream() throws IOException, URISyntaxException
@@ -103,7 +98,7 @@ public class HttpEntityTest
       inputStream = HttpEntity.openInputStream(url, "", null, 0, Collections.emptyMap());
       inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5, Collections.emptyMap());
       inputStream.skip(5);
-      Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
+      Assertions.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
     }
     finally {
       IOUtils.closeQuietly(inputStream);
@@ -136,8 +131,8 @@ public class HttpEntityTest
           (httpExchange) -> {
             Headers headers = httpExchange.getRequestHeaders();
             for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
-              Assert.assertTrue(headers.containsKey(entry.getKey()));
-              Assert.assertEquals(headers.get(entry.getKey()).get(0), entry.getValue());
+              Assertions.assertTrue(headers.containsKey(entry.getKey()));
+              Assertions.assertEquals(headers.get(entry.getKey()).get(0), entry.getValue());
             }
             String payload = "12345678910";
             byte[] outputBytes = payload.getBytes(StandardCharsets.UTF_8);
@@ -156,7 +151,7 @@ public class HttpEntityTest
       inputStream = HttpEntity.openInputStream(url, "", null, 0, requestHeaders);
       inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5, requestHeaders);
       inputStream.skip(5);
-      Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
+      Assertions.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
     }
     finally {
       IOUtils.closeQuietly(inputStream);

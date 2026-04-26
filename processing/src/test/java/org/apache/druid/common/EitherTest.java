@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class EitherTest
 {
@@ -35,18 +35,18 @@ public class EitherTest
   {
     final Either<String, String> either = Either.value("yay");
 
-    Assert.assertFalse(either.isError());
-    Assert.assertTrue(either.isValue());
-    Assert.assertEquals("yay", either.valueOrThrow());
+    Assertions.assertFalse(either.isError());
+    Assertions.assertTrue(either.isValue());
+    Assertions.assertEquals("yay", either.valueOrThrow());
 
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, either::error);
+    final IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, either::error);
     MatcherAssert.assertThat(e.getMessage(), CoreMatchers.startsWith("Not an error"));
 
     // Test toString.
-    Assert.assertEquals("Value[yay]", either.toString());
+    Assertions.assertEquals("Value[yay]", either.toString());
 
     // Test map.
-    Assert.assertEquals(Either.value("YAY"), either.map(StringUtils::toUpperCase));
+    Assertions.assertEquals(Either.value("YAY"), either.map(StringUtils::toUpperCase));
   }
 
   @Test
@@ -54,18 +54,18 @@ public class EitherTest
   {
     final Either<String, String> either = Either.value(null);
 
-    Assert.assertFalse(either.isError());
-    Assert.assertTrue(either.isValue());
-    Assert.assertNull(either.valueOrThrow());
+    Assertions.assertFalse(either.isError());
+    Assertions.assertTrue(either.isValue());
+    Assertions.assertNull(either.valueOrThrow());
 
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, either::error);
+    final IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, either::error);
     MatcherAssert.assertThat(e.getMessage(), CoreMatchers.startsWith("Not an error"));
 
     // Test toString.
-    Assert.assertEquals("Value[null]", either.toString());
+    Assertions.assertEquals("Value[null]", either.toString());
 
     // Test map.
-    Assert.assertEquals(Either.value("nullxyz"), either.map(s -> s + "xyz"));
+    Assertions.assertEquals(Either.value("nullxyz"), either.map(s -> s + "xyz"));
   }
 
   @Test
@@ -73,18 +73,18 @@ public class EitherTest
   {
     final Either<String, Object> either = Either.error("oh no");
 
-    Assert.assertTrue(either.isError());
-    Assert.assertFalse(either.isValue());
-    Assert.assertEquals("oh no", either.error());
+    Assertions.assertTrue(either.isError());
+    Assertions.assertFalse(either.isValue());
+    Assertions.assertEquals("oh no", either.error());
 
-    final RuntimeException e = Assert.assertThrows(RuntimeException.class, either::valueOrThrow);
+    final RuntimeException e = Assertions.assertThrows(RuntimeException.class, either::valueOrThrow);
     MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("oh no"));
 
     // Test toString.
-    Assert.assertEquals("Error[oh no]", either.toString());
+    Assertions.assertEquals("Error[oh no]", either.toString());
 
     // Test map.
-    Assert.assertEquals(either, either.map(o -> "this does nothing because the Either is an error"));
+    Assertions.assertEquals(either, either.map(o -> "this does nothing because the Either is an error"));
   }
 
   @Test
@@ -92,17 +92,17 @@ public class EitherTest
   {
     final Either<Throwable, Object> either = Either.error(new AssertionError("oh no"));
 
-    Assert.assertTrue(either.isError());
-    Assert.assertFalse(either.isValue());
+    Assertions.assertTrue(either.isError());
+    Assertions.assertFalse(either.isValue());
     MatcherAssert.assertThat(either.error(), CoreMatchers.instanceOf(AssertionError.class));
     MatcherAssert.assertThat(either.error().getMessage(), CoreMatchers.equalTo("oh no"));
 
-    final RuntimeException e = Assert.assertThrows(RuntimeException.class, either::valueOrThrow);
+    final RuntimeException e = Assertions.assertThrows(RuntimeException.class, either::valueOrThrow);
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(AssertionError.class));
     MatcherAssert.assertThat(e.getCause().getMessage(), CoreMatchers.equalTo("oh no"));
 
     // Test toString.
-    Assert.assertEquals("Error[java.lang.AssertionError: oh no]", either.toString());
+    Assertions.assertEquals("Error[java.lang.AssertionError: oh no]", either.toString());
   }
 
   @Test
@@ -114,8 +114,8 @@ public class EitherTest
     final Either<DruidException, Object> either = Either.error(original);
 
     // Non-DEVELOPER DruidExceptions are re-thrown as-is by valueOrThrow.
-    final DruidException e = Assert.assertThrows(DruidException.class, either::valueOrThrow);
-    Assert.assertSame(original, e);
+    final DruidException e = Assertions.assertThrows(DruidException.class, either::valueOrThrow);
+    Assertions.assertSame(original, e);
   }
 
   @Test
@@ -127,10 +127,10 @@ public class EitherTest
     final Either<DruidException, Object> either = Either.error(original);
 
     // DEVELOPER DruidExceptions are wrapped to capture the current stack trace.
-    final DruidException e = Assert.assertThrows(DruidException.class, either::valueOrThrow);
-    Assert.assertNotSame(original, e);
-    Assert.assertSame(original, e.getCause());
-    Assert.assertEquals(DruidException.Persona.DEVELOPER, e.getTargetPersona());
+    final DruidException e = Assertions.assertThrows(DruidException.class, either::valueOrThrow);
+    Assertions.assertNotSame(original, e);
+    Assertions.assertSame(original, e.getCause());
+    Assertions.assertEquals(DruidException.Persona.DEVELOPER, e.getTargetPersona());
   }
 
   @Test

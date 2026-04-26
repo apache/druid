@@ -21,10 +21,8 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,15 +43,12 @@ public class DimensionRangePartitionsSpecTest
   );
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Test
   public void serde()
   {
     String json = serialize(SPEC);
     DimensionRangePartitionsSpec spec = deserialize(json);
-    Assert.assertEquals(SPEC, spec);
+    Assertions.assertEquals(SPEC, spec);
   }
 
   @Test
@@ -109,7 +104,7 @@ public class DimensionRangePartitionsSpecTest
     DimensionRangePartitionsSpec spec = new TestSpecBuilder()
         .targetRowsPerSegment(123)
         .build();
-    Assert.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -118,7 +113,7 @@ public class DimensionRangePartitionsSpecTest
     DimensionRangePartitionsSpec spec = new TestSpecBuilder()
         .maxRowsPerSegment(123)
         .build();
-    Assert.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -138,7 +133,7 @@ public class DimensionRangePartitionsSpecTest
         .targetRowsPerSegment(10)
         .partitionDimensions(partitionDimensions)
         .build();
-    Assert.assertEquals(partitionDimensions, spec.getPartitionDimensions());
+    Assertions.assertEquals(partitionDimensions, spec.getPartitionDimensions());
   }
 
   private static String serialize(Object object)
@@ -164,7 +159,7 @@ public class DimensionRangePartitionsSpecTest
   /**
    * Spec builder used in this test.
    */
-  private class TestSpecBuilder
+  private static class TestSpecBuilder
   {
     private Integer targetRowsPerSegment;
     private Integer maxRowsPerSegment;
@@ -190,9 +185,8 @@ public class DimensionRangePartitionsSpecTest
 
     void testIllegalArgumentException(String exceptionExpectedMessage)
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage(exceptionExpectedMessage);
-      build();
+      Throwable t = Assertions.assertThrows(IllegalArgumentException.class, this::build);
+      Assertions.assertEquals(exceptionExpectedMessage, t.getMessage());
     }
 
     DimensionRangePartitionsSpec build()

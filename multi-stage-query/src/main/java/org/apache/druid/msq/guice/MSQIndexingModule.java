@@ -36,6 +36,7 @@ import org.apache.druid.msq.counters.CpuCounter;
 import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.counters.StorageCounters;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
@@ -198,6 +199,7 @@ public class MSQIndexingModule implements DruidModule
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
         SegmentGenerationProgressCounter.Snapshot.class,
+        StorageCounters.Snapshot.class,
         CpuCounters.Snapshot.class,
         CpuCounter.Snapshot.class,
         NilQueryCounterSnapshot.class,

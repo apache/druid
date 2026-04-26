@@ -25,10 +25,8 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.net.URI;
@@ -69,9 +67,6 @@ public class CloudObjectInputSourceTest
       new CloudObjectLocation(URI.create("s3://bar/foo/file2.parquet"))
   );
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testGetUris()
   {
@@ -80,7 +75,7 @@ public class CloudObjectInputSourceTest
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         URIS,
         inputSource.getUris()
     );
@@ -94,7 +89,7 @@ public class CloudObjectInputSourceTest
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         PREFIXES,
         inputSource.getPrefixes()
     );
@@ -108,7 +103,7 @@ public class CloudObjectInputSourceTest
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals("**.parquet", inputSource.getObjectGlob());
+    Assertions.assertEquals("**.parquet", inputSource.getObjectGlob());
   }
 
   @Test
@@ -124,9 +119,9 @@ public class CloudObjectInputSourceTest
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals("**.parquet", inputSource1.getObjectGlob());
-    Assert.assertEquals("**.csv", inputSource2.getObjectGlob());
-    Assert.assertFalse(inputSource2.equals(inputSource1));
+    Assertions.assertEquals("**.parquet", inputSource1.getObjectGlob());
+    Assertions.assertEquals("**.csv", inputSource2.getObjectGlob());
+    Assertions.assertFalse(inputSource2.equals(inputSource1));
   }
 
   @Test
@@ -147,12 +142,12 @@ public class CloudObjectInputSourceTest
 
     List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
 
-    Assert.assertEquals("**.csv", inputSource.getObjectGlob());
-    Assert.assertEquals(URIS, returnedLocationUris);
+    Assertions.assertEquals("**.csv", inputSource.getObjectGlob());
+    Assertions.assertEquals(URIS, returnedLocationUris);
 
     final List<InputEntity> entities =
         Lists.newArrayList(inputSource.getInputEntities(new JsonInputFormat(null, null, null, null, null)));
-    Assert.assertEquals(URIS.size(), entities.size());
+    Assertions.assertEquals(URIS.size(), entities.size());
   }
 
   @Test
@@ -173,12 +168,12 @@ public class CloudObjectInputSourceTest
 
     List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
 
-    Assert.assertEquals(null, inputSource.getObjectGlob());
-    Assert.assertEquals(URIS, returnedLocationUris);
+    Assertions.assertEquals(null, inputSource.getObjectGlob());
+    Assertions.assertEquals(URIS, returnedLocationUris);
 
     final List<InputEntity> entities =
         Lists.newArrayList(inputSource.getInputEntities(new JsonInputFormat(null, null, null, null, null)));
-    Assert.assertEquals(URIS.size(), entities.size());
+    Assertions.assertEquals(URIS.size(), entities.size());
   }
 
   @Test
@@ -199,12 +194,12 @@ public class CloudObjectInputSourceTest
 
     List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
 
-    Assert.assertEquals("**.csv", inputSource.getObjectGlob());
-    Assert.assertEquals(URIS, returnedLocationUris);
+    Assertions.assertEquals("**.csv", inputSource.getObjectGlob());
+    Assertions.assertEquals(URIS, returnedLocationUris);
 
     final List<InputEntity> entities =
         Lists.newArrayList(inputSource.getInputEntities(new JsonInputFormat(null, null, null, null, null)));
-    Assert.assertEquals(OBJECTS.size(), entities.size());
+    Assertions.assertEquals(OBJECTS.size(), entities.size());
   }
 
   @Test
@@ -223,24 +218,24 @@ public class CloudObjectInputSourceTest
 
     List<CloudObjectLocation> returnedLocations = splits.map(InputSplit::get).collect(Collectors.toList()).get(0);
 
-    Assert.assertNull(inputSource.getObjectGlob());
-    Assert.assertEquals(OBJECTS, returnedLocations);
+    Assertions.assertNull(inputSource.getObjectGlob());
+    Assertions.assertEquals(OBJECTS, returnedLocations);
 
     final List<InputEntity> entities =
         Lists.newArrayList(inputSource.getInputEntities(new JsonInputFormat(null, null, null, null, null)));
-    Assert.assertEquals(OBJECTS.size(), entities.size());
+    Assertions.assertEquals(OBJECTS.size(), entities.size());
   }
 
   @Test
   public void testGlobSubdirectories()
   {
     PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:**.parquet");
-    Assert.assertTrue(m.matches(Paths.get("db/date=2022-08-01/001.parquet")));
-    Assert.assertTrue(m.matches(Paths.get("db/date=2022-08-01/002.parquet")));
+    Assertions.assertTrue(m.matches(Paths.get("db/date=2022-08-01/001.parquet")));
+    Assertions.assertTrue(m.matches(Paths.get("db/date=2022-08-01/002.parquet")));
 
     PathMatcher m2 = FileSystems.getDefault().getPathMatcher("glob:db/date=2022-08-01/*.parquet");
-    Assert.assertTrue(m2.matches(Paths.get("db/date=2022-08-01/001.parquet")));
-    Assert.assertFalse(m2.matches(Paths.get("db/date=2022-08-01/_junk/0/001.parquet")));
+    Assertions.assertTrue(m2.matches(Paths.get("db/date=2022-08-01/001.parquet")));
+    Assertions.assertFalse(m2.matches(Paths.get("db/date=2022-08-01/_junk/0/001.parquet")));
   }
 
   private static class MockSplitWidget implements CloudObjectSplitWidget

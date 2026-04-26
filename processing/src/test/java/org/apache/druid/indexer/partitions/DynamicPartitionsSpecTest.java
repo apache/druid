@@ -20,8 +20,8 @@
 package org.apache.druid.indexer.partitions;
 
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
 public class DynamicPartitionsSpecTest
@@ -30,38 +30,38 @@ public class DynamicPartitionsSpecTest
   public void testConstructorWithValidParameters()
   {
     DynamicPartitionsSpec spec = new DynamicPartitionsSpec(1000, 10000L);
-    Assert.assertEquals(1000, spec.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(10000L, spec.getMaxTotalRows().longValue());
+    Assertions.assertEquals(1000, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(10000L, spec.getMaxTotalRows().longValue());
 
     spec = new DynamicPartitionsSpec(1, 1L);
-    Assert.assertEquals(1, spec.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(1L, spec.getMaxTotalRows().longValue());
+    Assertions.assertEquals(1, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(1L, spec.getMaxTotalRows().longValue());
 
     spec = new DynamicPartitionsSpec(null, 5000L);
-    Assert.assertEquals(5000L, spec.getMaxTotalRows().longValue());
-    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(5000L, spec.getMaxTotalRows().longValue());
+    Assertions.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
 
     spec = new DynamicPartitionsSpec(500, null);
-    Assert.assertEquals(500, spec.getMaxRowsPerSegment().intValue());
-    Assert.assertNull(spec.getMaxTotalRows());
+    Assertions.assertEquals(500, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertNull(spec.getMaxTotalRows());
 
     spec = new DynamicPartitionsSpec(-1, 3333L);
-    Assert.assertEquals(3333L, spec.getMaxTotalRows().longValue());
-    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(3333L, spec.getMaxTotalRows().longValue());
+    Assertions.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
 
     spec = new DynamicPartitionsSpec(1000, -1L);
-    Assert.assertEquals(1000, spec.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(-1L, spec.getMaxTotalRows().longValue());
+    Assertions.assertEquals(1000, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(-1L, spec.getMaxTotalRows().longValue());
   }
 
   @Test
   public void testConstructorWithInvalidParametersThrowsInvalidInput()
   {
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(0, 10000L));
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(1000, 0L));
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(0, 0L));
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(-2, 3333L));
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(1000, -2L));
-    Assert.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(-100, -1000L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(0, 10000L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(1000, 0L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(0, 0L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(-2, 3333L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(1000, -2L));
+    Assertions.assertThrows(DruidException.class, () -> new DynamicPartitionsSpec(-100, -1000L));
   }
 }

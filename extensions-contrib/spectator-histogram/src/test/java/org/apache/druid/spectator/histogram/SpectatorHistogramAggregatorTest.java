@@ -44,6 +44,12 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -54,6 +60,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
@@ -169,29 +176,17 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"longSum\", \"name\": \"cost_sum\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new LongSumAggregatorFactory("cost_sum", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [\"product\"],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"cost_histogram\", \"fieldName\": "
-            + "\"cost_sum\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("product", "product"))
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("cost_histogram", "cost_sum"))
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     assertResultsMatch(results, 0, "A");
@@ -206,29 +201,16 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -245,32 +227,21 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   @Test
   public void testBuildingAndMergingHistogramsTimeseriesQuery() throws Exception
   {
-    Object rawseq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
+    TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
+        .dataSource("test_datasource")
+        .granularity(Granularities.ALL)
+        .aggregators(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+        .intervals("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+        .build();
+    Sequence<Result<TimeseriesResultValue>> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"timeseries\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        tsQuery
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -279,7 +250,6 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(50), 3L);
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
-    Sequence<Result<TimeseriesResultValue>> seq = (Sequence<Result<TimeseriesResultValue>>) rawseq;
     List<Result<TimeseriesResultValue>> results = seq.toList();
     Assert.assertEquals(1, results.size());
     SpectatorHistogram value = (SpectatorHistogram) results.get(0).getValue().getMetric("merged_cost_histogram");
@@ -293,29 +263,17 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [\"product\"],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("product", "product"))
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_histogram", "histogram"))
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -348,31 +306,19 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"longSum\", \"name\": \"count_histogram\", \"fieldName\": "
-            + "\"histogram\"},",
-            "    {\"type\": \"doubleSum\", \"name\": \"double_count_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        new LongSumAggregatorFactory("count_histogram", "histogram"),
+                        new DoubleSumAggregatorFactory("double_count_histogram", "histogram")
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -390,52 +336,23 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"longSum\", \"name\": \"count_histogram\", \"fieldName\": "
-            + "\"histogram\"},",
-            "    {\"type\": \"doubleSum\", \"name\": \"double_count_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"],",
-            "  \"filter\": {\n",
-            "    \"fields\": [\n",
-            "      {\n",
-            "        \"field\": {\n",
-            "          \"dimension\": \"histogram\",\n",
-            "          \"value\": \"0\",\n",
-            "          \"type\": \"selector\"\n",
-            "        },\n",
-            "        \"type\": \"not\"\n",
-            "      },\n",
-            "      {\n",
-            "        \"field\": {\n",
-            "          \"dimension\": \"histogram\",\n",
-            "          \"value\": \"\",\n",
-            "          \"type\": \"selector\"\n",
-            "        },\n",
-            "        \"type\": \"not\"\n",
-            "      }\n",
-            "    ],\n",
-            "    \"type\": \"and\"\n",
-            "  }",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        new LongSumAggregatorFactory("count_histogram", "histogram"),
+                        new DoubleSumAggregatorFactory("double_count_histogram", "histogram")
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .setDimFilter(new AndDimFilter(
+                        new NotDimFilter(new SelectorDimFilter("histogram", "0", null)),
+                        new NotDimFilter(new SelectorDimFilter("histogram", "", null))
+                    ))
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -453,29 +370,16 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogramDistribution\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory.Distribution("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -496,29 +400,16 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogramTimer\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory.Timer("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -535,32 +426,21 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   @Test
   public void testIngestingPreaggregatedHistograms() throws Exception
   {
-    Object rawseq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
+    TimeseriesQuery preAggTsQuery = Druids.newTimeseriesQueryBuilder()
+        .dataSource("test_datasource")
+        .granularity(Granularities.ALL)
+        .aggregators(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+        .intervals("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+        .build();
+    Sequence<Result<TimeseriesResultValue>> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("pre_agg_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"timeseries\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        preAggTsQuery
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -569,7 +449,6 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(50), 3L);
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
-    Sequence<Result<TimeseriesResultValue>> seq = (Sequence<Result<TimeseriesResultValue>>) rawseq;
     List<Result<TimeseriesResultValue>> results = seq.toList();
     Assert.assertEquals(1, results.size());
     SpectatorHistogram value = (SpectatorHistogram) results.get(0).getValue().getMetric("merged_cost_histogram");
@@ -584,17 +463,11 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogramTimer\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory.Timer("histogram", "cost")),
         segmentDir,
         0, // minTimestamp
         Granularities.NONE,
-        10, // maxRowCount
-        true
+        10 // maxRowCount
     );
 
     ObjectMapper mapper = (ObjectMapper) TestHelper.makeJsonMapper();
@@ -636,17 +509,11 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogramDistribution\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory.Distribution("histogram", "cost")),
         segmentDir,
         0, // minTimestamp
         Granularities.NONE,
-        10, // maxRowCount
-        true
+        10 // maxRowCount
     );
 
     ObjectMapper mapper = (ObjectMapper) TestHelper.makeJsonMapper();
@@ -687,35 +554,28 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"percentileSpectatorHistogram\", \"name\": \"percentileValue\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_cost_histogram\"}"
-            + ", \"percentile\": \"50.0\"},",
-            "    {\"type\": \"percentilesSpectatorHistogram\", \"name\": \"percentileValues\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_cost_histogram\"}"
-            + ", \"percentiles\": [25.0, 50.0, 75.0, 99.0]}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+                    .setPostAggregatorSpecs(
+                        new SpectatorHistogramPercentilePostAggregator(
+                            "percentileValue",
+                            new FieldAccessPostAggregator(null, "merged_cost_histogram"),
+                            50.0
+                        ),
+                        new SpectatorHistogramPercentilesPostAggregator(
+                            "percentileValues",
+                            new FieldAccessPostAggregator(null, "merged_cost_histogram"),
+                            new double[]{25.0, 50.0, 75.0, 99.0}
+                        )
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
     SpectatorHistogram expected = new SpectatorHistogram();
     expected.add(PercentileBuckets.indexOf(10), 1L);
@@ -806,33 +666,24 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [\"product\"],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"percentileSpectatorHistogram\", \"name\": \"p50\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
-            + ", \"percentile\": \"50.0\"}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("product", "product"))
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_histogram", "histogram"))
+                    .setPostAggregatorSpecs(
+                        new SpectatorHistogramPercentilePostAggregator(
+                            "p50",
+                            new FieldAccessPostAggregator(null, "merged_histogram"),
+                            50.0
+                        )
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -856,33 +707,24 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [\"product\"],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"percentilesSpectatorHistogram\", \"name\": \"percentiles\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
-            + ", \"percentiles\": [25.0, 50.0, 75.0]}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("product", "product"))
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_histogram", "histogram"))
+                    .setPostAggregatorSpecs(
+                        new SpectatorHistogramPercentilesPostAggregator(
+                            "percentiles",
+                            new FieldAccessPostAggregator(null, "merged_histogram"),
+                            new double[]{25.0, 50.0, 75.0}
+                        )
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -909,32 +751,22 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0,
         Granularities.NONE,
         10,
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimenions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_cost_histogram\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_cost_histogram", "histogram"))
+                    .setPostAggregatorSpecs(
+                        new SpectatorHistogramCountPostAggregator(
+                            "count",
+                            new FieldAccessPostAggregator(null, "merged_cost_histogram")
+                        )
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();
@@ -950,32 +782,23 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
         INPUT_FORMAT,
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
-            "]"
-        ),
+        List.of(new SpectatorHistogramAggregatorFactory("histogram", "cost")),
         0,
         Granularities.NONE,
         10,
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [\"product\"],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
-            + "\"histogram\"}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("product", "product"))
+                    .setAggregatorSpecs(new SpectatorHistogramAggregatorFactory("merged_histogram", "histogram"))
+                    .setPostAggregatorSpecs(
+                        new SpectatorHistogramCountPostAggregator(
+                            "count",
+                            new FieldAccessPostAggregator(null, "merged_histogram")
+                        )
+                    )
+                    .setInterval("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z")
+                    .build()
     );
 
     List<ResultRow> results = seq.toList();

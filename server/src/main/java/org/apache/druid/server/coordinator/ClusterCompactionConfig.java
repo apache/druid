@@ -61,7 +61,7 @@ public class ClusterCompactionConfig
     this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
     this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
     this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
-    this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+    this.useSupervisors = Configs.valueOrDefault(useSupervisors, true);
     this.storeCompactionStatePerSegment = Configs.valueOrDefault(
         storeCompactionStatePerSegment,
         true
@@ -157,5 +157,77 @@ public class ClusterCompactionConfig
            ", compactionPolicy=" + compactionPolicy +
            ", storeCompactionStatePerSegment=" + storeCompactionStatePerSegment +
            '}';
+  }
+
+  public Builder toBuilder()
+  {
+    return new Builder().compactionTaskSlotRatio(compactionTaskSlotRatio)
+                        .maxCompactionTaskSlots(maxCompactionTaskSlots)
+                        .compactionPolicy(compactionPolicy)
+                        .useSupervisors(useSupervisors)
+                        .storeCompactionStatePerSegment(storeCompactionStatePerSegment);
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static class Builder
+  {
+    private Double compactionTaskSlotRatio;
+    private Integer maxCompactionTaskSlots;
+    private CompactionCandidateSearchPolicy compactionPolicy;
+    private Boolean useSupervisors;
+    private CompactionEngine engine;
+    private Boolean storeCompactionStatePerSegment;
+
+    public Builder compactionTaskSlotRatio(double compactionTaskSlotRatio)
+    {
+      this.compactionTaskSlotRatio = compactionTaskSlotRatio;
+      return this;
+    }
+
+    public Builder maxCompactionTaskSlots(int maxCompactionTaskSlots)
+    {
+      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
+      return this;
+    }
+
+    public Builder compactionPolicy(CompactionCandidateSearchPolicy compactionPolicy)
+    {
+      this.compactionPolicy = compactionPolicy;
+      return this;
+    }
+
+    public Builder useSupervisors(boolean useSupervisors)
+    {
+      this.useSupervisors = useSupervisors;
+      return this;
+    }
+
+    public Builder engine(CompactionEngine engine)
+    {
+      this.engine = engine;
+      return this;
+    }
+
+    public Builder storeCompactionStatePerSegment(boolean storeCompactionStatePerSegment)
+    {
+      this.storeCompactionStatePerSegment = storeCompactionStatePerSegment;
+      return this;
+    }
+
+    public ClusterCompactionConfig build()
+    {
+      return new ClusterCompactionConfig(
+          compactionTaskSlotRatio,
+          maxCompactionTaskSlots,
+          compactionPolicy,
+          useSupervisors,
+          engine,
+          storeCompactionStatePerSegment
+      );
+    }
   }
 }

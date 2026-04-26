@@ -97,6 +97,7 @@
   "kafka/consumer/recordsPerRequestAvg" : { "dimensions" : ["topic"], "type" : "gauge", "help": "Average records per fetch request as seen by the consumer of a Kafka indexing task (per topic)."},
   "kafka/consumer/outgoingBytes" : { "dimensions" : ["node_id"], "type" : "count", "help": "Bytes sent to Kafka brokers by the consumer of a Kafka indexing task (per node)."},
   "kafka/consumer/incomingBytes" : { "dimensions" : ["node_id"], "type" : "count", "help": "Bytes received from Kafka brokers by the consumer of a Kafka indexing task (per node)."},
+  "kafka/consumer/pollIdleRatio" : { "dimensions" : [], "type" : "gauge", "help": "Average fraction of time the consumer of a Kafka indexing task spent idle (not in poll). 0 means never idle, 1 means always idle."},
 
   "ingest/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
   "ingest/segments/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },

@@ -34,7 +34,12 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -101,20 +106,17 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testQuery() throws Exception
   {
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"bloom\", \"name\": \"blooming_quality\", \"field\": \"quality\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource("test_datasource")
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setDimFilter(new SelectorDimFilter("market", "upfront", null))
+                                     .setAggregatorSpecs(
+                                         new BloomFilterAggregatorFactory("blooming_quality", new DefaultDimensionSpec("quality", "quality"), null)
+                                     )
+                                     .build();
 
     MapBasedRow row = ingestAndQuery(query);
-
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("blooming_quality"));
     Assert.assertTrue(filter.testString("mezzanine"));
@@ -125,63 +127,52 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testNestedQuery() throws Exception
   {
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": {"
-                   + "\"type\": \"query\","
-                   + "\"query\": {"
-                   + "\"queryType\":\"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"intervals\": [ \"1970/2050\" ],"
-                   + "\"granularity\":\"ALL\","
-                   + "\"dimensions\":[],"
-                   + "\"aggregations\": [{ \"type\":\"longSum\", \"name\":\"innerSum\", \"fieldName\":\"count\"}]"
-                   + "}"
-                   + "},"
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"bloom\", \"name\": \"bloom\", \"field\": \"innerSum\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery innerQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval("1970/2050")
+                                          .setAggregatorSpecs(new LongSumAggregatorFactory("innerSum", "count"))
+                                          .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(innerQuery)
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setAggregatorSpecs(
+                                         new BloomFilterAggregatorFactory("bloom", new DefaultDimensionSpec("innerSum", "innerSum"), null)
+                                     )
+                                     .build();
 
     MapBasedRow row = ingestAndQuery(query);
-
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("bloom"));
     Assert.assertTrue(filter.testLong(13L));
     Assert.assertFalse(filter.testLong(5L));
   }
 
-
   @Test
   public void testNestedQueryComplex() throws Exception
   {
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": {"
-                   + "\"type\": \"query\","
-                   + "\"query\": {"
-                   + "\"queryType\":\"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"intervals\": [ \"1970/2050\" ],"
-                   + "\"granularity\":\"ALL\","
-                   + "\"dimensions\":[],"
-                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
-                   + "\"aggregations\": [{ \"type\":\"bloom\", \"name\":\"innerBloom\", \"field\":\"quality\"}]"
-                   + "}"
-                   + "},"
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"bloom\", \"name\": \"innerBloom\", \"field\": \"innerBloom\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery innerQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval("1970/2050")
+                                          .setDimFilter(new SelectorDimFilter("market", "upfront", null))
+                                          .setAggregatorSpecs(
+                                              new BloomFilterAggregatorFactory("innerBloom", new DefaultDimensionSpec("quality", "quality"), null)
+                                          )
+                                          .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(innerQuery)
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setAggregatorSpecs(
+                                         new BloomFilterAggregatorFactory("innerBloom", new DefaultDimensionSpec("innerBloom", "innerBloom"), null)
+                                     )
+                                     .build();
 
     MapBasedRow row = ingestAndQuery(query);
-
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("innerBloom"));
     Assert.assertTrue(filter.testString("mezzanine"));
@@ -192,17 +183,15 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testQueryFakeDimension() throws Exception
   {
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"bloom\", \"name\": \"blooming_quality\", \"field\": \"nope\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource("test_datasource")
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setDimFilter(new SelectorDimFilter("market", "upfront", null))
+                                     .setAggregatorSpecs(
+                                         new BloomFilterAggregatorFactory("blooming_quality", new DefaultDimensionSpec("nope", "nope"), null)
+                                     )
+                                     .build();
 
     MapBasedRow row = ingestAndQuery(query);
 
@@ -217,9 +206,9 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(empty, serialized);
   }
 
-  private MapBasedRow ingestAndQuery(String query) throws Exception
+  private MapBasedRow ingestAndQuery(GroupByQuery query) throws Exception
   {
-    String metricSpec = "[{ \"type\": \"count\", \"name\": \"count\"}]";
+    List<AggregatorFactory> metricSpec = List.of(new CountAggregatorFactory("count"));
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
@@ -239,6 +228,6 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     );
 
     List<ResultRow> results = seq.toList();
-    return results.get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
+    return results.get(0).toMapBasedRow(query);
   }
 }

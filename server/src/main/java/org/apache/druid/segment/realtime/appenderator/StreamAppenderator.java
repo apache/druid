@@ -516,7 +516,9 @@ public class StreamAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig
+          maxBytesTuningConfig,
+          tuningConfig.getIndexSpec(),
+          Collections.emptyList()
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -1412,6 +1414,7 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            tuningConfig.getIndexSpec(),
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

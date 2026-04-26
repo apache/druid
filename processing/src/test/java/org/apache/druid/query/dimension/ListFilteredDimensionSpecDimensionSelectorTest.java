@@ -30,8 +30,8 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -57,8 +57,8 @@ public class ListFilteredDimensionSpecDimensionSelectorTest extends InitializedN
   @Test
   public void testNullDimensionSelectorReturnNull()
   {
-    Assert.assertNull(targetWithAllowList.decorate((DimensionSelector) null));
-    Assert.assertNull(targetWithDenyList.decorate((DimensionSelector) null));
+    Assertions.assertNull(targetWithAllowList.decorate((DimensionSelector) null));
+    Assertions.assertNull(targetWithDenyList.decorate((DimensionSelector) null));
   }
 
   @Test
@@ -128,7 +128,7 @@ public class ListFilteredDimensionSpecDimensionSelectorTest extends InitializedN
             nameLookupPossibleInAdvance
         )
     );
-    Assert.assertSame(expectedDimensionSelectorClass, selector.getClass());
+    Assertions.assertSame(expectedDimensionSelectorClass, selector.getClass());
     assertAllowListFiltering(rowSupplier, selector);
   }
 
@@ -151,7 +151,7 @@ public class ListFilteredDimensionSpecDimensionSelectorTest extends InitializedN
             nameLookupPossibleInAdvance
         )
     );
-    Assert.assertSame(expectedDimensionSelectorClass, selector.getClass());
+    Assertions.assertSame(expectedDimensionSelectorClass, selector.getClass());
 
     assertDenyListFiltering(rowSupplier, selector);
   }
@@ -174,36 +174,36 @@ public class ListFilteredDimensionSpecDimensionSelectorTest extends InitializedN
   {
     rowSupplier.set(data.get(0));
     IndexedInts encodedRow = selector.getRow();
-    Assert.assertEquals(1, encodedRow.size());
-    Assert.assertEquals("val1_1", selector.lookupName(encodedRow.get(0)));
+    Assertions.assertEquals(1, encodedRow.size());
+    Assertions.assertEquals("val1_1", selector.lookupName(encodedRow.get(0)));
 
     rowSupplier.set(data.get(1));
     encodedRow = selector.getRow();
-    Assert.assertEquals(2, encodedRow.size());
-    Assert.assertEquals("val2_2", selector.lookupName(encodedRow.get(0)));
-    Assert.assertEquals("val2_3", selector.lookupName(encodedRow.get(1)));
+    Assertions.assertEquals(2, encodedRow.size());
+    Assertions.assertEquals("val2_2", selector.lookupName(encodedRow.get(0)));
+    Assertions.assertEquals("val2_3", selector.lookupName(encodedRow.get(1)));
 
     rowSupplier.set(data.get(2));
     encodedRow = selector.getRow();
-    Assert.assertEquals(0, encodedRow.size());
+    Assertions.assertEquals(0, encodedRow.size());
   }
 
   private void assertDenyListFiltering(RowSupplier rowSupplier, DimensionSelector selector)
   {
     rowSupplier.set(data.get(0));
     IndexedInts encodedRow = selector.getRow();
-    Assert.assertEquals(1, encodedRow.size());
-    Assert.assertEquals("val1_2", selector.lookupName(encodedRow.get(0)));
+    Assertions.assertEquals(1, encodedRow.size());
+    Assertions.assertEquals("val1_2", selector.lookupName(encodedRow.get(0)));
 
     rowSupplier.set(data.get(1));
     encodedRow = selector.getRow();
-    Assert.assertEquals(1, encodedRow.size());
-    Assert.assertEquals("val2_1", selector.lookupName(encodedRow.get(0)));
+    Assertions.assertEquals(1, encodedRow.size());
+    Assertions.assertEquals("val2_1", selector.lookupName(encodedRow.get(0)));
 
     rowSupplier.set(data.get(2));
     encodedRow = selector.getRow();
-    Assert.assertEquals(1, encodedRow.size());
-    Assert.assertEquals("val3_1", selector.lookupName(encodedRow.get(0)));
+    Assertions.assertEquals(1, encodedRow.size());
+    Assertions.assertEquals("val3_1", selector.lookupName(encodedRow.get(0)));
   }
 
   private static class RowSupplier implements Supplier<List<String>>

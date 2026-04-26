@@ -23,6 +23,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -115,7 +116,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       boolean hasSpatialIndexes
   )
   {
-    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, BuiltInTypesModule.getMaxStringLength());
   }
 
   public StringDimensionHandler(

@@ -19,25 +19,20 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
+import java.util.List;
 
 public class LocalInputSourceAdapterTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   @Test
   public void testAdapterGet()
   {
     LocalInputSourceFactory localInputSourceAdapter = new LocalInputSourceFactory();
-    Assert.assertTrue(localInputSourceAdapter.create(Arrays.asList(
-        "foo.parquet",
-        "bar.parquet"
-    )) instanceof LocalInputSource);
+    Assertions.assertInstanceOf(
+        LocalInputSource.class,
+        localInputSourceAdapter.create(List.of("foo.parquet", "bar.parquet"))
+    );
   }
 }

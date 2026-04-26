@@ -434,14 +434,14 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertEquals(3, taskCountAfterScaleOut);
     Assert.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
-            .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+            .anyMatch("Scale cooldown not elapsed yet"::equals));
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
     autoScaler.reset();
     autoScaler.stop();
@@ -470,14 +470,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.replay(taskMaster);
 
     StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10)
-    {
-      @Override
-      public int getActiveTaskGroupsCount()
-      {
-        return 2;
-      }
-    };
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
@@ -488,6 +481,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         spec,
         dynamicActionEmitter
     );
+    supervisor.getIoConfig().setTaskCount(2);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();

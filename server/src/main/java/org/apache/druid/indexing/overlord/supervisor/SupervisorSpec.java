@@ -103,6 +103,18 @@ public interface SupervisorSpec
   String getSource();
 
   /**
+   * Validates this supervisor spec against current system state at submission time.
+   * Implementations should throw a {@link DruidException} with category
+   * {@link DruidException.Category#INVALID_INPUT} when the spec should be rejected.
+   * <p>
+   * The default implementation does no validation.
+   */
+  default void validateSpec() throws DruidException
+  {
+    // The default implementation does not do any validation checks.
+  }
+
+  /**
    * Checks if a spec can be replaced with a proposed spec (proposesSpec).
    * <p>
    * By default, this method does no validation checks. Implementations of this method can choose to define rules

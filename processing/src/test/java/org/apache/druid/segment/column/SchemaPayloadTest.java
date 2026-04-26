@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -46,11 +46,11 @@ public class SchemaPayloadTest
         Collections.singletonMap("twosum", new StringLastAggregatorFactory("billy", "nilly", null, 20))
     );
 
-    Assert.assertEquals(payload, payloadCopy);
+    Assertions.assertEquals(payload, payloadCopy);
 
     byte[] bytes = mapper.writeValueAsBytes(payload);
     SchemaPayload deserialized = mapper.readValue(bytes, SchemaPayload.class);
 
-    Assert.assertEquals(payload, deserialized);
+    Assertions.assertEquals(payload, deserialized);
   }
 }

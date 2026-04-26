@@ -264,6 +264,8 @@
     <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
     <cve>CVE-2025-58056</cve>
     <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
+    <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
+    <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
   </suppress>
 
   <suppress>
@@ -474,6 +476,16 @@
   <suppress base="true">
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
     <cve>CVE-2022-4244</cve>
+  </suppress>
+
+  <!--  CVE-2025-67030 affects plexus-utils in all versions prior to 4.0.3, but our usage does not exercise the vulnerable functionality and we are not impacted in practice;
+    upgrading to 4.0.3+ would require significant effort due to breaking changes and likely a full migration to Maven 4 and aligned ecosystem components -->
+  <suppress>
+    <notes><![CDATA[
+      file name: plexus-utils-*.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-utils@.*$</packageUrl>
+    <cve>CVE-2025-67030</cve>
   </suppress>
 
   <!-- CVE-2023-5072 has a too broad CPE that seems to be flagging dependencies like json-*. Neither Druid nor any of its

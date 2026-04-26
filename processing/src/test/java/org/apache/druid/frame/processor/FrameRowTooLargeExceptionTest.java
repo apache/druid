@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.processor;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FrameRowTooLargeExceptionTest
 {
@@ -28,6 +28,6 @@ public class FrameRowTooLargeExceptionTest
   public void test_getMaxFrameSize()
   {
     final long maxFrameSize = 100;
-    Assert.assertEquals(maxFrameSize, new FrameRowTooLargeException(maxFrameSize).getMaxFrameSize());
+    Assertions.assertEquals(maxFrameSize, new FrameRowTooLargeException(maxFrameSize).getMaxFrameSize());
   }
 }

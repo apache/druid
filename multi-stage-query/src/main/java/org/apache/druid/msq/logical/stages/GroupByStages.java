@@ -91,7 +91,7 @@ public class GroupByStages
   {
     GroupByQuery gby = makeGbyQuery(projectStage, grouping);
     PreShuffleStage aggStage = new PreShuffleStage(projectStage, gby.withPostAggregatorSpecs(Collections.emptyList()));
-    SortStage sortStage = new SortStage(aggStage, getKeyColumns(grouping.getDimensions()));
+    SortStage sortStage = new SortStage(aggStage, getKeyColumns(grouping.getDimensions()), null);
     PostShuffleStage finalAggStage = new PostShuffleStage(sortStage, gby, grouping.getOutputRowSignature());
     return finalAggStage;
   }

@@ -1282,7 +1282,7 @@ public class SystemSchema extends AbstractSchema
       // Get queries from all engines
       final List<QueryInfo> allQueries = new ArrayList<>();
       for (final SqlEngine sqlEngine : sqlEngineRegistryProvider.get().getAllEngines()) {
-        final GetQueriesResponse response = sqlEngine.getRunningQueries(
+        final GetQueriesResponse response = sqlEngine.getQueries(
             false, // selfOnly false to get queries from all servers
             true, // includeComplete true to include all queries
             authenticationResult,

@@ -86,6 +86,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -720,17 +721,21 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     }
     // CompressedVSizeColumnarIntsSupplier$CompressedByteSizeColumnarInts
     // CompressedVSizeColumnarMultiIntsSupplier$CompressedVSizeColumnarMultiInts
-    Field compressedSupplierField = obj.getClass().getDeclaredField("this$0");
-    compressedSupplierField.setAccessible(true);
-
-    Object supplier = compressedSupplierField.get(obj);
-
-    Field compressionField = supplier.getClass().getDeclaredField("compression");
-    compressionField.setAccessible(true);
-
-    Object strategy = compressionField.get(supplier);
-
-    Assert.assertEquals(expectedStrategy, strategy);
+    // JDK 25+ restricts access to synthetic this$0 fields; traverse the hierarchy for getCompressionStrategy() instead.
+    Class<?> cls = obj.getClass();
+    while (cls != null) {
+      try {
+        Method method = cls.getDeclaredMethod("getCompressionStrategy");
+        method.setAccessible(true);
+        Object strategy = method.invoke(obj);
+        Assert.assertEquals(expectedStrategy, strategy);
+        return;
+      }
+      catch (NoSuchMethodException e) {
+        cls = cls.getSuperclass();
+      }
+    }
+    Assert.fail("Could not find getCompressionStrategy() on " + obj.getClass());
   }
 
 

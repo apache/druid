@@ -22,7 +22,7 @@ package org.apache.druid.query.groupby;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.TestBufferPool;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -80,7 +80,7 @@ public class TestGroupByBuffers implements Closeable
   public void close()
   {
     if (processingPool != null) {
-      Assert.assertEquals(0, processingPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, processingPool.getOutstandingObjectCount());
       processingPool = null;
     }
 

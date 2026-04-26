@@ -25,8 +25,6 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -35,7 +33,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
@@ -55,7 +52,7 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
   /**
    * Create a v10 {@link SegmentFileMapper} with 'external' attached v10 segment files
    *
-   * @param segmentFile v10 segment file with name {@link IndexIO#V10_FILE_NAME}
+   * @param segmentFile v10 segment file with name {@link org.apache.druid.segment.IndexIO#V10_FILE_NAME}
    * @param mapper      json mapper to deserialize metadata
    * @param externals   list of 'external' v10 segment files to attach to this mapper and files that can be referenced
    *                    using {@link #mapExternalFile(String, String)}
@@ -101,91 +98,44 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
       ObjectMapper mapper
   ) throws IOException
   {
+    final SegmentFileMetadataReader.Result metadataResult;
     try (FileInputStream fis = new FileInputStream(segmentFile)) {
-      // version (byte) | metadata compression (byte) | metadata length (int)
-      final byte[] header = new byte[1 + 1 + Integer.BYTES];
-      int read = fis.read(header);
-      if (read < header.length) {
-        throw DruidException.defensive("expected at least [%s] bytes, but only read [%s]", header.length, read);
-      }
-      final ByteBuffer headerBuffer = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN);
-
-      if (headerBuffer.get(0) != IndexIO.V10_VERSION) {
-        throw DruidException.defensive("not v10, got[%s] instead", headerBuffer.get(0));
-      }
-
-      final byte compression = headerBuffer.get(1);
-      final CompressionStrategy compressionStrategy = CompressionStrategy.forId(compression);
-
-      final int metaLength = headerBuffer.getInt(2);
-      final byte[] meta = new byte[metaLength];
-
-      final int startOffset;
-      if (CompressionStrategy.NONE == compressionStrategy) {
-        startOffset = header.length + meta.length;
-        read = fis.read(meta);
-        if (read < meta.length) {
-          throw DruidException.defensive("read[%s] which is less than expected metadata length[%s]", read, metaLength);
-        }
-      } else {
-        final byte[] compressedLengthBytes = new byte[Integer.BYTES];
-        read = fis.read(compressedLengthBytes);
-        if (read != Integer.BYTES) {
-          throw DruidException.defensive("read[%s] which is less than expected [%s]", read, Integer.BYTES);
-        }
-        final ByteBuffer compressedLengthBuffer = ByteBuffer.wrap(compressedLengthBytes).order(ByteOrder.LITTLE_ENDIAN);
-        final int compressedLength = compressedLengthBuffer.getInt(0);
-        startOffset = header.length + Integer.BYTES + compressedLength;
-
-        final byte[] compressed = new byte[compressedLength];
-        read = fis.read(compressed);
-        if (read < compressed.length) {
-          throw DruidException.defensive(
-              "read[%s] which is less than expected compressed metadata length[%s]",
-              read,
-              compressedLength
-          );
-        }
-
-        final ByteBuffer inBuffer = ByteBuffer.wrap(compressed).order(ByteOrder.LITTLE_ENDIAN);
-        final ByteBuffer outBuffer = ByteBuffer.wrap(meta).order(ByteOrder.LITTLE_ENDIAN);
-        final CompressionStrategy.Decompressor decompressor = compressionStrategy.getDecompressor();
-        decompressor.decompress(inBuffer, compressedLength, outBuffer);
-      }
-
-      final SegmentFileMetadata metadata = mapper.readValue(meta, SegmentFileMetadata.class);
-      final List<MappedByteBuffer> containers = Lists.newArrayListWithCapacity(metadata.getContainers().size());
-
-      // eagerly map all container buffers so we can ensure they all share the same file descriptor without needing to
-      // maintain an open channel (which could be closed during an interrupt for example)
-      try (RandomAccessFile f = new RandomAccessFile(segmentFile, "r");
-           FileChannel channel = f.getChannel()) {
-        for (SegmentFileContainerMetadata containerMetadata : metadata.getContainers()) {
-          containers.add(
-              channel.map(
-                  FileChannel.MapMode.READ_ONLY,
-                  startOffset + containerMetadata.getStartOffset(),
-                  containerMetadata.getSize()
-              )
-          );
-        }
-      }
-      catch (IOException e) {
-        Closer closer = Closer.create();
-        for (MappedByteBuffer buffer : containers) {
-          closer.register(() -> ByteBufferUtils.unmap(buffer));
-        }
-        CloseableUtils.closeAndWrapExceptions(closer);
-        throw DruidException.defensive(e, "Problem mapping segment file[%s]", segmentFile.getAbsolutePath());
-      }
-
-      return new SegmentFileMapperV10(
-          segmentFile,
-          metadata,
-          List.copyOf(containers),
-          Map.of()
-      );
+      metadataResult = SegmentFileMetadataReader.read(fis, mapper);
     }
+
+    final SegmentFileMetadata metadata = metadataResult.getMetadata();
+    final long startOffset = metadataResult.getHeaderSize();
+    final List<MappedByteBuffer> containers = Lists.newArrayListWithCapacity(metadata.getContainers().size());
+
+    // eagerly map all container buffers so we can ensure they all share the same file descriptor without needing to
+    // maintain an open channel (which could be closed during an interrupt for example)
+    try (RandomAccessFile f = new RandomAccessFile(segmentFile, "r");
+         FileChannel channel = f.getChannel()) {
+      for (SegmentFileContainerMetadata containerMetadata : metadata.getContainers()) {
+        containers.add(
+            channel.map(
+                FileChannel.MapMode.READ_ONLY,
+                startOffset + containerMetadata.getStartOffset(),
+                containerMetadata.getSize()
+            )
+        );
+      }
+    }
+    catch (IOException e) {
+      Closer closer = Closer.create();
+      for (MappedByteBuffer buffer : containers) {
+        closer.register(() -> ByteBufferUtils.unmap(buffer));
+      }
+      CloseableUtils.closeAndWrapExceptions(closer);
+      throw DruidException.defensive(e, "Problem mapping segment file[%s]", segmentFile.getAbsolutePath());
+    }
+
+    return new SegmentFileMapperV10(
+        segmentFile,
+        metadata,
+        List.copyOf(containers),
+        Map.of()
+    );
   }
 
   private final File segmentFile;

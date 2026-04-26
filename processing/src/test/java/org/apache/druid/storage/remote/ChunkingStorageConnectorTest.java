@@ -21,30 +21,31 @@ package org.apache.druid.storage.remote;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 
 public class ChunkingStorageConnectorTest
 {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
 
   private StorageConnector storageConnector;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    storageConnector = new TestStorageConnector(temporaryFolder.newFolder());
+    storageConnector = new TestStorageConnector(FileUtils.createTempDirInLocation(tempDir, "storage"));
   }
 
   @Test
@@ -52,7 +53,7 @@ public class ChunkingStorageConnectorTest
   {
     InputStream is = storageConnector.read("");
     byte[] dataBytes = IOUtils.toByteArray(is);
-    Assert.assertEquals(TestStorageConnector.DATA, new String(dataBytes, StandardCharsets.UTF_8));
+    Assertions.assertEquals(TestStorageConnector.DATA, new String(dataBytes, StandardCharsets.UTF_8));
   }
 
   @Test
@@ -77,7 +78,7 @@ public class ChunkingStorageConnectorTest
                            : range;
         InputStream is = storageConnector.readRange("", startPosition, limitedRange);
         byte[] dataBytes = IOUtils.toByteArray(is);
-        Assert.assertEquals(
+        Assertions.assertEquals(
             TestStorageConnector.DATA.substring(startPosition, startPosition + limitedRange),
             new String(dataBytes, StandardCharsets.UTF_8)
         );

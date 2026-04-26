@@ -20,18 +20,18 @@
 package org.apache.druid.common.utils;
 
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
 public class PropUtilsTest
 {
-  @Test(expected = ISE.class)
+  @Test
   public void testNotSpecifiedGetProperty()
   {
     Properties prop = new Properties();
-    PropUtils.getProperty(prop, "");
+    Assertions.assertThrows(ISE.class, () -> PropUtils.getProperty(prop, ""));
   }
 
   @Test
@@ -39,14 +39,14 @@ public class PropUtilsTest
   {
     Properties prop = new Properties();
     prop.setProperty("key", "value");
-    Assert.assertEquals("value", PropUtils.getProperty(prop, "key"));
+    Assertions.assertEquals("value", PropUtils.getProperty(prop, "key"));
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testNotSpecifiedGetPropertyAsInt()
   {
     Properties prop = new Properties();
-    PropUtils.getPropertyAsInt(prop, "", null);
+    Assertions.assertThrows(ISE.class, () -> PropUtils.getPropertyAsInt(prop, "", null));
   }
 
   @Test
@@ -55,7 +55,7 @@ public class PropUtilsTest
     Properties prop = new Properties();
     int defaultValue = 1;
     int result = PropUtils.getPropertyAsInt(prop, "", defaultValue);
-    Assert.assertEquals(defaultValue, result);
+    Assertions.assertEquals(defaultValue, result);
   }
 
   @Test
@@ -65,14 +65,14 @@ public class PropUtilsTest
     int expectedValue = 1;
     prop.setProperty("key", Integer.toString(expectedValue));
     int result = PropUtils.getPropertyAsInt(prop, "key");
-    Assert.assertEquals(expectedValue, result);
+    Assertions.assertEquals(expectedValue, result);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testFormatExceptionGetPropertyAsInt()
   {
     Properties prop = new Properties();
     prop.setProperty("key", "1-value");
-    PropUtils.getPropertyAsInt(prop, "key", null);
+    Assertions.assertThrows(ISE.class, () -> PropUtils.getPropertyAsInt(prop, "key", null));
   }
 }

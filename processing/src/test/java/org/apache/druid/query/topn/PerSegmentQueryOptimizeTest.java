@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.SuppressedAggregatorFactory;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -56,10 +56,10 @@ public class PerSegmentQueryOptimizeTest
 
     AggregatorFactory excludedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(exclude));
     AggregatorFactory expectedSuppressedAgg = new SuppressedAggregatorFactory(longSumAggregatorFactory);
-    Assert.assertEquals(expectedSuppressedAgg, excludedAgg);
+    Assertions.assertEquals(expectedSuppressedAgg, excludedAgg);
 
     AggregatorFactory includedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(include));
-    Assert.assertEquals(longSumAggregatorFactory, includedAgg);
+    Assertions.assertEquals(longSumAggregatorFactory, includedAgg);
 
     AggregatorFactory partialAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(partial));
     AggregatorFactory expectedPartialFilteredAgg = new FilteredAggregatorFactory(
@@ -70,7 +70,7 @@ public class PerSegmentQueryOptimizeTest
             null
         )
     );
-    Assert.assertEquals(expectedPartialFilteredAgg, partialAgg);
+    Assertions.assertEquals(expectedPartialFilteredAgg, partialAgg);
   }
 
   @Test
@@ -93,13 +93,13 @@ public class PerSegmentQueryOptimizeTest
     Interval partial = Intervals.utc(1500, 2500);
 
     AggregatorFactory excludedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(exclude));
-    Assert.assertEquals(aggregatorFactory, excludedAgg);
+    Assertions.assertEquals(aggregatorFactory, excludedAgg);
 
     AggregatorFactory includedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(include));
-    Assert.assertEquals(aggregatorFactory, includedAgg);
+    Assertions.assertEquals(aggregatorFactory, includedAgg);
 
     AggregatorFactory partialAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(partial));
-    Assert.assertEquals(aggregatorFactory, partialAgg);
+    Assertions.assertEquals(aggregatorFactory, partialAgg);
   }
 
   private PerSegmentQueryOptimizationContext getOptimizationContext(Interval segmentInterval)

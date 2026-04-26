@@ -21,8 +21,8 @@ package org.apache.druid.storage.local;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -37,6 +37,6 @@ public class LocalTmpStorageConfigTest
                         .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider(tmpString))
     );
     LocalTmpStorageConfig localTmpStorageConfig = injector.getInstance(LocalTmpStorageConfig.class);
-    Assert.assertTrue(localTmpStorageConfig.getTmpDir().getAbsolutePath().contains(tmpString));
+    Assertions.assertTrue(localTmpStorageConfig.getTmpDir().getAbsolutePath().contains(tmpString));
   }
 }

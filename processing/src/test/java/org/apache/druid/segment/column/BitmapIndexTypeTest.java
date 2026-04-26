@@ -22,8 +22,8 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BitmapIndexTypeTest
 {
@@ -35,7 +35,7 @@ public class BitmapIndexTypeTest
     BitmapIndexType strategy = BitmapIndexType.NullValueIndex.INSTANCE;
     String there = JSON_MAPPER.writeValueAsString(strategy);
     BitmapIndexType andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexType.class);
-    Assert.assertEquals(strategy, andBackAgain);
+    Assertions.assertEquals(strategy, andBackAgain);
   }
 
   @Test
@@ -44,6 +44,6 @@ public class BitmapIndexTypeTest
     BitmapIndexType strategy = BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE;
     String there = JSON_MAPPER.writeValueAsString(strategy);
     BitmapIndexType andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexType.class);
-    Assert.assertEquals(strategy, andBackAgain);
+    Assertions.assertEquals(strategy, andBackAgain);
   }
 }

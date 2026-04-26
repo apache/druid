@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BitmapSerdeFactoryTest
 {
@@ -32,11 +32,11 @@ public class BitmapSerdeFactoryTest
   public void testSerialization() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new ConciseBitmapSerdeFactory()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(BitmapSerde.createLegacyFactory()));
-    Assert.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory()));
+    Assertions.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
+    Assertions.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new ConciseBitmapSerdeFactory()));
+    Assertions.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(BitmapSerde.createLegacyFactory()));
+    Assertions.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
+    Assertions.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory()));
   }
 
   @Test
@@ -44,15 +44,15 @@ public class BitmapSerdeFactoryTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     final BitmapSerdeFactory roaringFactory = mapper.readValue("{\"type\":\"roaring\"}", BitmapSerdeFactory.class);
-    Assert.assertTrue(roaringFactory instanceof RoaringBitmapSerdeFactory);
-    Assert.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
-    Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof RoaringBitmapSerdeFactory);
+    Assertions.assertTrue(roaringFactory instanceof RoaringBitmapSerdeFactory);
+    Assertions.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
+    Assertions.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof RoaringBitmapSerdeFactory);
   }
 
   @Test
   public void testForBitmapFactory()
   {
-    Assert.assertTrue(BitmapSerde.forBitmapFactory(new RoaringBitmapFactory()) instanceof BitmapSerde.DefaultBitmapSerdeFactory);
-    Assert.assertTrue(BitmapSerde.forBitmapFactory(new ConciseBitmapFactory()) instanceof ConciseBitmapSerdeFactory);
+    Assertions.assertTrue(BitmapSerde.forBitmapFactory(new RoaringBitmapFactory()) instanceof BitmapSerde.DefaultBitmapSerdeFactory);
+    Assertions.assertTrue(BitmapSerde.forBitmapFactory(new ConciseBitmapFactory()) instanceof ConciseBitmapSerdeFactory);
   }
 }

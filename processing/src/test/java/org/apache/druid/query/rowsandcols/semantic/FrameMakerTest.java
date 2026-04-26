@@ -26,8 +26,8 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FrameMakerTest
 {
@@ -53,7 +53,7 @@ public class FrameMakerTest
 
     final FrameMaker frameMaker = FrameMaker.fromRAC(ArrayListRowsAndColumnsTest.MAKER.apply(mapOfColumnsRowsAndColumns));
 
-    Assert.assertEquals(ROW_SIGNATURE, frameMaker.computeSignature());
+    Assertions.assertEquals(ROW_SIGNATURE, frameMaker.computeSignature());
 
     final Frame frame = frameMaker.toColumnBasedFrame();
     ColumnBasedFrameRowsAndColumns columnBasedFrameRowsAndColumns = new ColumnBasedFrameRowsAndColumns(
@@ -65,12 +65,12 @@ public class FrameMakerTest
       ColumnAccessor actualColumn = columnBasedFrameRowsAndColumns.findColumn(columnName).toAccessor();
 
       for (int i = 0; i < expectedColumn.numRows(); i++) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             expectedColumn.getObject(i),
             actualColumn.getObject(i)
         );
       }
     }
-    Assert.assertEquals(3, frame.numRows());
+    Assertions.assertEquals(3, frame.numRows());
   }
 }

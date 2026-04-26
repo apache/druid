@@ -54,10 +54,11 @@ public class CuratorModule implements Module
   static final int MAX_SLEEP_TIME_MS = 45000;
 
   private final boolean haltOnFailedStart;
+  private final Runnable exitAction;
 
   public CuratorModule()
   {
-    this(true);
+    this(true, () -> System.exit(1));
   }
 
   /**
@@ -66,7 +67,13 @@ public class CuratorModule implements Module
    */
   public CuratorModule(boolean haltOnFailedStart)
   {
+    this(haltOnFailedStart, () -> System.exit(1));
+  }
+
+  CuratorModule(boolean haltOnFailedStart, Runnable exitAction)
+  {
     this.haltOnFailedStart = haltOnFailedStart;
+    this.exitAction = exitAction;
   }
 
   @Override
@@ -214,7 +221,7 @@ public class CuratorModule implements Module
       log.error(t, "Exception when stopping server after unhandled Curator error.");
     }
     finally {
-      System.exit(1);
+      exitAction.run();
     }
   }
 

@@ -29,8 +29,8 @@ import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -60,7 +60,7 @@ public class WindowLastProcessorTest
         new WindowLastProcessor("objectCol", "LastObjectCol"),
         new WindowLastProcessor("nullLastCol", "NullLastCol")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("LastIntCol", "LastDoubleCol", "LastObjectCol", "NullLastCol"),
         processor.getOutputColumnNames()
     );

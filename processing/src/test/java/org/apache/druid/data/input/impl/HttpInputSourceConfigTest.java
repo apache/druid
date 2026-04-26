@@ -21,8 +21,8 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -38,22 +38,22 @@ public class HttpInputSourceConfigTest
   public void testNullAllowedProtocolsUseDefault()
   {
     HttpInputSourceConfig config = new HttpInputSourceConfig(null, null);
-    Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
-    Assert.assertEquals(Collections.emptySet(), config.getAllowedHeaders());
+    Assertions.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
+    Assertions.assertEquals(Collections.emptySet(), config.getAllowedHeaders());
   }
 
   @Test
   public void testEmptyAllowedProtocolsUseDefault()
   {
     HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of(), null);
-    Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
+    Assertions.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testCustomAllowedProtocols()
   {
     HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of("druid"), null);
-    Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
+    Assertions.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
   }
 
   @Test
@@ -63,7 +63,7 @@ public class HttpInputSourceConfigTest
         ImmutableSet.of("druid"),
         ImmutableSet.of("Content-Type", "Referer")
     );
-    Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
-    Assert.assertEquals(ImmutableSet.of("content-type", "referer"), config.getAllowedHeaders());
+    Assertions.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
+    Assertions.assertEquals(ImmutableSet.of("content-type", "referer"), config.getAllowedHeaders());
   }
 }

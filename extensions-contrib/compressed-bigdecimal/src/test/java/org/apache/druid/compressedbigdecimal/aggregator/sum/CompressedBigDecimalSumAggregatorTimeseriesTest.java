@@ -20,15 +20,30 @@
 package org.apache.druid.compressedbigdecimal.aggregator.sum;
 
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorTimeseriesTestBase;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+
+import java.util.List;
 
 public class CompressedBigDecimalSumAggregatorTimeseriesTest extends CompressedBigDecimalAggregatorTimeseriesTestBase
 {
+  private static final TimeseriesQuery QUERY = Druids.newTimeseriesQueryBuilder()
+      .dataSource("test_datasource")
+      .granularity(Granularities.ALL)
+      .aggregators(new CompressedBigDecimalSumAggregatorFactory("cbdStringRevenue", "revenue", 3, 9, null))
+      .filters(new NotDimFilter(new SelectorDimFilter("property", "XXX", null)))
+      .intervals("2017-01-01T00:00:00.000Z/P1D")
+      .build();
+
   @Override
   public void testIngestAndTimeseriesQuery() throws Exception
   {
     testIngestAndTimeseriesQueryHelper(
-        "bd_sum_test_aggregators.json",
-        "bd_sum_test_timeseries_query.json",
+        List.of(new CompressedBigDecimalSumAggregatorFactory("bigDecimalRevenue", "revenue", 3, 9, null)),
+        QUERY,
         "15000000010.000000005"
     );
   }
@@ -37,10 +52,9 @@ public class CompressedBigDecimalSumAggregatorTimeseriesTest extends CompressedB
   public void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception
   {
     testIngestMultipleSegmentsAndTimeseriesQueryHelper(
-        "bd_sum_test_aggregators.json",
-        "bd_sum_test_timeseries_query.json",
+        List.of(new CompressedBigDecimalSumAggregatorFactory("bigDecimalRevenue", "revenue", 3, 9, null)),
+        QUERY,
         "15000000010.000000005"
     );
   }
 }
-

@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class MapLookupExtractionFnSerDeTest
       "", "empty"
   );
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     mapper = TestHelper.makeJsonMapper();
@@ -59,12 +59,12 @@ public class MapLookupExtractionFnSerDeTest
         )
     );
     for (String key : RENAMES.keySet()) {
-      Assert.assertEquals(RENAMES.get(key), fn.apply(key));
+      Assertions.assertEquals(RENAMES.get(key), fn.apply(key));
     }
     final String crazyString = UUID.randomUUID().toString();
-    Assert.assertEquals(null, fn.apply(crazyString));
+    Assertions.assertEquals(null, fn.apply(crazyString));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         crazyString,
         mapper
             .readerFor(DimExtractionFn.class)

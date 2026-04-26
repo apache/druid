@@ -26,8 +26,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.LegacyDimensionSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -48,7 +48,7 @@ public class SearchQueryTest
     String json = JSON_MAPPER.writeValueAsString(query);
     Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
-    Assert.assertEquals(query, serdeQuery);
+    Assertions.assertEquals(query, serdeQuery);
   }
 
   @Test
@@ -79,7 +79,7 @@ public class SearchQueryTest
                          .query("a")
                          .build();
 
-    Assert.assertEquals(query1, query2);
+    Assertions.assertEquals(query1, query2);
   }
 
   @Test
@@ -97,14 +97,14 @@ public class SearchQueryTest
         + QueryRunnerTestHelper.QUALITY_DIMENSION
         + "\"],\"query\":{\"type\":\"insensitive_contains\",\"value\":\"a\"},\"sort\":{\"type\":\"lexicographic\"},\"context\":null}";
     final Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
-    Assert.assertEquals(query.toString(), serdeQuery.toString());
-    Assert.assertEquals(query, serdeQuery);
+    Assertions.assertEquals(query.toString(), serdeQuery.toString());
+    Assertions.assertEquals(query, serdeQuery);
 
     final String json2 =
         "{\"queryType\":\"search\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"filter\":null,\"granularity\":{\"type\":\"all\"},\"limit\":1000,\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z\"]},\"searchDimensions\":[\"quality\"],\"query\":{\"type\":\"insensitive_contains\",\"value\":\"a\"},\"sort\":{\"type\":\"lexicographic\"},\"context\":null}";
     final Query serdeQuery2 = JSON_MAPPER.readValue(json2, Query.class);
 
-    Assert.assertEquals(query.toString(), serdeQuery2.toString());
-    Assert.assertEquals(query, serdeQuery2);
+    Assertions.assertEquals(query.toString(), serdeQuery2.toString());
+    Assertions.assertEquals(query, serdeQuery2);
   }
 }

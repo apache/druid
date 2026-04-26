@@ -21,8 +21,8 @@ package org.apache.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.EventMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -40,15 +40,15 @@ public class AlertBuilderTest
 
     final EventMap alertMap = alertEvent.toMap();
 
-    Assert.assertEquals("alerts", alertMap.get("feed"));
-    Assert.assertEquals("alert[oops]", alertMap.get("description"));
-    Assert.assertEquals("druid/test", alertMap.get("service"));
-    Assert.assertEquals("example.com", alertMap.get("host"));
+    Assertions.assertEquals("alerts", alertMap.get("feed"));
+    Assertions.assertEquals("alert[oops]", alertMap.get("description"));
+    Assertions.assertEquals("druid/test", alertMap.get("service"));
+    Assertions.assertEquals("example.com", alertMap.get("host"));
 
     final Map<String, Object> dataMap = (Map<String, Object>) alertMap.get("data");
-    Assert.assertEquals("java.lang.RuntimeException", dataMap.get("exceptionType"));
-    Assert.assertEquals("an exception!", dataMap.get("exceptionMessage"));
-    Assert.assertEquals("bar", dataMap.get("foo"));
-    Assert.assertEquals("qux", dataMap.get("baz"));
+    Assertions.assertEquals("java.lang.RuntimeException", dataMap.get("exceptionType"));
+    Assertions.assertEquals("an exception!", dataMap.get("exceptionMessage"));
+    Assertions.assertEquals("bar", dataMap.get("foo"));
+    Assertions.assertEquals("qux", dataMap.get("baz"));
   }
 }

@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -52,6 +52,6 @@ public class SimpleDictionaryMergingIteratorTest
     while (dictionaryMergeIterator.hasNext()) {
       actualSequence.add(dictionaryMergeIterator.next());
     }
-    Assert.assertEquals(expectedSequence, actualSequence);
+    Assertions.assertEquals(expectedSequence, actualSequence);
   }
 }

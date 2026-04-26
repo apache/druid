@@ -161,7 +161,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, false);
   }
 
   @Override
@@ -202,6 +202,12 @@ public class MSQTestWorkerContext implements WorkerContext
 
   @Override
   public boolean includeAllCounters()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isDebug()
   {
     return true;
   }
