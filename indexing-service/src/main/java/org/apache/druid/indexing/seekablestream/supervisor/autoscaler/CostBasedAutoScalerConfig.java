@@ -37,8 +37,9 @@ import java.util.Objects;
 /**
  * Configuration for cost-based auto-scaling of seekable stream supervisor tasks.
  * Uses a cost function combining lag and idle time metrics to determine optimal task counts.
- * Task counts are selected from a bounded range derived from the current partitions-per-task (PPT)
- * ratio, not strictly from factors/divisors of the partition count.
+ * Candidate task counts are derived from possible partitions-per-task ratios and are not limited
+ * to factors/divisors of the partition count. Optional scale-up and scale-down boundaries control
+ * how much of that candidate set is evaluated around the current task count.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
@@ -211,9 +212,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Enables or disables the use of task count boundaries derived from the current partitions-per-task (PPT) ratio
-   * when evaluating SCALE UP actions. If enabled, the auto-scaler will only consider task counts within a certain
-   * range around the current PPT ratio, which can help prevent large jumps in task count.
+   * Enables or disables the task-count evaluation window when considering scale-up candidates.
+   * If enabled, the optimizer only evaluates a small number of candidate task counts above the current count,
+   * which prevents large scale-up jumps.
    */
   @JsonProperty("useTaskCountBoundariesOnScaleUp")
   public boolean shouldUseTaskCountBoundariesOnScaleUp()
@@ -222,9 +223,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Enables or disables the use of task count boundaries derived from the current partitions-per-task (PPT) ratio
-   * when evaluating SCALE DOWN actions. If enabled, the auto-scaler will only consider task counts within a certain
-   * range around the current PPT ratio, which can help prevent large jumps in task count.
+   * Enables or disables the task-count evaluation window when considering scale-down candidates.
+   * If enabled, the optimizer only evaluates a small number of candidate task counts below the current count,
+   * which prevents large scale-down drops.
    */
   @JsonProperty("useTaskCountBoundariesOnScaleDown")
   public boolean shouldUseTaskCountBoundariesOnScaleDown()
@@ -253,8 +254,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Indicates whether task scaling down is limited to periods during task rollovers only.
-   * If set to {@code false}, allows scaling down during normal task run time.
+   * Indicates whether scale-down actions are deferred to task rollover.
+   * If set to {@code false}, scale-down can happen during regular scale-action checks.
    */
   @JsonProperty("scaleDownDuringTaskRolloverOnly")
   public boolean isScaleDownOnTaskRolloverOnly()

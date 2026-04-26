@@ -46,15 +46,16 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Cost-based auto-scaler for seekable stream supervisors.
- * Uses a weighted cost function combining lag recovery time (seconds) and idleness cost (seconds)
+ * Uses a weighted cost function combining lag recovery time and idle-ratio cost
  * to determine optimal task counts.
  * <p>
- * Candidate task counts are derived by scanning a bounded window of partitions-per-task (PPT) values
- * around the current PPT, then converting those to task counts. This allows non-divisor task counts
- * while keeping changes gradual (no large jumps).
+ * Candidate task counts are derived from possible partitions-per-task ratios, then converted
+ * to task counts. When configured, scale-up and scale-down can independently limit the evaluated
+ * candidates to a small window around the current task count to avoid large jumps.
  * <p>
- * Scale-up and scale-down are both evaluated proactively.
- * Future versions may perform scale-down on task rollover only.
+ * Scale-up is applied during regular scale-action checks. Scale-down is applied during regular
+ * checks unless {@link CostBasedAutoScalerConfig#isScaleDownOnTaskRolloverOnly()} defers it
+ * to task rollover.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
@@ -66,11 +67,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
 
   /**
-   * The maximum number of partitions a single task can handle before requiring a new task
-   * to be created during auto-scaling operations.
+   * Maximum number of candidate task counts to evaluate above or below the current task count
+   * when scale-up or scale-down boundaries are enabled.
    * <p>
-   * This constant is used to enforce an upper boundary on the partitions-per-task ratio,
-   * ensuring operational efficiency and preventing excessive burden on individual tasks.
+   * The misspelling is preserved to avoid unnecessary churn in this package-private constant.
    */
   static final int BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK = 2;
 
@@ -249,7 +249,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *   <li>Current task count already optimal</li>
    * </ul>
    *
-   * @return optimal task count for scale-up, or -1 if no scaling action needed
+   * @return optimal task count, or -1 if no scaling action is needed
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -299,7 +299,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         config.getIdleWeight()
     );
 
-    // Find the task count which reduces cost
+    // Find the evaluated task count with the lowest cost.
     final CostResult[] costResults = new CostResult[validTaskCounts.length];
     Arrays.fill(costResults, CostResult.INFINITE_COST);
 
@@ -345,14 +345,15 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       );
     }
 
-    // Scale up is performed eagerly.
+    // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
     return optimalTaskCount;
   }
 
   /**
-   * Generates valid task counts based on partitions-per-task ratios.
+   * Generates valid task counts by converting every possible partitions-per-task ratio
+   * into a task count and filtering by configured min/max task count bounds.
    *
-   * @return sorted list of valid task counts within bounds
+   * @return list of valid task counts within bounds
    */
   @SuppressWarnings({"ReassignedVariable"})
   static int[] computeValidTaskCounts(

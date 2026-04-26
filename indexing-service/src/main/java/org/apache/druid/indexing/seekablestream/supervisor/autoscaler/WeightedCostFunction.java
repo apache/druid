@@ -24,11 +24,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 /**
  * Weighted cost function using compute time as the core metric.
- * Costs represent actual time in seconds, making them intuitive and debuggable.
+ * Lag cost is based on recovery time in seconds; idle cost is a penalty derived from
+ * the predicted idle ratio.
  *
  * <p>Idle cost uses a U-shaped penalty with minimum at {@link #IDEAL_IDLE_RATIO}.
- * This penalizes both under-provisioning (low idle → no safety margin, lag risk) and
- * over-provisioning (high idle → wasted cycles), with asymmetric severity controlled by
+ * This penalizes both under-provisioning (low idle, no safety margin, lag risk) and
+ * over-provisioning (high idle, wasted capacity), with asymmetric severity controlled by
  * {@link #UNDER_PROVISIONING_PENALTY} and {@link #OVER_PROVISIONING_PENALTY}.
  */
 public class WeightedCostFunction
@@ -61,7 +62,7 @@ public class WeightedCostFunction
   static final double UNDER_PROVISIONING_PENALTY = 2.0;
 
   /**
-   * Penalty magnitude applied when idle ratio is 1 (fully wasted cycles).
+   * Penalty magnitude applied when idle ratio is 1 (fully wasted capacity).
    * Controls the steepness of the U-shape on the over-provisioning side.
    */
   static final double OVER_PROVISIONING_PENALTY = 1.0;
@@ -69,14 +70,13 @@ public class WeightedCostFunction
   /**
    * Computes cost for a given task count using compute time metrics.
    * <p>
-   * Costs are measured in 'seconds':
+   * Cost components are derived from:
    * <ul>
-   *   <li><b>lagCost</b>: Expected time (seconds) to recover current lag</li>
-   *   <li><b>idleCost</b>: Total compute time (seconds) wasted being idle per task duration</li>
+   *   <li><b>lagCost</b>: weighted expected time to recover current lag</li>
+   *   <li><b>idleCost</b>: weighted U-shaped penalty for the predicted idle ratio</li>
    * </ul>
    * <p>
-   * Formula: {@code lagWeight * lagRecoveryTime + idleWeight * idlenessCost}.
-   * This approach directly connects costs to operational metrics.
+   * Formula: {@code lagWeight * lagRecoveryTime + idleWeight * idleRatioPenalty}.
    *
    * @return CostResult containing totalCost, lagCost, and idleCost,
    * or result with {@link Double#POSITIVE_INFINITY} for invalid inputs
@@ -129,15 +129,15 @@ public class WeightedCostFunction
   }
 
   /**
-   * U-shaped idle cost with minimum at {@code idealIdleRatio}.
+   * U-shaped idle cost with minimum at {@link #IDEAL_IDLE_RATIO}.
    *
    * <ul>
-   *   <li>idle &lt; ideal: under-provisioning penalty — no safety margin, lag risk</li>
-   *   <li>idle = ideal: baseline cost only ({@code taskCount * idealIdleRatio})</li>
-   *   <li>idle &gt; ideal: over-provisioning penalty — wasted cycles</li>
+   *   <li>idle &lt; ideal: under-provisioning penalty, no safety margin, lag risk</li>
+   *   <li>idle = ideal: baseline cost only ({@code taskCount * IDEAL_IDLE_RATIO})</li>
+   *   <li>idle &gt; ideal: over-provisioning penalty, wasted capacity</li>
    * </ul>
    * <p>
-   * The {@code idealIdleRatio} baseline keeps cost non-zero at the optimum so the optimizer
+   * The ideal-idle baseline keeps cost non-zero at the optimum so the optimizer
    * always has a finite trade-off against lag cost.
    */
   double uShapedIdleCost(double predictedIdleRatio, int taskCount)
@@ -154,7 +154,7 @@ public class WeightedCostFunction
   }
 
   /**
-   * Estimates the idle ratio for a proposed task count with linear prediction.
+   * Estimates the idle ratio for a proposed task count with a capacity-based prediction.
    *
    * @param metrics   current system metrics containing idle ratio and task count
    * @param taskCount target task count to estimate an idle ratio for
@@ -174,7 +174,7 @@ public class WeightedCostFunction
       return currentPollIdleRatio;
     }
 
-    // Linear prediction (capacity-based) - existing logic
+    // Capacity-based prediction: preserve current busy work and spread it over the proposed task count.
     final double busyFraction = 1.0 - currentPollIdleRatio;
     final double taskRatio = (double) taskCount / currentTaskCount;
     final double linearPrediction = Math.max(0.0, Math.min(1.0, 1.0 - busyFraction / taskRatio));
