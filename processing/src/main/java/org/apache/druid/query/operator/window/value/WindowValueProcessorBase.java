@@ -142,6 +142,10 @@ public abstract class WindowValueProcessorBase implements Processor
       return;
     }
 
+    // Note that this logic would not be correct for SQL like:
+    //   FIRST_VALUE(x) OVER (ORDER BY t RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)
+    // The SQL validator will reject queries with offset-based RANGE frames such as this.
+    // See https://github.com/apache/druid/issues/15767 for more details.
     final WindowFrame.Groups groupsFrame = frame.unwrap(WindowFrame.Groups.class);
     if (groupsFrame != null) {
       final int[] boundaries =
