@@ -78,17 +78,14 @@ public class CostBasedAutoScalerTest
   public void testComputeValidTaskCounts()
   {
     boolean useTaskCountBoundaries = true;
-    int highLagThreshold = 50_000;
 
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
     int[] validTaskCounts = computeValidTaskCounts(
         100,
         25,
-        0L,
         1,
         100,
-        useTaskCountBoundaries,
-        highLagThreshold
+        useTaskCountBoundaries
     );
     Assert.assertTrue("Expected current task count to be included", contains(validTaskCounts, 25));
     Assert.assertTrue("Expected next scale-up option (34) to be included", contains(validTaskCounts, 34));
@@ -97,11 +94,9 @@ public class CostBasedAutoScalerTest
     int[] singlePartition = computeValidTaskCounts(
         1,
         1,
-        0L,
         1,
         100,
-        useTaskCountBoundaries,
-        highLagThreshold
+        useTaskCountBoundaries
     );
     Assert.assertTrue("Single partition should yield at least one valid count", singlePartition.length > 0);
     Assert.assertTrue("Single partition should include task count 1", contains(singlePartition, 1));
@@ -110,61 +105,40 @@ public class CostBasedAutoScalerTest
     int[] exceedsPartitions = computeValidTaskCounts(
         2,
         5,
-        0L,
         1,
         100,
-        useTaskCountBoundaries,
-        highLagThreshold
+        useTaskCountBoundaries
     );
     Assert.assertEquals(2, exceedsPartitions.length);
     Assert.assertTrue(contains(exceedsPartitions, 1));
     Assert.assertTrue(contains(exceedsPartitions, 2));
 
     // Lag expansion: low lag should not include max, high lag should allow aggressive scaling
-    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30, useTaskCountBoundaries, highLagThreshold);
+    int[] lowLagCounts = computeValidTaskCounts(30, 3, 1, 30, useTaskCountBoundaries);
     Assert.assertFalse("Low lag should not include max task count", contains(lowLagCounts, 30));
     Assert.assertTrue("Low lag should cap scale-up around 4 tasks", contains(lowLagCounts, 4));
-
-    // High lag uses logarithmic formula: K * ln(lagSeverity) where K = P/(6.4*sqrt(C))
-    // For P=30, C=3, lagPerPartition=500K, threshold=50K: lagSeverity=10, K=2.7, delta=6.2
-    // This allows controlled scaling to ~10-15 tasks (not all the way to max)
-    long highAggregateLag = 30L * 500_000L;
-    int[] highLagCounts = computeValidTaskCounts(
-        30,
-        3,
-        highAggregateLag,
-        1,
-        30,
-        useTaskCountBoundaries,
-        highLagThreshold
-    );
-    Assert.assertTrue("High lag should allow scaling to 10 tasks", contains(highLagCounts, 10));
-    Assert.assertTrue("High lag should allow scaling to 15 tasks", contains(highLagCounts, 15));
-    Assert.assertFalse("High lag should not jump straight to max (30) from 3", contains(highLagCounts, 30));
 
     // Respects taskCountMax
     int[] cappedCounts = computeValidTaskCounts(
         30,
         4,
-        highAggregateLag,
         1,
         3,
-        useTaskCountBoundaries,
-        highLagThreshold
+        useTaskCountBoundaries
     );
     Assert.assertTrue("Should include taskCountMax when within bounds", contains(cappedCounts, 3));
     Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
 
     // Respects taskCountMin - filters out values below the minimum
     // With partitionCount=100, currentTaskCount=10, the computed range includes values like 8, 9, 10, 12, 13
-    int[] minCappedCounts = computeValidTaskCounts(100, 10, 0L, 10, 100, useTaskCountBoundaries, highLagThreshold);
+    int[] minCappedCounts = computeValidTaskCounts(100, 10, 10, 100, useTaskCountBoundaries);
     Assert.assertFalse("Should not include values below taskCountMin (8)", contains(minCappedCounts, 8));
     Assert.assertFalse("Should not include values below taskCountMin (9)", contains(minCappedCounts, 9));
     Assert.assertTrue("Should include values at taskCountMin (10)", contains(minCappedCounts, 10));
     Assert.assertTrue("Should include values above taskCountMin (12)", contains(minCappedCounts, 12));
 
     // Both bounds applied together
-    int[] bothBounds = computeValidTaskCounts(100, 10, 0L, 10, 12, useTaskCountBoundaries, highLagThreshold);
+    int[] bothBounds = computeValidTaskCounts(100, 10, 10, 12, useTaskCountBoundaries);
     Assert.assertFalse("Should not include values below taskCountMin (8)", contains(bothBounds, 8));
     Assert.assertFalse("Should not include values below taskCountMin (9)", contains(bothBounds, 9));
     Assert.assertFalse("Should not include values above taskCountMax (13)", contains(bothBounds, 13));
@@ -197,9 +171,13 @@ public class CostBasedAutoScalerTest
     int highIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(10.0, 50, 100, 0.9));
     Assert.assertTrue("High idle should not suggest scale-up", highIdleResult <= 50);
 
-    // With low idle and balanced weights, the algorithm should not scale up aggressively
+    // With idle below ideal (0.1 < 0.25), U-shaped cost penalizes under-provisioning,
+    // driving a moderate scale-up toward the ideal operating point.
     int lowIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
-    Assert.assertTrue("With low idle and balanced weights, avoid aggressive scale-up", lowIdleResult <= 25);
+    Assert.assertTrue(
+        "Low idle below ideal should drive scale-up toward ideal operating point",
+        lowIdleResult > 25
+    );
   }
 
   @Test

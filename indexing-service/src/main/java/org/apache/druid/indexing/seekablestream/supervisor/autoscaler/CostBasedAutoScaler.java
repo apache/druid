@@ -176,7 +176,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
     // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
     final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
-                                     || currentTaskCount > config.getTaskCountMax();
+                                           || currentTaskCount > config.getTaskCountMax();
     if (isTaskCountOutOfBounds) {
       currentTaskCount = Math.min(config.getTaskCountMax(), Math.max(config.getTaskCountMin(), currentTaskCount));
     }
@@ -188,16 +188,28 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     // regardless of optimal task count, to get back to a safe state.
     if (isTaskCountOutOfBounds) {
       taskCount = currentTaskCount;
-      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
-               supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount);
+      log.info(
+          "Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
+          supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount
+      );
     } else if (optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
-      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);
+      log.info(
+          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).",
+          supervisorId,
+          currentTaskCount,
+          taskCount
+      );
     } else if (!config.isScaleDownOnTaskRolloverOnly()
                && optimalTaskCount < currentTaskCount
                && optimalTaskCount > 0) {
       taskCount = optimalTaskCount;
-      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).", supervisorId, currentTaskCount, taskCount);
+      log.info(
+          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).",
+          supervisorId,
+          currentTaskCount,
+          taskCount
+      );
     } else {
       taskCount = -1;
       log.debug("No scaling required for supervisor[%s]", supervisorId);
@@ -261,11 +273,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
         partitionCount,
         currentTaskCount,
-        (long) metrics.getAggregateLag(),
         config.getTaskCountMin(),
         config.getTaskCountMax(),
-        config.shouldUseTaskCountBoundaries(),
-        config.getHighLagThreshold()
+        config.shouldUseTaskCountBoundariesOnScaleUp() && config.shouldUseTaskCountBoundariesOnScaleDown()
     );
 
     if (validTaskCounts.length == 0) {
@@ -330,11 +340,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   static int[] computeValidTaskCounts(
       int partitionCount,
       int currentTaskCount,
-      double aggregateLag,
       int taskCountMin,
       int taskCountMax,
-      boolean isTaskCountBoundariesEnabled,
-      int highLagThreshold
+      boolean isTaskCountBoundariesEnabled
   )
   {
     if (partitionCount <= 0 || currentTaskCount <= 0) {
@@ -353,19 +361,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           partitionCount,
           currentPartitionsPerTask + MAX_DECREASE_IN_PARTITIONS_PER_TASK
       );
-
-      int extraIncrease = 0;
-      if (highLagThreshold > 0) {
-        extraIncrease = computeExtraPPTIncrease(
-            highLagThreshold,
-            aggregateLag,
-            partitionCount,
-            currentTaskCount,
-            taskCountMax
-        );
-      }
-      int effectiveMaxIncrease = MAX_INCREASE_IN_PARTITIONS_PER_TASK + extraIncrease;
-      minPartitionsPerTask = Math.max(minPartitionsPerTask, currentPartitionsPerTask - effectiveMaxIncrease);
+      minPartitionsPerTask = Math.max(
+          minPartitionsPerTask,
+          currentPartitionsPerTask - MAX_INCREASE_IN_PARTITIONS_PER_TASK
+      );
     }
 
     for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask
@@ -376,50 +375,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
     return result.toIntArray();
-  }
-
-  /**
-   * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
-   * is above the configured threshold.
-   * <p>
-   * This uses a logarithmic formula for consistent absolute growth:
-   * {@code deltaTasks = K * ln(lagSeverity)}
-   * where {@code K = (partitionCount / 6.4) / sqrt(currentTaskCount)}
-   * <p>
-   * This ensures that small taskCount's get a massive relative boost,
-   * while large taskCount's receive more measured, stable increases.
-   */
-  static int computeExtraPPTIncrease(
-      double lagThreshold,
-      double aggregateLag,
-      int partitionCount,
-      int currentTaskCount,
-      int taskCountMax
-  )
-  {
-    if (partitionCount <= 0 || taskCountMax <= 0 || currentTaskCount <= 0) {
-      return 0;
-    }
-
-    final double lagPerPartition = aggregateLag / partitionCount;
-    if (lagPerPartition < lagThreshold) {
-      return 0;
-    }
-
-    final double lagSeverity = lagPerPartition / lagThreshold;
-
-    // Logarithmic growth: ln(lagSeverity) is positive when lagSeverity > 1
-    // First multoplier decreases with sqrt(currentTaskCount): aggressive when small, conservative when large
-    final double deltaTasks = (partitionCount / K_PARTITION_DIVISOR) / Math.sqrt(currentTaskCount) * Math.log(
-        lagSeverity);
-
-    final double targetTaskCount = Math.min(taskCountMax, (double) currentTaskCount + deltaTasks);
-
-    // Compute precise PPT reduction to avoid early integer truncation artifacts
-    final double currentPPT = (double) partitionCount / currentTaskCount;
-    final double targetPPT = (double) partitionCount / targetTaskCount;
-
-    return Math.max(0, (int) Math.floor(currentPPT - targetPPT));
   }
 
   /**
