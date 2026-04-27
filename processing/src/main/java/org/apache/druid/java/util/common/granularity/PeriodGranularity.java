@@ -600,6 +600,16 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         offset += millis;
       }
       return t - offset;
+    } else if (period.getYears() == 0 && period.getMonths() == 0 && period.getWeeks() == 0 && period.getDays() == 0) {
+      // If the period only contains hours, minutes, seconds, and millis,
+      // their duration is always precise even across daylight saving transitions.
+      // Therefore, we can safely convert the period to milliseconds.
+      final long millis = period.toStandardDuration().getMillis();
+      long offset = t % millis - origin % millis;
+      if (offset < 0) {
+        offset += millis;
+      }
+      return t - offset;
     } else {
       throw new UnsupportedOperationException(
           "Period cannot be converted to milliseconds as some fields mays vary in length with chronology " + chronology
