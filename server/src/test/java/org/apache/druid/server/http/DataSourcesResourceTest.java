@@ -783,7 +783,14 @@ public class DataSourcesResourceTest
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
-            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            null,
+            auditManager
+            auditManager
         );
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
