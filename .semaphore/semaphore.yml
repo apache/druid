@@ -147,7 +147,7 @@ blocks:
             - name: MAVEN_PROJECTS
               value: services
             - name: MAVEN_OPTS
-              value: "-Dmaven.repo.local=.m2 -DforkCount=1 -DreuseForks=false"
+              value: "-DforkCount=1 -DreuseForks=false"
           commands: *run_tests
 
         - name: "Other Tests"
