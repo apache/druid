@@ -92,36 +92,64 @@ public class WeightedCostFunction
     }
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
-    final double lagRecoveryTime;
     if (avgProcessingRate < 0) {
       throw DruidException.defensive("Avg processing rate[%.2f] must not be negative.", avgProcessingRate);
-    } else {
-      // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
-      // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
-      // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
-      if (metrics.getAggregateLag() <= 0) {
-        lagRecoveryTime = 0;
-      } else {
-        final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
-        final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
-        final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
-        lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
-      }
     }
 
-    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount);
+    // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
+    // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
+    // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
+    final double lagRecoveryTime;
+    if (metrics.getAggregateLag() <= 0) {
+      lagRecoveryTime = 0;
+    } else {
+      final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
+      final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
+      final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
+      lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
+    }
+
+    // Capacity-based idle prediction. When the proposed count would oversaturate the cluster
+    // (busy work exceeds available capacity), the unmet demand becomes a virtual lag-recovery
+    // time on the same axis as real lag — so the optimizer treats predicted saturation as
+    // predicted lag, not as "perfect utilization".
+    final double currentPollIdleRatio = metrics.getPollIdleRatio();
+    final int currentTaskCount = metrics.getCurrentTaskCount();
+    final double predictedIdleRatio;
+    final double overrun;
+    if (currentPollIdleRatio < 0) {
+      predictedIdleRatio = 0.5;
+      overrun = 0.0;
+    } else if (currentTaskCount <= 0 || proposedTaskCount == currentTaskCount) {
+      predictedIdleRatio = currentPollIdleRatio;
+      overrun = 0.0;
+    } else {
+      final double busyFraction = 1.0 - currentPollIdleRatio;
+      final double taskRatio = (double) proposedTaskCount / currentTaskCount;
+      final double rawIdle = 1.0 - busyFraction / taskRatio;
+      if (rawIdle >= 0) {
+        predictedIdleRatio = Math.min(1.0, rawIdle);
+        overrun = 0.0;
+      } else {
+        predictedIdleRatio = 0.0;
+        overrun = -rawIdle;
+      }
+    }
+    final double virtualLagRecoveryTime = overrun * metrics.getTaskDurationSeconds();
+
     final double idleCost = uShapedIdleCost(predictedIdleRatio, proposedTaskCount);
-    final double lagCost = config.getLagWeight() * lagRecoveryTime;
+    final double lagCost = config.getLagWeight() * (lagRecoveryTime + virtualLagRecoveryTime);
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
     final double cost = lagCost + weightedIdleCost;
 
     log.debug(
         "Cost for taskCount[%d]: lagCost[%.2fs], idleCost[%.2fs], "
-        + "predictedIdle[%.3f], finalCost[%.2fs]",
+        + "predictedIdle[%.3f], overrun[%.3f], finalCost[%.2fs]",
         proposedTaskCount,
         lagCost,
         weightedIdleCost,
         predictedIdleRatio,
+        overrun,
         cost
     );
 
@@ -151,36 +179,6 @@ public class WeightedCostFunction
       penalty = OVER_PROVISIONING_PENALTY * norm * norm;
     }
     return taskCount * (IDEAL_IDLE_RATIO + penalty);
-  }
-
-  /**
-   * Estimates the idle ratio for a proposed task count with a capacity-based prediction.
-   *
-   * @param metrics   current system metrics containing idle ratio and task count
-   * @param taskCount target task count to estimate an idle ratio for
-   * @return estimated idle ratio in range [0.0, 1.0]
-   */
-  private double estimateIdleRatio(CostMetrics metrics, int taskCount)
-  {
-    final double currentPollIdleRatio = metrics.getPollIdleRatio();
-
-    if (currentPollIdleRatio < 0) {
-      // No idle data available, assume moderate idle
-      return 0.5;
-    }
-
-    final int currentTaskCount = metrics.getCurrentTaskCount();
-    if (currentTaskCount <= 0 || taskCount == currentTaskCount) {
-      return currentPollIdleRatio;
-    }
-
-    // Capacity-based prediction: preserve current busy work and spread it over the proposed task count.
-    final double busyFraction = 1.0 - currentPollIdleRatio;
-    final double taskRatio = (double) taskCount / currentTaskCount;
-    final double linearPrediction = Math.max(0.0, Math.min(1.0, 1.0 - busyFraction / taskRatio));
-
-    // Clamp to valid range [0, 1]
-    return Math.max(0.0, linearPrediction);
   }
 
 }

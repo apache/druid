@@ -192,11 +192,11 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
+        .enableTaskAutoScaler(true)
         .taskCountMin(1)
         .taskCountMax(4)
-        .lagWeight(1.0)
-        .idleWeight(1.0)
-        .enableTaskAutoScaler(true)
+        .lagWeight(0.5)
+        .idleWeight(0.5)
         .minTriggerScaleActionFrequencyMillis(10L)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))

@@ -69,10 +69,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
    * when scale-up or scale-down boundaries are enabled.
-   * <p>
-   * The misspelling is preserved to avoid unnecessary churn in this package-private constant.
    */
-  static final int BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK = 2;
+  static final int BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK = 2;
 
   /**
    * If the average partition lag crosses this value and the processing rate is
@@ -309,14 +307,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
-                 ? Math.min(currentTaskCountIndex + BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
+                 ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
                  : endIndex;
     }
 
     if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       startIndex = currentTaskCountIndex >= 0
-                   ? Math.max(currentTaskCountIndex - BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
+                   ? Math.max(currentTaskCountIndex - BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
                    : startIndex;
     }
 
