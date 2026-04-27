@@ -24,11 +24,16 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
+
+import javax.annotation.Nullable;
 
 /**
  * Abstract superclass for null-aware numeric aggregators.
@@ -63,7 +68,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    if (this.forceNotNullable()) {
+    if (!useNullableNumericAggregators(columnSelectorFactory)) {
       return aggregator;
     }
     return new NullableNumericAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -74,7 +79,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    if (this.forceNotNullable()) {
+    if (!useNullableNumericAggregators(columnSelectorFactory)) {
       return aggregator;
     }
     return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -86,7 +91,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    if (this.forceNotNullable()) {
+    if (!useNullableNumericAggregators(columnSelectorFactory)) {
       return aggregator;
     }
     return new NullableNumericVectorAggregator(aggregator, selector);
@@ -109,6 +114,27 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
       return getMaxIntermediateSize();
     }
     return getMaxIntermediateSize() + Byte.BYTES;
+  }
+
+  private boolean useNullableNumericAggregators(ColumnInspector columnInspector)
+  {
+    if (forceNotNullable()) {
+      return false;
+    }
+
+    final String inputColumn = getInputColumn();
+    if (inputColumn == null) {
+      return true;
+    }
+
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(inputColumn);
+    return !(Types.isNumeric(capabilities) && capabilities.hasNulls().isFalse());
+  }
+
+  @Nullable
+  protected String getInputColumn()
+  {
+    return null;
   }
 
   /**
