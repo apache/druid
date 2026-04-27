@@ -790,7 +790,6 @@ public class DataSourcesResourceTest
             null,
             null,
             auditManager
-            auditManager
         );
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
