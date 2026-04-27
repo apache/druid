@@ -38,6 +38,7 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.segment.transform.ScanTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -68,9 +69,11 @@ import java.util.TreeSet;
  */
 public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 {
-  // alice: 2 tags x 2 services = 4, bob: 1 tag x 3 services = 3 = 7 unnested rows
-  // carol (null arrays) and dave (missing columns) each produce 1 passthrough row = 2
-  // total: 9
+  /**
+   * alice: 2 tags x 2 services = 4, bob: 1 tag x 3 services = 3 = 7 unnested rows
+   * carol (null arrays) and dave (missing columns) each produce 1 passthrough row = 2
+   * total: 9
+   */
   private static final int EXPECTED_ROWS = 9;
 
   private final KafkaResource kafka = new KafkaResource();
@@ -124,6 +127,11 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(EXPECTED_ROWS)
+    );
+
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 

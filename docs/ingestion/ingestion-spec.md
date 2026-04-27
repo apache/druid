@@ -389,88 +389,80 @@ The `expression` is a [Druid query expression](../querying/math-expr.md).
 
 #### Scan transform
 
-The scan transform processes each input row through an embedded [scan query](../querying/scan-query.md) during ingestion. Its primary use case is unnesting array-valued columns, producing multiple output rows from a single input row. This allows streaming ingestion (Kafka, Kinesis) to explode arrays into individual rows at ingest time, rather than at query time.
+The scan transform unnests array-valued columns during ingestion, producing multiple output rows from a single input row. This allows streaming ingestion (Kafka, Kinesis) to explode arrays into individual rows at ingest time, rather than at query time.
 
-The scan transform wraps each input row in a temporary single-row segment, runs the configured scan query against it, and emits the resulting rows. The scan query's data source must use `"__input__"` as the base table name.
+Each input row is wrapped in a temporary single-row segment and run through the configured [scan query](../querying/scan-query.md). The scan query uses an [unnest data source](../querying/datasource.md#unnest) with `"__input__"` as the base table name.
 
-**Unnesting a string array:**
+**Example: Unnesting a string array**
+
+Given input rows with a `tags` column containing `["sports", "news"]`, this `transformSpec` produces one output row per tag:
 
 ```json
-{
-  "type": "scan",
-  "name": "tag",
-  "query": {
-    "queryType": "scan",
-    "dataSource": {
-      "type": "unnest",
-      "base": { "type": "table", "name": "__input__" },
-      "virtualColumn": {
-        "type": "expression",
-        "name": "tag",
-        "expression": "\"tags\"",
-        "outputType": "STRING"
+"transformSpec": {
+  "transforms": [
+    {
+      "type": "scan",
+      "name": "tag",
+      "query": {
+        "queryType": "scan",
+        "dataSource": {
+          "type": "unnest",
+          "base": { "type": "table", "name": "__input__" },
+          "virtualColumn": {
+            "type": "expression",
+            "name": "tag",
+            "expression": "\"tags\"",
+            "outputType": "STRING"
+          }
+        },
+        "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
+        "resultFormat": "list"
       }
-    },
-    "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
-    "resultFormat": "list"
-  }
+    }
+  ]
 }
 ```
 
-**Unnesting an array of JSON objects:**
+**Example: Unnesting an array of JSON objects with a filter**
+
+Given input rows with a `services` column containing `[{"type": "web", "dc": "us-east1"}, {"type": "api", "dc": "us-west2"}]`, this `transformSpec` unnests each object into its own row. The optional `unnestFilter` keeps only elements where `service.type` equals `"web"`:
 
 ```json
-{
-  "type": "scan",
-  "name": "service",
-  "query": {
-    "queryType": "scan",
-    "dataSource": {
-      "type": "unnest",
-      "base": { "type": "table", "name": "__input__" },
-      "virtualColumn": {
-        "type": "expression",
-        "name": "service",
-        "expression": "\"services\"",
-        "outputType": "COMPLEX<json>"
+"transformSpec": {
+  "transforms": [
+    {
+      "type": "scan",
+      "name": "service",
+      "query": {
+        "queryType": "scan",
+        "dataSource": {
+          "type": "unnest",
+          "base": { "type": "table", "name": "__input__" },
+          "virtualColumn": {
+            "type": "expression",
+            "name": "service",
+            "expression": "\"services\"",
+            "outputType": "COMPLEX<json>"
+          },
+          "unnestFilter": {
+            "type": "selector",
+            "dimension": "service",
+            "value": "web"
+          }
+        },
+        "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
+        "resultFormat": "list"
       }
-    },
-    "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
-    "resultFormat": "list"
-  }
-}
-```
-
-**Unnesting with a filter (only matching elements produce rows):**
-
-```json
-{
-  "type": "scan",
-  "name": "tag",
-  "query": {
-    "queryType": "scan",
-    "dataSource": {
-      "type": "unnest",
-      "base": { "type": "table", "name": "__input__" },
-      "virtualColumn": {
-        "type": "expression",
-        "name": "tag",
-        "expression": "\"tags\"",
-        "outputType": "STRING"
-      },
-      "unnestFilter": { "type": "selector", "dimension": "tag", "value": "sports" }
-    },
-    "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
-    "resultFormat": "list"
-  }
+    }
+  ]
 }
 ```
 
 |Property|Description|Required|
 |--------|-----------|--------|
 |`type`|Must be `"scan"`.|Yes|
-|`name`|Output name for this transform. This is also used to identify the transform and should match the virtual column name in the query's unnest data source.|Yes|
-|`query`|A [scan query](../querying/scan-query.md) that defines how to process each input row. Use an [unnest data source](../querying/datasource.md#unnest) with `"__input__"` as the base table to unnest arrays. The `intervals` should be set to eternity and `resultFormat` to `"list"`.|Yes|
+|`name`|Output name for this transform. Should match the virtual column name in the query's unnest data source.|Yes|
+|`query`|A [scan query](../querying/scan-query.md) that defines how to process each input row. Use an [unnest data source](../querying/datasource.md#unnest) with `"__input__"` as the base table to unnest arrays. Set `intervals` to eternity and `resultFormat` to `"list"`.|Yes|
 
 You can define multiple scan transforms in the `transforms` list. They are applied sequentially, producing a cross join. For example, unnesting both `tags` (2 elements) and `services` (3 elements) produces 6 rows per input row.
 
