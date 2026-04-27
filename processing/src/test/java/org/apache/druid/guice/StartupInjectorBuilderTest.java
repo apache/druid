@@ -195,13 +195,13 @@ public class StartupInjectorBuilderTest
     props.setProperty(StartupInjectorBuilder.SERVERVIEW_TYPE_CONFIG_STRING, "batch");
 
     final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
-    MatcherAssert.assertThat(
-        Assert.assertThrows(ISE.class, builder::build),
-        ExceptionMatcher.of(ISE.class).expectMessageIs(
-            "Invalid value[batch] for property[druid.serverview.type]. Only [http] is supported;"
-            + " the ZooKeeper-based 'batch' server view has been removed. Remove this property or"
-            + " set it to 'http'. See the Druid upgrade notes for details."
-        )
+
+    Throwable t = Assertions.assertThrows(ISE.class, builder::build);
+    Assertions.assertEquals(
+        "Invalid value[batch] for property[druid.serverview.type]. Only [http] is supported;"
+        + " the ZooKeeper-based 'batch' server view has been removed. Remove this property or"
+        + " set it to 'http'. See the Druid upgrade notes for details.",
+        t.getMessage()
     );
   }
 
