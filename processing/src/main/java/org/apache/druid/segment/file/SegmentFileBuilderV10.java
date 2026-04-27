@@ -48,7 +48,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -110,10 +109,11 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
   // Nested addWithChannel calls (for example a serializer that, while being written, emits sub-files for its own
   // columnar parts) can't write into the current container concurrently with the outer writer. These nested writes are
-  // redirected to temporary files and merged back into container(s) once the outer writer completes.
-  private final List<File> completedDelegateFiles = new ArrayList<>();
-  private final List<File> inProgressDelegateFiles = new ArrayList<>();
-  private final Map<String, String> delegateFileNameMap = new HashMap<>();
+  // redirected to temporary files and merged back into container(s) once the outer writer completes. Each entry
+  // carries the file group that was active when the delegate was created so that the merge routes it into the
+  // correct container even if the active group has since changed.
+  private final List<DelegateEntry> completedDelegates = new ArrayList<>();
+  private final List<DelegateEntry> inProgressDelegates = new ArrayList<>();
   private long delegateFileCounter = 0;
 
   @Nullable
@@ -343,11 +343,12 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       externalBuilder.close();
     }
 
-    if (!completedDelegateFiles.isEmpty() || !inProgressDelegateFiles.isEmpty()) {
+    if (!completedDelegates.isEmpty() || !inProgressDelegates.isEmpty()) {
       abort();
       throw new ISE(
           "[%d] writers in progress and [%d] completed writers needs to be closed before closing builder.",
-          inProgressDelegateFiles.size(), completedDelegateFiles.size()
+          inProgressDelegates.size(),
+          completedDelegates.size()
       );
     }
 
@@ -478,9 +479,14 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
   private SegmentFileChannel delegateChannel(final String name, final long size) throws IOException
   {
-    final String delegateName = nextDelegateFileName(name);
+    // Prefixed with outputFileName so delegate files from a main builder and its externals (which share baseDir)
+    // cannot collide, since main and external always have distinct output file names.
+    final String delegateName = StringUtils.format("%s-delegate-%d", outputFileName, delegateFileCounter++);
     final File tmpFile = new File(baseDir, delegateName);
-    inProgressDelegateFiles.add(tmpFile);
+    // Snapshot the active group now so that if this delegate is merged after the outer writer has advanced past
+    // the group it was created under, it still routes into the correct container.
+    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentFileGroup);
+    inProgressDelegates.add(entry);
 
     return new SegmentFileChannel()
     {
@@ -533,8 +539,8 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       public void close() throws IOException
       {
         channel.close();
-        completedDelegateFiles.add(tmpFile);
-        inProgressDelegateFiles.remove(tmpFile);
+        completedDelegates.add(entry);
+        inProgressDelegates.remove(entry);
         if (!writerCurrentlyInUse) {
           mergeDelegatedFiles();
         }
@@ -544,36 +550,34 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
   /**
    * Move completed delegate temp files into containers by replaying them as regular {@link #add} calls. Only called
-   * when no outer writer is currently holding the builder.
+   * when no outer writer is currently holding the builder. Each entry's snapshotted group is restored as
+   * {@link #currentFileGroup} during its replay so the file lands in the container that was active when the
+   * nested write was originally requested, not whichever group happens to be active at merge time.
    */
   private void mergeDelegatedFiles() throws IOException
   {
-    if (completedDelegateFiles.isEmpty()) {
+    if (completedDelegates.isEmpty()) {
       return;
     }
-    final List<File> toProcess = new ArrayList<>(completedDelegateFiles);
-    final Map<String, String> nameMap = new HashMap<>(delegateFileNameMap);
-    completedDelegateFiles.clear();
-    delegateFileNameMap.clear();
-    for (File file : toProcess) {
-      final String name = nameMap.get(file.getName());
-      add(name, file);
-      if (!file.delete()) {
-        LOG.warn("Unable to delete delegate file[%s]", file);
+    final List<DelegateEntry> toProcess = new ArrayList<>(completedDelegates);
+    completedDelegates.clear();
+    final String savedGroup = currentFileGroup;
+    try {
+      for (DelegateEntry entry : toProcess) {
+        currentFileGroup = entry.group;
+        add(entry.name, entry.file);
+        if (!entry.file.delete()) {
+          LOG.warn("Unable to delete delegate file[%s]", entry.file);
+        }
       }
+    }
+    finally {
+      currentFileGroup = savedGroup;
     }
   }
 
-  /**
-   * Generate a unique temp file name for a delegated nested write. Prefixed with {@link #outputFileName} so that
-   * delegate files from a main builder and its externals (which share {@link #baseDir}) cannot collide as main and
-   * external always have distinct output file names.
-   */
-  private String nextDelegateFileName(String name)
+  private record DelegateEntry(File file, String name, @Nullable String group)
   {
-    final String delegateName = StringUtils.format("%s-delegate-%d", outputFileName, delegateFileCounter++);
-    delegateFileNameMap.put(delegateName, name);
-    return delegateName;
   }
 
   /**

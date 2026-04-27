@@ -100,13 +100,7 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    if (name == null || name.isEmpty()) {
-      throw InvalidInput.exception("projection name cannot be null or empty");
-    }
-    if (Projections.BASE_TABLE_PROJECTION_NAME.equals(name)) {
-      throw InvalidInput.exception("projection cannot use reserved name[%s]", Projections.BASE_TABLE_PROJECTION_NAME);
-    }
-    this.name = name;
+    this.name = Projections.validateProjectionName(name);
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
       throw InvalidInput.exception(
           "projection[%s] groupingColumns and aggregators must not both be null or empty",

@@ -83,8 +83,6 @@ class SegmentFileBuilderV10Test
   @Test
   void testProjectionNameWithSlashRoutesCorrectly() throws IOException
   {
-    // regression: projection names may legitimately contain '/', so container routing must use the declared
-    // projection rather than a parsed prefix of internal file names.
     final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(baseDir);
 
@@ -256,13 +254,57 @@ class SegmentFileBuilderV10Test
     }
   }
 
-  private static void assertBytes(ByteBuffer actual, byte[] expected)
+  @Test
+  void testNestedDelegateClosedAfterOuterRoutesToOriginalGroup() throws IOException
   {
-    Assertions.assertNotNull(actual);
-    Assertions.assertEquals(expected.length, actual.remaining());
-    final byte[] got = new byte[expected.length];
-    actual.get(got);
-    Assertions.assertArrayEquals(expected, got);
+    // doing something like this is weird and probably should happen in practice, but if a nested write was requested
+    // while file group "groupA" was active; even if the caller switches to "groupB" before finally closing the nested
+    // channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise the grouping breaks,
+    // and files from other groups end up in the same container.
+    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
+    FileUtils.mkdirp(baseDir);
+
+    final byte[] outerBytes = new byte[]{1, 2, 3, 4};
+    final byte[] nestedBytes = new byte[]{5, 6, 7, 8};
+    final byte[] groupBBytes = new byte[]{9, 10, 11, 12};
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      builder.startFileGroup("groupA");
+
+      final SegmentFileChannel outer = builder.addWithChannel("groupA/outer", outerBytes.length);
+      final SegmentFileChannel nested = builder.addWithChannel("groupA/nested", nestedBytes.length);
+      nested.write(ByteBuffer.wrap(nestedBytes));
+
+      // close the outer first so writerCurrentlyInUse clears while the nested delegate is still open
+      outer.write(ByteBuffer.wrap(outerBytes));
+      outer.close();
+
+      // switch group before closing the still-open nested delegate; merge must use the snapshotted "groupA"
+      builder.startFileGroup("groupB");
+      nested.close();
+
+      // and a real groupB file so we can verify groupB's container is independent of the nested file
+      try (SegmentFileChannel groupBFile = builder.addWithChannel("groupB/file", groupBBytes.length)) {
+        groupBFile.write(ByteBuffer.wrap(groupBBytes));
+      }
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+
+      // the nested file was requested under groupA, so it must share groupA's container with groupA/outer
+      // and must NOT be in groupB's container alongside groupB/file.
+      final int outerContainer = metadata.getFiles().get("groupA/outer").getContainer();
+      final int nestedContainer = metadata.getFiles().get("groupA/nested").getContainer();
+      final int groupBContainer = metadata.getFiles().get("groupB/file").getContainer();
+      Assertions.assertEquals(outerContainer, nestedContainer, "nested delegate landed in the wrong container");
+      Assertions.assertNotEquals(groupBContainer, nestedContainer, "nested delegate leaked into groupB's container");
+
+      assertBytes(mapper.mapFile("groupA/outer"), outerBytes);
+      assertBytes(mapper.mapFile("groupA/nested"), nestedBytes);
+      assertBytes(mapper.mapFile("groupB/file"), groupBBytes);
+    }
   }
 
   @Test
@@ -283,6 +325,15 @@ class SegmentFileBuilderV10Test
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       Assertions.assertEquals(1, mapper.getSegmentFileMetadata().getContainers().size());
     }
+  }
+
+  private static void assertBytes(ByteBuffer actual, byte[] expected)
+  {
+    Assertions.assertNotNull(actual);
+    Assertions.assertEquals(expected.length, actual.remaining());
+    final byte[] got = new byte[expected.length];
+    actual.get(got);
+    Assertions.assertArrayEquals(expected, got);
   }
 
   private static void assertNoContainerMixesProjections(SegmentFileMetadata metadata)
