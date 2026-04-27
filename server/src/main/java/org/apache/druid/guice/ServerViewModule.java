@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.FilteredServerInventoryViewProvider;
@@ -29,9 +28,7 @@ import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerInventoryViewProvider;
 import org.apache.druid.client.ServerView;
-import org.apache.druid.error.DruidException;
 
-import java.util.Properties;
 import java.util.StringJoiner;
 
 /**
@@ -42,24 +39,6 @@ public class ServerViewModule implements Module
   public static final String TYPE = "type";
   public static final String SERVERVIEW_TYPE_PROPERTY = "druid.serverview.type";
   public static final String SERVERVIEW_TYPE_HTTP = "http";
-
-  @Inject
-  public void configure(Properties properties)
-  {
-    String configuredType = properties.getProperty(SERVERVIEW_TYPE_PROPERTY);
-    if (configuredType != null && !SERVERVIEW_TYPE_HTTP.equals(configuredType)) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Invalid value[%s] for property[%s]. Only [%s] is supported; the ZooKeeper-based"
-                              + " 'batch' server view has been removed. Remove this property or set it to 'http'."
-                              + " See the Druid upgrade notes for details.",
-                              configuredType,
-                              SERVERVIEW_TYPE_PROPERTY,
-                              SERVERVIEW_TYPE_HTTP
-                          );
-    }
-  }
 
   @Override
   public void configure(Binder binder)
