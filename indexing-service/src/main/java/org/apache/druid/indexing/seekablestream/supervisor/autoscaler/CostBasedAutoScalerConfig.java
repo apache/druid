@@ -65,6 +65,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
 
+  /**
+   * Creates a new CostBasedAutoScalerConfig instance.
+   * <p>
+   * Note: useTaskCountBoundaries and highLagThreshold are kept for backward compatibility,
+   * but effectively they are removed.
+   */
   @JsonCreator
   public CostBasedAutoScalerConfig(
       @JsonProperty("taskCountMax") Integer taskCountMax,
@@ -76,6 +82,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
+      @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
+      @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleUp") Boolean useTaskCountBoundariesOnScaleUp,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleDown") Boolean useTaskCountBoundariesOnScaleDown,
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
@@ -460,6 +468,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
+          null,
+          null,
           useTaskCountBoundariesOnScaleUp,
           useTaskCountBoundariesOnScaleDown,
           minScaleUpDelay,
