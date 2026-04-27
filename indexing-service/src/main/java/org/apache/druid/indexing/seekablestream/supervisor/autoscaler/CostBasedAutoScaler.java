@@ -309,14 +309,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
-                 ? currentTaskCountIndex + BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK
+                 ? Math.min(currentTaskCountIndex + BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
                  : endIndex;
     }
 
     if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       startIndex = currentTaskCountIndex >= 0
-                   ? currentTaskCountIndex - BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK
+                   ? Math.max(currentTaskCountIndex - BOUNARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
                    : startIndex;
     }
 
