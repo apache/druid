@@ -49,7 +49,6 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
-                  + "  \"highLagThreshold\": 30000,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
@@ -68,6 +67,8 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);

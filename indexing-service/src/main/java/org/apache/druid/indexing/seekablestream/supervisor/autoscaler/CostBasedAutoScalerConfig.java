@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
 
@@ -44,6 +45,8 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
+  private static final EmittingLogger LOG = new EmittingLogger(CostBasedAutoScalerConfig.class);
+
   static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
   static final double DEFAULT_LAG_WEIGHT = 0.4;
   static final double DEFAULT_IDLE_WEIGHT = 0.6;
@@ -115,6 +118,14 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
 
     if (this.enableTaskAutoScaler) {
+      if (useTaskCountBoundaries != null) {
+        LOG.warn("useTaskCountBoundaries is removed, "
+                 + "use useTaskCountBoundariesOnScaleUp and useTaskCountBoundariesOnScaleDown instead");
+      }
+      if (highLagThreshold != null) {
+        LOG.warn("highLagThreshold is removed, the autoscaler behavior is good enough just with cost function");
+      }
+
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
       Preconditions.checkNotNull(taskCountMin, "taskCountMin is required when enableTaskAutoScaler is true");
       Preconditions.checkArgument(taskCountMax >= taskCountMin, "taskCountMax must be >= taskCountMin");
