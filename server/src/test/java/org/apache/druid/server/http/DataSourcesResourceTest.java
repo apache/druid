@@ -54,8 +54,11 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
+import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatcher;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.IntervalPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -655,38 +658,49 @@ public class DataSourcesResourceTest
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null, null);
     Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, databaseRuleManager, null, null, null, auditManager);
+        new DataSourcesResource(
+            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+        );
 
-    // test dropped
+    // test dropped: segment exists in metadata, drop rule applies → won't be handed off
+    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    DataSegment segment1 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval1), "v1", 1);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
             .once();
-    EasyMock.replay(databaseRuleManager);
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment1)))
+            .once();
+    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
 
-    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     Response response1 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval1, 1, "v1");
     Assert.assertTrue((boolean) response1.getEntity());
 
-    EasyMock.verify(databaseRuleManager);
+    EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
 
     // test isn't dropped and no timeline found
-    EasyMock.reset(databaseRuleManager);
+    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    DataSegment segment2 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval2), "v1", 1);
+    EasyMock.reset(databaseRuleManager, segmentsMetadataManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment2)))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(null)
             .once();
-    EasyMock.replay(inventoryView, databaseRuleManager);
+    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
 
-    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
     Response response2 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval2, 1, "v1");
     Assert.assertFalse((boolean) response2.getEntity());
 
-    EasyMock.verify(inventoryView, databaseRuleManager);
+    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
 
     // test isn't dropped and timeline exist
     String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
+    DataSegment segment3 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval3), "v1", 1);
     SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
     VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
@@ -702,19 +716,154 @@ public class DataSourcesResourceTest
         return ret;
       }
     };
-    EasyMock.reset(inventoryView, databaseRuleManager);
+    EasyMock.reset(inventoryView, databaseRuleManager, segmentsMetadataManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment3)))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(timeline)
             .once();
-    EasyMock.replay(inventoryView, databaseRuleManager);
+    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
 
     Response response3 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval3, 1, "v1");
     Assert.assertTrue((boolean) response3.getEntity());
 
-    EasyMock.verify(inventoryView, databaseRuleManager);
+    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteSegmentNotInMetadataReturnsTrue()
+  {
+    // A segment that hasn't been published to metadata yet (or has been removed) is reported as definitively
+    // never-handed-off so the realtime task can move on.
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(
+            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+        );
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
+            .once();
+    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+
+    String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertTrue((boolean) response.getEntity());
+
+    EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithPartialLoadRuleFallThrough()
+  {
+    // A FALL_THROUGH partial rule whose matcher does not resolve on the segment (the projection it asks for is not
+    // present) should not halt the cascade. The next rule (drop) catches the segment, so the response is true.
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-03T00:00:00Z");
+    Rule partialRule = new IntervalPartialLoadRule(
+        ruleInterval,
+        null,
+        null,
+        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        CannotMatchBehavior.FALL_THROUGH
+    );
+    Rule dropRule = new IntervalDropRule(ruleInterval);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(
+            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+        );
+
+    String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    // Segment exposes projections [other_daily] which the partial rule's matcher (asking for "user_daily") cannot
+    // resolve, so the partial rule falls through and the drop rule catches it.
+    DataSegment segment = buildHandoffSegment(
+        TestDataSource.WIKI, Intervals.of(interval), "v1", 1, ImmutableList.of("other_daily")
+    );
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(partialRule, dropRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment)))
+            .once();
+    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertTrue((boolean) response.getEntity());
+
+    EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithPartialLoadRuleMatcherResolves()
+  {
+    // A partial rule whose matcher does resolve on the segment applies (loads), so the segment is "still waiting for
+    // handoff", the response is false until the timeline reflects it.
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-03T00:00:00Z");
+    Rule partialRule = new IntervalPartialLoadRule(
+        ruleInterval,
+        null,
+        null,
+        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        CannotMatchBehavior.FALL_THROUGH
+    );
+    Rule dropRule = new IntervalDropRule(ruleInterval);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(
+            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+        );
+
+    String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    DataSegment segment = buildHandoffSegment(
+        TestDataSource.WIKI, Intervals.of(interval), "v1", 1, ImmutableList.of("user_daily")
+    );
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(partialRule, dropRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment)))
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(null)
+            .once();
+    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
+
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertFalse((boolean) response.getEntity());
+
+    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
+  }
+
+  private static DataSegment buildHandoffSegment(String dataSource, Interval interval, String version, int partitionNumber)
+  {
+    return buildHandoffSegment(dataSource, interval, version, partitionNumber, null);
+  }
+
+  private static DataSegment buildHandoffSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      int partitionNumber,
+      List<String> projections
+  )
+  {
+    return DataSegment.builder()
+                      .dataSource(dataSource)
+                      .interval(interval)
+                      .version(version)
+                      .shardSpec(new NumberedShardSpec(partitionNumber, 100))
+                      .projections(projections)
+                      .size(0)
+                      .build();
   }
 
   @Test

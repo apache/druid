@@ -34,7 +34,7 @@ import java.util.Map;
  * Base for {@link PartialLoadMatcher} implementations that decide which of a segment's V10 projections to load.
  * Subclasses supply the resolution policy via {@link #resolveProjectionNames(DataSegment)}; this base handles
  * fingerprint computation and wraps the result into the {@code partialProjection} load-spec wire form consumed
- * by the historical-side {@code PartialProjectionLoadSpec} (which does not exist yet, supplied in future work).
+ * by the historical-side {@code PartialProjectionLoadSpec}.
  * <p>
  * The fingerprint is a hash of what projections are partially loaded on a segment by this rule; the data node will
  * include this value in the segment announcement so that it can be used as a lightweight value to compare against
@@ -42,7 +42,7 @@ import java.util.Map;
  */
 public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
 {
-  static final String WIRE_TYPE = "partialProjection";
+  static final String LOAD_SPEC_TYPE = "partialProjection";
   static final String FINGERPRINT_VERSION = "v1";
 
   /**
@@ -62,10 +62,10 @@ public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
     }
     final String fingerprint = computeFingerprint(resolved);
     final Map<String, Object> wrapped = Map.of(
-        "type", WIRE_TYPE,
+        "type", LOAD_SPEC_TYPE,
         "delegate", baseLoadSpec,
         "projections", resolved,
-        "ruleFingerprint", fingerprint
+        "fingerprint", fingerprint
     );
     return new MatchResult(wrapped, fingerprint);
   }

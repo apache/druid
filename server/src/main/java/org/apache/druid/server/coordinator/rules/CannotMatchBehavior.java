@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 import javax.annotation.Nullable;
 
@@ -36,25 +37,45 @@ public enum CannotMatchBehavior
   /**
    * The rule does not apply; the cascade continues to the next rule.
    */
-  FALL_THROUGH,
+  FALL_THROUGH("fallThrough"),
 
   /**
    * The rule applies and the segment is loaded in full on this tier.
    */
-  FULL_LOAD;
+  FULL_LOAD("fullLoad");
+
+  private final String id;
+
+  CannotMatchBehavior(String id)
+  {
+    this.id = id;
+  }
 
   @JsonCreator
   @Nullable
-  public static CannotMatchBehavior fromString(String value)
+  public static CannotMatchBehavior fromString(final String id)
   {
-    if (value == null) {
+    if (id == null) {
       return null;
     }
     for (CannotMatchBehavior behavior : values()) {
-      if (behavior.name().equals(value)) {
+      if (behavior.id.equals(id)) {
         return behavior;
       }
     }
+
     return null;
+  }
+
+  @JsonValue
+  public String getId()
+  {
+    return id;
+  }
+
+  @Override
+  public String toString()
+  {
+    return id;
   }
 }

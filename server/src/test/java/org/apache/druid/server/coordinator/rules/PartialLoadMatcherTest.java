@@ -21,22 +21,25 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Cross-cutting tests for the {@link PartialLoadMatcher} interface itself: fingerprint stability across matcher
+ * implementations, the {@link PartialLoadMatcher.MatchResult} value type, and {@link UnknownPartialLoadMatcher}
+ * (the {@code defaultImpl} fallback for unrecognized matcher types). Per-matcher behavior tests live in their own
+ * test classes (see {@link ExactProjectionPartialLoadMatcherTest},
+ * {@link WildcardProjectionPartialLoadMatcherTest}).
+ */
 public class PartialLoadMatcherTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -57,350 +60,6 @@ public class PartialLoadMatcherTest
       )
       .loadSpec(BASE_LOAD_SPEC)
       .size(0);
-
-  @Test
-  void testExactMatchProducesResultWhenIntersectionNonEmpty()
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("c", "a", "x")
-    );
-    DataSegment segment = segmentWithProjections(List.of("a", "b", "c"));
-
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-
-    Map<String, Object> wrapped = result.wrappedLoadSpec();
-    Assertions.assertEquals("partialProjection", wrapped.get("type"));
-    Assertions.assertEquals(BASE_LOAD_SPEC, wrapped.get("delegate"));
-    Assertions.assertEquals(List.of("a", "c"), wrapped.get("projections"));
-    Assertions.assertEquals(result.fingerprint(), wrapped.get("ruleFingerprint"));
-    Assertions.assertTrue(result.fingerprint().startsWith("v1:"));
-    Assertions.assertEquals("v1:".length() + 16, result.fingerprint().length());
-  }
-
-  @Test
-  void testExactMatchReturnsNullWhenNoIntersection()
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("x", "y")
-    );
-    DataSegment segment = segmentWithProjections(List.of("a", "b"));
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
-  }
-
-  @Test
-  void testExactMatchReturnsNullForProjectionAgnosticSegment()
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("a")
-    );
-    DataSegment segment = segmentWithProjections(null);
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
-  }
-
-  @Test
-  void testExactMatchReturnsNullForEmptyProjectionsList()
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("a")
-    );
-    DataSegment segment = segmentWithProjections(Collections.emptyList());
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
-  }
-
-  @Test
-  void testExactConstructorRejectsNullNames()
-  {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            DruidException.class,
-            () -> new ExactProjectionPartialLoadMatcher(null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageContains("names must not be null or empty")
-    );
-  }
-
-  @Test
-  void testExactConstructorRejectsEmptyNames()
-  {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            DruidException.class,
-            () -> new ExactProjectionPartialLoadMatcher(Collections.emptyList())
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageContains("names must not be null or empty")
-    );
-  }
-
-  @Test
-  void testExactMatchSortsAndDeduplicates()
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("c", "a", "a", "b")
-    );
-    DataSegment segment = segmentWithProjections(List.of("a", "b", "c"));
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(List.of("a", "b", "c"), result.wrappedLoadSpec().get("projections"));
-  }
-
-  @Test
-  void testExactSerde() throws Exception
-  {
-    ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
-        List.of("a", "b")
-    );
-    String json = OBJECT_MAPPER.writeValueAsString(matcher);
-    PartialLoadMatcher reread = OBJECT_MAPPER.readValue(json, PartialLoadMatcher.class);
-    Assertions.assertEquals(matcher, reread);
-    Assertions.assertInstanceOf(ExactProjectionPartialLoadMatcher.class, reread);
-  }
-
-  @Test
-  void testExactEquals()
-  {
-    EqualsVerifier.forClass(ExactProjectionPartialLoadMatcher.class).usingGetClass().verify();
-  }
-
-  @Test
-  void testWildcardConstructorRejectsNullPatterns()
-  {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            DruidException.class,
-            () -> new WildcardProjectionPartialLoadMatcher(null, null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageContains("patterns must not be null or empty")
-    );
-  }
-
-  @Test
-  void testWildcardConstructorRejectsEmptyPatterns()
-  {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            DruidException.class,
-            () -> new WildcardProjectionPartialLoadMatcher(Collections.emptyList(), null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageContains("patterns must not be null or empty")
-    );
-  }
-
-  @Test
-  void testWildcardMatchStarMatchesAll()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("*"),
-        null
-    );
-    DataSegment segment = segmentWithProjections(List.of("alpha", "beta", "gamma"));
-
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("alpha", "beta", "gamma"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardMatchPrefixGlob()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        null
-    );
-    DataSegment segment = segmentWithProjections(
-        List.of("user_daily", "user_hourly", "session_daily")
-    );
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("user_daily", "user_hourly"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardMatchSingleCharGlob()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("p?"),
-        null
-    );
-    DataSegment segment = segmentWithProjections(List.of("p1", "p2", "pxx", "q1"));
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("p1", "p2"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardMultiplePatternsUnioned()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*", "session_d*"),
-        null
-    );
-    DataSegment segment = segmentWithProjections(
-        List.of("user_daily", "session_daily", "session_hourly", "other")
-    );
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("session_daily", "user_daily"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardReturnsNullForProjectionAgnosticSegment()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("*"),
-        null
-    );
-    Assertions.assertNull(matcher.match(segmentWithProjections(null), BASE_LOAD_SPEC));
-    Assertions.assertNull(matcher.match(segmentWithProjections(Collections.emptyList()), BASE_LOAD_SPEC));
-  }
-
-  @Test
-  void testWildcardEscapesRegexMetachars()
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("a.b"),
-        null
-    );
-    DataSegment segment = segmentWithProjections(List.of("a.b", "axb"));
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(List.of("a.b"), result.wrappedLoadSpec().get("projections"));
-  }
-
-  @Test
-  void testWildcardSerde() throws Exception
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*", "p?"),
-        null
-    );
-    String json = OBJECT_MAPPER.writeValueAsString(matcher);
-    PartialLoadMatcher reread = OBJECT_MAPPER.readValue(json, PartialLoadMatcher.class);
-    Assertions.assertEquals(matcher, reread);
-    Assertions.assertInstanceOf(WildcardProjectionPartialLoadMatcher.class, reread);
-  }
-
-  @Test
-  void testWildcardExcludeLiteralRemovesMatchedName()
-  {
-    // Long-retention rule that loads all user_* projections except user_daily — the latter is intended to live only on
-    // a shorter-retention exact-match rule. A literal name is a zero-wildcard glob, so the same excludePatterns field
-    // covers this case.
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        List.of("user_daily")
-    );
-    DataSegment segment = segmentWithProjections(
-        List.of("user_daily", "user_hourly", "user_weekly")
-    );
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("user_hourly", "user_weekly"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardExcludePatternRemovesMatchingNames()
-  {
-    // Broad rule that loads everything except names handled by a different, more specific rule.
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("*"),
-        List.of("user_*")
-    );
-    DataSegment segment = segmentWithProjections(
-        List.of("user_daily", "user_hourly", "session_daily", "other")
-    );
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("other", "session_daily"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardExcludeNotMatchedIsNoop()
-  {
-    // Excluding a pattern that doesn't match anything in the segment is a no-op.
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        List.of("session_*")
-    );
-    DataSegment segment = segmentWithProjections(
-        List.of("user_daily", "user_hourly", "session_daily")
-    );
-    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(
-        List.of("user_daily", "user_hourly"),
-        result.wrappedLoadSpec().get("projections")
-    );
-  }
-
-  @Test
-  void testWildcardExcludeAllMatchedReturnsNull()
-  {
-    // If excludePatterns consume every match the result is empty; the matcher reports "does not match".
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        List.of("user_*")
-    );
-    DataSegment segment = segmentWithProjections(List.of("user_daily", "user_hourly"));
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
-  }
-
-  @Test
-  void testWildcardExcludeChangesFingerprint()
-  {
-    DataSegment segment = segmentWithProjections(List.of("user_daily", "user_hourly"));
-    String withoutExcludes = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        null
-    ).match(segment, segment.getLoadSpec()).fingerprint();
-    String withExcludes = new WildcardProjectionPartialLoadMatcher(
-        List.of("user_*"),
-        List.of("user_daily")
-    ).match(segment, segment.getLoadSpec()).fingerprint();
-    Assertions.assertNotEquals(withoutExcludes, withExcludes);
-  }
-
-  @Test
-  void testWildcardSerdeWithExcludePatterns() throws Exception
-  {
-    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
-        List.of("*"),
-        List.of("user_*")
-    );
-    String json = OBJECT_MAPPER.writeValueAsString(matcher);
-    PartialLoadMatcher reread = OBJECT_MAPPER.readValue(json, PartialLoadMatcher.class);
-    Assertions.assertEquals(matcher, reread);
-    Assertions.assertEquals(
-        List.of("user_*"),
-        ((WildcardProjectionPartialLoadMatcher) reread).getExcludePatterns()
-    );
-  }
-
-  @Test
-  void testWildcardEquals()
-  {
-    EqualsVerifier.forClass(WildcardProjectionPartialLoadMatcher.class)
-                  .usingGetClass()
-                  .verify();
-  }
 
   @Test
   void testFingerprintStableAcrossEquivalentInputOrderAndDuplicates()
@@ -447,6 +106,36 @@ public class PartialLoadMatcherTest
   void testMatchResultEquals()
   {
     EqualsVerifier.forClass(PartialLoadMatcher.MatchResult.class).usingGetClass().verify();
+  }
+
+  @Test
+  void testUnknownTypeDeserializesToFallback() throws Exception
+  {
+    // A matcher type unknown to this Druid version should fall back to UnknownPartialLoadMatcher rather than fail to
+    // parse, so the rules cascade can keep working when an older coordinator reads a rule authored on a newer version.
+    String json = "{\"type\": \"someFutureMatcherType\", \"someFutureField\": [\"x\", \"y\"]}";
+    PartialLoadMatcher matcher = OBJECT_MAPPER.readValue(json, PartialLoadMatcher.class);
+    Assertions.assertInstanceOf(UnknownPartialLoadMatcher.class, matcher);
+  }
+
+  @Test
+  void testUnknownMatcherDoesNotApply()
+  {
+    // An unknown matcher returns null from match() so the rule's appliesTo defers to the rule's onCannotMatch
+    // behavior (FALL_THROUGH continues the cascade; FULL_LOAD applies the rule as a full load).
+    UnknownPartialLoadMatcher matcher = new UnknownPartialLoadMatcher();
+    DataSegment segment = segmentWithProjections(List.of("a", "b"));
+    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+  }
+
+  @Test
+  void testUnknownMatcherEquals()
+  {
+    Assertions.assertEquals(new UnknownPartialLoadMatcher(), new UnknownPartialLoadMatcher());
+    Assertions.assertEquals(
+        new UnknownPartialLoadMatcher().hashCode(),
+        new UnknownPartialLoadMatcher().hashCode()
+    );
   }
 
   private static DataSegment segmentWithProjections(List<String> projections)

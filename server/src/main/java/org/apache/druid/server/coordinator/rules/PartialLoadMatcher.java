@@ -34,7 +34,7 @@ import java.util.Map;
  * configuration that drives the decision and the wire format of their corresponding {@link LoadSpec} wrapper, so the
  * rule layer stays scheme-agnostic.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UnknownPartialLoadMatcher.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ExactProjectionPartialLoadMatcher.TYPE, value = ExactProjectionPartialLoadMatcher.class),
     @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class)

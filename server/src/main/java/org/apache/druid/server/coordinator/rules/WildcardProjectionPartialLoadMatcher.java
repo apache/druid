@@ -20,8 +20,8 @@
 package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
 
@@ -31,13 +31,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 /**
  * Selects projections whose names match any of the configured glob patterns, minus any names matching an entry in
- * {@code excludePatterns}. Matching uses {@link FilenameUtils#wildcardMatch(String, String)}; supported glob
- * metacharacters are {@code *} (any sequence of characters) and {@code ?} (single character), all other characters
- * literal. A literal projection name is also a valid glob (with no wildcards it matches exactly itself), so the same
- * field covers both "exclude this specific name" and "exclude anything matching this pattern."
+ * {@code excludePatterns}. Supported glob metacharacters:
+ * <ul>
+ *   <li>{@code *} — any sequence of characters (including empty)</li>
+ *   <li>{@code ?} — any single character</li>
+ *   <li>{@code \} — escapes the following character so it is treated literally; use {@code \*}, {@code \?}, or
+ *       {@code \\} to match a literal {@code *}, {@code ?}, or {@code \}. A trailing unescaped {@code \} is
+ *       rejected at construction.</li>
+ * </ul>
+ * All other characters are literal; regex metacharacters are escaped automatically. A literal projection name is
+ * a valid (zero-wildcard) glob, so the same {@code excludePatterns} field covers both "exclude this specific name"
+ * and "exclude anything matching this pattern."
  * <p>
  * For example, a long-retention rule {@code patterns=["user_*"], excludePatterns=["user_daily"]} keeps every
  * {@code user_*} projection except {@code user_daily} (which is expected to live on a shorter-retention rule). A
@@ -50,6 +58,8 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
 
   private final List<String> patterns;
   private final List<String> excludePatterns;
+  private final List<Pattern> compiledPatterns;
+  private final List<Pattern> compiledExcludePatterns;
 
   @JsonCreator
   public WildcardProjectionPartialLoadMatcher(
@@ -62,6 +72,8 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
     }
     this.patterns = List.copyOf(patterns);
     this.excludePatterns = excludePatterns == null ? List.of() : List.copyOf(excludePatterns);
+    this.compiledPatterns = compileAll(this.patterns);
+    this.compiledExcludePatterns = compileAll(this.excludePatterns);
   }
 
   @JsonProperty
@@ -71,6 +83,7 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<String> getExcludePatterns()
   {
     return excludePatterns;
@@ -85,24 +98,97 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
     }
     final TreeSet<String> matched = new TreeSet<>();
     for (String name : segmentProjections) {
-      if (matchesAny(name, excludePatterns)) {
+      if (matchesAny(name, compiledExcludePatterns)) {
         continue;
       }
-      if (matchesAny(name, patterns)) {
+      if (matchesAny(name, compiledPatterns)) {
         matched.add(name);
       }
     }
     return new ArrayList<>(matched);
   }
 
-  private static boolean matchesAny(String name, List<String> patterns)
+  private static List<Pattern> compileAll(List<String> globs)
   {
-    for (String pattern : patterns) {
-      if (FilenameUtils.wildcardMatch(name, pattern)) {
+    if (globs.isEmpty()) {
+      return List.of();
+    }
+    final List<Pattern> compiled = new ArrayList<>(globs.size());
+    for (String glob : globs) {
+      compiled.add(Pattern.compile(globToRegex(glob)));
+    }
+    return List.copyOf(compiled);
+  }
+
+  private static boolean matchesAny(String name, List<Pattern> patterns)
+  {
+    for (Pattern pattern : patterns) {
+      if (pattern.matcher(name).matches()) {
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Translates a glob pattern with {@code *}, {@code ?}, and {@code \} escape semantics into an equivalent regex
+   * pattern that matches the entire input string. Regex metacharacters in literal positions are escaped.
+   *
+   * @throws org.apache.druid.error.DruidException if {@code glob} ends with an unescaped backslash
+   */
+  static String globToRegex(String glob)
+  {
+    final StringBuilder sb = new StringBuilder(glob.length() + 4);
+    boolean escaping = false;
+    for (int i = 0; i < glob.length(); i++) {
+      final char c = glob.charAt(i);
+      if (escaping) {
+        appendLiteral(sb, c);
+        escaping = false;
+        continue;
+      }
+      switch (c) {
+        case '\\':
+          escaping = true;
+          break;
+        case '*':
+          sb.append(".*");
+          break;
+        case '?':
+          sb.append('.');
+          break;
+        default:
+          appendLiteral(sb, c);
+      }
+    }
+    if (escaping) {
+      throw InvalidInput.exception("Glob pattern [%s] ends with an unescaped backslash", glob);
+    }
+    return sb.toString();
+  }
+
+  private static void appendLiteral(StringBuilder sb, char c)
+  {
+    switch (c) {
+      case '.':
+      case '(':
+      case ')':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
+      case '+':
+      case '|':
+      case '^':
+      case '$':
+      case '\\':
+      case '*':
+      case '?':
+        sb.append('\\').append(c);
+        break;
+      default:
+        sb.append(c);
+    }
   }
 
   @Override

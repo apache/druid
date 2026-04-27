@@ -918,11 +918,28 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
+      // Look up the segment in the metadata snapshot so the rule cascade can be evaluated against the real segment
+      // (necessary for partial load rules whose matcher inspects the segment's projection list). If the snapshot is
+      // not yet available, we cannot decide, let the realtime task retry.
+      final DataSourcesSnapshot snapshot = segmentsMetadataManager.getRecentDataSourcesSnapshot();
+      if (snapshot == null) {
+        return Response.ok(false).build();
+      }
+      final ImmutableDruidDataSource immutableDruidDataSource = snapshot.getDataSource(dataSourceName);
+      final DataSegment segment = immutableDruidDataSource == null
+                                  ? null
+                                  : immutableDruidDataSource.getSegment(
+                                      SegmentId.of(dataSourceName, theInterval, version, partitionNumber)
+                                  );
+      // Segment isn't published in metadata; it will never be handed off.
+      if (segment == null) {
+        return Response.ok(true).build();
+      }
 
       // A segment that is not eligible for load will never be handed off
       boolean eligibleForLoad = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(theInterval, now)) {
+        if (rule.appliesTo(segment, now)) {
           eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
