@@ -40,13 +40,18 @@ import java.util.Map;
 public class Transformer
 {
   private final Map<String, RowFunction> transforms = new HashMap<>();
+  private final List<Transform> multiRowTransforms = new ArrayList<>();
   private final ThreadLocal<Row> rowSupplierForValueMatcher = new ThreadLocal<>();
   private final ValueMatcher valueMatcher;
 
   Transformer(final TransformSpec transformSpec)
   {
     for (final Transform transform : transformSpec.getTransforms()) {
-      transforms.put(transform.getName(), transform.getRowFunction());
+      if (transform.isMultiRow()) {
+        multiRowTransforms.add(transform);
+      } else {
+        transforms.put(transform.getName(), transform.getRowFunction());
+      }
     }
 
     if (transformSpec.getFilter() != null) {
@@ -62,6 +67,14 @@ public class Transformer
     } else {
       valueMatcher = null;
     }
+  }
+
+  /**
+   * Whether any multi-row transforms are configured.
+   */
+  public boolean hasMultiRowTransform()
+  {
+    return !multiRowTransforms.isEmpty();
   }
 
   /**
@@ -92,6 +105,38 @@ public class Transformer
     }
 
     return transformedRow;
+  }
+
+  /**
+   * Transforms an input row, returning zero or more output rows.
+   * Applies single-row transforms and filtering first, then chains multi-row transforms sequentially.
+   */
+  public List<InputRow> transformToList(@Nullable final InputRow row)
+  {
+    final InputRow singleRowResult = transform(row);
+    if (singleRowResult == null) {
+      return List.of();
+    }
+
+    return applyMultiRowTransforms(singleRowResult);
+  }
+
+  private List<InputRow> applyMultiRowTransforms(final InputRow inputRow)
+  {
+    if (multiRowTransforms.isEmpty()) {
+      return List.of(inputRow);
+    }
+
+    List<InputRow> current = List.of(inputRow);
+    for (final Transform multiRowTransform : multiRowTransforms) {
+      final List<InputRow> next = new ArrayList<>();
+      for (final InputRow currentRow : current) {
+        next.addAll(multiRowTransform.applyMultiRow(currentRow));
+      }
+      current = next;
+    }
+
+    return current;
   }
 
   @Nullable
@@ -139,6 +184,30 @@ public class Transformer
       }
     }
 
-    return inputRowListPlusRawValues;
+    return applyMultiRowTransforms(inputRowListPlusRawValues);
+  }
+
+  private InputRowListPlusRawValues applyMultiRowTransforms(final InputRowListPlusRawValues row)
+  {
+    if (multiRowTransforms.isEmpty() || row.getInputRows() == null) {
+      return row;
+    }
+
+    final List<InputRow> inputRows = row.getInputRows();
+    final List<Map<String, Object>> inputRawValues = row.getRawValuesList();
+    final List<InputRow> outputRows = new ArrayList<>();
+    final List<Map<String, Object>> outputRawValues = inputRawValues == null ? null : new ArrayList<>();
+
+    for (int i = 0; i < inputRows.size(); i++) {
+      final List<InputRow> expandedRows = applyMultiRowTransforms(inputRows.get(i));
+      outputRows.addAll(expandedRows);
+      if (outputRawValues != null) {
+        for (int j = 0; j < expandedRows.size(); j++) {
+          outputRawValues.add(inputRawValues.get(i));
+        }
+      }
+    }
+
+    return InputRowListPlusRawValues.ofList(outputRawValues, outputRows, row.getParseException());
   }
 }

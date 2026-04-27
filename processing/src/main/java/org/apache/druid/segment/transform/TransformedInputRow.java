@@ -30,6 +30,7 @@ import org.joda.time.DateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class TransformedInputRow implements InputRow
 {
@@ -118,6 +119,11 @@ public class TransformedInputRow implements InputRow
   public InputRow getBaseRow()
   {
     return row;
+  }
+
+  Set<String> getTransformedColumns()
+  {
+    return Set.copyOf(transforms.keySet());
   }
 
   @Override

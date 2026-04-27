@@ -21,8 +21,11 @@ package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -36,11 +39,15 @@ import java.util.Set;
  * Transforms do have some limitations. They can only refer to fields present in the actual input rows; in particular,
  * they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a
  * field with another field containing all nulls, which will act similarly to removing the field.
+ *
+ * Multi-row transforms (like {@link ScanTransform}) can produce multiple output rows from a single input row.
+ * These are applied after all single-row transforms.
  */
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class)
+    @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class),
+    @JsonSubTypes.Type(name = "scan", value = ScanTransform.class)
 })
 public interface Transform
 {
@@ -51,12 +58,30 @@ public interface Transform
 
   /**
    * Returns the function for this transform. The RowFunction takes an entire row as input and returns a column value
-   * as output.
+   * as output. Multi-row transforms may return null here.
    */
+  @Nullable
   RowFunction getRowFunction();
 
   /**
    * Returns the names of all columns that this transform is going to read.
    */
   Set<String> getRequiredColumns();
+
+  /**
+   * Whether this transform can produce multiple output rows from a single input row.
+   */
+  default boolean isMultiRow()
+  {
+    return false;
+  }
+
+  /**
+   * For multi-row transforms, applies this transform to a single input row and returns zero or more output rows.
+   * Single-row transforms should not override this when {@link #isMultiRow()} is false.
+   */
+  default List<InputRow> applyMultiRow(InputRow inputRow)
+  {
+    return List.of(inputRow);
+  }
 }

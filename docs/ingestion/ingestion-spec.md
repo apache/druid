@@ -368,7 +368,7 @@ Transforms do have some limitations. They can only refer to fields present in th
 they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a field
 with another field containing all nulls, which will act similarly to removing the field.
 
-Druid currently includes one kind of built-in transform, the expression transform. It has the following syntax:
+Druid includes two kinds of built-in transforms: expression transforms and [scan transforms](#scan-transform). The expression transform has the following syntax:
 
 ```
 {
@@ -386,6 +386,41 @@ The `expression` is a [Druid query expression](../querying/math-expr.md).
  and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
  your ingestion spec.
 :::
+
+#### Scan transform
+
+The scan transform unnests array-valued columns during ingestion, producing multiple output rows from a single input row. This allows streaming ingestion (Kafka, Kinesis) to explode arrays into individual rows at ingest time, rather than at query time.
+
+```json
+{
+  "type": "scan",
+  "name": "tag",
+  "unnestColumn": {
+    "type": "expression",
+    "name": "tag",
+    "expression": "\"tags\"",
+    "outputType": "STRING"
+  },
+  "unnestFilter": {
+    "type": "selector",
+    "dimension": "tag",
+    "value": "sports"
+  }
+}
+```
+
+|Property|Description|Required|
+|--------|-----------|--------|
+|`type`|Must be `"scan"`.|Yes|
+|`name`|Output name for this transform.|Yes|
+|`unnestColumn`|A [virtual column](../querying/virtual-columns.md) that defines which column to unnest and the output column name. Use `outputType` of `"STRING"` for string arrays or `"COMPLEX<json>"` for arrays of objects.|Yes|
+|`unnestFilter`|An optional [filter](../querying/filters.md) applied to the unnested output column. Only array elements matching this filter produce output rows.|No|
+
+You can define multiple scan transforms in the `transforms` list. They are applied sequentially, producing a cross join. For example, unnesting both `tags` (2 elements) and `services` (3 elements) produces 6 rows per input row.
+
+If the unnest column is missing or the array is empty, the input row passes through with the unnest output column set to null.
+
+Expression transforms are applied before scan transforms. The `transformSpec` filter is also applied before any unnesting, so it operates on the original input row.
 
 #### Filter
 

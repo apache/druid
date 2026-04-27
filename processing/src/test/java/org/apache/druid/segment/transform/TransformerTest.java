@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -313,6 +315,39 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, actual.getRawValuesList().size());
     Assert.assertEquals("val1", actual.getInputRows().get(0).getRaw("dim"));
     Assert.assertEquals("val1", actual.getRawValuesList().get(0).get("dim"));
+  }
+
+  @Test
+  public void testInputRowListPlusRawValuesTransformWithScanTransformExpandsRowsAndRawValues()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(
+                new ScanTransform(
+                    "tag",
+                    new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+                    null
+                )
+            )
+        )
+    );
+
+    final InputRow inputRow = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("user", "tags"),
+        ImmutableMap.of("user", "alice", "tags", ImmutableList.of("a", "b"))
+    );
+    final Map<String, Object> rawValues = ImmutableMap.of("user", "alice", "tags", ImmutableList.of("a", "b"));
+
+    final InputRowListPlusRawValues transformed = transformer.transform(InputRowListPlusRawValues.of(inputRow, rawValues));
+    Assert.assertNotNull(transformed);
+    Assert.assertEquals(2, transformed.getInputRows().size());
+    Assert.assertEquals(2, transformed.getRawValuesList().size());
+    Assert.assertEquals(rawValues, transformed.getRawValuesList().get(0));
+    Assert.assertEquals(rawValues, transformed.getRawValuesList().get(1));
+    Assert.assertEquals("a", transformed.getInputRows().get(0).getRaw("tag"));
+    Assert.assertEquals("b", transformed.getInputRows().get(1).getRaw("tag"));
   }
 
   @Test
