@@ -919,19 +919,15 @@ public class DataSourcesResource
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
       // Look up the segment in the metadata snapshot so the rule cascade can be evaluated against the real segment
-      // (necessary for partial load rules whose matcher inspects the segment's projection list). If the snapshot is
-      // not yet available, we cannot decide, let the realtime task retry.
-      final DataSourcesSnapshot snapshot = segmentsMetadataManager.getRecentDataSourcesSnapshot();
-      if (snapshot == null) {
-        return Response.ok(false).build();
+      // (necessary for partial load rules whose matcher inspects the segment's projection list). If the cached
+      // snapshot is missing the segment, force a refresh and re-check before declaring it never-handed-off, since
+      // the cache may simply not have caught up to a recent publish.
+      final SegmentId segmentId = SegmentId.of(dataSourceName, theInterval, version, partitionNumber);
+      DataSegment segment = lookupSegment(segmentsMetadataManager.getRecentDataSourcesSnapshot(), segmentId);
+      if (segment == null) {
+        segment = lookupSegment(segmentsMetadataManager.forceUpdateDataSourcesSnapshot(), segmentId);
       }
-      final ImmutableDruidDataSource immutableDruidDataSource = snapshot.getDataSource(dataSourceName);
-      final DataSegment segment = immutableDruidDataSource == null
-                                  ? null
-                                  : immutableDruidDataSource.getSegment(
-                                      SegmentId.of(dataSourceName, theInterval, version, partitionNumber)
-                                  );
-      // Segment isn't published in metadata; it will never be handed off.
+      // Still not in metadata after a refresh; it will never be handed off.
       if (segment == null) {
         return Response.ok(true).build();
       }
@@ -976,6 +972,16 @@ public class DataSourcesResource
       log.error(e, "Error while handling hand off check request");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
     }
+  }
+
+  @Nullable
+  private static DataSegment lookupSegment(@Nullable DataSourcesSnapshot snapshot, SegmentId segmentId)
+  {
+    if (snapshot == null) {
+      return null;
+    }
+    final ImmutableDruidDataSource ds = snapshot.getDataSource(segmentId.getDataSource());
+    return ds == null ? null : ds.getSegment(segmentId);
   }
 
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> servedSegments, SegmentDescriptor descriptor)

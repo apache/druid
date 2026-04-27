@@ -743,10 +743,9 @@ public class DataSourcesResourceTest
   @Test
   public void testIsHandOffCompleteSegmentNotInMetadataReturnsTrue()
   {
-    // A segment that hasn't been published to metadata yet (or has been removed) is reported as definitively
-    // never-handed-off so the realtime task can move on.
+    // A segment that hasn't been published to metadata (and is not found after a forced refresh) is reported as
+    // definitively never-handed-off so the realtime task can move on.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
             inventoryView,
@@ -758,9 +757,12 @@ public class DataSourcesResourceTest
             auditManager
         );
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(loadRule))
+            .andReturn(ImmutableList.of())
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
             .once();
     EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
@@ -770,6 +772,40 @@ public class DataSourcesResourceTest
     Assert.assertTrue((boolean) response.getEntity());
 
     EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteForcesMetadataRefreshOnSnapshotMiss()
+  {
+    // A cache miss on the recent snapshot triggers a forced refresh; if the segment turns up after the refresh, the
+    // rule cascade evaluates against it just as if it had been in the cached snapshot all along.
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(
+            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+        );
+    String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
+            .once();
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment)))
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(null)
+            .once();
+    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
+
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertFalse((boolean) response.getEntity());
+
+    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
   }
 
   @Test
