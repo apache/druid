@@ -32,6 +32,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.ScanTransform;
@@ -130,13 +134,29 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         ImmutableList.of(
             new ScanTransform(
                 "tag",
-                new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-                null
+                Druids.newScanQueryBuilder()
+                      .dataSource(UnnestDataSource.create(
+                          new TableDataSource("__input__"),
+                          new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                          null
+                      ))
+                      .eternityInterval()
+                      .columns((List<String>) null)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                      .build()
             ),
             new ScanTransform(
                 "svc",
-                new ExpressionVirtualColumn("svc", "\"services\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
-                null
+                Druids.newScanQueryBuilder()
+                      .dataSource(UnnestDataSource.create(
+                          new TableDataSource("__input__"),
+                          new ExpressionVirtualColumn("svc", "\"services\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
+                          null
+                      ))
+                      .eternityInterval()
+                      .columns((List<String>) null)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                      .build()
             )
         )
     );
@@ -221,11 +241,10 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
   @Timeout(60)
   public void test_countRows()
   {
-    final long count = Long.parseLong(cluster.runSql(
-        StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource)
-    ).trim());
-    // Exactly 9: alice(4) + bob(3) + carol(1 passthrough) + dave(1 passthrough).
-    Assertions.assertEquals(EXPECTED_ROWS, count);
+    Assertions.assertEquals(
+        String.valueOf(EXPECTED_ROWS),
+        cluster.runSql(StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource)).trim()
+    );
   }
 
   @Test
@@ -261,11 +280,22 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
             dataSource
         )
     );
+
+    Assertions.assertEquals(
+        "music,3\nnews,2\nsports,2",
+        result.trim()
+    );
+
     // music: 1 x 3 services = 3, news: 1 x 2 services = 2, sports: 1 x 2 services = 2
     // carol/dave have null tags so they don't appear in this grouping
     Assertions.assertEquals(
         "music,3\nnews,2\nsports,2",
-        result.trim()
+        cluster.runSql(
+            StringUtils.format(
+                "SELECT \"tag\", COUNT(*) AS cnt FROM \"%s\" WHERE \"tag\" IS NOT NULL GROUP BY 1 ORDER BY 1",
+                dataSource
+            )
+        )
     );
   }
 
@@ -273,15 +303,14 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
   @Timeout(60)
   public void test_groupByUser()
   {
-    final String result = cluster.runSql(
-        StringUtils.format(
-            "SELECT \"user\", COUNT(*) AS cnt FROM \"%s\" GROUP BY 1 ORDER BY 1",
-            dataSource
-        )
-    );
     Assertions.assertEquals(
         "alice,4\nbob,3\ncarol,1\ndave,1",
-        result.trim()
+        cluster.runSql(
+            StringUtils.format(
+                "SELECT \"user\", COUNT(*) AS cnt FROM \"%s\" GROUP BY 1 ORDER BY 1",
+                dataSource
+            )
+        )
     );
   }
 

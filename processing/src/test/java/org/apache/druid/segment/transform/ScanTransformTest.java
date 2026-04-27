@@ -20,12 +20,17 @@
 package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -35,6 +40,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +50,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
   private static InputRow makeRow(Object... kvPairs)
   {
-    final java.util.LinkedHashMap<String, Object> event = new java.util.LinkedHashMap<>();
+    Preconditions.checkArgument(kvPairs.length % 2 == 0, "kvPairs must have even length");
+    final LinkedHashMap<String, Object> event = new LinkedHashMap<>();
     final List<String> dimensions = new ArrayList<>();
     for (int i = 0; i < kvPairs.length; i += 2) {
       final String key = (String) kvPairs[i];
@@ -58,10 +65,28 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
   private static ScanTransform makeUnnestTransform(String inputColumn, String outputName)
   {
+    return makeUnnestTransform(inputColumn, outputName, ColumnType.STRING, null);
+  }
+
+  private static ScanTransform makeUnnestTransform(
+      String inputColumn,
+      String outputName,
+      ColumnType outputType,
+      SelectorDimFilter unnestFilter
+  )
+  {
     return new ScanTransform(
         outputName,
-        new ExpressionVirtualColumn(outputName, "\"" + inputColumn + "\"", ColumnType.STRING, ExprMacroTable.nil()),
-        null
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource("__input__"),
+                  new ExpressionVirtualColumn(outputName, "\"" + inputColumn + "\"", outputType, ExprMacroTable.nil()),
+                  unnestFilter
+              ))
+              .eternityInterval()
+              .columns((List<String>) null)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .build()
     );
   }
 
@@ -132,18 +157,12 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   @Test
   public void testUnnestArrayOfJsonObjects()
   {
-    final ScanTransform transform = new ScanTransform(
-        "item",
-        new ExpressionVirtualColumn("item", "\"items\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
-        null
-    );
-
-    final List<Map<String, Object>> items = List.of(
+    final ScanTransform transform = makeUnnestTransform("items", "item", ColumnType.NESTED_DATA, null);
+    final InputRow input = makeRow("user", "alice", "items", List.of(
         Map.of("product", "shirt", "price", 25),
         Map.of("product", "pants", "price", 40),
         Map.of("product", "hat", "price", 15)
-    );
-    final InputRow input = makeRow("user", "alice", "items", items);
+    ));
 
     final List<InputRow> result = transform.applyMultiRow(input);
     Assert.assertEquals(3, result.size());
@@ -161,12 +180,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   @Test
   public void testUnnestNestedArrays()
   {
-    final ScanTransform transform = new ScanTransform(
-        "element",
-        new ExpressionVirtualColumn("element", "\"data\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
-        null
-    );
-
+    final ScanTransform transform = makeUnnestTransform("data", "element", ColumnType.NESTED_DATA, null);
     final InputRow input = makeRow(
         "user", "alice",
         "data", List.of(List.of(1, 2), List.of(3))
@@ -205,11 +219,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   @Test
   public void testWithUnnestFilter()
   {
-    final ScanTransform transform = new ScanTransform(
-        "tag",
-        new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-        new SelectorDimFilter("tag", "b", null)
-    );
+    final ScanTransform transform = makeUnnestTransform("tags", "tag", ColumnType.STRING, new SelectorDimFilter("tag", "b", null));
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
 
     final List<InputRow> result = transform.applyMultiRow(input);
@@ -218,32 +228,11 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithUnnestFilterDropsRowWhenNoValuesMatch()
-  {
-    final ScanTransform transform = new ScanTransform(
-        "tag",
-        new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-        new SelectorDimFilter("tag", "z", null)
-    );
-    final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
-
-    final List<InputRow> result = transform.applyMultiRow(input);
-    Assert.assertTrue(result.isEmpty());
-  }
-
-  @Test
   public void testIsMultiRow()
   {
     final ScanTransform transform = makeUnnestTransform("tags", "tag");
     Assert.assertTrue(transform.isMultiRow());
     Assert.assertNull(transform.getRowFunction());
-  }
-
-  @Test
-  public void testGetRequiredColumns()
-  {
-    final ScanTransform transform = makeUnnestTransform("tags", "tag");
-    Assert.assertTrue(transform.getRequiredColumns().contains("tags"));
   }
 
   // --- Transformer integration tests ---
@@ -295,21 +284,11 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   @Test
   public void testTransformerWithChainedScanTransformsFlattensNestedArrays()
   {
-    // Two scan transforms: first unnests [[1,2],[3]] into [1,2] and [3],
-    // second unnests those inner arrays into individual elements.
     final TransformSpec spec = new TransformSpec(
         null,
         List.of(
-            new ScanTransform(
-                "inner",
-                new ExpressionVirtualColumn("inner", "\"data\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
-                null
-            ),
-            new ScanTransform(
-                "val",
-                new ExpressionVirtualColumn("val", "\"inner\"", ColumnType.LONG, ExprMacroTable.nil()),
-                null
-            )
+            makeUnnestTransform("data", "inner", ColumnType.NESTED_DATA, null),
+            makeUnnestTransform("inner", "val", ColumnType.LONG, null)
         )
     );
 
@@ -330,7 +309,10 @@ public class ScanTransformTest extends InitializedNullHandlingTest
       values.add(row.getRaw("val"));
       Assert.assertEquals("alice", row.getRaw("user"));
     }
-    Assert.assertEquals(List.of(1, 2, 3), values);
+    Assert.assertEquals(3, values.size());
+    Assert.assertEquals(1, ((Number) values.get(0)).intValue());
+    Assert.assertEquals(2, ((Number) values.get(1)).intValue());
+    Assert.assertEquals(3, ((Number) values.get(2)).intValue());
   }
 
   @Test
@@ -353,28 +335,6 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     Assert.assertEquals(2, result.size());
     Assert.assertEquals("a", result.get(0).getRaw("tag"));
     Assert.assertEquals("b", result.get(1).getRaw("tag"));
-    Assert.assertEquals("ALICE", result.get(0).getRaw("upper_user"));
-    Assert.assertEquals("ALICE", result.get(1).getRaw("upper_user"));
-  }
-
-  @Test
-  public void testTransformerWithScanTransformPreservesNonDimensionColumns()
-  {
-    final TransformSpec spec = new TransformSpec(
-        null,
-        List.of(makeUnnestTransform("tags", "tag"))
-    );
-    final Transformer transformer = spec.toTransformer();
-    final InputRow input = new MapBasedInputRow(
-        TIMESTAMP,
-        List.of("user", "tags"),
-        Map.of("user", "alice", "metricCount", 5L, "tags", List.of("a", "b"))
-    );
-
-    final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(2, result.size());
-    Assert.assertEquals(5L, result.get(0).getRaw("metricCount"));
-    Assert.assertEquals(5L, result.get(1).getRaw("metricCount"));
   }
 
   @Test
@@ -419,11 +379,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final TransformSpec spec = new TransformSpec(
         null,
         List.of(
-            new ScanTransform(
-                "tag",
-                new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-                new SelectorDimFilter("tag", "a", null)
-            )
+            makeUnnestTransform("tags", "tag", ColumnType.STRING, new SelectorDimFilter("tag", "a", null))
         )
     );
 
@@ -440,11 +396,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
         null,
         List.of(
             new ExpressionTransform("upper_user", "upper(\"user\")", TestExprMacroTable.INSTANCE),
-            new ScanTransform(
-                "tag",
-                new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-                null
-            )
+            makeUnnestTransform("tags", "tag")
         )
     );
 

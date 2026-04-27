@@ -23,19 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.UnnestCursorFactory;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -47,33 +44,32 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
- * A multi-row transform that unnests array columns during ingestion using the cursor-based unnest machinery.
- * Each input row is wrapped in a single-row segment, the unnest cursor iterates over array elements,
- * and each element becomes a separate output row.
+ * A multi-row transform that processes each input row through the scan query engine during ingestion.
+ * Each input row is wrapped in a single-row segment and run through the configured {@link ScanQuery},
+ * which can include UNNEST (via {@link org.apache.druid.query.UnnestDataSource}), filters, virtual columns, etc.
  *
- * If the unnest column is missing or the array is empty, the input row passes through with the
- * unnest output column set to null.
+ * If the query produces no output rows (e.g., empty/missing array), the input row passes through
+ * with null values for any new columns.
  */
 public class ScanTransform implements Transform
 {
+  private static final ScanQueryEngine ENGINE = new ScanQueryEngine();
+
   private final String name;
-  private final VirtualColumn unnestColumn;
-  @Nullable
-  private final DimFilter unnestFilter;
+  private final ScanQuery query;
 
   @JsonCreator
   public ScanTransform(
       @JsonProperty("name") final String name,
-      @JsonProperty("unnestColumn") final VirtualColumn unnestColumn,
-      @JsonProperty("unnestFilter") @Nullable final DimFilter unnestFilter
+      @JsonProperty("query") final ScanQuery query
   )
   {
     this.name = name;
-    this.unnestColumn = unnestColumn;
-    this.unnestFilter = unnestFilter;
+    this.query = query;
   }
 
   @Override
@@ -91,22 +87,15 @@ public class ScanTransform implements Transform
   }
 
   @JsonProperty
-  public VirtualColumn getUnnestColumn()
+  public ScanQuery getQuery()
   {
-    return unnestColumn;
-  }
-
-  @JsonProperty
-  @Nullable
-  public DimFilter getUnnestFilter()
-  {
-    return unnestFilter;
+    return query;
   }
 
   @Override
   public Set<String> getRequiredColumns()
   {
-    return Set.copyOf(unnestColumn.requiredColumns());
+    return Set.copyOf(query.getDataSource().getTableNames());
   }
 
   @Override
@@ -118,25 +107,7 @@ public class ScanTransform implements Transform
   @Override
   public List<InputRow> applyMultiRow(final InputRow inputRow)
   {
-    final List<String> columns = getColumnsForProcessing(inputRow);
-    final String unnestOutputName = unnestColumn.getOutputName();
-    if (!columns.contains(unnestOutputName)) {
-      columns.add(unnestOutputName);
-    }
-
-    final List<String> dimensionColumns = new ArrayList<>(inputRow.getDimensions());
-    if (!dimensionColumns.contains(unnestOutputName)) {
-      dimensionColumns.add(unnestOutputName);
-    }
-
-    final RowSignature.Builder signatureBuilder = RowSignature.builder();
-    signatureBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
-    for (final String column : columns) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-        signatureBuilder.add(column, ColumnType.NESTED_DATA);
-      }
-    }
-    final RowSignature inputSignature = signatureBuilder.build();
+    final RowSignature inputSignature = buildSignature(inputRow);
 
     final RowBasedSegment<InputRow> segment = new RowBasedSegment<>(
         Sequences.simple(List.of(inputRow)),
@@ -144,95 +115,81 @@ public class ScanTransform implements Transform
         inputSignature
     );
 
-    final CursorFactory baseCursorFactory = segment.as(CursorFactory.class);
-    final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder().setInterval(Intervals.ETERNITY).build();
-    try (final CursorHolder cursorHolder = makeUnnestCursorFactory(baseCursorFactory, unnestFilter).makeCursorHolder(cursorBuildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      if (cursor == null) {
-        return List.of();
-      }
+    final Segment mappedSegment = applySegmentMapFunction(segment);
 
-      final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-      final List<BaseObjectColumnValueSelector> selectors = new ArrayList<>(columns.size());
-      for (final String column : columns) {
-        selectors.add(factory.makeColumnValueSelector(column));
-      }
+    final ScanQuery queryWithoutTimeout = query.withOverriddenContext(
+        Map.of(QueryContexts.TIMEOUT_KEY, 0)
+    );
 
-      final List<InputRow> result = new ArrayList<>();
+    final List<ScanResultValue> scanResults = ENGINE.process(
+        queryWithoutTimeout,
+        mappedSegment,
+        ResponseContext.createEmpty(),
+        null
+    ).toList();
 
-      while (!cursor.isDone()) {
-        final Map<String, Object> event = new LinkedHashMap<>();
-        for (int i = 0; i < columns.size(); i++) {
-          final Object value = selectors.get(i).getObject();
-          if (value != null) {
-            event.put(columns.get(i), value);
-          }
-        }
+    final List<InputRow> result = new ArrayList<>();
 
+    for (final ScanResultValue scanResult : scanResults) {
+      final List<String> dimensionColumns = resolveDimensionColumns(inputRow, scanResult.getColumns());
+      @SuppressWarnings("unchecked")
+      final List<Map<String, Object>> events = (List<Map<String, Object>>) scanResult.getEvents();
+      for (final Map<String, Object> event : events) {
         result.add(new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, event));
-        cursor.advance();
       }
+    }
 
-      if (result.isEmpty()) {
-        if (unnestFilter != null && hasAnyUnnestValues(baseCursorFactory, cursorBuildSpec)) {
-          return List.of();
-        }
-
-        final Map<String, Object> passthroughEvent = new LinkedHashMap<>();
-        for (final String column : columns) {
-          if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-            passthroughEvent.put(column, inputRow.getRaw(column));
-          }
-        }
-        passthroughEvent.put(unnestOutputName, null);
-        result.add(new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, passthroughEvent));
+    if (result.isEmpty()) {
+      final List<String> dimensionColumns = resolveDimensionColumns(inputRow, null);
+      final Map<String, Object> passthroughEvent = new LinkedHashMap<>();
+      for (final String dim : inputRow.getDimensions()) {
+        passthroughEvent.put(dim, inputRow.getRaw(dim));
       }
-
-      return result;
+      result.add(new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, passthroughEvent));
     }
+
+    return result;
   }
 
-  private List<String> getColumnsForProcessing(final InputRow inputRow)
+  private Segment applySegmentMapFunction(final Segment segment)
   {
-    final LinkedHashSet<String> columns = new LinkedHashSet<>();
-    columns.add(ColumnHolder.TIME_COLUMN_NAME);
-    columns.addAll(inputRow.getDimensions());
-
-    final MapBasedInputRow mapBasedInputRow = getMapBasedInputRow(inputRow);
-    if (mapBasedInputRow != null) {
-      columns.addAll(mapBasedInputRow.getEvent().keySet());
-    }
-
-    if (inputRow instanceof TransformedInputRow) {
-      columns.addAll(((TransformedInputRow) inputRow).getTransformedColumns());
-    }
-
-    return new ArrayList<>(columns);
+    final SegmentMapFunction mapFunction = query.getDataSource().createSegmentMapFunction(query);
+    final Optional<Segment> mapped = mapFunction.apply(Optional.of(segment));
+    return mapped.orElse(segment);
   }
 
-  @Nullable
-  private static MapBasedInputRow getMapBasedInputRow(final InputRow inputRow)
+  private static RowSignature buildSignature(final InputRow inputRow)
   {
-    if (inputRow instanceof MapBasedInputRow) {
-      return (MapBasedInputRow) inputRow;
+    final RowSignature.Builder signatureBuilder = RowSignature.builder();
+    signatureBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
+    for (final String dim : inputRow.getDimensions()) {
+      signatureBuilder.add(dim, ColumnType.NESTED_DATA);
     }
-    if (inputRow instanceof TransformedInputRow) {
-      return getMapBasedInputRow(((TransformedInputRow) inputRow).getBaseRow());
-    }
-    return null;
+    return signatureBuilder.build();
   }
 
-  private UnnestCursorFactory makeUnnestCursorFactory(final CursorFactory baseCursorFactory, @Nullable final DimFilter filter)
+  private List<String> resolveDimensionColumns(final InputRow inputRow, @Nullable final List<String> scanResultColumns)
   {
-    return new UnnestCursorFactory(baseCursorFactory, unnestColumn, filter);
-  }
+    final LinkedHashSet<String> dims = new LinkedHashSet<>(inputRow.getDimensions());
 
-  private boolean hasAnyUnnestValues(final CursorFactory baseCursorFactory, final CursorBuildSpec cursorBuildSpec)
-  {
-    try (final CursorHolder unfilteredCursorHolder = makeUnnestCursorFactory(baseCursorFactory, null).makeCursorHolder(cursorBuildSpec)) {
-      final Cursor unfilteredCursor = unfilteredCursorHolder.asCursor();
-      return unfilteredCursor != null && !unfilteredCursor.isDone();
+    if (scanResultColumns != null) {
+      for (final String col : scanResultColumns) {
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col)) {
+          dims.add(col);
+        }
+      }
     }
+
+    final List<String> queryColumns = query.getColumns();
+    if (queryColumns != null) {
+      for (final String col : queryColumns) {
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col)) {
+          dims.add(col);
+        }
+      }
+    }
+
+    return new ArrayList<>(dims);
   }
 
   @Override
@@ -246,14 +203,13 @@ public class ScanTransform implements Transform
     }
     final ScanTransform that = (ScanTransform) o;
     return Objects.equals(name, that.name)
-           && Objects.equals(unnestColumn, that.unnestColumn)
-           && Objects.equals(unnestFilter, that.unnestFilter);
+           && Objects.equals(query, that.query);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, unnestColumn, unnestFilter);
+    return Objects.hash(name, query);
   }
 
   @Override
@@ -261,8 +217,7 @@ public class ScanTransform implements Transform
   {
     return "ScanTransform{" +
            "name=" + name +
-           ", unnestColumn=" + unnestColumn +
-           ", unnestFilter=" + unnestFilter +
+           ", query=" + query +
            '}';
   }
 }

@@ -28,8 +28,12 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -326,8 +330,15 @@ public class TransformerTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 new ScanTransform(
                     "tag",
-                    new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
-                    null
+                    Druids.newScanQueryBuilder()
+                          .dataSource(UnnestDataSource.create(
+                              new TableDataSource("__input__"),
+                              new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+                              null
+                          ))
+                          .eternityInterval()
+                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                          .build()
                 )
             )
         )

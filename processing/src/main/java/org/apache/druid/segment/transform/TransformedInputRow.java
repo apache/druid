@@ -121,7 +121,7 @@ public class TransformedInputRow implements InputRow
     return row;
   }
 
-  Set<String> getTransformedColumns()
+  public Set<String> getTransformedColumns()
   {
     return Set.copyOf(transforms.keySet());
   }
