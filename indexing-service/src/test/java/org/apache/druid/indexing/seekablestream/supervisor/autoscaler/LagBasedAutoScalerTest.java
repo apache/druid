@@ -74,6 +74,8 @@ public class LagBasedAutoScalerTest
         4,
         true,       // enableTaskAutoScaler
         6_000_000L, // minTriggerScaleActionFrequencyMillis
+        null,       // minScaleUpDelay
+        null,       // minScaleDownDelay
         null,       // lagAggregate
         null        // stopTaskCountRatio
     );

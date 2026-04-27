@@ -17,36 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.common.guava;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-/**
- */
-public abstract class ThreadRenamingRunnable implements Runnable
+public enum ScaleDirection
 {
-  private final String name;
+  SCALE_UP("scale-up"), SCALE_DOWN("scale-down");
 
-  public ThreadRenamingRunnable(
-      String name
-  )
+  private final String label;
+
+  ScaleDirection(String label)
   {
-    this.name = name;
+    this.label = label;
   }
 
   @Override
-  public final void run()
+  public String toString()
   {
-    final Thread currThread = Thread.currentThread();
-    String currName = currThread.getName();
-    try {
-      currThread.setName(name);
-      doRun();
-    }
-    finally {
-      currThread.setName(currName);
-    }
-
+    return label;
   }
-
-  public abstract void doRun();
 }
-

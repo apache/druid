@@ -19,32 +19,58 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 /**
- * A {@link BalancerStrategy} which can be used when historicals in a tier have
- * varying disk capacities. This strategy normalizes the cost of placing a segment on
- * a server as calculated by {@link CostBalancerStrategy} by doing the following:
- * <ul>
- * <li>Divide the cost by the number of segments on the server. This ensures that
- * cost does not increase just because the number of segments on a server is higher.</li>
- * <li>Multiply the resulting value by disk usage ratio. This ensures that all
- * hosts have equivalent levels of percentage disk utilization.</li>
- * </ul>
- * i.e. to place a segment on a given server
+ * A {@link BalancerStrategy} which normalizes the cost of placing a segment on a
+ * server as calculated by {@link CostBalancerStrategy} by multiplying it by the
+ * server's disk usage ratio.
  * <pre>
- * cost = as computed by CostBalancerStrategy
- * normalizedCost = (cost / numSegments) * usageRatio
- *                = (cost / numSegments) * (diskUsed / totalDiskSpace)
+ * normalizedCost = cost * usageRatio
+ *     where usageRatio = diskUsed / totalDiskSpace
  * </pre>
+ * This penalizes servers that are more full, driving disk utilization to equalize
+ * across the tier. When all servers have equal disk usage, the behavior is identical
+ * to {@link CostBalancerStrategy}. When historicals have different disk capacities,
+ * this naturally accounts for both fill level and total capacity.
+ * <p>
+ * To prevent oscillation when servers have similar utilization, any server that
+ * is already projected to hold the segment (the source on a move, or a currently
+ * serving node on a drop) receives a cost discount equal to
+ * {@link #DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
+ * the destination saves at least this fraction of the source's cost. The default
+ * is configurable via
+ * {@code druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold}.
  */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
+  /**
+   * Default minimum fractional cost reduction required before a segment will
+   * be moved off a server that is already projected to hold it. A value of
+   * {@code 0.05} means the destination must be at least 5% cheaper than the
+   * source for the move to happen.
+   */
+  static final double DEFAULT_MOVE_COST_SAVINGS_THRESHOLD = 0.05;
+
+  private final double sourceCostMultiplier;
+
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
+    this(exec, DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+  }
+
+  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
+  {
     super(exec);
+    Preconditions.checkArgument(
+        moveCostSavingsThreshold >= 0.0 && moveCostSavingsThreshold < 1.0,
+        "moveCostSavingsThreshold[%s] must be in [0.0, 1.0)",
+        moveCostSavingsThreshold
+    );
+    this.sourceCostMultiplier = 1.0 - moveCostSavingsThreshold;
   }
 
   @Override
@@ -59,15 +85,22 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
       return cost;
     }
 
-    int nSegments = 1;
-    if (server.getServer().getNumSegments() > 0) {
-      nSegments = server.getServer().getNumSegments();
+    // Guard against NaN propagation in the cost comparator if a server
+    // somehow reports a non-positive maxSize. Such a server cannot hold
+    // anything and will be rejected by canLoadSegment, so returning the
+    // raw cost is safe.
+    final long maxSize = server.getMaxSize();
+    if (maxSize <= 0) {
+      return cost;
     }
 
-    double normalizedCost = cost / nSegments;
-    double usageRatio = (double) server.getSizeUsed() / (double) server.getServer().getMaxSize();
+    double usageRatio = (double) server.getSizeUsed() / maxSize;
+    double normalizedCost = cost * usageRatio;
 
-    return normalizedCost * usageRatio;
+    if (server.isProjectedSegment(proposalSegment)) {
+      normalizedCost *= sourceCostMultiplier;
+    }
+
+    return normalizedCost;
   }
 }
-

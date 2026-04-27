@@ -28,7 +28,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -89,8 +88,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
   private volatile CostMetrics lastKnownMetrics;
-
-  private volatile long lastScaleActionTimeMillis = -1;
 
   public CostBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
@@ -189,21 +186,17 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     // If task count is out of bounds, scale to the configured boundary
     // regardless of optimal task count, to get back to a safe state.
-    if (isScaleActionAllowed() && isTaskCountOutOfBounds) {
+    if (isTaskCountOutOfBounds) {
       taskCount = currentTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
       log.info("Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
                supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount);
-    } else if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
+    } else if (optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
       log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);
     } else if (!config.isScaleDownOnTaskRolloverOnly()
-               && isScaleActionAllowed()
                && optimalTaskCount < currentTaskCount
                && optimalTaskCount > 0) {
       taskCount = optimalTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
       log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).", supervisorId, currentTaskCount, taskCount);
     } else {
       taskCount = -1;
@@ -594,22 +587,4 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
-  /**
-   * Determines if a scale action is currently allowed based on the elapsed time
-   * since the last scale action and the configured minimum scale-down delay.
-   */
-  private boolean isScaleActionAllowed()
-  {
-    if (lastScaleActionTimeMillis < 0) {
-      return true;
-    }
-
-    final long barrierMillis = config.getMinScaleDownDelay().getMillis();
-    if (barrierMillis <= 0) {
-      return true;
-    }
-
-    final long elapsedMillis = DateTimes.nowUtc().getMillis() - lastScaleActionTimeMillis;
-    return elapsedMillis >= barrierMillis;
-  }
 }

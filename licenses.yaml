@@ -3414,7 +3414,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.9.1
+version: 3.9.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
