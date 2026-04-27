@@ -659,7 +659,13 @@ public class DataSourcesResourceTest
     Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
-            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            null,
+            auditManager
         );
 
     // test dropped: segment exists in metadata, drop rule applies → won't be handed off
@@ -743,7 +749,13 @@ public class DataSourcesResourceTest
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
-            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            null,
+            auditManager
         );
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule))
@@ -777,14 +789,24 @@ public class DataSourcesResourceTest
     Rule dropRule = new IntervalDropRule(ruleInterval);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
-            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            null,
+            auditManager
         );
 
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     // Segment exposes projections [other_daily] which the partial rule's matcher (asking for "user_daily") cannot
     // resolve, so the partial rule falls through and the drop rule catches it.
     DataSegment segment = buildHandoffSegment(
-        TestDataSource.WIKI, Intervals.of(interval), "v1", 1, ImmutableList.of("other_daily")
+        TestDataSource.WIKI,
+        Intervals.of(interval),
+        "v1",
+        1,
+        ImmutableList.of("other_daily")
     );
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
@@ -818,12 +840,22 @@ public class DataSourcesResourceTest
     Rule dropRule = new IntervalDropRule(ruleInterval);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
-            inventoryView, segmentsMetadataManager, databaseRuleManager, null, null, null, auditManager
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            null,
+            auditManager
         );
 
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     DataSegment segment = buildHandoffSegment(
-        TestDataSource.WIKI, Intervals.of(interval), "v1", 1, ImmutableList.of("user_daily")
+        TestDataSource.WIKI,
+        Intervals.of(interval),
+        "v1",
+        1,
+        ImmutableList.of("user_daily")
     );
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
