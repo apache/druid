@@ -470,7 +470,7 @@ This example unnests both `tags` and `services` arrays (via nested unnest data s
 |`type`|Must be `"scan"`.|Yes|
 |`query`|A [scan query](../querying/scan-query.md) that defines how to process each input row. Use an [unnest data source](../querying/datasource.md#unnest) with `"__input__"` as the base table to unnest arrays. Nest multiple unnest data sources for cross-join unnesting. Add `virtualColumns` on the scan query for expression-based column derivations. Set `intervals` to eternity and `resultFormat` to `"list"`.|Yes|
 
-If an unnest column is missing or the array is empty, the input row passes through with the unnest output columns set to null. Virtual columns are still evaluated on passthrough rows.
+If an unnest column is missing or the array is empty, the input row produces no output rows, matching native `CROSS JOIN UNNEST` semantics.
 
 ### Projections
 

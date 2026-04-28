@@ -200,9 +200,9 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
   {
     // alice: 2 tags x 2 services = 4 rows
     // bob: 1 tag x 3 services = 3 rows
-    // carol: null tags x null services => 1 passthrough row
-    // dave: missing tags & services columns => 1 passthrough row
-    // total: 9 rows
+    // carol: null tags x null services => 0 rows (CROSS JOIN UNNEST semantics)
+    // dave: missing tags & services columns => 0 rows (CROSS JOIN UNNEST semantics)
+    // total: 7 rows
     final List<Map<String, Object>> records = new ArrayList<>();
     records.add(Map.of(
         "__time", "2024-01-01T00:00:00Z",
