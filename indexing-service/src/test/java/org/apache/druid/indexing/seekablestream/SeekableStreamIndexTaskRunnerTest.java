@@ -315,7 +315,8 @@ public class SeekableStreamIndexTaskRunnerTest
         .withNumPartitions(10)
         .withNumRows(1_000)
         .eachOfSizeInMb(500);
-    final SegmentsAndCommitMetadata commitMetadata = new SegmentsAndCommitMetadata(segment, "offset-100");
+    final SegmentsAndCommitMetadata commitMetadata =
+        new SegmentsAndCommitMetadata(segment, "offset-100").withWasPublished(true);
 
     final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
     Mockito.when(task.newDriver(any(), any(), any()))
