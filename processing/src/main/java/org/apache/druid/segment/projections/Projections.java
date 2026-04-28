@@ -509,12 +509,12 @@ public class Projections
     return projectionSpec.getSchema().getName() + "/";
   }
 
-  public static String getProjectionSmooshFileName(ProjectionSchema schema, String columnName)
+  public static String getProjectionSegmentInternalFileName(ProjectionSchema schema, String columnName)
   {
-    return getProjectionSmooshPrefix(schema) + columnName;
+    return getProjectionSegmentInternalFilePrefix(schema) + columnName;
   }
 
-  public static String getProjectionSmooshPrefix(ProjectionSchema projectionSchema)
+  public static String getProjectionSegmentInternalFilePrefix(ProjectionSchema projectionSchema)
   {
     return projectionSchema.getName() + "/";
   }
