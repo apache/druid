@@ -146,6 +146,7 @@
     <cve>CVE-2024-9823</cve> <!-- This is in hadoop's shadded jetty. no version of hadoop has updated to fixed version. It is a jetty server vuln, which should not be exploitable in hadoop client code -->
     <cve>CVE-2025-27821</cve> <!-- native hdfs vulnerability -->
     <cve>CVE-2025-5115</cve> <!-- netty issue in shaded hadoop -->
+    <cve>CVE-2026-5795</cve> <!-- This affects Jetty JASPIAuthenticator (jetty-security module). The application only includes shaded jetty-io, which does not contain the vulnerable classes. -->
   </suppress>
 
   <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->
@@ -595,6 +596,16 @@
   </suppress>
 
   <suppress>
+    <notes><![CDATA[
+    file name: log4j-*-2.25.3.jar (all log4j artifacts)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.logging\.log4j/log4j-.*@.*$</packageUrl>
+    <cve>CVE-2026-34478</cve>
+    <cve>CVE-2026-34480</cve>
+    <cve>CVE-2026-34481</cve>
+  </suppress>
+
+  <suppress>
     <!--
       - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
       -->
@@ -759,5 +770,14 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: pac4j-*-5.7.3.jar (all pac4j artifacts)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-.*@5\.7\.3$</packageUrl>
+    <cve>CVE-2026-40458</cve> <!-- CSRF vulnerability - not applicable as Druid explicitly disables CSRF checks by using authorizer="none" in Pac4jFilter for API/web service usage -->
+    <cve>CVE-2026-40459</cve> <!-- LDAP injection vulnerability - not applicable as Druid uses OIDC authentication (pac4j-oidc), not LDAP authentication -->
   </suppress>
 </suppressions>
