@@ -658,7 +658,7 @@ public class K8sDruidNodeDiscoveryProviderTest
         throw new SocketTimeoutException("testing timeout on start!!!");
       }
 
-      if (channelResetOnStart) {                  // ADD THIS BLOCK
+      if (channelResetOnStart) {
         throw new ChannelResetException(new RuntimeException("simulated StreamResetException"));
       }
 
