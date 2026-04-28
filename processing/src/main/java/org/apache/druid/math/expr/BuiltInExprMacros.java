@@ -290,6 +290,18 @@ public class BuiltInExprMacros
         // Not a literal, so no constant value
         return null;
       }
+
+      @Override
+      public int hashCode()
+      {
+        return NowExpression.class.hashCode();
+      }
+
+      @Override
+      public boolean equals(Object obj)
+      {
+        return obj instanceof NowExpression;
+      }
     }
   }
 
