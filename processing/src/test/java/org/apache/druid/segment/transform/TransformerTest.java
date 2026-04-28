@@ -324,25 +324,17 @@ public class TransformerTest extends InitializedNullHandlingTest
   @Test
   public void testInputRowListPlusRawValuesTransformWithScanTransformExpandsRowsAndRawValues()
   {
-    final Transformer transformer = new Transformer(
-        new TransformSpec(
-            null,
-            ImmutableList.of(
-                new ScanTransform(
-                    "tag",
-                    Druids.newScanQueryBuilder()
-                          .dataSource(UnnestDataSource.create(
-                              new TableDataSource("__input__"),
-                              new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
-                              null
-                          ))
-                          .eternityInterval()
-                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-                          .build()
-                )
-            )
-        )
-    );
+    final BaseTransformer transformer = new ScanTransformSpec(
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource("__input__"),
+                  new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+                  null
+              ))
+              .eternityInterval()
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .build()
+    ).toTransformer();
 
     final InputRow inputRow = new MapBasedInputRow(
         DateTimes.nowUtc(),

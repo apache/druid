@@ -31,9 +31,9 @@ import java.util.List;
 public class TransformingInputEntityReader implements InputEntityReader
 {
   private final InputEntityReader delegate;
-  private final Transformer transformer;
+  private final BaseTransformer transformer;
 
-  public TransformingInputEntityReader(InputEntityReader delegate, Transformer transformer)
+  public TransformingInputEntityReader(InputEntityReader delegate, BaseTransformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;
@@ -50,6 +50,7 @@ public class TransformingInputEntityReader implements InputEntityReader
     }
     return delegate.read().map(transformer::transform);
   }
+
 
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException

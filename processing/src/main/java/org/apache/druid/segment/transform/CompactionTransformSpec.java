@@ -39,12 +39,15 @@ import java.util.Objects;
 public class CompactionTransformSpec
 {
   @Nullable
-  public static CompactionTransformSpec of(@Nullable TransformSpec transformSpec)
+  public static CompactionTransformSpec of(@Nullable BaseTransformSpec transformSpec)
   {
     if (transformSpec == null) {
       return null;
     }
     if (TransformSpec.NONE.equals(transformSpec)) {
+      return null;
+    }
+    if (!(transformSpec instanceof TransformSpec)) {
       return null;
     }
 

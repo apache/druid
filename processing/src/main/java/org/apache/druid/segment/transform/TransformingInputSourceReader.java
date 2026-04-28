@@ -32,9 +32,9 @@ import java.util.List;
 public class TransformingInputSourceReader implements InputSourceReader
 {
   private final InputSourceReader delegate;
-  private final Transformer transformer;
+  private final BaseTransformer transformer;
 
-  TransformingInputSourceReader(InputSourceReader delegate, Transformer transformer)
+  TransformingInputSourceReader(InputSourceReader delegate, BaseTransformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;

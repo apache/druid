@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -39,8 +38,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.metadata.Metric;
-import org.apache.druid.segment.transform.ScanTransform;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.ScanTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -63,9 +61,12 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Verifies ScanTransform unnests array columns during Kafka ingestion.
- * Uses two scan transforms to unnest both "tags" (string array) and "services" (object array)
- * into a single datasource, producing a cross join of tag x service for each input row.
+ * Verifies ScanTransform during Kafka ingestion:
+ * <ul>
+ *   <li>Unnests both "tags" (string array) and "services" (object array) via nested UnnestDataSources</li>
+ *   <li>Computes derived columns via virtual columns (upper case, string concat)</li>
+ *   <li>All in a single scan query — demonstrates unnest + expression transforms combined</li>
+ * </ul>
  */
 public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 {
@@ -137,36 +138,35 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 
   private void submitSupervisor()
   {
-    final TransformSpec transformSpec = new TransformSpec(
-        null,
-        ImmutableList.of(
-            new ScanTransform(
-                "tag",
-                Druids.newScanQueryBuilder()
-                      .dataSource(UnnestDataSource.create(
-                          new TableDataSource("__input__"),
-                          new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
-                          null
-                      ))
-                      .eternityInterval()
-                      .columns((List<String>) null)
-                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-                      .build()
-            ),
-            new ScanTransform(
-                "svc",
-                Druids.newScanQueryBuilder()
-                      .dataSource(UnnestDataSource.create(
-                          new TableDataSource("__input__"),
-                          new ExpressionVirtualColumn("svc", "\"services\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
-                          null
-                      ))
-                      .eternityInterval()
-                      .columns((List<String>) null)
-                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-                      .build()
-            )
-        )
+    final ScanTransformSpec transformSpec = new ScanTransformSpec(
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  UnnestDataSource.create(
+                      new TableDataSource("__input__"),
+                      new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                      null
+                  ),
+                  new ExpressionVirtualColumn("svc", "\"services\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
+                  null
+              ))
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "upper_user",
+                      "upper(\"user\")",
+                      ColumnType.STRING,
+                      ExprMacroTable.nil()
+                  ),
+                  new ExpressionVirtualColumn(
+                      "user_tag",
+                      "concat(\"user\", '_', \"tag\")",
+                      ColumnType.STRING,
+                      ExprMacroTable.nil()
+                  )
+              )
+              .eternityInterval()
+              .columns((List<String>) null)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .build()
     );
 
     final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
@@ -368,6 +368,45 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         "eu-west1,2",  // bob: cdn + cache (both eu-west1) x 1 tag
         "us-east1,3",  // alice: web(us-east1) x 2 tags + bob: db(us-east1) x 1 tag
         "us-west2,2"   // alice: api(us-west2) x 2 tags
+    ));
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_upperCaseVirtualColumn()
+  {
+    final String result = cluster.runSql(
+        StringUtils.format(
+            "SELECT \"upper_user\", COUNT(*) AS cnt FROM \"%s\" GROUP BY 1 ORDER BY 1",
+            dataSource
+        )
+    );
+    Assertions.assertEquals(
+        "ALICE,4\nBOB,3\nCAROL,1\nDAVE,1",
+        result.trim()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_concatVirtualColumn()
+  {
+    // user_tag = concat(user, '_', tag) — computed at ingest time via scan query virtual column
+    final String result = cluster.runSql(
+        StringUtils.format(
+            "SELECT \"user_tag\", COUNT(*) AS cnt"
+            + " FROM \"%s\""
+            + " WHERE \"tag\" IS NOT NULL"
+            + " GROUP BY 1 ORDER BY 1",
+            dataSource
+        )
+    );
+    final Set<String> actual = new TreeSet<>(List.of(result.trim().split("\n")));
+    final Set<String> expected = new TreeSet<>(List.of(
+        "alice_news,2",     // alice_news x 2 services
+        "alice_sports,2",   // alice_sports x 2 services
+        "bob_music,3"       // bob_music x 3 services
     ));
     Assertions.assertEquals(expected, actual);
   }
