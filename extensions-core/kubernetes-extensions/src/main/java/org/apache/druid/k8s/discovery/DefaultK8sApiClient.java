@@ -33,7 +33,6 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.PatchUtils;
 import io.kubernetes.client.util.Watch;
-import okhttp3.internal.http2.StreamResetException;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.List;
@@ -276,7 +276,7 @@ public class DefaultK8sApiClient implements K8sApiClient
             if (ex.getCause() instanceof SocketTimeoutException) {
               throw (SocketTimeoutException) ex.getCause();
             }
-            if (ex.getCause() instanceof StreamResetException) {
+            if (ex.getCause() instanceof IOException && !(ex.getCause() instanceof InterruptedIOException)) {
               throw new ChannelResetException(ex.getCause());
             }
             throw ex;
