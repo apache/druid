@@ -21,18 +21,14 @@ package org.apache.druid.data.input;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class MapBasedRowTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testGetLongMetricFromString()
@@ -50,13 +46,13 @@ public class MapBasedRowTest
           .build()
     );
     
-    Assert.assertEquals(-1.2, row.getMetric("k0"));
-    Assert.assertEquals(1.23, row.getMetric("k1"));
-    Assert.assertEquals(1.8, row.getMetric("k2"));
-    Assert.assertEquals(100000.0, row.getMetric("k3"));
-    Assert.assertEquals(9223372036854775806L, row.getMetric("k4"));
-    Assert.assertEquals(-9223372036854775807L, row.getMetric("k5"));
-    Assert.assertEquals(9223372036854775802L, row.getMetric("k6"));
+    Assertions.assertEquals(-1.2, row.getMetric("k0"));
+    Assertions.assertEquals(1.23, row.getMetric("k1"));
+    Assertions.assertEquals(1.8, row.getMetric("k2"));
+    Assertions.assertEquals(100000.0, row.getMetric("k3"));
+    Assertions.assertEquals(9223372036854775806L, row.getMetric("k4"));
+    Assertions.assertEquals(-9223372036854775807L, row.getMetric("k5"));
+    Assertions.assertEquals(9223372036854775802L, row.getMetric("k6"));
   }
 
   @Test
@@ -66,7 +62,6 @@ public class MapBasedRowTest
     event.put("k0", 1);
     event.put("k1", 2);
     final MapBasedRow row = new MapBasedRow(DateTimes.nowUtc(), event);
-    expectedException.expect(UnsupportedOperationException.class);
-    row.getEvent().put("k2", 3);
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> row.getEvent().put("k2", 3));
   }
 }

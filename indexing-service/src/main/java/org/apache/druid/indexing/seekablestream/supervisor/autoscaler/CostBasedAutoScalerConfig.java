@@ -45,7 +45,6 @@ import java.util.Objects;
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
   static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
-  static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 5 * 60 * 1000; // 5 minutes
   static final double DEFAULT_LAG_WEIGHT = 0.25;
   static final double DEFAULT_IDLE_WEIGHT = 0.75;
   static final Duration DEFAULT_MIN_SCALE_DELAY = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS * 3);
@@ -62,6 +61,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final double idleWeight;
   private final boolean useTaskCountBoundaries;
   private final int highLagThreshold;
+  private final Duration minScaleUpDelay;
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
 
@@ -78,6 +78,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
       @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
       @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
+      @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly
   )
@@ -90,7 +91,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
                                    : DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
     this.minTriggerScaleActionFrequencyMillis = Configs.valueOrDefault(
         minTriggerScaleActionFrequencyMillis,
-        DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS
+        DEFAULT_SCALE_ACTION_PERIOD_MILLIS
     );
 
     // Cost function weights with defaults
@@ -98,6 +99,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.useTaskCountBoundaries = Configs.valueOrDefault(useTaskCountBoundaries, false);
     this.highLagThreshold = Configs.valueOrDefault(highLagThreshold, -1);
+    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, Duration.millis(this.minTriggerScaleActionFrequencyMillis));
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
 
@@ -125,7 +127,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
-    Preconditions.checkArgument(this.minScaleDownDelay.getMillis() >= 0, "minScaleDownDelay must be >= 0");
+    Preconditions.checkArgument(this.minScaleUpDelay.getMillis() >= 0, "minScaleUpDelay must be a duration >= 0 millis");
+    Preconditions.checkArgument(this.minScaleDownDelay.getMillis() >= 0, "minScaleDownDelay must be a duration >= 0 millis");
   }
 
   /**
@@ -165,6 +168,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return taskCountStart;
   }
 
+  @Deprecated
   @Override
   @JsonProperty
   public long getMinTriggerScaleActionFrequencyMillis()
@@ -217,10 +221,19 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Represents the minimum duration between successful scale actions.
-   * A higher value implies a more conservative scaling behavior, ensuring that tasks
-   * are not scaled too frequently during workload fluctuations.
+   * Returns the minimum delay before a scale-up action is allowed after any previous scale action.
    */
+  @Override
+  @JsonProperty
+  public Duration getMinScaleUpDelay()
+  {
+    return minScaleUpDelay;
+  }
+
+  /**
+   * Returns the minimum delay before a scale-down action is allowed after any previous scale action.
+   */
+  @Override
   @JsonProperty
   public Duration getMinScaleDownDelay()
   {
@@ -263,6 +276,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
            && useTaskCountBoundaries == that.useTaskCountBoundaries
+           && Objects.equals(minScaleUpDelay, that.minScaleUpDelay)
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && Objects.equals(taskCountStart, that.taskCountStart)
@@ -285,6 +299,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         idleWeight,
         useTaskCountBoundaries,
         highLagThreshold,
+        minScaleUpDelay,
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly
     );
@@ -305,6 +320,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", idleWeight=" + idleWeight +
            ", useTaskCountBoundaries=" + useTaskCountBoundaries +
            ", highLagThreshold=" + highLagThreshold +
+           ", minScaleUpDelay=" + minScaleUpDelay +
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            '}';
@@ -327,6 +343,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Double idleWeight;
     private Boolean useTaskCountBoundaries;
     private Integer highLagThreshold;
+    private Duration minScaleUpDelay;
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
 
@@ -388,6 +405,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder minScaleUpDelay(Duration minScaleUpDelay)
+    {
+      this.minScaleUpDelay = minScaleUpDelay;
+      return this;
+    }
+
     public Builder minScaleDownDelay(Duration minScaleDownDelay)
     {
       this.minScaleDownDelay = minScaleDownDelay;
@@ -426,6 +449,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           idleWeight,
           useTaskCountBoundaries,
           highLagThreshold,
+          minScaleUpDelay,
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly
       );

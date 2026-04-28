@@ -18,9 +18,15 @@
 
 import type { Field } from '../../components';
 
+export interface PerSegmentTimeoutConfig {
+  perSegmentTimeoutMs: number;
+  monitorOnly?: boolean;
+}
+
 export interface BrokerDynamicConfig {
   queryBlocklist?: QueryBlocklistRule[];
   queryContext?: Record<string, unknown>;
+  perSegmentTimeoutConfig?: Record<string, PerSegmentTimeoutConfig>;
 }
 
 export interface QueryBlocklistRule {
@@ -48,6 +54,18 @@ export const BROKER_DYNAMIC_CONFIG_FIELDS: Field<BrokerDynamicConfig>[] = [
       <>
         List of rules to block queries on brokers. Each rule can match by datasource, query type,
         and/or context parameters.
+      </>
+    ),
+  },
+  {
+    name: 'perSegmentTimeoutConfig',
+    type: 'json',
+    info: (
+      <>
+        Per-datasource per-segment timeout configuration. Maps datasource name to timeout settings.
+        When a query targets a configured datasource, the broker injects the per-segment timeout
+        into the query context (unless the caller already set it explicitly). Set{' '}
+        <code>monitorOnly: true</code> to log without enforcing.
       </>
     ),
   },

@@ -40,8 +40,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,7 +79,7 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
 
     final Frame frame;
     try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
-      Assert.assertTrue(frameWriter.addSelection());
+      Assertions.assertTrue(frameWriter.addSelection());
       frame = Frame.wrap(frameWriter.toByteArray());
     }
 
@@ -124,11 +124,11 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
         .errorMsg(errorMsg)
         .build();
 
-    InvalidFieldException actualException = Assert.assertThrows(
+    InvalidFieldException actualException = Assertions.assertThrows(
         InvalidFieldException.class,
         rowBasedFrameWriter::addSelection
     );
-    Assert.assertEquals(expectedException, actualException);
-    Assert.assertEquals(realException, actualException.getCause());
+    Assertions.assertEquals(expectedException, actualException);
+    Assertions.assertEquals(realException, actualException.getCause());
   }
 }

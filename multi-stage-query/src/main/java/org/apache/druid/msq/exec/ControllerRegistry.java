@@ -17,36 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.common.guava;
+package org.apache.druid.msq.exec;
+
+import org.apache.druid.indexer.report.TaskReport;
+
+import javax.annotation.Nullable;
 
 /**
+ * Registry for actively-running {@link Controller} instances, held in {@link ControllerHolder}.
  */
-public abstract class ThreadRenamingRunnable implements Runnable
+public interface ControllerRegistry
 {
-  private final String name;
+  /**
+   * Register a controller holder. Throws if a controller with the same query ID is already registered.
+   */
+  void register(ControllerHolder holder);
 
-  public ThreadRenamingRunnable(
-      String name
-  )
-  {
-    this.name = name;
-  }
-
-  @Override
-  public final void run()
-  {
-    final Thread currThread = Thread.currentThread();
-    String currName = currThread.getName();
-    try {
-      currThread.setName(name);
-      doRun();
-    }
-    finally {
-      currThread.setName(currName);
-    }
-
-  }
-
-  public abstract void doRun();
+  /**
+   * Deregister a controller holder. Optionally stores a final report.
+   */
+  void deregister(ControllerHolder holder, @Nullable TaskReport.ReportMap report);
 }
-

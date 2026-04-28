@@ -34,7 +34,7 @@ This reference contains context parameters organized by their scope:
 To learn how to set the query context, see [Set query context](./query-context.md).
 
 For reference on query context parameters specific to Druid SQL, visit [SQL query context](sql-query-context.md). 
-For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters).
+For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference.md#context-parameters).
 
 
 ## General parameters

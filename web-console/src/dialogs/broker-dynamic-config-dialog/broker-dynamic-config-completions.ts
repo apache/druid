@@ -34,6 +34,11 @@ export const BROKER_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         documentation:
           'Default query context values applied to all queries on this broker. These override static defaults from runtime properties but are overridden by per-query context values. Useful for setting cluster-wide defaults like priority or timeout without restarting.',
       },
+      {
+        value: 'perSegmentTimeoutConfig',
+        documentation:
+          'Per-datasource per-segment timeout configuration. Maps datasource name to {perSegmentTimeoutMs, monitorOnly}. The broker injects the timeout into query context unless the caller set it explicitly.',
+      },
     ],
   },
   // Query context key suggestions
@@ -98,6 +103,21 @@ export const BROKER_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.queryBlocklist.[*].dataSources.[]',
     completions: [{ value: 'example_datasource', documentation: 'Datasource name to block' }],
+  },
+  // Per-segment timeout config per datasource
+  {
+    path: '$.perSegmentTimeoutConfig.*',
+    isObject: true,
+    completions: [
+      {
+        value: 'perSegmentTimeoutMs',
+        documentation: 'Per-segment timeout in milliseconds (required, must be > 0)',
+      },
+      {
+        value: 'monitorOnly',
+        documentation: 'If true, log the configured timeout without enforcing it (default: false)',
+      },
+    ],
   },
   // Context matches example
   {

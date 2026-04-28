@@ -64,6 +64,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final BalancerStrategy strategy;
 
   private final boolean useRoundRobinAssignment;
+  private final Map<String, Set<String>> historicalTierAliases;
 
   private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
@@ -87,6 +88,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
+    this.historicalTierAliases = loadingConfig.getHistoricalTierAliases();
 
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
@@ -198,17 +200,45 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
   }
 
+  /**
+   * Resolves alias tiers in the given tier-to-replica-count map. For each tier
+   * that is a key in {@link #historicalTierAliases}, the entry is replaced by
+   * one entry per alias value — each receiving the same replica count. The alias
+   * key itself is treated as a virtual tier and is not kept in the result. Tiers
+   * not present in {@link #historicalTierAliases} are passed through unchanged.
+   * Explicit counts already present in the map are not overwritten by alias expansion.
+   */
+  private Map<String, Integer> expandWithAliases(Map<String, Integer> tierToReplicaCount)
+  {
+    if (historicalTierAliases.isEmpty()) {
+      return tierToReplicaCount;
+    }
+
+    final Map<String, Integer> expanded = new HashMap<>();
+    tierToReplicaCount.forEach((tier, replicaCount) -> {
+      final Set<String> aliases = historicalTierAliases.get(tier);
+      if (aliases != null) {
+        // tier is a virtual alias key — replace it with its real tiers
+        aliases.forEach(alias -> expanded.putIfAbsent(alias, replicaCount));
+      } else {
+        expanded.put(tier, replicaCount);
+      }
+    });
+    return expanded;
+  }
+
   @Override
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
+    final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
     final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
-    if (tierToReplicaCount.isEmpty()) {
+    if (effectiveTierToReplicaCount.isEmpty()) {
       // Track the counts for a segment even if it requires 0 replicas on all tiers
       replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
     } else {
       // Identify empty tiers and determine total required replicas
-      tierToReplicaCount.forEach((tier, requiredReplicas) -> {
+      effectiveTierToReplicaCount.forEach((tier, requiredReplicas) -> {
         reportTierCapacityStats(segment, requiredReplicas, tier);
 
         SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
@@ -237,7 +267,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       dropsQueued += updateReplicasInTier(
           segment,
           tier,
-          tierToReplicaCount.getOrDefault(tier, 0),
+          effectiveTierToReplicaCount.getOrDefault(tier, 0),
           replicaSurplus - dropsQueued
       );
     }

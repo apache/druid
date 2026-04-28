@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -63,6 +64,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -101,6 +103,7 @@ public class QueryLifecycle
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final List<QueryBlocklistRule> queryBlocklist;
+  private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
   private final long startMs;
   private final long startNs;
 
@@ -124,6 +127,7 @@ public class QueryLifecycle
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final List<QueryBlocklistRule> queryBlocklist,
+      final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig,
       final long startMs,
       final long startNs
   )
@@ -138,6 +142,7 @@ public class QueryLifecycle
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.queryBlocklist = queryBlocklist;
+    this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -216,13 +221,50 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        queryConfigProvider.getContext(),
-        baseQuery.getContext()
-    );
-    mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
-    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
+    // Start with system defaults, apply per-datasource override, then user context wins
+    Map<String, Object> contextWithDefaults = new HashMap<>(queryConfigProvider.getContext());
+    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
+    Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
+    finalContext.put(BaseQuery.QUERY_ID, queryId);
+
+    this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
+  }
+
+  /**
+   * If a per-datasource per-segment timeout is configured, injects it into the context defaults.
+   * User context (applied later via {@link QueryContexts#override}) will override this if set explicitly.
+   * In monitorOnly mode, logs the configured timeout but does not inject it.
+   *
+   * For queries involving multiple datasources (e.g., joins or unions), the timeout from the first matching datasource is applied
+   * since getTableNames() returns a Set, the match order is non-deterministic.
+   */
+  private void applyPerDatasourcePerSegmentTimeout(
+      final Query<?> query,
+      final Map<String, Object> contextWithDefaults,
+      final String queryId
+  )
+  {
+    if (perSegmentTimeoutConfig.isEmpty()) {
+      return;
+    }
+
+    for (String tableName : query.getDataSource().getTableNames()) {
+      PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
+      if (dsConfig != null) {
+        if (dsConfig.isMonitorOnly()) {
+          log.debug(
+              "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
+              dsConfig.getPerSegmentTimeoutMs(),
+              tableName,
+              queryId
+          );
+        } else {
+          contextWithDefaults.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());
+        }
+        return;
+      }
+    }
   }
 
   /**

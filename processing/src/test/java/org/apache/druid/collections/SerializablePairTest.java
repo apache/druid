@@ -20,8 +20,8 @@
 package org.apache.druid.collections;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -35,8 +35,8 @@ public class SerializablePairTest
     SerializablePair pair = new SerializablePair<>(5L, 9L);
     byte[] bytes = JSON_MAPPER.writeValueAsBytes(pair);
     SerializablePair<Number, Number> deserializedPair = JSON_MAPPER.readValue(bytes, SerializablePair.class);
-    Assert.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
-    Assert.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
+    Assertions.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
+    Assertions.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
   }
 
   @Test
@@ -45,7 +45,7 @@ public class SerializablePairTest
     SerializablePair pair = new SerializablePair<>(5L, 9L);
     String str = JSON_MAPPER.writeValueAsString(pair);
     SerializablePair<Number, Number> deserializedPair = JSON_MAPPER.readValue(str, SerializablePair.class);
-    Assert.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
-    Assert.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
+    Assertions.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
+    Assertions.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
   }
 }

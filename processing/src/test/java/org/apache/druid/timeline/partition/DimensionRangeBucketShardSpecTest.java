@@ -29,10 +29,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,13 +41,10 @@ public class DimensionRangeBucketShardSpecTest
 
   private static final List<String> DIMENSIONS = Arrays.asList("dim1", "dim2");
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testConvert()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new BuildingDimensionRangeShardSpec(
             1,
             DIMENSIONS,
@@ -69,7 +64,7 @@ public class DimensionRangeBucketShardSpecTest
   @Test
   public void testConvert_withSingleDimension()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5),
         new DimensionRangeBucketShardSpec(
             1,
@@ -83,7 +78,7 @@ public class DimensionRangeBucketShardSpecTest
   @Test
   public void testCreateChunk()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new NumberedPartitionChunk<>(1, 0, "test"),
         new DimensionRangeBucketShardSpec(
             1,
@@ -109,7 +104,7 @@ public class DimensionRangeBucketShardSpecTest
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -120,7 +115,7 @@ public class DimensionRangeBucketShardSpecTest
             )
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -130,7 +125,7 @@ public class DimensionRangeBucketShardSpecTest
             )
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -159,40 +154,37 @@ public class DimensionRangeBucketShardSpecTest
     );
     final String json = mapper.writeValueAsString(original);
     ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
-    Assert.assertEquals(ShardSpec.Type.BUCKET_RANGE, shardSpec.getType());
-    Assert.assertEquals(original, shardSpec);
+    Assertions.assertEquals(ShardSpec.Type.BUCKET_RANGE, shardSpec.getType());
+    Assertions.assertEquals(original, shardSpec);
   }
 
   @Test
   public void testInvalidStartTupleSize()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new DimensionRangeBucketShardSpec(1, DIMENSIONS, StringTuple.create("a"), null)
+    );
+    Assertions.assertTrue(e.getMessage().contains(
         "Start tuple must either be null or of the same size as the number of partition dimensions"
-    );
-
-    new DimensionRangeBucketShardSpec(
-        1,
-        DIMENSIONS,
-        StringTuple.create("a"),
-        null
-    );
+    ));
   }
 
   @Test
   public void testInvalidEndTupleSize()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new DimensionRangeBucketShardSpec(
+            1,
+            DIMENSIONS,
+            StringTuple.create("a", "b"),
+            StringTuple.create("e", "f", "g")
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains(
         "End tuple must either be null or of the same size as the number of partition dimensions"
-    );
-
-    new DimensionRangeBucketShardSpec(
-        1,
-        DIMENSIONS,
-        StringTuple.create("a", "b"),
-        StringTuple.create("e", "f", "g")
-    );
+    ));
   }
 
   @Test

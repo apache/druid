@@ -21,8 +21,8 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FilterTuningTest
 {
@@ -32,13 +32,13 @@ public class FilterTuningTest
     final ObjectMapper objectMapper = new DefaultObjectMapper();
 
     final FilterTuning filterTuning1 = new FilterTuning(false, 100, 200);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         filterTuning1,
         objectMapper.readValue(objectMapper.writeValueAsString(filterTuning1), FilterTuning.class)
     );
 
     final FilterTuning filterTuning2 = new FilterTuning(true, 100, 200);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         filterTuning2,
         objectMapper.readValue(objectMapper.writeValueAsString(filterTuning2), FilterTuning.class)
     );

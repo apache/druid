@@ -203,9 +203,10 @@ public class MSQTasks
   }
 
   /**
-   * Returns a string form of a {@link MSQErrorReport} suitable for logging.
+   * Returns a string form of a {@link MSQErrorReport} suitable for logging. When {@code forceFullStackTrace} is true,
+   * the full stack trace is always included (when available), regardless of fault type.
    */
-  static String errorReportToLogMessage(final MSQErrorReport errorReport)
+  static String errorReportToLogMessage(final MSQErrorReport errorReport, final boolean forceFullStackTrace)
   {
     final StringBuilder logMessage = new StringBuilder("Work failed");
 
@@ -222,7 +223,7 @@ public class MSQTasks
     logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
-      if (logFullStackTrace(errorReport.getFault())) {
+      if (forceFullStackTrace || logFullStackTrace(errorReport.getFault())) {
         logMessage.append('\n').append(errorReport.getExceptionStackTrace());
       } else {
         // Log first line only (error class, message) for known faults, to avoid polluting logs.

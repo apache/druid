@@ -71,6 +71,16 @@ public class ByteTracker
     currentBytes = Math.subtractExact(currentBytes, byteCount);
   }
 
+  public synchronized long getMaxBytes()
+  {
+    return maxBytes;
+  }
+
+  public synchronized long getCurrentBytes()
+  {
+    return currentBytes;
+  }
+
   public static ByteTracker unboundedTracker()
   {
     return new ByteTracker(Long.MAX_VALUE);

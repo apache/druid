@@ -28,6 +28,11 @@ In Apache Druid, compaction is a special type of ingestion task that reads data 
  Auto-compaction skips datasources that have a segment granularity of `ALL`.
 :::
 
+There are two ways to run automatic compaction in Druid:
+
+* **Compaction supervisors on the Overlord** (recommended): Provides better reactivity, support for the MSQ task engine, and easier management through the supervisor framework. See [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
+* **Coordinator duties**: An alternative approach that runs compaction as a Coordinator duty. See [Auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
+
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
 This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
@@ -52,14 +57,6 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-:::info
-
-The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
-
-:::
-
-For automatic compaction using Coordinator duties, you submit the spec to the [Compaction config UI](#manage-auto-compaction-using-the-web-console) or the [Compaction configuration API](#manage-auto-compaction-using-coordinator-apis).
-
 Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
 * `skipOffsetFromLatest`
@@ -68,9 +65,9 @@ The following properties only apply to auto-compaction:
 
 Since the automatic compaction system provides a management layer on top of manual compaction tasks,
 the auto-compaction configuration does not include task-specific properties found in a typical Druid ingestion spec.
-The following properties are automatically set by the Coordinator:
+The following properties are automatically set by the auto-compaction system:
 * `type`: Set to `compact`.
-* `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
+* `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `auto`.
 * `context`: Set according to the user-provided `taskContext`.
 
 Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
@@ -83,178 +80,23 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
 
-## Auto-compaction using Coordinator duties
-
-You can control how often the Coordinator checks to see if auto-compaction is needed. The Coordinator [indexing period](../configuration/index.md#data-management), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
-The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
-This time period also affects other Coordinator duties such as cleanup of unused segments and stale pending segments.
-To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#change-compaction-frequency).
-
-At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
-When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
-If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
-
-No additional configuration is needed to run automatic compaction tasks using the Coordinator and native engine. This is the default behavior for Druid.
-You can configure it for a datasource through the web console or programmatically via an API.
-This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
-
-### Manage auto-compaction using the web console
-
-Use the web console to enable automatic compaction for a datasource as follows:
-
-1. Click **Datasources** in the top-level navigation.
-2. In the **Compaction** column, click the edit icon for the datasource to compact.
-3. In the **Compaction config** dialog, configure the auto-compaction settings. The dialog offers a form view as well as a JSON view. Editing the form updates the JSON specification, and editing the JSON updates the form field, if present. Form fields not present in the JSON indicate default values. You may add additional properties to the JSON for auto-compaction settings not displayed in the form. See [Configure automatic compaction](#auto-compaction-syntax) for supported settings for auto-compaction.
-4. Click **Submit**.
-5. Refresh the **Datasources** view. The **Compaction** column for the datasource changes from “Not enabled” to “Awaiting first run.”
-
-The following screenshot shows the compaction config dialog for a datasource with auto-compaction enabled.
-![Compaction config in web console](../assets/compaction-config.png)
-
-To disable auto-compaction for a datasource, click **Delete** from the **Compaction config** dialog. Druid does not retain your auto-compaction configuration.
-
-### Manage auto-compaction using Coordinator APIs  
-
-Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
-To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
-See [Configure automatic compaction](#auto-compaction-syntax) for the syntax of an auto-compaction spec.
-Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
-The following example configures auto-compaction for the `wikipedia` datasource:
-
-```sh
-curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "dataSource": "wikipedia",
-    "granularitySpec": {
-        "segmentGranularity": "DAY"
-    }
-}'
-```
-
-To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
-
-```sh
-curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
-```
-
-### Change compaction frequency
-
-If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
-Set the time period of the duty group in the `coordinator/runtime.properties` file.
-The following example shows how to create a duty group named `compaction` and set the auto-compaction period to 1 minute:
-```
-druid.coordinator.dutyGroups=["compaction"]
-druid.coordinator.compaction.duties=["compactSegments"]
-druid.coordinator.compaction.period=PT60S
-```
-
-### View Coordinator duty auto-compaction stats
-
-After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction).
-
-In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
-
-To get statistics by API, send a [`GET` request](../api-reference/automatic-compaction-api.md#view-automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
-
-
-## Avoid conflicts with ingestion
-
-Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
-
-* Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
-* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
-* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
-
-### Enable concurrent append and replace
-
-You can use concurrent append and replace to safely replace the existing data in an interval of a datasource while new data is being appended to that interval even during compaction.
-
-To do this, you need to update your datasource to allow concurrent append and replace tasks:
-
-* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
-* If you're using the UI, enable **Use concurrent locks** in the **Compaction config** for your datasource.
-
-You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
-
-For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
-
-### Skip compaction for latest segments
-
-The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
-
-To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
-
-## Examples
-
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-guidelines). The examples in this section do not change the underlying data.
-
-### Change segment granularity
-
-You have a stream set up to ingest data with `HOUR` segment granularity into the `wikistream` datasource. You notice that your Druid segments are smaller than the [recommended segment size](../operations/segment-optimization.md) of 5 million rows per segment. You wish to automatically compact segments to `DAY` granularity while leaving the latest week of data _not_ compacted because your stream consistently receives data within that time period.
-
-The following auto-compaction configuration compacts existing `HOUR` segments into `DAY` segments while leaving the latest week of data not compacted:
-
-```json
-{
-  "dataSource": "wikistream",
-  "granularitySpec": {
-    "segmentGranularity": "DAY"
-  },
-  "skipOffsetFromLatest": "P1W",
-}
-```
-
-### Update partitioning scheme
-
-For your `wikipedia` datasource, you want to optimize segment access when regularly ingesting data without compromising compute time when querying the data. Your ingestion spec for batch append uses [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning) to optimize for write-time operations, while your stream ingestion partitioning is configured by the stream service. You want to implement auto-compaction to reorganize the data with a suitable read-time partitioning using [multi-dimension range partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning). Based on the dimensions frequently accessed in queries, you wish to partition on the following dimensions: `channel`, `countryName`, `namespace`.
-
-The following auto-compaction configuration compacts updates the `wikipedia` segments to use multi-dimension range partitioning:
-
-```json
-{
-  "dataSource": "wikipedia",
-  "tuningConfig": {
-    "partitionsSpec": {
-      "type": "range",
-      "partitionDimensions": [
-        "channel",
-        "countryName",
-        "namespace"
-      ],
-      "targetRowsPerSegment": 5000000
-    }
-  }
-}
-```
-
 ## Auto-compaction using compaction supervisors
 
 :::info
 For advanced time-based data lifecycle management — such as coarsening segment granularity, deleting old rows, or changing compression as data ages — see [Cascading reindexing](cascading-reindexing.md).
 :::
 
-You can run automatic compaction using compaction supervisors on the Overlord rather than Coordinator duties. Compaction supervisors provide the following benefits over Coordinator duties:
+The recommended way to run automatic compaction is using compaction supervisors on the Overlord. Compaction supervisors provide the following benefits:
 
 * Can use the supervisor framework to get information about the auto-compaction, such as status or state
 * More easily suspend or resume compaction for a datasource
 * Can use either the native compaction engine or the [MSQ task engine](#use-msq-for-auto-compaction)
 * More reactive and submits tasks as soon as a compaction slot is available
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
-* Uses new Indexing State Fingerprinting mechanisms to store less data per segment in metadata storage
+* Can be configured to store compact fingerprints instead of full compaction state in metadata storage
+* Supports minor compaction through the [Most fragmented first policy](../api-reference/automatic-compaction-api.md#compaction-policy-mostfragmentedfirst)
 
-
-To use compaction supervisors, the following configuration requirements must be met:
-
-* You must be using incremental segment metadata caching:
-  * `druid.manager.segments.useIncrementalCache` set to `always` or `ifSynced` in your Overlord and Coordinator runtime properties.
-    * See [Segment metadata caching](../configuration/index.md#metadata-retrieval) for full configuration documentation.
-
-* update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
-  *  `useSupervisors` to `true` so that compaction tasks can be run as supervisor tasks
-  *  `engine` to `msq` to use the MSQ task engine as the compaction engine or to `native` (default value) to use the native engine.
-
-Compaction supervisors use the same syntax as auto-compaction using Coordinator duties with one key difference: you submit the auto-compaction as a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec`.
+To use a compaction supervisor, submit the auto-compaction configuration as a supervisor spec. Set `type` to `autocompact` and include the auto-compaction config in the `spec`.
 
 To submit an automatic compaction task, you can submit a supervisor spec through the [web console](#manage-compaction-supervisors-with-the-web-console) or the [supervisor API](#manage-compaction-supervisors-with-supervisor-apis).
 
@@ -365,6 +207,155 @@ The following are some examples of aggregators that aren't supported since at le
     ```
 
 
+## Auto-compaction using Coordinator duties
+
+As an alternative to compaction supervisors, you can run automatic compaction using Coordinator duties. The Coordinator [indexing period](../configuration/index.md#data-management), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
+The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
+This time period also affects other Coordinator duties such as cleanup of unused segments and stale pending segments.
+To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#change-compaction-frequency).
+
+At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
+When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
+If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
+
+You can configure Coordinator-based auto-compaction for a datasource through the web console or programmatically via an API.
+This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
+
+To use Coordinator-based auto-compaction, the following configuration requirements must be met:
+
+* update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
+  *  `useSupervisors` to `false`
+  *  `engine` to `native` to use the native engine, since MSQ task engine is not supported as the compaction engine in Coordinator.
+
+### Manage auto-compaction using the web console
+
+Use the web console to enable automatic compaction for a datasource as follows:
+
+1. Click **Datasources** in the top-level navigation.
+2. In the **Compaction** column, click the edit icon for the datasource to compact.
+3. In the **Compaction config** dialog, configure the auto-compaction settings. The dialog offers a form view as well as a JSON view. Editing the form updates the JSON specification, and editing the JSON updates the form field, if present. Form fields not present in the JSON indicate default values. You may add additional properties to the JSON for auto-compaction settings not displayed in the form. See [Configure automatic compaction](#auto-compaction-syntax) for supported settings for auto-compaction.
+4. Click **Submit**.
+5. Refresh the **Datasources** view. The **Compaction** column for the datasource changes from "Not enabled" to "Awaiting first run."
+
+The following screenshot shows the compaction config dialog for a datasource with auto-compaction enabled.
+![Compaction config in web console](../assets/compaction-config.png)
+
+To disable auto-compaction for a datasource, click **Delete** from the **Compaction config** dialog. Druid does not retain your auto-compaction configuration.
+
+### Manage auto-compaction using Coordinator APIs
+
+Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
+To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
+See [Configure automatic compaction](#auto-compaction-syntax) for the syntax of an auto-compaction spec.
+Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
+The following example configures auto-compaction for the `wikipedia` datasource:
+
+```sh
+curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "dataSource": "wikipedia",
+    "granularitySpec": {
+        "segmentGranularity": "DAY"
+    }
+}'
+```
+
+To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
+
+```sh
+curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
+```
+
+### Change compaction frequency
+
+If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
+Set the time period of the duty group in the `coordinator/runtime.properties` file.
+The following example shows how to create a duty group named `compaction` and set the auto-compaction period to 1 minute:
+```
+druid.coordinator.dutyGroups=["compaction"]
+druid.coordinator.compaction.duties=["compactSegments"]
+druid.coordinator.compaction.period=PT60S
+```
+
+### View Coordinator duty auto-compaction stats
+
+After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction).
+
+In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
+
+To get statistics by API, send a [`GET` request](../api-reference/automatic-compaction-api.md#view-automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
+
+
+## Avoid conflicts with ingestion
+
+Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
+
+* Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
+* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
+* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
+
+### Enable concurrent append and replace
+
+You can use concurrent append and replace to safely replace the existing data in an interval of a datasource while new data is being appended to that interval even during compaction.
+
+To do this, you need to update your datasource to allow concurrent append and replace tasks:
+
+* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
+* If you're using the UI, enable **Use concurrent locks** in the **Compaction config** for your datasource.
+
+You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
+
+For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
+
+### Skip compaction for latest segments
+
+The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
+
+To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
+## Examples
+
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-guidelines). The examples in this section do not change the underlying data.
+
+### Change segment granularity
+
+You have a stream set up to ingest data with `HOUR` segment granularity into the `wikistream` datasource. You notice that your Druid segments are smaller than the [recommended segment size](../operations/segment-optimization.md) of 5 million rows per segment. You wish to automatically compact segments to `DAY` granularity while leaving the latest week of data _not_ compacted because your stream consistently receives data within that time period.
+
+The following auto-compaction configuration compacts existing `HOUR` segments into `DAY` segments while leaving the latest week of data not compacted:
+
+```json
+{
+  "dataSource": "wikistream",
+  "granularitySpec": {
+    "segmentGranularity": "DAY"
+  },
+  "skipOffsetFromLatest": "P1W"
+}
+```
+
+### Update partitioning scheme
+
+For your `wikipedia` datasource, you want to optimize segment access when regularly ingesting data without compromising compute time when querying the data. Your ingestion spec for batch append uses [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning) to optimize for write-time operations, while your stream ingestion partitioning is configured by the stream service. You want to implement auto-compaction to reorganize the data with a suitable read-time partitioning using [multi-dimension range partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning). Based on the dimensions frequently accessed in queries, you wish to partition on the following dimensions: `channel`, `countryName`, `namespace`.
+
+The following auto-compaction configuration compacts updates the `wikipedia` segments to use multi-dimension range partitioning:
+
+```json
+{
+  "dataSource": "wikipedia",
+  "tuningConfig": {
+    "partitionsSpec": {
+      "type": "range",
+      "partitionDimensions": [
+        "channel",
+        "countryName",
+        "namespace"
+      ],
+      "targetRowsPerSegment": 5000000
+    }
+  }
+}
+```
 
 ## Learn more
 

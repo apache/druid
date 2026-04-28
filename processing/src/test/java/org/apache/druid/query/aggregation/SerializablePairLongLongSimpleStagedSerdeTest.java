@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Random;
@@ -62,8 +62,8 @@ public class SerializablePairLongLongSimpleStagedSerdeTest
   private static void assertValueEquals(@Nullable SerializablePairLongLong value, int size)
   {
     byte[] bytes = SERDE.serialize(value);
-    Assert.assertEquals(size, bytes.length);
+    Assertions.assertEquals(size, bytes.length);
     SerializablePairLongLong deserialized = SERDE.deserialize(bytes);
-    Assert.assertEquals(value, deserialized);
+    Assertions.assertEquals(value, deserialized);
   }
 }

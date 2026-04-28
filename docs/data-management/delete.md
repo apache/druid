@@ -127,7 +127,7 @@ Refer to [Data management on the Coordinator](../configuration/index.md#data-man
 
 :::info
 This is an experimental feature that:
-- Can be used only if [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+- Can be used only if [segment metadata caching](../configuration/index.md#segment-metadata-cache) is enabled on the Overlord.
 - MUST NOT be used if auto-kill of unused segments is already enabled on the Coordinator.
 :::
 
