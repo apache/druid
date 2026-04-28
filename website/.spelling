@@ -2646,3 +2646,4 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+passthrough
