@@ -409,4 +409,28 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     Assert.assertTrue(deserialized instanceof ScanTransformSpec);
     Assert.assertEquals(spec, deserialized);
   }
+
+  @Test
+  public void testUnnestPreservesNonDimensionEventFields()
+  {
+    // Simulates a fixed-dimensions ingestion with a metric: `bytes_sent` is in the raw event map
+    // but excluded from getDimensions() because DataSchema added it to dimensionExclusions.
+    // The expanded rows must still carry `bytes_sent` so downstream aggregators can read it.
+    final LinkedHashMap<String, Object> event = new LinkedHashMap<>();
+    event.put("user", "alice");
+    event.put("tags", List.of("a", "b"));
+    event.put("bytes_sent", 1024L);
+    final InputRow input = new MapBasedInputRow(TIMESTAMP, List.of("user", "tags"), event);
+
+    final BaseTransformer transformer = makeTransformer(makeUnnestQuery("tags", "tag"));
+    final List<InputRow> result = transformer.transformToList(input);
+
+    Assert.assertEquals(2, result.size());
+    for (final InputRow row : result) {
+      Assert.assertEquals(1024L, row.getRaw("bytes_sent"));
+      Assert.assertEquals("alice", row.getRaw("user"));
+    }
+    Assert.assertEquals("a", result.get(0).getRaw("tag"));
+    Assert.assertEquals("b", result.get(1).getRaw("tag"));
+  }
 }

@@ -191,6 +191,12 @@ public class ScanTransformer implements BaseTransformer
     final Set<String> columns = new LinkedHashSet<>();
     columns.add(ColumnHolder.TIME_COLUMN_NAME);
     columns.addAll(inputRow.getDimensions());
+    // Include raw event fields that aren't in getDimensions() — e.g. metric inputs that DataSchema added
+    // to dimensionExclusions. Without this, fixed-dimension ingestions with metrics would read null for
+    // their metric source fields in expanded rows.
+    if (inputRow instanceof MapBasedInputRow) {
+      columns.addAll(((MapBasedInputRow) inputRow).getEvent().keySet());
+    }
     for (final VirtualColumn vc : query.getVirtualColumns().getVirtualColumns()) {
       columns.add(vc.getOutputName());
     }

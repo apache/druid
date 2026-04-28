@@ -34,6 +34,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -175,6 +176,7 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("__time", "auto", null))
                 .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
                 .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                .withAggregators(new LongSumAggregatorFactory("total_bytes", "bytes_sent"))
                 .withTransform(transformSpec)
         )
         .withIoConfig(
@@ -204,6 +206,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
     // dave: missing tags & services columns => 0 rows (CROSS JOIN UNNEST semantics)
     // total: 7 rows
     final List<Map<String, Object>> records = new ArrayList<>();
+    // bytes_sent is a metric input (not a dimension). It must survive the scan transform so the
+    // LongSumAggregatorFactory on total_bytes reads the real value, not zero.
     records.add(Map.of(
         "__time", "2024-01-01T00:00:00Z",
         "user", "alice",
@@ -211,7 +215,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         "services", List.of(
             Map.of("type", "web", "dc", "us-east1"),
             Map.of("type", "api", "dc", "us-west2")
-        )
+        ),
+        "bytes_sent", 100
     ));
     records.add(Map.of(
         "__time", "2024-01-01T00:01:00Z",
@@ -221,7 +226,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
             Map.of("type", "cdn", "dc", "eu-west1"),
             Map.of("type", "cache", "dc", "eu-west1"),
             Map.of("type", "db", "dc", "us-east1")
-        )
+        ),
+        "bytes_sent", 50
     ));
 
     // carol: explicit null values for both array columns
@@ -429,5 +435,29 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         "alice,sports,web,us-east1"
     ));
     Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_metricInputSurvivesUnnestExpansion()
+  {
+    // bytes_sent is a metric input, not a dimension. It must be preserved on every expanded row
+    // after the scan transform, otherwise LongSum aggregates to 0.
+    // alice: 4 expanded rows x 100 = 400, bob: 3 expanded rows x 50 = 150, total = 550.
+    Assertions.assertEquals(
+        "550",
+        cluster.runSql(StringUtils.format("SELECT SUM(\"total_bytes\") FROM \"%s\"", dataSource)).trim()
+    );
+
+    // Per-user sums confirm the metric value is preserved unchanged on each unnested row.
+    Assertions.assertEquals(
+        "alice,400\nbob,150",
+        cluster.runSql(
+            StringUtils.format(
+                "SELECT \"user\", SUM(\"total_bytes\") FROM \"%s\" GROUP BY 1 ORDER BY 1",
+                dataSource
+            )
+        ).trim()
+    );
   }
 }
