@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -276,10 +277,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       }
 
       // nothing in the segment would match
-      if (excludedFilterIntervals.size() == filterIntervals.size() && elseValue == null) {
-        // Nothing in the segment would match. Skip this filter if no elseValue is set. (If an elseValue is set,
-        // we need to emit the elseValue.)
-        return new SuppressedAggregatorFactory(delegate);
+      if (excludedFilterIntervals.size() == filterIntervals.size()) {
+        if (elseValue == null) {
+          // No reason to do any aggregation at all, we're just going to return null.
+          return new SuppressedAggregatorFactory(delegate);
+        } else {
+          // Skip interval check, but do create a real FilteredAggregatorFactory so we emit the elseValue.
+          return new FilteredAggregatorFactory(delegate, FalseDimFilter.instance(), this.name, this.elseValue);
+        }
       }
 
       return new FilteredAggregatorFactory(

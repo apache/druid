@@ -69,3 +69,14 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER 
         LogicalTableScan(table=[[druid, numfoo]])
 
 !druidPlan
+
+-- Time predicate that doesn't match any rows in the segment. Rows exist but none match the condition.
+SELECT SUM(CASE WHEN __time >= TIMESTAMP '2050-01-01' THEN l1 ELSE 0 END) FROM numfoo;
++--------+
+| EXPR$0 |
++--------+
+|      0 |
++--------+
+(1 row)
+
+!ok

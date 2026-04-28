@@ -20,8 +20,14 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.PerSegmentQueryOptimizationContext;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.filter.FalseDimFilter;
+import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -83,6 +89,60 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("x", "x"),
             new SelectorDimFilter("y", "wat", null)
         ).requiredFields()
+    );
+  }
+
+  @Test
+  public void testOptimizeForSegmentIntervalAllExcludedNoElseValue()
+  {
+    final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new LongSumAggregatorFactory("a", "a"),
+        new IntervalDimFilter(
+            ColumnHolder.TIME_COLUMN_NAME,
+            ImmutableList.of(Intervals.of("2050/2051")),
+            null
+        ),
+        "a",
+        null
+    );
+
+    final AggregatorFactory optimized = factory.optimizeForSegment(
+        new PerSegmentQueryOptimizationContext(
+            new SegmentDescriptor(Intervals.of("2000/2001"), "v", 0)
+        )
+    );
+
+    Assertions.assertEquals(new SuppressedAggregatorFactory(new LongSumAggregatorFactory("a", "a")), optimized);
+  }
+
+  @Test
+  public void testOptimizeForSegmentIntervalAllExcludedWithElseValue()
+  {
+    final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new LongSumAggregatorFactory("a", "a"),
+        new IntervalDimFilter(
+            ColumnHolder.TIME_COLUMN_NAME,
+            ImmutableList.of(Intervals.of("2050/2051")),
+            null
+        ),
+        "a",
+        0L
+    );
+
+    final AggregatorFactory optimized = factory.optimizeForSegment(
+        new PerSegmentQueryOptimizationContext(
+            new SegmentDescriptor(Intervals.of("2000/2001"), "v", 0)
+        )
+    );
+
+    Assertions.assertEquals(
+        new FilteredAggregatorFactory(
+            new LongSumAggregatorFactory("a", "a"),
+            FalseDimFilter.instance(),
+            "a",
+            0L
+        ),
+        optimized
     );
   }
 }
