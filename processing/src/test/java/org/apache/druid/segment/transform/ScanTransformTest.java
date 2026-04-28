@@ -115,9 +115,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of());
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("alice", result.get(0).getRaw("user"));
-    Assert.assertNull(result.get(0).getRaw("tag"));
+    // Empty array produces 0 rows, matching native CROSS JOIN UNNEST semantics
+    Assert.assertEquals(0, result.size());
   }
 
   @Test
@@ -127,10 +126,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "host", "web-01");
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("alice", result.get(0).getRaw("user"));
-    Assert.assertEquals("web-01", result.get(0).getRaw("host"));
-    Assert.assertNull(result.get(0).getRaw("svc"));
+    // Missing column produces 0 rows, matching native CROSS JOIN UNNEST semantics
+    Assert.assertEquals(0, result.size());
   }
 
   @Test
@@ -285,6 +282,35 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testNestedUnnestWithMissingOuterColumn()
+  {
+    final BaseTransformer transformer = new ScanTransformSpec(
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  UnnestDataSource.create(
+                      new TableDataSource("__input__"),
+                      new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                      null
+                  ),
+                  new ExpressionVirtualColumn("svc", "\"services\"", ColumnType.NESTED_DATA, ExprMacroTable.nil()),
+                  null
+              ))
+              .eternityInterval()
+              .columns((List<String>) null)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .build()
+    ).toTransformer();
+
+    // tags present (2 elements), services missing
+    final InputRow input = makeRow("trace_id", "abc", "tags", List.of("music", "blll"));
+    final List<InputRow> result = transformer.transformToList(input);
+
+    // Nested unnest is a cross join: tags x services. With services missing, the cross join
+    // produces 0 rows — matching native CROSS JOIN UNNEST semantics.
+    Assert.assertEquals(0, result.size());
+  }
+
+  @Test
   public void testNestedUnnestFlattensNestedArrays()
   {
     final BaseTransformer transformer = new ScanTransformSpec(
@@ -343,9 +369,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     ).toTransformer();
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b"));
     final List<InputRow> result = transformer.transformToList(input);
-    // Filter rejects the row (user != "not_alice"), so passthrough with no unnest
-    Assert.assertEquals(1, result.size());
-    Assert.assertNull(result.get(0).getRaw("tag"));
+    // Filter rejects the row (user != "not_alice"), so 0 rows — matching native scan query semantics
+    Assert.assertEquals(0, result.size());
   }
 
   @Test

@@ -30,7 +30,6 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowIdSupplier;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.ValueMatchers;
@@ -66,11 +65,6 @@ class SettableRowCursorFactory implements CursorFactory
   {
     this.currentRow = row;
     this.rowId++;
-  }
-
-  ColumnSelectorFactory getColumnSelectorFactory(final VirtualColumns virtualColumns)
-  {
-    return virtualColumns.wrap(baseSelectorFactory);
   }
 
   @Override

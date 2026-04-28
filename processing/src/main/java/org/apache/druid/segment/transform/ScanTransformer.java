@@ -62,8 +62,8 @@ import java.util.Set;
  * on the factory and the cursor is {@link Cursor#reset reset} — no per-row segment or cursor allocation.
  *
  * <p>When the scan query produces zero output rows (e.g., null/missing arrays, or filter rejection),
- * the input row passes through with unnest output columns set to null and virtual columns still evaluated.
- * This differs from {@link TransformSpec}'s filter behavior which drops the row entirely.
+ * the input row is dropped. This matches native Druid UNNEST / CROSS JOIN semantics where
+ * null or empty arrays produce zero rows.
  *
  * <p>This class is not thread-safe. Each reader thread should have its own instance.
  */
@@ -166,7 +166,7 @@ public class ScanTransformer implements BaseTransformer
     }
 
     if (cursor == null || cursor.isDone()) {
-      return List.of(buildPassthroughRow(inputRow));
+      return List.of();
     }
 
     final List<String> columns = resolveColumnsForRow(inputRow);
@@ -183,26 +183,7 @@ public class ScanTransformer implements BaseTransformer
       cursor.advance();
     }
 
-    return result.isEmpty() ? List.of(buildPassthroughRow(inputRow)) : result;
-  }
-
-  private InputRow buildPassthroughRow(final InputRow inputRow)
-  {
-    final Set<String> unnestOutputColumns = new LinkedHashSet<>();
-    collectOutputColumnNames(query.getDataSource(), unnestOutputColumns);
-
-    final List<String> columns = resolveColumnsForRow(inputRow);
-    final List<String> dimensionColumns = resolveDimensionColumns(inputRow, columns);
-    final ColumnSelectorFactory factory = baseCursorFactory.getColumnSelectorFactory(query.getVirtualColumns());
-    final Map<String, Object> event = new LinkedHashMap<>();
-    for (final String col : columns) {
-      if (unnestOutputColumns.contains(col)) {
-        event.put(col, null);
-      } else {
-        event.put(col, factory.makeColumnValueSelector(col).getObject());
-      }
-    }
-    return new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, event);
+    return result;
   }
 
   private List<String> resolveColumnsForRow(final InputRow inputRow)
