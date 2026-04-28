@@ -72,10 +72,10 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 {
   /**
    * alice: 2 tags x 2 services = 4, bob: 1 tag x 3 services = 3 = 7 unnested rows
-   * carol (null arrays) and dave (missing columns) each produce 1 passthrough row = 2
-   * total: 9
+   * carol (null arrays) and dave (missing columns) produce 0 rows (matching native CROSS JOIN UNNEST semantics)
+   * total: 7
    */
-  private static final int EXPECTED_ROWS = 9;
+  private static final int EXPECTED_ROWS = 7;
 
   private final KafkaResource kafka = new KafkaResource();
   private final EmbeddedBroker broker = new EmbeddedBroker();
@@ -271,9 +271,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
     final Set<String> expected = new TreeSet<>(List.of(
         "alice,news,2",      // news x 2 services (web, api)
         "alice,sports,2",    // sports x 2 services (web, api)
-        "bob,music,3",       // music x 3 services (cdn, cache, db)
-        "carol,,1",          // passthrough (null tag, null svc)
-        "dave,,1"            // passthrough (missing tag, missing svc)
+        "bob,music,3"        // music x 3 services (cdn, cache, db)
+        // carol and dave dropped: null/missing arrays produce 0 rows (CROSS JOIN UNNEST semantics)
     ));
     Assertions.assertEquals(expected, actual);
   }
@@ -312,7 +311,7 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
   public void test_groupByUser()
   {
     Assertions.assertEquals(
-        "alice,4\nbob,3\ncarol,1\ndave,1",
+        "alice,4\nbob,3",
         cluster.runSql(
             StringUtils.format(
                 "SELECT \"user\", COUNT(*) AS cnt FROM \"%s\" GROUP BY 1 ORDER BY 1",
@@ -383,7 +382,7 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         )
     );
     Assertions.assertEquals(
-        "ALICE,4\nBOB,3\nCAROL,1\nDAVE,1",
+        "ALICE,4\nBOB,3",
         result.trim()
     );
   }
