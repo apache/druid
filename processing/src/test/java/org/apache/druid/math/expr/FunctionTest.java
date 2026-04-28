@@ -1558,4 +1558,74 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
     Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
+
+  @Test
+  public void testNow()
+  {
+    long beforeCall = System.currentTimeMillis();
+
+    Expr expr = Parser.parse("now()", ExprMacroTable.nil());
+    ExprEval result = expr.eval(InputBindings.nilBindings());
+
+    long afterCall = System.currentTimeMillis();
+
+    Assert.assertNotNull(result.value());
+    Assert.assertEquals(ExpressionType.LONG, result.type());
+
+    long timestamp = result.asLong();
+    Assert.assertTrue(
+        "Timestamp should be between before and after: " + beforeCall + " <= " + timestamp + " <= " + afterCall,
+        timestamp >= beforeCall && timestamp <= afterCall
+    );
+  }
+
+  @Test
+  public void testNowEvaluatedPerRow()
+  {
+    Expr expr = Parser.parse("now()", ExprMacroTable.nil());
+
+    long time1 = expr.eval(InputBindings.nilBindings()).asLong();
+
+    try {
+      Thread.sleep(5);
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
+    long time2 = expr.eval(InputBindings.nilBindings()).asLong();
+
+    Assert.assertTrue(
+        "Second call should return same or later timestamp: " + time1 + " <= " + time2,
+        time2 >= time1
+    );
+  }
+
+  @Test
+  public void testNowRejectsArguments()
+  {
+    Throwable t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> Parser.parse("now(123)", ExprMacroTable.nil()).eval(InputBindings.nilBindings())
+    );
+    Assert.assertEquals("Function[now] does not accept arguments", t.getMessage());
+  }
+
+  @Test
+  public void testNowInExpression()
+  {
+    // Test using now() in a more complex expression
+    Expr expr = Parser.parse("now() - 1000", ExprMacroTable.nil());
+
+    long beforeCall = System.currentTimeMillis();
+    ExprEval result = expr.eval(InputBindings.nilBindings());
+    long afterCall = System.currentTimeMillis();
+
+    long computed = result.asLong();
+    Assert.assertTrue(
+        "Result should be approximately 1 second before now: computed=" + computed
+            + ", expected range=[" + (beforeCall - 1000) + ", " + (afterCall - 1000) + "]",
+        computed >= (beforeCall - 1100) && computed <= (afterCall - 900)
+    );
+  }
 }

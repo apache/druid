@@ -507,4 +507,54 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
     Assert.assertEquals(ImmutableList.of("a"), actualTranformedRow.getDimension("dim1"));
   }
+
+  @Test
+  public void testNowTransform()
+  {
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(
+            new ExpressionTransform("ingestion_time", "now()", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("lag_ms", "now() - __time", TestExprMacroTable.INSTANCE)
+        )
+    );
+
+    long beforeTransform = System.currentTimeMillis();
+
+    InputRow row = new MapBasedInputRow(
+        DateTimes.of("2024-01-01T00:00:00Z"),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", "value")
+    );
+
+    Transformer transformer = transformSpec.toTransformer();
+    InputRow transformed = transformer.transform(row);
+
+    long afterTransform = System.currentTimeMillis();
+
+    Assert.assertNotNull(transformed);
+    Assert.assertNotNull(transformed.getRaw("ingestion_time"));
+
+    long ingestionTime = ((Number) transformed.getRaw("ingestion_time")).longValue();
+    Assert.assertTrue(
+        "Ingestion time should be between transform start and end: "
+            + beforeTransform + " <= " + ingestionTime + " <= " + afterTransform,
+        ingestionTime >= beforeTransform && ingestionTime <= afterTransform
+    );
+
+    // Verify lag calculation (may be slightly different from ingestionTime - __time due to timing)
+    long lag = ((Number) transformed.getRaw("lag_ms")).longValue();
+    long eventTime = DateTimes.of("2024-01-01T00:00:00Z").getMillis();
+    long expectedLag = ingestionTime - eventTime;
+
+    // Allow small difference since now() is called twice (once for ingestion_time, once for lag_ms)
+    long lagDiff = Math.abs(lag - expectedLag);
+    Assert.assertTrue(
+        "Lag should be approximately correct (diff=" + lagDiff + "ms): expected=" + expectedLag + ", actual=" + lag,
+        lagDiff < 100  // Allow up to 100ms difference
+    );
+
+    // Verify lag is positive (ingestion happened after event)
+    Assert.assertTrue("Lag should be positive", lag > 0);
+  }
 }

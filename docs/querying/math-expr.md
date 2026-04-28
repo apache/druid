@@ -110,6 +110,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
+|now|now() returns the current system timestamp in milliseconds since epoch (1970-01-01 00:00:00 UTC). This function is evaluated for each row at processing time, making it ideal for capturing ingestion timestamps. Returns the same format as `__time`.|
 |timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milliseconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
 |unix_timestamp|same with 'timestamp' function but returns seconds instead |
 |timestamp_ceil|timestamp_ceil(expr, period, \[origin, \[timezone\]\]) rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|

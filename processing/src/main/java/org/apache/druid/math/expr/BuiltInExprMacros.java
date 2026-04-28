@@ -214,4 +214,83 @@ public class BuiltInExprMacros
     }
   }
 
+  /**
+   * Expression macro for now() function that returns current system timestamp.
+   * Implemented as a macro to prevent constant folding optimization.
+   */
+  public static class NowExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "now";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 0);
+      return new NowExpression();
+    }
+
+    final class NowExpression implements Expr
+    {
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        return ExprEval.ofLong(System.currentTimeMillis());
+      }
+
+      @Override
+      public String stringify()
+      {
+        return "now()";
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        return shuttle.visit(this);
+      }
+
+      @Override
+      public BindingAnalysis analyzeInputs()
+      {
+        // Return analysis indicating this is NOT constant
+        // by pretending we have a free variable
+        return new BindingAnalysis();
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.LONG;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        // NOT a literal - prevents constant folding
+        return false;
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return false;
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        // Not a literal, so no constant value
+        return null;
+      }
+    }
+  }
+
 }

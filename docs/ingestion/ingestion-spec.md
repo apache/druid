@@ -387,6 +387,52 @@ The `expression` is a [Druid query expression](../querying/math-expr.md).
  your ingestion spec.
 :::
 
+##### Example: Capturing Ingestion Time
+
+To track when Druid ingests each row, use the `now()` function:
+
+```json
+"transformSpec": {
+  "transforms": [
+    {
+      "type": "expression",
+      "name": "druid_ingestion_time",
+      "expression": "now()"
+    },
+    {
+      "type": "expression",
+      "name": "ingestion_lag_ms",
+      "expression": "now() - __time"
+    }
+  ]
+}
+```
+
+Add the ingestion timestamp as a dimension:
+
+```json
+"dimensionsSpec": {
+  "dimensions": [
+    "user",
+    "action",
+    {
+      "type": "long",
+      "name": "druid_ingestion_time"
+    },
+    {
+      "type": "long",
+      "name": "ingestion_lag_ms"
+    }
+  ]
+}
+```
+
+This enables you to:
+- Measure end-to-end latency from event time to ingestion
+- Track data freshness and SLA compliance
+- Debug pipeline delays
+- Distinguish fresh data from backfills or reprocessing
+
 #### Filter
 
 The `filter` conditionally filters input rows during ingestion. Only rows that pass the filter will be
