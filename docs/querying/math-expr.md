@@ -125,7 +125,7 @@ The following built-in functions are available.
 :::warning
 `now()` is non-deterministic: replicated streaming tasks and task replays evaluate it to different
 values, producing inconsistent results across replicas. Do not use `now()` to overwrite `__time`.
-For Kafka, prefer [`kafka.timestamp`](../ingestion/kafka-ingestion.md#kafka-input-format) as the
+For Kafka, prefer [`kafka.timestamp`](../ingestion/data-formats.md#kafka) as the
 `__time` source.
 :::
 
