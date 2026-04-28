@@ -1584,17 +1584,13 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     Expr expr = Parser.parse("now()", ExprMacroTable.nil());
 
+    // now() must not be treated as a literal, otherwise it would be constant-folded
+    // and not re-evaluated per row.
+    Assert.assertFalse(expr.isLiteral());
+    Assert.assertNull(expr.getLiteralValue());
+
     long time1 = expr.eval(InputBindings.nilBindings()).asLong();
-
-    try {
-      Thread.sleep(5);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
     long time2 = expr.eval(InputBindings.nilBindings()).asLong();
-
     Assert.assertTrue(
         "Second call should return same or later timestamp: " + time1 + " <= " + time2,
         time2 >= time1

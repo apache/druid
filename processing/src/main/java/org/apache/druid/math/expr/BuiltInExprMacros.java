@@ -235,7 +235,7 @@ public class BuiltInExprMacros
       return new NowExpression();
     }
 
-    final class NowExpression implements Expr
+    static final class NowExpression implements Expr
     {
       @Override
       public ExprEval eval(ObjectBinding bindings)
