@@ -335,10 +335,11 @@ must be tagged properly to make this script working. See the above [Release note
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+$ mvn -Pwebsite-docs -DreleaseVersion=37.0.0 -DdevelopmentVersion=38.0.0-SNAPSHOT -Dtag=druid-37.0.0-rc1 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+$ git push origin tag druid-37.0.0-rc1
 ```
 
-In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later. 
+In this example it will create a tag, `druid-37.0.0-rc1`. If this release passes vote then we can add the final `druid-37.0.0` release tag later. 
 We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
 
 
@@ -353,7 +354,7 @@ $ git clone git@github.com:apache/druid.git druid-release
 ### Switch to tag
 
 ```bash
-$ git checkout druid-0.17.0-rc3
+$ cd druid-release && git checkout druid-37.0.0-rc1
 ```
 
 ### Build Artifacts
@@ -365,12 +366,12 @@ $ mvn clean install -Papache-release,dist,rat -DskipTests -Dgpg.keyname=<your GP
 This should produce the following artifacts:
 
 ```plaintext
-apache-druid-0.17.0-bin.tar.gz
-apache-druid-0.17.0-bin.tar.gz.asc
-apache-druid-0.17.0-bin.tar.gz.sha512
-apache-druid-0.17.0-src.tar.gz
-apache-druid-0.17.0-src.tar.gz.asc
-apache-druid-0.17.0-src.tar.gz.sha512
+apache-druid-37.0.0-bin.tar.gz
+apache-druid-37.0.0-bin.tar.gz.asc
+apache-druid-37.0.0-bin.tar.gz.sha512
+apache-druid-37.0.0-src.tar.gz
+apache-druid-37.0.0-src.tar.gz.asc
+apache-druid-37.0.0-src.tar.gz.sha512
 ```
 
 Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/druid/KEYS.                                                                                               
@@ -378,18 +379,18 @@ Ensure that the GPG key fingerprint used in the `mvn install` command matches yo
 ### Verify checksums
 
 ```bash
-$ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-bin.tar.gz.sha512 ; echo)
+$ diff <(shasum -a512 apache-druid-37.0.0-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-37.0.0-bin.tar.gz.sha512 ; echo)
 ...
-$ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
+$ diff <(shasum -a512 apache-druid-37.0.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-37.0.0-src.tar.gz.sha512 ; echo)
 ...
 ```
 
 ### Verify GPG signatures
 
 ```bash
-$ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
+$ gpg --verify apache-druid-37.0.0-bin.tar.gz.asc apache-druid-37.0.0-bin.tar.gz
 ...
-$ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
+$ gpg --verify apache-druid-37.0.0-src.tar.gz.asc apache-druid-37.0.0-src.tar.gz
 ...
 ```
 
@@ -404,15 +405,16 @@ $ svn checkout https://dist.apache.org/repos/dist/dev/druid
 Copy the `src` and `bin` artifacts to a folder for the release version and add it to SVN and publish the artifacts:
 
 ```bash
-$ svn add 0.17.0-rc3
+$ cp ../druid-release/distribution/target/apache* ./37.0.0-rc1/.
+$ svn add 37.0.0-rc1
 ...
-$ svn commit -m 'add 0.17.0-rc3 artifacts'
+$ svn commit -m 'add 37.0.0-rc1 artifacts'
 ```
 
 > The commit might fail with the following message if the tarball exceeds 450MB in size (the current limit on the size of a single commit). If this happens, ensure that the tar does not include any superfluous dependencies. If the size is still not within 450MB, raise a ticket with asfinfra to increase the limit.
 > ```
-> $ svn commit -m 'add 0.17.0-rc3 artifacts'
-> Adding  (bin)  apache-druid-25.0.0-bin.tar.gz
+> $ svn commit -m 'add 37.0.0-rc1 artifacts'
+> Adding  (bin)  apache-druid-37.0.0-bin.tar.gz
 > Transmitting file data .svn: E175002: Commit failed (details follow):
 > svn: E175002: PUT request on '/repos/dist/!svn/txr/58803-1dhj/dev/druid/25.0.0-rc1/apache-druid-25.0.0-bin.tar.gz' failed
 > ```
@@ -429,7 +431,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
 
 2. From `druid-website`, checkout a staging branch based off of the `asf-staging` branch.
 
-3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-staging`.
+3. From `druid-website-src`, create a release branch from `master`, such as `37.0.0-staging`.
    1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. If this is a patch release, replace the prior release of that version. For example, replace `27.0.0` with `27.0.1`. Don't add a new entry. 
    2. In this file, also update the release date. This is a placeholder date since the final date isn't decided until voting completes. You'll need to update it again before doing the production steps.
    3. In `scripts`, run: 
@@ -438,7 +440,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
    # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
    # The script assumes you use `npm`. If you use `yarn`, include `--yarn`.
 
-   python do_all_things.py -v VERSION --source /my/path/to/apache/druid
+   python do_all_things.py -v VERSION --source /my/path/to/apache/druid-release
    ```
    
 
@@ -479,7 +481,7 @@ provider inserts linebreaks beyond a certain length.
 ##### Subject
 
 ```plaintext
-[VOTE] Release Apache Druid 35.0.0 [RC1]
+[VOTE] Release Apache Druid 37.0.0 [RC2]
 ```
 
 ##### Body
@@ -487,33 +489,33 @@ provider inserts linebreaks beyond a certain length.
 ```plaintext
 Hi all,
 
-I have created a build for Apache Druid 35.0.0, release candidate 1.
+I have created a build for Apache Druid 37.0.0, release candidate 2.
 
 Thanks to everyone who has helped contribute to the release! You can read the proposed release notes here:
-https://github.com/apache/druid/issues/18630
+https://github.com/apache/druid/issues/19287
 
-The release candidate has been tagged in GitHub as druid-35.0.0-rc1 (f6712c6694a2b95961607c3ceac0123418641d40), 
-available here: https://github.com/apache/druid/releases/tag/druid-35.0.0-rc1
+The release candidate has been tagged in GitHub as druid-37.0.0-rc2 (b206640c830bc2c3bdc2867cfb317c902a0e1acb), 
+available here: https://github.com/apache/druid/releases/tag/druid-37.0.0-rc2
 
 The artifacts to be voted on are located here:
-https://dist.apache.org/repos/dist/dev/druid/35.0.0-rc1/
+https://dist.apache.org/repos/dist/dev/druid/37.0.0-rc2/
 
 A staged Maven repository is available for review at:
-https://repository.apache.org/content/repositories/orgapachedruid-1091/
+https://repository.apache.org/content/repositories/orgapachedruid-1098/
 
 Staged druid.apache.org website documentation is available here:
-https://druid.staged.apache.org/docs/35.0.0/design/index.html
+https://druid.staged.apache.org/docs/37.0.0/design/index.html
 
 A Docker image containing the binary of the release candidate can be retrieved via:
-docker pull apache/druid:35.0.0-rc1
+docker pull apache/druid:37.0.0-rc2
 
 artifact checksums
 src:
-831c273d3c9806d2e73a8f216a29b33a4a10eed12f812258b01d0d1cb063d96806b420cd758dda8641beaf7e813855dafb676bfb1c706391a69ad524a16fe45c
+f0ba5dbd3897b61d8956b5e9d1075d3f1681ff6905db505ac674c8f5b5bc899876cc3fee52b1799323a4fff8282d61d693dfef15d037cab656945952c2abefa2
 bin:
-28d9efef40d3e9e4328694bbb9fb449f19470b77c859d3cf83a0e475b6bd5f0dd0e8c9fe596e0801cf9105f2daf424ed3f136b9209d70a434bc6b43dc4d441cf
-docker: 
-1c48677ee8a8dc633edcc5f2b29393a09b35d0e5f065cf2863872c02c47485b3
+ba2f23755676a057df93e6ceb5cc9d158d1b0c8f693a9b189d7048c57aea161773b039076bfeb5d2eb1bc1cd318d8f80a5030bcb6ab7deaf30ba8b019cfb57be
+docker:
+15be98e21ac7c63cab1a60d26a0499c362173970e38046ae73624e01ae387641
 
 Release artifacts are signed with the following key:
 https://people.apache.org/keys/committer/yqm.asc
@@ -524,16 +526,16 @@ https://dist.apache.org/repos/dist/release/druid/KEYS
 (If you are a committer, please feel free to add your own key to that file by following the instructions in the file's header.)
 
 Verify checksums:
-diff <(shasum -a512 apache-druid-35.0.0-src.tar.gz | cut -d ' ' -f1) \
-<(cat apache-druid-35.0.0-src.tar.gz.sha512 ; echo)
+diff <(shasum -a512 apache-druid-37.0.0-src.tar.gz | cut -d ' ' -f1) \
+<(cat apache-druid-37.0.0-src.tar.gz.sha512 ; echo)
 
-diff <(shasum -a512 apache-druid-35.0.0-bin.tar.gz | cut -d ' ' -f1) \
-<(cat apache-druid-35.0.0-bin.tar.gz.sha512 ; echo)
+diff <(shasum -a512 apache-druid-37.0.0-bin.tar.gz | cut -d ' ' -f1) \
+<(cat apache-druid-37.0.0-bin.tar.gz.sha512 ; echo)
 
 Verify signatures:
-gpg --verify apache-druid-35.0.0-src.tar.gz.asc apache-druid-35.0.0-src.tar.gz
+gpg --verify apache-druid-37.0.0-src.tar.gz.asc apache-druid-37.0.0-src.tar.gz
 
-gpg --verify apache-druid-35.0.0-bin.tar.gz.asc apache-druid-35.0.0-bin.tar.gz
+gpg --verify apache-druid-37.0.0-bin.tar.gz.asc apache-druid-37.0.0-bin.tar.gz
 
 Please review the proposed artifacts and vote. 
 Note that Apache has specific requirements that must be met before +1 binding votes can be cast by PMC members. 
@@ -547,7 +549,7 @@ mvn apache-rat:check -Prat
 
 This vote will be open for at least 72 hours. The vote will pass if a majority of at least three +1 PMC votes are cast.
 
-[ ] +1 Release this package as Apache Druid 35.0.0
+[ ] +1 Release this package as Apache Druid 37.0.0
 [ ] 0 I don't feel strongly about it, but I'm okay with the release
 [ ] -1 Do not release this package because...
 
@@ -589,7 +591,7 @@ Once the Druid community vote passes (or fails), close the vote with a thread li
 ##### Subject
 
 ```plaintext
-[RESULT][VOTE] Release Apache Druid 35.0.0 [RC1]
+[RESULT][VOTE] Release Apache Druid 37.0.0 [RC1]
 ```
 
 ##### Body
@@ -629,9 +631,9 @@ Once a release candidate has passed the Druid PMC vote, you'll need to do the fo
 Tag the rc that passed vote as the release tag and push to github.
 
 ```bash
-$ git checkout druid-35.0.0-rc1
-$ git tag druid-35.0.0
-$ git push origin tag druid-35.0.0
+$ git checkout druid-37.0.0-rc1
+$ git tag druid-37.0.0
+$ git push origin tag druid-37.0.0
 ```
 
 ### Publish release artifacts to SVN
@@ -641,11 +643,11 @@ The final release artifacts are kept in the `https://dist.apache.org/repos/dist/
 Use `svn mv` to publish the release artifacts as below:
 
 ```bash
-$ svn mv https://dist.apache.org/repos/dist/dev/druid/35.0.0-rc1 https://dist.apache.org/repos/dist/release/druid/35.0.0 -m 'add 35.0.0 artifacts'
+$ svn mv https://dist.apache.org/repos/dist/dev/druid/37.0.0-rc1 https://dist.apache.org/repos/dist/release/druid/37.0.0 -m 'add 37.0.0 artifacts'
 ```
 
 Replace the versions of the release candidate and the release with the ones you are currently working on. This command will drop those artifacts from the dev repo but add them to the release repo.
-Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/35.0.0`.
+Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/37.0.0`.
 
 ### Publish the staged Maven repo
 Returning to the staged repo you created for the Druid PMC vote ( https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
