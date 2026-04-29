@@ -134,6 +134,69 @@ public class WildcardProjectionPartialLoadMatcherTest
   }
 
   @Test
+  void testMatchSuffixGlob()
+  {
+    // Wildcard at the start of the pattern: anchors enforced by full-string match.
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("*_daily"),
+        null
+    );
+    DataSegment segment = segmentWithProjections(List.of("user_daily", "session_daily", "user_hourly"));
+    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(
+        List.of("session_daily", "user_daily"),
+        result.wrappedLoadSpec().get("projections")
+    );
+  }
+
+  @Test
+  void testMatchMidStringGlob()
+  {
+    // Wildcard between two literal fragments: full-string match required on both ends.
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("user_*_v2"),
+        null
+    );
+    DataSegment segment = segmentWithProjections(
+        List.of("user_daily_v2", "user_hourly_v2", "user_daily", "session_daily_v2")
+    );
+    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(
+        List.of("user_daily_v2", "user_hourly_v2"),
+        result.wrappedLoadSpec().get("projections")
+    );
+  }
+
+  @Test
+  void testMatchIsCaseSensitive()
+  {
+    // matching is case-sensitive
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("User_*"),
+        null
+    );
+    DataSegment segment = segmentWithProjections(List.of("user_daily", "User_daily"));
+    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of("User_daily"), result.wrappedLoadSpec().get("projections"));
+  }
+
+  @Test
+  void testMatchReturnsNullWhenNoPatternsHit()
+  {
+    // Segment has projections but none match any configured pattern: distinct code path from the
+    // projection-agnostic-segment short-circuit.
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("user_*"),
+        null
+    );
+    DataSegment segment = segmentWithProjections(List.of("session_daily", "session_hourly", "other"));
+    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+  }
+
+  @Test
   void testMultiplePatternsUnioned()
   {
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
@@ -285,6 +348,25 @@ public class WildcardProjectionPartialLoadMatcherTest
     );
     DataSegment segment = segmentWithProjections(
         List.of("user_daily", "user_hourly", "session_daily", "other")
+    );
+    PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(
+        List.of("other", "session_daily"),
+        result.wrappedLoadSpec().get("projections")
+    );
+  }
+
+  @Test
+  void testMultipleExcludePatternsUnioned()
+  {
+    // Multiple excludePatterns are OR'd: a name matching any one of them is excluded.
+    WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
+        List.of("*"),
+        List.of("user_*", "session_temp_*")
+    );
+    DataSegment segment = segmentWithProjections(
+        List.of("user_daily", "session_temp_x", "session_daily", "other")
     );
     PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
     Assertions.assertNotNull(result);
