@@ -74,7 +74,7 @@ public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
   {
     final Hasher hasher = Hashing.sha256().newHasher();
     for (String name : sortedDedupedNames) {
-      hasher.putString(name, StandardCharsets.UTF_8);
+      hasher.putUnencodedChars(name);
       hasher.putByte((byte) 0);
     }
     final String hex = BaseEncoding.base16().encode(hasher.hash().asBytes()).toLowerCase(Locale.ROOT);
