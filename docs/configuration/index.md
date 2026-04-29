@@ -154,7 +154,6 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.zk.paths.base`|Base ZooKeeper path.|`/druid`|
-|`druid.zk.paths.announcementsPath`|Druid service announcement path.|`${druid.zk.paths.base}/announcements`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
 
 The indexing service also uses its own set of paths. These configs can be included in the common configuration.
@@ -167,7 +166,7 @@ The indexing service also uses its own set of paths. These configs can be includ
 |`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|`${druid.zk.paths.indexer.base}/status`|
 
 If `druid.zk.paths.base` and `druid.zk.paths.indexer.base` are both set, and none of the other `druid.zk.paths.*` or `druid.zk.paths.indexer.*` values are set, then the other properties will be evaluated relative to their respective `base`.
-For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.announcementsPath` will default to `/druid1/announcements` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
+For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.coordinatorPath` will default to `/druid1/coordinator` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
 
 The following path is used for service discovery. It is **not** affected by `druid.zk.paths.base` and **must** be specified separately.
 

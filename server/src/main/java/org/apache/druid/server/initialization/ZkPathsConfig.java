@@ -27,18 +27,11 @@ public class ZkPathsConfig
   @JsonProperty
   private String base = "druid";
   @JsonProperty
-  private String announcementsPath;
-  @JsonProperty
   private String coordinatorPath;
 
   public String getBase()
   {
     return base;
-  }
-
-  public String getAnnouncementsPath()
-  {
-    return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
   }
 
   public String getCoordinatorPath()
@@ -75,7 +68,6 @@ public class ZkPathsConfig
     }
     ZkPathsConfig otherConfig = (ZkPathsConfig) other;
     return this.getBase().equals(otherConfig.getBase()) &&
-        this.getAnnouncementsPath().equals(otherConfig.getAnnouncementsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath());
   }
 
@@ -83,7 +75,6 @@ public class ZkPathsConfig
   public int hashCode()
   {
     int result = base != null ? base.hashCode() : 0;
-    result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
     result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
     return result;
   }

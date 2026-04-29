@@ -58,16 +58,10 @@ ${druid.zk.paths.overlordPath}/_OVERLORD
 
 ## Service announcement and discovery
 
-All Druid services publish their presence by creating an ephemeral znode at
-
-```
-${druid.zk.paths.announcementsPath}/${druid.host}
-```
-
-In addition, each service announces a richer `DruidNode` record (host, port, role, services) under the internal-discovery path, so that other services can enumerate cluster members by role:
+Each Druid service announces a `DruidNode` record (host, port, role, services) under the internal-discovery path so that other services can enumerate cluster members by role:
 
 ```
 ${druid.zk.paths.base}/internal-discovery/${nodeRole}/${druid.host}
 ```
 
-Brokers and Coordinators use this internal-discovery path to find Historicals, Peons, and Indexers. They then poll each discovered service's HTTP `/druid-internal/v1/segments` endpoint to get its current set of served segments.
+Brokers and Coordinators use this path to find Historicals, Peons, and Indexers. They then poll each discovered service's HTTP `/druid-internal/v1/segments` endpoint to get its current set of served segments.
