@@ -28,7 +28,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -40,21 +39,23 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Cost-based auto-scaler for seekable stream supervisors.
- * Uses a weighted cost function combining lag recovery time (seconds) and idleness cost (seconds)
+ * Uses a weighted cost function combining lag recovery time and idle-ratio cost
  * to determine optimal task counts.
  * <p>
- * Candidate task counts are derived by scanning a bounded window of partitions-per-task (PPT) values
- * around the current PPT, then converting those to task counts. This allows non-divisor task counts
- * while keeping changes gradual (no large jumps).
+ * Candidate task counts are derived from possible partitions-per-task ratios, then converted
+ * to task counts. When configured, scale-up and scale-down can independently limit the evaluated
+ * candidates to a small window around the current task count to avoid large jumps.
  * <p>
- * Scale-up and scale-down are both evaluated proactively.
- * Future versions may perform scale-down on task rollover only.
+ * Scale-up is applied during regular scale-action checks. Scale-down is applied during regular
+ * checks unless {@link CostBasedAutoScalerConfig#isScaleDownOnTaskRolloverOnly()} defers it
+ * to task rollover.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
@@ -65,21 +66,17 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
 
-  static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
-  static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+  /**
+   * Maximum number of candidate task counts to evaluate above or below the current task count
+   * when scale-up or scale-down boundaries are enabled.
+   */
+  static final int BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK = 2;
 
   /**
-   * If average partition lag crosses this value and the processing rate is
+   * If the average partition lag crosses this value and the processing rate is
    * still zero, scaling actions are skipped and an alert is raised.
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
-
-  /**
-   * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
-   * This controls how aggressive the scaling is relative to partition count.
-   * That value was chosen by carefully analyzing the math model behind the implementation.
-   */
-  static final double K_PARTITION_DIVISOR = 6.4;
 
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
@@ -89,8 +86,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
   private volatile CostMetrics lastKnownMetrics;
-
-  private volatile long lastScaleActionTimeMillis = -1;
 
   public CostBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
@@ -179,7 +174,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
     // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
     final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
-                                     || currentTaskCount > config.getTaskCountMax();
+                                           || currentTaskCount > config.getTaskCountMax();
     if (isTaskCountOutOfBounds) {
       currentTaskCount = Math.min(config.getTaskCountMax(), Math.max(config.getTaskCountMin(), currentTaskCount));
     }
@@ -189,22 +184,30 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     // If task count is out of bounds, scale to the configured boundary
     // regardless of optimal task count, to get back to a safe state.
-    if (isScaleActionAllowed() && isTaskCountOutOfBounds) {
+    if (isTaskCountOutOfBounds) {
       taskCount = currentTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
-               supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount);
-    } else if (isScaleActionAllowed() && optimalTaskCount > currentTaskCount) {
+      log.info(
+          "Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
+          supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount
+      );
+    } else if (optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).", supervisorId, currentTaskCount, taskCount);
+      log.info(
+          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).",
+          supervisorId,
+          currentTaskCount,
+          taskCount
+      );
     } else if (!config.isScaleDownOnTaskRolloverOnly()
-               && isScaleActionAllowed()
                && optimalTaskCount < currentTaskCount
                && optimalTaskCount > 0) {
       taskCount = optimalTaskCount;
-      lastScaleActionTimeMillis = DateTimes.nowUtc().getMillis();
-      log.info("Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).", supervisorId, currentTaskCount, taskCount);
+      log.info(
+          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).",
+          supervisorId,
+          currentTaskCount,
+          taskCount
+      );
     } else {
       taskCount = -1;
       log.debug("No scaling required for supervisor[%s]", supervisorId);
@@ -244,7 +247,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *   <li>Current task count already optimal</li>
    * </ul>
    *
-   * @return optimal task count for scale-up, or -1 if no scaling action needed
+   * @return optimal task count, or -1 if no scaling action is needed
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -268,11 +271,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
         partitionCount,
         currentTaskCount,
-        (long) metrics.getAggregateLag(),
         config.getTaskCountMin(),
-        config.getTaskCountMax(),
-        config.shouldUseTaskCountBoundaries(),
-        config.getHighLagThreshold()
+        config.getTaskCountMax()
     );
 
     if (validTaskCounts.length == 0) {
@@ -297,9 +297,28 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         config.getIdleWeight()
     );
 
-    // Find the task count which reduces cost
+    // Find the evaluated task count with the lowest cost.
     final CostResult[] costResults = new CostResult[validTaskCounts.length];
-    for (int i = 0; i < validTaskCounts.length; ++i) {
+    Arrays.fill(costResults, CostResult.INFINITE_COST);
+
+    int startIndex = 0;
+    int endIndex = validTaskCounts.length - 1;
+
+    if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
+      int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
+      endIndex = currentTaskCountIndex >= 0
+                 ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
+                 : endIndex;
+    }
+
+    if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
+      int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
+      startIndex = currentTaskCountIndex >= 0
+                   ? Math.max(currentTaskCountIndex - BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
+                   : startIndex;
+    }
+
+    for (int i = startIndex; i <= endIndex; ++i) {
       final int taskCount = validTaskCounts[i];
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
@@ -324,24 +343,22 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       );
     }
 
-    // Scale up is performed eagerly.
+    // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
     return optimalTaskCount;
   }
 
   /**
-   * Generates valid task counts based on partitions-per-task ratios.
+   * Generates valid task counts by converting every possible partitions-per-task ratio
+   * into a task count and filtering by configured min/max task count bounds.
    *
-   * @return sorted list of valid task counts within bounds
+   * @return list of valid task counts within bounds
    */
   @SuppressWarnings({"ReassignedVariable"})
   static int[] computeValidTaskCounts(
       int partitionCount,
       int currentTaskCount,
-      double aggregateLag,
       int taskCountMin,
-      int taskCountMax,
-      boolean isTaskCountBoundariesEnabled,
-      int highLagThreshold
+      int taskCountMax
   )
   {
     if (partitionCount <= 0 || currentTaskCount <= 0) {
@@ -349,32 +366,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     IntSet result = new IntArraySet();
-    final int currentPartitionsPerTask = partitionCount / currentTaskCount;
 
     // Minimum partitions per task correspond to the maximum number of tasks (scale up) and vice versa.
     int minPartitionsPerTask = Math.min(1, partitionCount / taskCountMax);
     int maxPartitionsPerTask = Math.max(partitionCount, partitionCount / taskCountMin);
-
-    if (isTaskCountBoundariesEnabled) {
-      maxPartitionsPerTask = Math.min(
-          partitionCount,
-          currentPartitionsPerTask + MAX_DECREASE_IN_PARTITIONS_PER_TASK
-      );
-
-      int extraIncrease = 0;
-      if (highLagThreshold > 0) {
-        extraIncrease = computeExtraPPTIncrease(
-            highLagThreshold,
-            aggregateLag,
-            partitionCount,
-            currentTaskCount,
-            taskCountMax
-        );
-      }
-      int effectiveMaxIncrease = MAX_INCREASE_IN_PARTITIONS_PER_TASK + extraIncrease;
-      minPartitionsPerTask = Math.max(minPartitionsPerTask, currentPartitionsPerTask - effectiveMaxIncrease);
-    }
-
     for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask
                                                        && partitionsPerTask != 0; partitionsPerTask--) {
       final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
@@ -383,50 +378,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
     return result.toIntArray();
-  }
-
-  /**
-   * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
-   * is above the configured threshold.
-   * <p>
-   * This uses a logarithmic formula for consistent absolute growth:
-   * {@code deltaTasks = K * ln(lagSeverity)}
-   * where {@code K = (partitionCount / 6.4) / sqrt(currentTaskCount)}
-   * <p>
-   * This ensures that small taskCount's get a massive relative boost,
-   * while large taskCount's receive more measured, stable increases.
-   */
-  static int computeExtraPPTIncrease(
-      double lagThreshold,
-      double aggregateLag,
-      int partitionCount,
-      int currentTaskCount,
-      int taskCountMax
-  )
-  {
-    if (partitionCount <= 0 || taskCountMax <= 0 || currentTaskCount <= 0) {
-      return 0;
-    }
-
-    final double lagPerPartition = aggregateLag / partitionCount;
-    if (lagPerPartition < lagThreshold) {
-      return 0;
-    }
-
-    final double lagSeverity = lagPerPartition / lagThreshold;
-
-    // Logarithmic growth: ln(lagSeverity) is positive when lagSeverity > 1
-    // First multoplier decreases with sqrt(currentTaskCount): aggressive when small, conservative when large
-    final double deltaTasks = (partitionCount / K_PARTITION_DIVISOR) / Math.sqrt(currentTaskCount) * Math.log(
-        lagSeverity);
-
-    final double targetTaskCount = Math.min(taskCountMax, (double) currentTaskCount + deltaTasks);
-
-    // Compute precise PPT reduction to avoid early integer truncation artifacts
-    final double currentPPT = (double) partitionCount / currentTaskCount;
-    final double targetPPT = (double) partitionCount / targetTaskCount;
-
-    return Math.max(0, (int) Math.floor(currentPPT - targetPPT));
   }
 
   /**
@@ -594,22 +545,4 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
-  /**
-   * Determines if a scale action is currently allowed based on the elapsed time
-   * since the last scale action and the configured minimum scale-down delay.
-   */
-  private boolean isScaleActionAllowed()
-  {
-    if (lastScaleActionTimeMillis < 0) {
-      return true;
-    }
-
-    final long barrierMillis = config.getMinScaleDownDelay().getMillis();
-    if (barrierMillis <= 0) {
-      return true;
-    }
-
-    final long elapsedMillis = DateTimes.nowUtc().getMillis() - lastScaleActionTimeMillis;
-    return elapsedMillis >= barrierMillis;
-  }
 }

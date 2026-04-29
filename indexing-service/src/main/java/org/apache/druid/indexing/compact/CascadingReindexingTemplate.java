@@ -354,7 +354,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    for (IntervalPartitioningInfo intervalInfo : searchIntervals) {
+    for (int i = 0; i < searchIntervals.size(); i++) {
+      IntervalPartitioningInfo intervalInfo = searchIntervals.get(i);
       Interval reindexingInterval = intervalInfo.getInterval();
 
       if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
@@ -363,14 +364,24 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         continue;
       }
 
-      // Skip intervals that extend past the skip offset boundary (not just data boundary)
-      // This preserves granularity alignment and ensures intervals exist in synthetic timeline
-      // Only apply this when a skip offset is actually configured
+      // Skip offsets, if configured, can result in needing to truncate a search interval. If the truncation makes the interval invalid, skip it.
       if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
           intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
-        LOG.debug("Search interval[%s] extends past skip offset boundary[%s], skipping to preserve alignment",
-                  reindexingInterval, adjustedTimelineInterval.getEnd());
-        continue;
+
+        DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(adjustedTimelineInterval.getEnd());
+        if (!alignedEnd.isAfter(reindexingInterval.getStart())) {
+          LOG.debug("Search interval[%s] is entirely within skip offset, skipping", reindexingInterval);
+          continue;
+        }
+        reindexingInterval = new Interval(reindexingInterval.getStart(), alignedEnd);
+        // Replace the entry in searchIntervals so the downstream synthetic-timeline lookup
+        // in ReindexingConfigBuilder matches the truncated interval.
+        intervalInfo = new IntervalPartitioningInfo(
+            reindexingInterval,
+            intervalInfo.getSourceRule(),
+            intervalInfo.isRuleSynthetic()
+        );
+        searchIntervals.set(i, intervalInfo);
       }
 
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
