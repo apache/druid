@@ -63,7 +63,7 @@ public class Projections
       throw InvalidInput.exception("projection name cannot be null or empty");
     }
     if (name.startsWith("__")) {
-      throw InvalidInput.exception("projection cannot use reserved name[%s]", BASE_TABLE_PROJECTION_NAME);
+      throw InvalidInput.exception("projection cannot use reserved name[%s], names cannot start with '__'", name);
     }
     return name;
   }
