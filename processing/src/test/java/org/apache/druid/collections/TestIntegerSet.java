@@ -25,8 +25,8 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.WrappedBitSetBitmap;
 import org.apache.druid.collections.bitmap.WrappedConciseBitmap;
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -48,7 +48,7 @@ public class TestIntegerSet
     IntSetTestUtility.addAllToMutable(wrappedBitSetBitmapBitSet, IntSetTestUtility.getSetBits());
     IntegerSet integerSet = IntegerSet.wrap(wrappedBitSetBitmapBitSet);
 
-    Assert.assertTrue(Sets.difference(integerSet, IntSetTestUtility.getSetBits()).isEmpty());
+    Assertions.assertTrue(Sets.difference(integerSet, IntSetTestUtility.getSetBits()).isEmpty());
   }
 
   @Test
@@ -63,10 +63,10 @@ public class TestIntegerSet
       set.add(999);
       integerSet.add(999);
 
-      Assert.assertTrue(Sets.difference(integerSet, set).isEmpty());
+      Assertions.assertTrue(Sets.difference(integerSet, set).isEmpty());
 
       integerSet.add(58577);
-      Assert.assertFalse(Sets.difference(integerSet, set).isEmpty());
+      Assertions.assertFalse(Sets.difference(integerSet, set).isEmpty());
     }
   }
 
@@ -79,10 +79,10 @@ public class TestIntegerSet
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
 
       Set<Integer> set = IntSetTestUtility.getSetBits();
-      Assert.assertTrue(integerSet.containsAll(set));
+      Assertions.assertTrue(integerSet.containsAll(set));
 
       set.add(999);
-      Assert.assertFalse(integerSet.containsAll(set));
+      Assertions.assertFalse(integerSet.containsAll(set));
     }
   }
 
@@ -98,7 +98,7 @@ public class TestIntegerSet
 
       integerSet.removeAll(set);
       boolean isEmpty = integerSet.isEmpty();
-      Assert.assertTrue(isEmpty);
+      Assertions.assertTrue(isEmpty);
     }
   }
 
@@ -115,7 +115,7 @@ public class TestIntegerSet
       integerSet.remove(1);
       set.remove(1);
 
-      Assert.assertTrue(Sets.difference(set, integerSet).isEmpty());
+      Assertions.assertTrue(Sets.difference(set, integerSet).isEmpty());
     }
   }
 
@@ -128,14 +128,14 @@ public class TestIntegerSet
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
 
-      Assert.assertFalse(integerSet.isEmpty());
+      Assertions.assertFalse(integerSet.isEmpty());
 
       integerSet.clear();
 
-      Assert.assertTrue(integerSet.isEmpty());
+      Assertions.assertTrue(integerSet.isEmpty());
 
       integerSet.add(1);
-      Assert.assertFalse(integerSet.isEmpty());
+      Assertions.assertFalse(integerSet.isEmpty());
     }
   }
 
@@ -149,7 +149,7 @@ public class TestIntegerSet
 
       Set<Integer> set = IntSetTestUtility.getSetBits();
 
-      Assert.assertEquals(set.size(), integerSet.size());
+      Assertions.assertEquals(set.size(), integerSet.size());
     }
   }
 
@@ -174,7 +174,7 @@ public class TestIntegerSet
       catch (UnsupportedOperationException ex) {
         threwError = true;
       }
-      Assert.assertTrue(threwError);
+      Assertions.assertTrue(threwError);
     }
   }
 
@@ -192,7 +192,7 @@ public class TestIntegerSet
       catch (IllegalArgumentException ex) {
         e = ex;
       }
-      Assert.assertNotNull(e);
+      Assertions.assertNotNull(e);
     }
   }
 
@@ -204,7 +204,7 @@ public class TestIntegerSet
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
       Set<Integer> set = Sets.newHashSet((Integer[]) integerSet.toArray());
-      Assert.assertTrue(Sets.difference(integerSet, set).isEmpty());
+      Assertions.assertTrue(Sets.difference(integerSet, set).isEmpty());
     }
   }
 
@@ -217,7 +217,7 @@ public class TestIntegerSet
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
       Set<Integer> set = Sets.newHashSet((Integer[]) integerSet.toArray(new Integer[0]));
-      Assert.assertTrue(Sets.difference(integerSet, set).isEmpty());
+      Assertions.assertTrue(Sets.difference(integerSet, set).isEmpty());
     }
   }
 
@@ -233,7 +233,7 @@ public class TestIntegerSet
       Integer[] bigArray = new Integer[1024];
       integerSet.toArray(bigArray);
       Set<Integer> set = Sets.newHashSet(bigArray);
-      Assert.assertTrue(Sets.difference(integerSet, set).isEmpty());
+      Assertions.assertTrue(Sets.difference(integerSet, set).isEmpty());
     }
   }
 }

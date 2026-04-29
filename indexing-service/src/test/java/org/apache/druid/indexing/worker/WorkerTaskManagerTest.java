@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -115,10 +116,15 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    return createWorkerTaskManager(FileUtils.createTempDir());
+    return createWorkerTaskManager(FileUtils.createTempDir(), new WorkerConfig());
   }
 
   private WorkerTaskManager createWorkerTaskManager(File baseDir)
+  {
+    return createWorkerTaskManager(baseDir, new WorkerConfig());
+  }
+
+  private WorkerTaskManager createWorkerTaskManager(File baseDir, WorkerConfig workerConfig)
   {
     TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(baseDir.toString())
@@ -185,6 +191,7 @@ public class WorkerTaskManagerTest
             location
         ),
         taskConfig,
+        workerConfig,
         overlordClient
     )
     {
@@ -625,5 +632,60 @@ public class WorkerTaskManagerTest
 
     workerTaskManager.start();
     Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+  }
+
+  @Test
+  public void test_startAlwaysEnabled_ignoresAndDeletesPersistedDisabledState() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final File baseTaskDir = FileUtils.createTempDir();
+
+    workerTaskManager = createWorkerTaskManager(baseTaskDir);
+    workerTaskManager.start();
+    workerTaskManager.workerDisabled();
+    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assert.assertTrue(workerTaskManager.getStateFile().exists());
+    workerTaskManager.stop();
+
+    final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
+        .setStartAlwaysEnabled(true)
+        .build();
+    workerTaskManager = createWorkerTaskManager(baseTaskDir, workerConfig);
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assert.assertFalse(workerTaskManager.getStateFile().exists());
+  }
+
+  @Test
+  public void test_startAlwaysEnabled_doesNotCreateStateFileWhenAbsent() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
+        .setStartAlwaysEnabled(true)
+        .build();
+    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager.start();
+    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assert.assertFalse(workerTaskManager.getStateFile().exists());
+  }
+
+  @Test
+  public void test_startAlwaysEnabled_runtimeDisableStillPersistsToStateFile() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
+        .setStartAlwaysEnabled(true)
+        .build();
+    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager.start();
+    workerTaskManager.workerDisabled();
+    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assert.assertTrue(workerTaskManager.getStateFile().exists());
   }
 }

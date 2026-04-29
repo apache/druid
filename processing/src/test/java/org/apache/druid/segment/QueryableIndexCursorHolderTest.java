@@ -43,8 +43,8 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
@@ -90,52 +90,52 @@ public class QueryableIndexCursorHolderTest
       }
     };
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         QueryableIndexCursorHolder.timeSearch(column, 0, 0, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2,
         QueryableIndexCursorHolder.timeSearch(column, 0, 2, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         QueryableIndexCursorHolder.timeSearch(column, 0, 0, values.length / 2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         QueryableIndexCursorHolder.timeSearch(column, 1, 0, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2,
         QueryableIndexCursorHolder.timeSearch(column, 1, 2, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         QueryableIndexCursorHolder.timeSearch(column, 1, 0, values.length / 2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         QueryableIndexCursorHolder.timeSearch(column, 1, 1, 8)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         8,
         QueryableIndexCursorHolder.timeSearch(column, 2, 0, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         10,
         QueryableIndexCursorHolder.timeSearch(column, 10, 0, values.length)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         11,
         QueryableIndexCursorHolder.timeSearch(column, 15, 0, values.length)
     );
@@ -227,7 +227,7 @@ public class QueryableIndexCursorHolderTest
           rowCount++;
           cursor.advance();
         }
-        Assert.assertEquals(2, rowCount);
+        Assertions.assertEquals(2, rowCount);
       }
     }
     finally {

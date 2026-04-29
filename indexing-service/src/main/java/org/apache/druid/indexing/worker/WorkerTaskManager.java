@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -110,9 +111,15 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   /**
    * Whether this worker is disabled (i.e., not accepting new tasks). Persisted to
    * {@link #STATE_FILE} under {@link #storageDir} so the flag survives
-   * process restarts.
+   * process restarts, unless {@link #startAlwaysEnabled} is true.
    */
   private final AtomicBoolean disabled = new AtomicBoolean(false);
+
+  /**
+   * When true, {@link #STATE_FILE} is deleted (rather than read) on startup,
+   * and the worker starts enabled. Controlled by {@code druid.worker.startAlwaysEnabled}.
+   */
+  private final boolean startAlwaysEnabled;
 
   private final OverlordClient overlordClient;
   private final File storageDir;
@@ -122,6 +129,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
+      WorkerConfig workerConfig,
       OverlordClient overlordClient
   )
   {
@@ -130,6 +138,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+    this.startAlwaysEnabled = workerConfig.isStartAlwaysEnabled();
 
     storageDir = taskConfig.getBaseTaskDir();
   }
@@ -357,18 +366,28 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   }
 
   /**
-   * Read {@link #STATE_FILE} and initialize {@link #disabled}.
+   * Read {@link #STATE_FILE} and initialize {@link #disabled}. When {@link #startAlwaysEnabled}
+   * is true, delete the file (if present) instead and leave {@link #disabled} at its default.
    */
   private void loadStateFile()
   {
     final File stateFile = getStateFile();
     if (stateFile.exists()) {
-      try {
-        final WorkerState state = jsonMapper.readValue(stateFile, WorkerState.class);
-        disabled.set(state.disabled());
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to read disabled state from[%s]. Starting as enabled.", stateFile);
+      if (startAlwaysEnabled) {
+        try {
+          Files.delete(stateFile.toPath());
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to delete state file[%s].", stateFile);
+        }
+      } else {
+        try {
+          final WorkerState state = jsonMapper.readValue(stateFile, WorkerState.class);
+          disabled.set(state.disabled());
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to read state file[%s]. Starting as enabled.", stateFile);
+        }
       }
     }
   }
