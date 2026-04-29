@@ -68,6 +68,12 @@ public abstract class PartialLoadRule extends LoadRule
   }
 
   @Override
+  public boolean isIntervalBased()
+  {
+    return false;
+  }
+
+  @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
     if (!appliesTo(segment.getInterval(), referenceTimestamp)) {

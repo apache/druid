@@ -25,7 +25,6 @@ import com.google.common.io.BaseEncoding;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;

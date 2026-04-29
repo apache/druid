@@ -654,6 +654,8 @@ public class DataSourcesResourceTest
   @Test
   public void testIsHandOffComplete()
   {
+    // Cascade with only interval-based rules (IntervalLoadRule + IntervalDropRule). The lazy supplier never fires
+    // since no segment-aware rule shows up, so no metadata snapshot lookups should happen.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null, null);
     Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
@@ -668,45 +670,36 @@ public class DataSourcesResourceTest
             auditManager
         );
 
-    // test dropped: segment exists in metadata, drop rule applies → won't be handed off
-    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
-    DataSegment segment1 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval1), "v1", 1);
+    // test dropped
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
             .once();
-    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
-            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment1)))
-            .once();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
+    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     Response response1 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval1, 1, "v1");
     Assert.assertTrue((boolean) response1.getEntity());
 
-    EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.verify(databaseRuleManager);
 
     // test isn't dropped and no timeline found
-    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
-    DataSegment segment2 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval2), "v1", 1);
-    EasyMock.reset(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.reset(databaseRuleManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
-            .once();
-    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
-            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment2)))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(null)
             .once();
-    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(inventoryView, databaseRuleManager);
 
+    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
     Response response2 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval2, 1, "v1");
     Assert.assertFalse((boolean) response2.getEntity());
 
-    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
+    EasyMock.verify(inventoryView, databaseRuleManager);
 
     // test isn't dropped and timeline exist
     String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
-    DataSegment segment3 = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval3), "v1", 1);
     SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
     VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
@@ -722,30 +715,35 @@ public class DataSourcesResourceTest
         return ret;
       }
     };
-    EasyMock.reset(inventoryView, databaseRuleManager, segmentsMetadataManager);
+    EasyMock.reset(inventoryView, databaseRuleManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(loadRule, dropRule))
-            .once();
-    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
-            .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment3)))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(timeline)
             .once();
-    EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(inventoryView, databaseRuleManager);
 
     Response response3 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval3, 1, "v1");
     Assert.assertTrue((boolean) response3.getEntity());
 
-    EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
+    EasyMock.verify(inventoryView, databaseRuleManager);
   }
 
   @Test
   public void testIsHandOffCompleteSegmentNotInMetadataReturnsTrue()
   {
-    // A segment that hasn't been published to metadata (and is not found after a forced refresh) is reported as
-    // definitively never-handed-off so the realtime task can move on.
+    // Cascade contains a partial rule (segment-aware), so the lazy supplier fires when the cascade reaches it.
+    // The segment isn't published in metadata and isn't found after a forced refresh, so the response is true.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z");
+    Rule partialRule = new IntervalPartialLoadRule(
+        ruleInterval,
+        null,
+        null,
+        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        CannotMatchBehavior.FALL_THROUGH
+    );
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
             inventoryView,
@@ -757,7 +755,7 @@ public class DataSourcesResourceTest
             auditManager
         );
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of())
+            .andReturn(ImmutableList.of(partialRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
@@ -777,10 +775,17 @@ public class DataSourcesResourceTest
   @Test
   public void testIsHandOffCompleteForcesMetadataRefreshOnSnapshotMiss()
   {
-    // A cache miss on the recent snapshot triggers a forced refresh; if the segment turns up after the refresh, the
-    // rule cascade evaluates against it just as if it had been in the cached snapshot all along.
+    // Cascade contains a partial rule, so the segment supplier fires. The cached snapshot misses; the forced refresh
+    // finds the segment, and the rule cascade evaluates against it.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"), null, null);
+    Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z");
+    Rule partialRule = new IntervalPartialLoadRule(
+        ruleInterval,
+        null,
+        null,
+        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        CannotMatchBehavior.FULL_LOAD
+    );
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
             inventoryView,
@@ -795,7 +800,7 @@ public class DataSourcesResourceTest
     DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(loadRule))
+            .andReturn(ImmutableList.of(partialRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))

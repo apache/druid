@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -918,24 +920,33 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
-      // Look up the segment in the metadata snapshot so the rule cascade can be evaluated against the real segment
-      // (necessary for partial load rules whose matcher inspects the segment's projection list). If the cached
-      // snapshot is missing the segment, force a refresh and re-check before declaring it never-handed-off, since
-      // the cache may simply not have caught up to a recent publish.
+      // Walk the cascade. Interval-based rules (most rules) can be evaluated from the interval alone; segment-aware
+      // rules (e.g., PartialLoadRule whose matcher inspects projections) require the actual segment, which we look
+      // up from metadata lazily and only if a segment-aware rule shows up. The segment lookup uses the recent cached
+      // snapshot first, then a forced refresh on miss to disambiguate "stale cache" from "never published."
       final SegmentId segmentId = SegmentId.of(dataSourceName, theInterval, version, partitionNumber);
-      DataSegment segment = lookupSegment(segmentsMetadataManager.getRecentDataSourcesSnapshot(), segmentId);
-      if (segment == null) {
-        segment = lookupSegment(segmentsMetadataManager.forceUpdateDataSourcesSnapshot(), segmentId);
-      }
-      // Still not in metadata after a refresh; it will never be handed off.
-      if (segment == null) {
-        return Response.ok(true).build();
-      }
+      final Supplier<DataSegment> segmentSupplier = Suppliers.memoize(
+          () -> {
+            DataSegment s = lookupSegment(segmentsMetadataManager.getRecentDataSourcesSnapshot(), segmentId);
+            return s != null ? s : lookupSegment(segmentsMetadataManager.forceUpdateDataSourcesSnapshot(), segmentId);
+          }
+      );
 
       // A segment that is not eligible for load will never be handed off
       boolean eligibleForLoad = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(segment, now)) {
+        final boolean applies;
+        if (rule.isIntervalBased()) {
+          applies = rule.appliesTo(theInterval, now);
+        } else {
+          final DataSegment segment = segmentSupplier.get();
+          // Segment isn't published in metadata (and a forced refresh didn't find it); it will never be handed off.
+          if (segment == null) {
+            return Response.ok(true).build();
+          }
+          applies = rule.appliesTo(segment, now);
+        }
+        if (applies) {
           eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
