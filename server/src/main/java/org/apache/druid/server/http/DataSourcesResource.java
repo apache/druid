@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -918,11 +920,33 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
+      // Walk the cascade. Interval-based rules (most rules) can be evaluated from the interval alone; segment-aware
+      // rules (e.g., PartialLoadRule whose matcher inspects projections) require the actual segment, which we look
+      // up from metadata lazily and only if a segment-aware rule shows up. The segment lookup uses the recent cached
+      // snapshot first, then a forced refresh on miss to disambiguate "stale cache" from "never published."
+      final SegmentId segmentId = SegmentId.of(dataSourceName, theInterval, version, partitionNumber);
+      final Supplier<DataSegment> segmentSupplier = Suppliers.memoize(
+          () -> {
+            DataSegment s = lookupSegment(segmentsMetadataManager.getRecentDataSourcesSnapshot(), segmentId);
+            return s != null ? s : lookupSegment(segmentsMetadataManager.forceUpdateDataSourcesSnapshot(), segmentId);
+          }
+      );
 
       // A segment that is not eligible for load will never be handed off
       boolean eligibleForLoad = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(theInterval, now)) {
+        final boolean applies;
+        if (rule.isIntervalBased()) {
+          applies = rule.appliesTo(theInterval, now);
+        } else {
+          final DataSegment segment = segmentSupplier.get();
+          // Segment isn't published in metadata (and a forced refresh didn't find it); it will never be handed off.
+          if (segment == null) {
+            return Response.ok(true).build();
+          }
+          applies = rule.appliesTo(segment, now);
+        }
+        if (applies) {
           eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
@@ -959,6 +983,16 @@ public class DataSourcesResource
       log.error(e, "Error while handling hand off check request");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
     }
+  }
+
+  @Nullable
+  private static DataSegment lookupSegment(@Nullable DataSourcesSnapshot snapshot, SegmentId segmentId)
+  {
+    if (snapshot == null) {
+      return null;
+    }
+    final ImmutableDruidDataSource ds = snapshot.getDataSource(segmentId.getDataSource());
+    return ds == null ? null : ds.getSegment(segmentId);
   }
 
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> servedSegments, SegmentDescriptor descriptor)

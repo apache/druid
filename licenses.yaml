@@ -877,7 +877,7 @@ name: pac4j-oidc java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.3
+version: 5.7.10
 libraries:
   - org.pac4j: pac4j-oidc
 
@@ -887,7 +887,7 @@ name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.3
+version: 5.7.10
 libraries:
   - org.pac4j: pac4j-core
 
@@ -897,7 +897,7 @@ name: pac4j-javaee java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.3
+version: 5.7.10
 libraries:
   - org.pac4j: pac4j-javaee
 
@@ -918,7 +918,7 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 9.37.2
+version: 9.37.3
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -2000,7 +2000,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.25.3
+version: 2.25.4
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -4042,7 +4042,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.8.0
+version: 1.8.1
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:
