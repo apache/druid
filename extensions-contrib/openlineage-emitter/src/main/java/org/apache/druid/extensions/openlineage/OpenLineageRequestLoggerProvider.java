@@ -68,7 +68,8 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private Set<String> excludedNativeQueryTypes = Set.of(
       "segmentMetadata",
-      "dataSourceMetadata"
+      "dataSourceMetadata",
+      "timeBoundary"
   );
 
   @JsonProperty

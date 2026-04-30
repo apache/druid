@@ -25,12 +25,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
@@ -53,6 +54,8 @@ import org.apache.http.util.EntityUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -97,6 +100,17 @@ public class OpenLineageRequestLogger implements RequestLogger
       .withUnquotedCasing(Casing.UNCHANGED)
       .withQuotedCasing(Casing.UNCHANGED)
       .withQuoting(Quoting.DOUBLE_QUOTE);
+
+  // Matches: INSERT INTO <table> ... (fallback when EXTERN prevents standard Calcite parsing)
+  // Handles both quoted ("table") and unquoted (table) identifiers.
+  private static final Pattern INSERT_INTO_PATTERN =
+      Pattern.compile("(?i)^\\s*INSERT\\s+INTO\\s+\"?([^\"\\s]+)\"?");
+  // Matches: REPLACE INTO <table> OVERWRITE ... (Druid-specific, not parseable by standard Calcite)
+  private static final Pattern REPLACE_INTO_PATTERN =
+      Pattern.compile("(?i)^\\s*REPLACE\\s+INTO\\s+\"?([^\"\\s]+)\"?");
+  // Extracts the SELECT subquery from a REPLACE INTO statement for input lineage
+  private static final Pattern REPLACE_SELECT_PATTERN =
+      Pattern.compile("(?is)\\b(SELECT\\s+.+?)(?:\\s+PARTITIONED\\s+BY|\\s+CLUSTERED\\s+BY|$)");
 
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
   static final int DEFAULT_EMIT_THREAD_COUNT = 1;
@@ -158,6 +172,11 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.transportType = transportType;
     this.transportUrl = transportUrl;
     this.excludedNativeQueryTypes = excludedNativeQueryTypes;
+    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP && transportUrl == null) {
+      throw new IllegalStateException(
+          "druid.request.logging.transportUrl must be set when transportType=HTTP"
+      );
+    }
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
       this.httpClient = httpClient != null ? httpClient : HttpClientBuilder.create().build();
       // Bounded queue: if the queue is full, drop the event rather than blocking the query thread.
@@ -177,20 +196,18 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
   }
 
+  // Note: ComposingRequestLogger does not delegate @LifecycleStart to sub-loggers, so this method
+  // may not be called when used in a composing configuration. HTTP URL validation is therefore
+  // performed in the constructor instead. This method is retained for direct lifecycle use.
   @LifecycleStart
   @Override
-  public void start() throws Exception
+  public void start()
   {
-    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP && transportUrl == null) {
-      throw new IllegalStateException(
-          "druid.request.logging.transportUrl must be set when transportType=HTTP"
-      );
-    }
-    if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
-      log.info("Started OpenLineage HTTP transport to [%s]", transportUrl);
-    } else {
-      log.info("Started OpenLineage console transport");
-    }
+    log.info(
+        "Started OpenLineage {} transport{}",
+        transportType,
+        transportUrl != null ? " to [" + transportUrl + "]" : ""
+    );
   }
 
   @LifecycleStop
@@ -260,10 +277,44 @@ public class OpenLineageRequestLogger implements RequestLogger
         output = extractOutput(parsed);
       }
       catch (SqlParseException e) {
-        // Druid-specific SQL extensions (REPLACE, EXTERN, etc.) may not parse with the standard
-        // Calcite parser. Emit the event without table-level lineage rather than failing.
+        // Druid-specific SQL extensions (REPLACE INTO, EXTERN, etc.) may not parse with the
+        // standard Calcite parser. Attempt to extract lineage from REPLACE INTO via regex;
+        // for other unparseable statements, emit the event without table-level lineage.
+        if (sql != null) {
+          Matcher insertMatcher = INSERT_INTO_PATTERN.matcher(sql);
+          if (insertMatcher.find()) {
+            output = insertMatcher.group(1);
+            // Also try to extract inputs from the SELECT subquery (handles PARTITIONED BY and
+            // other Druid-specific clauses that prevent full parsing). EXTERN-sourced inputs
+            // will fail to re-parse and fall through with empty inputs, which is correct.
+            Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
+            if (selectMatcher.find()) {
+              try {
+                SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
+                inputs = extractInputs(selectNode);
+              }
+              catch (SqlParseException ignored) {
+                // EXTERN or other non-standard sources — inputs left empty
+              }
+            }
+          }
+          Matcher m = REPLACE_INTO_PATTERN.matcher(sql);
+          if (m.find()) {
+            output = m.group(1);
+            Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
+            if (selectMatcher.find()) {
+              try {
+                SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
+                inputs = extractInputs(selectNode);
+              }
+              catch (SqlParseException ignored) {
+                // fall through with empty inputs
+              }
+            }
+          }
+        }
         log.debug(
-            "OpenLineage: could not parse SQL for lineage extraction (query will still be emitted): %s",
+            "OpenLineage: could not parse SQL with standard Calcite parser (query will still be emitted): %s",
             e.getMessage()
         );
       }
@@ -404,20 +455,11 @@ public class OpenLineageRequestLogger implements RequestLogger
   private List<String> extractInputs(SqlNode root)
   {
     List<String> tables = new ArrayList<>();
-    if (root instanceof SqlWith) {
-      SqlWith with = (SqlWith) root;
-      Set<String> cteNames = new HashSet<>();
-      for (SqlNode item : with.withList) {
-        if (item instanceof SqlWithItem) {
-          cteNames.add(((SqlWithItem) item).name.getSimple());
-          collectFromClause(((SqlWithItem) item).query, tables, cteNames);
-        }
-      }
-      collectFromClause(with.body, tables, cteNames);
-    } else if (root instanceof SqlInsert) {
-      collectFromClause(((SqlInsert) root).getSource(), tables, Set.of());
+    if (root instanceof SqlInsert) {
+      // For INSERT/REPLACE, only walk the source query — the target table is an output, not an input.
+      collectTableNames(((SqlInsert) root).getSource(), tables, Set.of());
     } else {
-      collectFromClause(root, tables, Set.of());
+      collectTableNames(root, tables, Set.of());
     }
     return tables;
   }
@@ -434,36 +476,91 @@ public class OpenLineageRequestLogger implements RequestLogger
     return null;
   }
 
-  private void collectFromClause(SqlNode from, List<String> tables, Set<String> excludeNames)
+  /**
+   * Walks the SQL tree to collect table references from FROM clauses, JOINs, subqueries in
+   * WHERE/HAVING/SELECT, and set operations (UNION/INTERSECT/EXCEPT). CTE alias names are
+   * tracked in {@code excludeNames} to avoid reporting them as table inputs.
+   *
+   * <p>The walker distinguishes table-reference positions (FROM, JOIN) from column-reference
+   * positions (SELECT list, WHERE expressions) by collecting {@link SqlIdentifier} nodes only
+   * from known table-reference contexts, while recursing into all subqueries to find nested
+   * FROM clauses.
+   */
+  private void collectTableNames(SqlNode node, List<String> tables, Set<String> excludeNames)
   {
-    if (from == null) {
+    if (node == null) {
       return;
     }
-    if (from instanceof SqlIdentifier) {
-      String name = String.join(".", ((SqlIdentifier) from).names);
-      if (!excludeNames.contains(name)) {
-        tables.add(name);
-      }
-    } else if (from instanceof SqlJoin) {
-      SqlJoin join = (SqlJoin) from;
-      collectFromClause(join.getLeft(), tables, excludeNames);
-      collectFromClause(join.getRight(), tables, excludeNames);
-    } else if (from instanceof SqlSelect) {
-      collectFromClause(((SqlSelect) from).getFrom(), tables, excludeNames);
-    } else if (from instanceof SqlWith) {
-      SqlWith with = (SqlWith) from;
+    if (node instanceof SqlWith) {
+      SqlWith with = (SqlWith) node;
       Set<String> innerExcludes = new HashSet<>(excludeNames);
       for (SqlNode item : with.withList) {
         if (item instanceof SqlWithItem) {
           innerExcludes.add(((SqlWithItem) item).name.getSimple());
-          collectFromClause(((SqlWithItem) item).query, tables, innerExcludes);
+          collectTableNames(((SqlWithItem) item).query, tables, innerExcludes);
         }
       }
-      collectFromClause(with.body, tables, innerExcludes);
-    } else if (from instanceof SqlOrderBy) {
-      collectFromClause(((SqlOrderBy) from).query, tables, excludeNames);
-    } else if (from instanceof SqlBasicCall && from.getKind() == SqlKind.AS) {
-      collectFromClause(((SqlBasicCall) from).operand(0), tables, excludeNames);
+      collectTableNames(with.body, tables, innerExcludes);
+    } else if (node instanceof SqlNodeList) {
+      // Lists (e.g., SELECT list items): recurse into each element to find subqueries.
+      for (SqlNode item : (SqlNodeList) node) {
+        collectTableNames(item, tables, excludeNames);
+      }
+    } else if (node instanceof SqlSelect) {
+      SqlSelect select = (SqlSelect) node;
+      // FROM clause: identifiers here are table references.
+      collectFromPosition(select.getFrom(), tables, excludeNames);
+      // Recurse into WHERE, HAVING, and SELECT list to find nested subqueries.
+      collectTableNames(select.getWhere(), tables, excludeNames);
+      collectTableNames(select.getHaving(), tables, excludeNames);
+      collectTableNames(select.getSelectList(), tables, excludeNames);
+    } else if (node instanceof SqlCall) {
+      SqlCall call = (SqlCall) node;
+      if (call.getKind() == SqlKind.UNION || call.getKind() == SqlKind.INTERSECT || call.getKind() == SqlKind.EXCEPT) {
+        // Set operations: each operand is a SELECT whose FROM clause has table references.
+        for (SqlNode operand : call.getOperandList()) {
+          collectTableNames(operand, tables, excludeNames);
+        }
+      } else {
+        // Other expressions (AND, OR, IN, =, function calls, etc.): recurse to find subqueries.
+        for (SqlNode operand : call.getOperandList()) {
+          if (operand instanceof SqlSelect || operand instanceof SqlWith || operand instanceof SqlCall) {
+            collectTableNames(operand, tables, excludeNames);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Collects table names from a FROM-clause position, where {@link SqlIdentifier} nodes
+   * represent table references (not column references).
+   */
+  private void collectFromPosition(SqlNode node, List<String> tables, Set<String> excludeNames)
+  {
+    if (node == null) {
+      return;
+    }
+    if (node instanceof SqlIdentifier) {
+      String name = String.join(".", ((SqlIdentifier) node).names);
+      if (!excludeNames.contains(name)) {
+        tables.add(name);
+      }
+    } else if (node instanceof SqlJoin) {
+      SqlJoin join = (SqlJoin) node;
+      collectFromPosition(join.getLeft(), tables, excludeNames);
+      collectFromPosition(join.getRight(), tables, excludeNames);
+    } else if (node instanceof SqlSelect) {
+      // Subquery in FROM: recurse into the full select.
+      collectTableNames(node, tables, excludeNames);
+    } else if (node instanceof SqlBasicCall && node.getKind() == SqlKind.AS) {
+      // Alias: the table reference is the first operand.
+      collectFromPosition(((SqlBasicCall) node).operand(0), tables, excludeNames);
+    } else if (node instanceof SqlCall) {
+      // LATERAL, UNNEST, or other FROM-position nodes: walk operands.
+      for (SqlNode operand : ((SqlCall) node).getOperandList()) {
+        collectFromPosition(operand, tables, excludeNames);
+      }
     }
   }
 
@@ -488,6 +585,14 @@ public class OpenLineageRequestLogger implements RequestLogger
     post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
     try {
       org.apache.http.HttpResponse response = httpClient.execute(post);
+      int statusCode = response.getStatusLine().getStatusCode();
+      if (statusCode < 200 || statusCode >= 300) {
+        log.warn(
+            "OpenLineage HTTP transport received non-2xx response [%d] from [%s]; event may have been dropped",
+            statusCode,
+            transportUrl
+        );
+      }
       EntityUtils.consumeQuietly(response.getEntity());
     }
     catch (IOException e) {
