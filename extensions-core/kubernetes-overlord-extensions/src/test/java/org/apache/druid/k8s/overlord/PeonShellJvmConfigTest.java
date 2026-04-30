@@ -82,7 +82,7 @@ public class PeonShellJvmConfigTest
 
     final String script = JVM_CONFIG_SOURCING_SNIPPET + "echo \"$JAVA_OPTS\"\n";
 
-    final ProcessBuilder pb = new ProcessBuilder("sh", "-c", script);
+    final ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", script);
     pb.environment().put("SERVICE_CONF_DIR", tempDir.toString());
     pb.environment().put("JAVA_OPTS", "-Dpeon.test.marker=fromJavaOpts -Dexisting=true");
     pb.redirectErrorStream(true);
@@ -126,7 +126,7 @@ public class PeonShellJvmConfigTest
   {
     final String script = JVM_CONFIG_SOURCING_SNIPPET + "echo \"$JAVA_OPTS\"\n";
 
-    final ProcessBuilder pb = new ProcessBuilder("sh", "-c", script);
+    final ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", script);
     pb.environment().put("SERVICE_CONF_DIR", tempDir.toString());
     pb.environment().put("JAVA_OPTS", "-Dexisting=true");
     pb.redirectErrorStream(true);
