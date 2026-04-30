@@ -155,6 +155,12 @@ public class PartialQueryableIndex implements QueryableIndex
             )
         );
         projectionSpecs.put(projectionSpec.getSchema().getName(), projectionSpec);
+      } else {
+        throw DruidException.defensive(
+            "Unexpected projection[%s] with type[%s]",
+            projectionSpec.getSchema().getName(),
+            projectionSpec.getSchema().getClass()
+        );
       }
     }
 
@@ -238,23 +244,6 @@ public class PartialQueryableIndex implements QueryableIndex
   /**
    * Answers from metadata without triggering column downloads. The default implementation in {@link QueryableIndex}
    * calls {@link #getColumnHolder(String)}, which would force a base table load.
-   * <p>
-   * Only {@link ColumnCapabilities#getType()} and {@link ColumnCapabilities#hasMultipleValues()} are populated from
-   * the metadata; richer fields ({@code isDictionaryEncoded}, {@code hasBitmapIndexes}, {@code hasNulls}, etc.) keep
-   * their default/UNKNOWN values. This is intentional:
-   * <ul>
-   *   <li>The hot caller is the broker computing SQL schema via {@link CursorFactory#getRowSignature()}, which only
-   *       reads {@link ColumnCapabilities#getType()}; that path must NOT trigger downloads.</li>
-   *   <li>Demanding callers (e.g. {@code DimensionHandlerUtils}, {@code ExpressionPlanner}, the cursor's column
-   *       selector factory) obtain capabilities via {@code ColumnHolder.getCapabilities()} through
-   *       {@code ColumnCache} at cursor execution time, which loads the column on access and returns accurate
-   *       capabilities.</li>
-   *   <li>Projection matching only needs column existence and type, both derivable from {@link ColumnDescriptor}.</li>
-   * </ul>
-   * The known problem with this is {@code SegmentAnalyzer} via {@code QueryableIndexPhysicalSegmentInspector}, which
-   * reads {@code isDictionaryEncoded()} from these capabilities. That can result in different results for non-default
-   * analysis on STRING columns under SegmentMetadataQuery. If it becomes a problem, we should problem fix the analyzer
-   * to source richer fields from the column holder, not this method.
    */
   @Nullable
   @Override
