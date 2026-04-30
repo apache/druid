@@ -164,13 +164,72 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
-  public void testSqlParseFailureStillEmitsEvent() throws IOException
+  public void testSqlReplaceIntoExtractsOutputAndInputs() throws IOException
   {
-    // Druid-specific syntax (REPLACE INTO) doesn't parse with the standard Calcite parser;
-    // the event is still emitted, just without table-level lineage.
+    // REPLACE INTO is Druid-specific and not parsed by standard Calcite; the regex fallback
+    // extracts the output table and re-parses the SELECT for inputs.
     logger.logSqlQuery(sqlLine(
-        "REPLACE INTO \"ds\" OVERWRITE ALL SELECT * FROM \"src\" PARTITIONED BY ALL",
+        "REPLACE INTO \"ds\" OVERWRITE ALL SELECT * FROM \"src\" PARTITIONED BY DAY",
         ImmutableMap.of("sqlQueryId", "qid-5"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
+    Assertions.assertTrue(inputNames(event).contains("src"));
+    JsonNode outputs = event.get("outputs");
+    Assertions.assertEquals(1, outputs.size());
+    Assertions.assertEquals("ds", outputs.get(0).get("name").asText());
+  }
+
+  @Test
+  public void testSqlInsertIntoWithDruidSourceExtractsInputAndOutput() throws IOException
+  {
+    // INSERT INTO with PARTITIONED BY is unparseable by standard Calcite; regex fallback
+    // extracts the output table and re-parses the SELECT for inputs.
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO \"target\" SELECT * FROM \"source\" PARTITIONED BY DAY",
+        ImmutableMap.of("sqlQueryId", "qid-insert-partitioned"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
+    Assertions.assertTrue(inputNames(event).contains("source"));
+    JsonNode outputs = event.get("outputs");
+    Assertions.assertEquals(1, outputs.size());
+    Assertions.assertEquals("target", outputs.get(0).get("name").asText());
+  }
+
+  @Test
+  public void testSqlInsertIntoWithExternExtractsOutputOnly() throws IOException
+  {
+    // INSERT INTO with EXTERN is unparseable by standard Calcite; the regex fallback
+    // extracts the output table only (EXTERN sources are external, not Druid datasets).
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO \"target\" SELECT * FROM TABLE(EXTERN('{\"type\":\"inline\",\"data\":\"\"}','{\"type\":\"json\"}')) PARTITIONED BY ALL",
+        ImmutableMap.of("sqlQueryId", "qid-extern"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
+    Assertions.assertEquals(0, event.get("inputs").size());
+    JsonNode outputs = event.get("outputs");
+    Assertions.assertEquals(1, outputs.size());
+    Assertions.assertEquals("target", outputs.get(0).get("name").asText());
+  }
+
+  @Test
+  public void testSqlUnparsedStatementStillEmitsEvent() throws IOException
+  {
+    // Completely unparseable SQL still emits an event (without lineage) rather than failing.
+    logger.logSqlQuery(sqlLine(
+        "THIS IS NOT VALID SQL !!!",
+        ImmutableMap.of("sqlQueryId", "qid-bad"),
         ImmutableMap.of("success", true)
     ));
 
@@ -312,16 +371,62 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
-  public void testStartThrowsWhenHttpWithoutUrl()
+  public void testSqlUnionAll() throws IOException
   {
-    OpenLineageRequestLogger httpLogger = new OpenLineageRequestLogger(
+    logger.logSqlQuery(sqlLine(
+        "SELECT * FROM \"tableA\" UNION ALL SELECT * FROM \"tableB\"",
+        ImmutableMap.of("sqlQueryId", "qid-union"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Set<String> names = inputNames(capturedEvents.get(0));
+    Assertions.assertTrue(names.contains("tableA"));
+    Assertions.assertTrue(names.contains("tableB"));
+  }
+
+  @Test
+  public void testSqlSubqueryInWhere() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "SELECT * FROM \"outer\" WHERE \"x\" IN (SELECT \"y\" FROM \"inner\")",
+        ImmutableMap.of("sqlQueryId", "qid-subquery"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Set<String> names = inputNames(capturedEvents.get(0));
+    Assertions.assertTrue(names.contains("outer"));
+    Assertions.assertTrue(names.contains("inner"));
+  }
+
+  @Test
+  public void testSqlScalarSubqueryInSelect() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "SELECT (SELECT COUNT(*) FROM \"counts\") AS cnt FROM \"main\"",
+        ImmutableMap.of("sqlQueryId", "qid-scalar"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Set<String> names = inputNames(capturedEvents.get(0));
+    Assertions.assertTrue(names.contains("main"));
+    Assertions.assertTrue(names.contains("counts"));
+  }
+
+  @Test
+  public void testConstructorThrowsWhenHttpWithoutUrl()
+  {
+    // HTTP URL validation is enforced at construction time so it fails fast during Guice wiring,
+    // even when ComposingRequestLogger does not delegate @LifecycleStart to sub-loggers.
+    Assertions.assertThrows(IllegalStateException.class, () -> new OpenLineageRequestLogger(
         MAPPER,
         NAMESPACE,
         OpenLineageRequestLoggerProvider.TransportType.HTTP,
         null,
         DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES
-    );
-    Assertions.assertThrows(IllegalStateException.class, httpLogger::start);
+    ));
   }
 
   private static RequestLogLine sqlLine(String sql, Map<String, Object> context, Map<String, Object> stats)
