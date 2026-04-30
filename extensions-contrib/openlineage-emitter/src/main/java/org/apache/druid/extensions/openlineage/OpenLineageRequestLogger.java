@@ -54,8 +54,6 @@ import org.apache.http.util.EntityUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -71,6 +69,8 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * OpenLineage RunEvents for completed Druid queries.
@@ -204,7 +204,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   public void start()
   {
     log.info(
-        "Started OpenLineage {} transport{}",
+        "Started OpenLineage %s transport%s",
         transportType,
         transportUrl != null ? " to [" + transportUrl + "]" : ""
     );
@@ -278,38 +278,36 @@ public class OpenLineageRequestLogger implements RequestLogger
       }
       catch (SqlParseException e) {
         // Druid-specific SQL extensions (REPLACE INTO, EXTERN, etc.) may not parse with the
-        // standard Calcite parser. Attempt to extract lineage from REPLACE INTO via regex;
+        // standard Calcite parser. Attempt to extract lineage via regex fallback;
         // for other unparseable statements, emit the event without table-level lineage.
-        if (sql != null) {
-          Matcher insertMatcher = INSERT_INTO_PATTERN.matcher(sql);
-          if (insertMatcher.find()) {
-            output = insertMatcher.group(1);
-            // Also try to extract inputs from the SELECT subquery (handles PARTITIONED BY and
-            // other Druid-specific clauses that prevent full parsing). EXTERN-sourced inputs
-            // will fail to re-parse and fall through with empty inputs, which is correct.
-            Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
-            if (selectMatcher.find()) {
-              try {
-                SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
-                inputs = extractInputs(selectNode);
-              }
-              catch (SqlParseException ignored) {
-                // EXTERN or other non-standard sources — inputs left empty
-              }
+        Matcher insertMatcher = INSERT_INTO_PATTERN.matcher(sql);
+        if (insertMatcher.find()) {
+          output = insertMatcher.group(1);
+          // Also try to extract inputs from the SELECT subquery (handles PARTITIONED BY and
+          // other Druid-specific clauses that prevent full parsing). EXTERN-sourced inputs
+          // will fail to re-parse and fall through with empty inputs, which is correct.
+          Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
+          if (selectMatcher.find()) {
+            try {
+              SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
+              inputs = extractInputs(selectNode);
+            }
+            catch (SqlParseException ignored) {
+              // EXTERN or other non-standard sources — inputs left empty
             }
           }
-          Matcher m = REPLACE_INTO_PATTERN.matcher(sql);
-          if (m.find()) {
-            output = m.group(1);
-            Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
-            if (selectMatcher.find()) {
-              try {
-                SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
-                inputs = extractInputs(selectNode);
-              }
-              catch (SqlParseException ignored) {
-                // fall through with empty inputs
-              }
+        }
+        Matcher m = REPLACE_INTO_PATTERN.matcher(sql);
+        if (m.find()) {
+          output = m.group(1);
+          Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
+          if (selectMatcher.find()) {
+            try {
+              SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
+              inputs = extractInputs(selectNode);
+            }
+            catch (SqlParseException ignored) {
+              // fall through with empty inputs
             }
           }
         }
