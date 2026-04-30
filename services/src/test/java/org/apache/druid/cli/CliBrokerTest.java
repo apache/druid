@@ -443,7 +443,6 @@ public class CliBrokerTest
     );
 
     final CliBroker broker = new CliBroker();
-    broker.configure(props);
     broker.configure(props, baseInjector);
     return broker.makeInjector(Set.of(NodeRole.BROKER));
   }

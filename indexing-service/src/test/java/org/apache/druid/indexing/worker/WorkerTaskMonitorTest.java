@@ -186,7 +186,6 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                null,
                 notifierFactory,
                 null,
                 null,

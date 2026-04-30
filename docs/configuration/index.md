@@ -154,9 +154,6 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.zk.paths.base`|Base ZooKeeper path.|`/druid`|
-|`druid.zk.paths.propertiesPath`|ZooKeeper properties path.|`${druid.zk.paths.base}/properties`|
-|`druid.zk.paths.announcementsPath`|Druid service announcement path.|`${druid.zk.paths.base}/announcements`|
-|`druid.zk.paths.liveSegmentsPath`|Current path for where Druid services announce their segments.|`${druid.zk.paths.base}/segments`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
 
 The indexing service also uses its own set of paths. These configs can be included in the common configuration.
@@ -169,7 +166,7 @@ The indexing service also uses its own set of paths. These configs can be includ
 |`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|`${druid.zk.paths.indexer.base}/status`|
 
 If `druid.zk.paths.base` and `druid.zk.paths.indexer.base` are both set, and none of the other `druid.zk.paths.*` or `druid.zk.paths.indexer.*` values are set, then the other properties will be evaluated relative to their respective `base`.
-For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.announcementsPath` will default to `/druid1/announcements` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
+For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.coordinatorPath` will default to `/druid1/coordinator` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
 
 The following path is used for service discovery. It is **not** affected by `druid.zk.paths.base` and **must** be specified separately.
 
@@ -648,27 +645,6 @@ This config is used to find the [Coordinator](../design/coordinator.md) using Cu
 |--------|-----------|-------|
 |`druid.selectors.coordinator.serviceName`|The druid.service name of the Coordinator service. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
 
-### Announcing segments
-
-You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
-
-#### Batch data segment announcer
-
-In current Druid, multiple data segments may be announced under the same Znode.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.announcer.segmentsPerNode`|Each Znode contains info for up to this many segments.|50|
-|`druid.announcer.maxBytesPerNode`|Max byte size for Znode. Allowed range is [1024, 1048576].|524288|
-|`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from Coordinator and Broker endpoints.|false|
-|`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from Coordinator and Broker endpoints.|false|
-
-If you want to turn off the batch data segment announcer, you can add a property to skip announcing segments. **You do not want to enable this config if you have any services using `batch` for `druid.serverview.type`**
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.announcer.skipSegmentAnnouncementOnZk`|Skip announcing segments to ZooKeeper. Note that the batch server view will not work if this is set to true.|false|
-
 ### JavaScript
 
 Druid supports dynamic runtime extension through JavaScript functions. This functionality can be configured through
@@ -796,7 +772,6 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 |Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
 |`druid.coordinator.segment.awaitInitializationOnStart`|true or false|Whether the Coordinator will wait for its view of segments to fully initialize before starting up. If set to 'true', the Coordinator's HTTP server will not start up, and the Coordinator will not announce itself as available, until the server view is initialized.|true|
 
 ##### Metadata retrieval
@@ -1931,7 +1906,6 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
 |`druid.broker.segment.watchedTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to only consider segments being served from a list of tiers. By default, Broker considers all tiers. This can be used to partition your dataSources in specific Historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources. This config is mutually exclusive from `druid.broker.segment.ignoredTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.ignoredTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to ignore the segments being served from a list of tiers. By default, Broker considers all tiers. This config is mutually exclusive from `druid.broker.segment.watchedTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|

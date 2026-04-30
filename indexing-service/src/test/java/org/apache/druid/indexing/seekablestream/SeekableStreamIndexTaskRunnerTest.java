@@ -55,7 +55,6 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -353,7 +352,6 @@ public class SeekableStreamIndexTaskRunnerTest
         .dataNodeService(new DataNodeService(DruidServer.DEFAULT_TIER, 100L, null, ServerType.HISTORICAL, 1))
         .lookupNodeService(new LookupNodeService(DruidServer.DEFAULT_TIER))
         .appenderatorsManager(new TestAppenderatorsManager())
-        .serverAnnouncer(new DataSegmentServerAnnouncer.Noop())
         .druidNodeAnnouncer(new NoopDruidNodeAnnouncer())
         .jsonMapper(TestHelper.JSON_MAPPER)
         .emitter(emitter)
