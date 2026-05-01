@@ -75,7 +75,16 @@ public class SegmentLoaderConfig
   private boolean virtualStorage = false;
 
   @JsonProperty("virtualStorageLoadThreads")
-  private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
+  private int virtualStorageLoadThreads = Math.max(32, 4 * runtimeInfo.getAvailableProcessors());
+
+  /**
+   * When true (the default), the on-demand load executor uses one virtual thread per task with a {@link
+   * java.util.concurrent.Semaphore} sized by {@link #virtualStorageLoadThreads} for backpressure. When false, falls back
+   * to a fixed platform-thread pool of that size. The escape hatch exists in case virtual threads behave poorly with a
+   * particular deep storage SDK or workload.
+   */
+  @JsonProperty("virtualStorageUseVirtualThreads")
+  private boolean virtualStorageUseVirtualThreads = true;
 
   /**
    * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
@@ -162,6 +171,11 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
+  public boolean isVirtualStorageUseVirtualThreads()
+  {
+    return virtualStorageUseVirtualThreads;
+  }
+
   public boolean isVirtualStorageEphemeral()
   {
     return virtualStorageIsEphemeral;
@@ -218,6 +232,7 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", virtualStorage=" + virtualStorage +
            ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageUseVirtualThreads=" + virtualStorageUseVirtualThreads +
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
