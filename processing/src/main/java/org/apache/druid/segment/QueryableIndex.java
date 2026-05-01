@@ -73,20 +73,6 @@ public interface QueryableIndex extends Closeable, ColumnInspector
    * {@link ColumnCapabilities#hasMultipleValues()} to be reliably set from this method; in some implementations richer
    * fields ({@code isDictionaryEncoded}, {@code hasBitmapIndexes}, {@code hasNulls}, etc.) might keep their
    * default/UNKNOWN values.
-   *
-   * This is intentional:
-   * <ul>
-   *   <li>The hot caller is the broker computing SQL schema via {@link CursorFactory#getRowSignature()}, which only
-   *       reads {@link ColumnCapabilities#getType()}; that path must NOT trigger downloads.</li>
-   *   <li>Demanding callers (e.g. {@code DimensionHandlerUtils}, {@code ExpressionPlanner}, the cursor's column
-   *       selector factory) obtain capabilities via {@code ColumnHolder.getCapabilities()} through
-   *       {@code ColumnCache} at cursor execution time, which loads the column on access and returns accurate
-   *       capabilities.</li>
-   *   <li>Projection matching only needs column existence and type, both derivable from {@link ColumnDescriptor}.</li>
-   * </ul>
-   * The known problem with this is {@code SegmentAnalyzer} via {@code QueryableIndexPhysicalSegmentInspector}, which
-   * reads {@code isDictionaryEncoded()} from these capabilities. That can result in different results for non-default
-   * analysis on STRING columns under SegmentMetadataQuery.
    */
   @Override
   @Nullable
