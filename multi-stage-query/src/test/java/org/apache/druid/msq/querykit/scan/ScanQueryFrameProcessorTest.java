@@ -359,7 +359,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         baseSegment.close();
       }
