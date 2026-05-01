@@ -26,11 +26,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +60,13 @@ public class ExpressionTransform implements Transform
     this.parsedExpression = Suppliers.memoize(
         () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
     )::get;
+
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(name)
+        && BuiltInExprMacros.NowExprMacro.containsNow(parsedExpression.get())) {
+      throw InvalidInput.exception(
+          "Cannot use expression[%s] to set column name[%s]. Consider adding a different"
+          + " column name with expression[%s].", BuiltInExprMacros.NowExprMacro.NAME, ColumnHolder.TIME_COLUMN_NAME, BuiltInExprMacros.NowExprMacro.NAME);
+    }
   }
 
   @JsonProperty

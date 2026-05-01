@@ -235,6 +235,22 @@ public class BuiltInExprMacros
       return new NowExpression();
     }
 
+    /**
+     * Returns true if {@code expr} contains a {@link NowExpression} call anywhere in its tree.
+     */
+    public static boolean containsNow(Expr expr)
+    {
+      // A boolean array because lambdas can only capture effectively final locals and we cannot short-circuit here
+      boolean[] found = {false};
+      expr.visit(child -> {
+        if (child instanceof NowExpression) {
+          found[0] = true;
+        }
+        return child;
+      });
+      return found[0];
+    }
+
     static final class NowExpression implements Expr
     {
       @Override
@@ -258,9 +274,8 @@ public class BuiltInExprMacros
       @Override
       public BindingAnalysis analyzeInputs()
       {
-        // Return analysis indicating this is NOT constant
-        // by pretending we have a free variable
-        return new BindingAnalysis();
+        // Synthetic dummy binding so the planner does not treat now() as constant.
+        return new BindingAnalysis(new IdentifierExpr("__dummy__"));
       }
 
       @Nullable

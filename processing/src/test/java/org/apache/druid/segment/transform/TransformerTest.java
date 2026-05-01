@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -556,5 +557,27 @@ public class TransformerTest extends InitializedNullHandlingTest
 
     // Verify lag is positive (ingestion happened after event)
     Assert.assertTrue("Lag should be positive", lag > 0);
+  }
+
+  @Test
+  public void testNowCannotBeUsedForTimeColumn()
+  {
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Cannot use expression[now] to set column name[__time]."
+        + " Consider adding a different column name with expression[now]."
+    ).assertThrowsAndMatches(
+        () -> new ExpressionTransform("__time", "now()", TestExprMacroTable.INSTANCE)
+    );
+  }
+
+  @Test
+  public void testNowRejectedWhenWrappedInArithmeticForTimeColumn()
+  {
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Cannot use expression[now] to set column name[__time]."
+        + " Consider adding a different column name with expression[now]."
+    ).assertThrowsAndMatches(
+        () -> new ExpressionTransform("__time", "now() + 1000", TestExprMacroTable.INSTANCE)
+    );
   }
 }
