@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -31,6 +33,20 @@ public interface CursorFactory extends ColumnInspector
    * scan, filter, transform, group and aggregate, and/or order the data.
    */
   CursorHolder makeCursorHolder(CursorBuildSpec spec);
+
+  /**
+   * Asynchronous variant of {@link #makeCursorHolder(CursorBuildSpec)} for cursor factories that may need to do I/O
+   * (e.g. download column data from deep storage) before they can serve a cursor. Callers running on threads that
+   * must not block.
+   * <p>
+   * The default implementation completes synchronously by delegating to {@link #makeCursorHolder(CursorBuildSpec)},
+   * which keeps every existing implementation async-correct without changes. Implementations backed by partial /
+   * lazy storage can override to do their I/O off-thread.
+   */
+  default ListenableFuture<CursorHolder> makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    return Futures.immediateFuture(makeCursorHolder(spec));
+  }
 
   /**
    * Returns the {@link RowSignature} of the data available from this cursor factory. For mutable segments, even though

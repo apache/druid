@@ -93,6 +93,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private SegmentsInputSlice handedOffSegments = null;
   private Yielder<Yielder<ResultRow>> currentResultsYielder;
   private ListenableFuture<DataServerQueryResult<ResultRow>> dataServerQueryResultFuture;
+  /**
+   * In-flight {@link GroupingEngine#processAsync} future for the current segment, when {@link #resultYielder} has not
+   * yet been derived. Cleared after the future completes and the yielder is set. Allows the processor to yield via
+   * {@link ReturnOrAwait#awaitAllFutures} while the future is pending instead of blocking on a download.
+   */
+  @Nullable
+  private ListenableFuture<Sequence<ResultRow>> pendingResultSequenceFuture;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -184,25 +191,36 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final Segment segment = mapSegment(segmentHolder, closer);
-      final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
-      final Sequence<ResultRow> rowSequence;
+      if (pendingResultSequenceFuture == null) {
+        final Segment segment = mapSegment(segmentHolder, closer);
+        final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
 
-      if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
-        // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
-        rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));
-      } else {
-        // Resolve this query using a cursor.
-        rowSequence = groupingEngine.process(
-            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-            Objects.requireNonNull(segment.as(CursorFactory.class)),
-            tbi,
-            bufferPool,
-            null
-        );
+        if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
+          // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
+          resultYielder = Yielders.each(
+              Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)))
+          );
+        } else {
+          // Resolve this query using a cursor; let the cursor factory acquire the cursor holder asynchronously so we
+          // can yield via ReturnOrAwait.awaitAllFutures while it does any I/O it needs.
+          pendingResultSequenceFuture = groupingEngine.processAsync(
+              query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+              Objects.requireNonNull(segment.as(CursorFactory.class)),
+              tbi,
+              bufferPool,
+              null
+          );
+        }
       }
 
-      resultYielder = Yielders.each(rowSequence);
+      if (pendingResultSequenceFuture != null) {
+        if (!pendingResultSequenceFuture.isDone()) {
+          return ReturnOrAwait.awaitAllFutures(List.of(pendingResultSequenceFuture));
+        }
+        final Sequence<ResultRow> rowSequence = FutureUtils.getUncheckedImmediately(pendingResultSequenceFuture);
+        pendingResultSequenceFuture = null;
+        resultYielder = Yielders.each(rowSequence);
+      }
     }
 
     populateFrameWriterAndFlushIfNeeded();

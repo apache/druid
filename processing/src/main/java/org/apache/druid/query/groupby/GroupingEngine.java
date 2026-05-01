@@ -27,11 +27,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
@@ -482,8 +484,46 @@ public class GroupingEngine
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
-    final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
+    validateForProcess(query, cursorFactory);
+    final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
+    return processWithCursorHolder(query, cursorFactory, cursorHolder, timeBoundaryInspector, bufferPool, buildSpec);
+  }
 
+  /**
+   * Asynchronous variant of {@link #process} that obtains the {@link CursorHolder} from
+   * {@link CursorFactory#makeCursorHolderAsync} so callers running on threads that must not block on I/O
+   * (e.g. MSQ frame processors) can yield via {@link org.apache.druid.frame.processor.ReturnOrAwait#awaitAllFutures}
+   * until the cursor holder is ready.
+   * <p>
+   * The processing-buffer reservation from {@code bufferPool} is deferred until the cursor holder is available, so
+   * the buffer is not held during cursor-holder I/O.
+   */
+  public ListenableFuture<Sequence<ResultRow>> processAsync(
+      GroupByQuery query,
+      CursorFactory cursorFactory,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
+      NonBlockingPool<ByteBuffer> bufferPool,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
+  {
+    validateForProcess(query, cursorFactory);
+    final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
+    return FutureUtils.transform(
+        cursorFactory.makeCursorHolderAsync(buildSpec),
+        cursorHolder -> processWithCursorHolder(
+            query,
+            cursorFactory,
+            cursorHolder,
+            timeBoundaryInspector,
+            bufferPool,
+            buildSpec
+        )
+    );
+  }
+
+  private static void validateForProcess(GroupByQuery query, @Nullable CursorFactory cursorFactory)
+  {
     if (cursorFactory == null) {
       throw new ISE(
           "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
@@ -494,20 +534,37 @@ public class GroupingEngine
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
+  }
 
-    final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
+  private Sequence<ResultRow> processWithCursorHolder(
+      GroupByQuery query,
+      CursorFactory cursorFactory,
+      CursorHolder cursorHolder,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
+      NonBlockingPool<ByteBuffer> bufferPool,
+      CursorBuildSpec buildSpec
+  )
+  {
+    final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
+
+    final ResourceHolder<ByteBuffer> bufferHolder;
+    try {
+      bufferHolder = bufferPool.take();
+    }
+    catch (Throwable e) {
+      CloseableUtils.closeAndWrapExceptions(cursorHolder);
+      throw e;
+    }
 
     Closer closer = Closer.create();
     closer.register(bufferHolder);
+    closer.register(cursorHolder);
     try {
       final String fudgeTimestampString = query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP);
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
-
-      final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
-      final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
       if (cursorHolder.isPreAggregated()) {
         query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));

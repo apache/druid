@@ -118,6 +118,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final Closer closer = Closer.create();
 
   private Cursor cursor;
+  /**
+   * In-flight {@link CursorFactory#makeCursorHolderAsync} future for the current segment, when {@link #cursor} has not
+   * yet been derived. Cleared after the future completes and the cursor is set up. Allows the processor to yield via
+   * {@link ReturnOrAwait#awaitAllFutures} while the future is pending instead of blocking on a download.
+   */
+  @Nullable
+  private ListenableFuture<CursorHolder> cursorHolderFuture;
   private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   /**
@@ -297,21 +304,29 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      final Segment segment = mapSegment(segmentHolder, closer);
-      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
-      if (cursorFactory == null) {
-        throw DruidException.defensive(
-            "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+      if (cursorHolderFuture == null) {
+        final Segment segment = mapSegment(segmentHolder, closer);
+        final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+        if (cursorFactory == null) {
+          throw DruidException.defensive(
+              "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
+
+        cursorHolderFuture = cursorFactory.makeCursorHolderAsync(
+            ScanQueryEngine.makeCursorBuildSpec(
+                query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+                null
+            )
         );
       }
 
-      final CursorHolder nextCursorHolder =
-          cursorFactory.makeCursorHolder(
-              ScanQueryEngine.makeCursorBuildSpec(
-                  query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-                  null
-              )
-          );
+      if (!cursorHolderFuture.isDone()) {
+        return ReturnOrAwait.awaitAllFutures(ImmutableList.of(cursorHolderFuture));
+      }
+
+      final CursorHolder nextCursorHolder = FutureUtils.getUncheckedImmediately(cursorHolderFuture);
+      cursorHolderFuture = null;
 
       final Cursor nextCursor;
 
