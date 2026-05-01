@@ -23,7 +23,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.projections.QueryableProjection;
