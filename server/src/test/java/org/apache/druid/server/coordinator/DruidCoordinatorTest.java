@@ -485,7 +485,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -538,7 +538,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -591,7 +591,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -702,14 +702,18 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
-
-    // Wait until group 1 duty ran for latch1 to countdown
-    latch1.await();
-    // Wait until group 2 duty ran for latch2 to countdown
-    latch2.await();
+    try {
+      // Wait until group 1 duty ran for latch1 to countdown
+      latch1.await();
+      // Wait until group 2 duty ran for latch2 to countdown
+      latch2.await();
+    }
+    finally {
+      coordinator.stop();
+    }
   }
 
   @Test(timeout = 60_000L)
