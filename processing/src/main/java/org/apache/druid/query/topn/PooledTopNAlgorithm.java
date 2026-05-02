@@ -338,7 +338,7 @@ public class PooledTopNAlgorithm
     return makeBufferAggregatorsForPooledTopN(params.getCursor(), query.getAggregatorSpecs());
   }
 
-  private static int getMaxIntermediateSizeWithNullsForPooledTopN(
+  static int getMaxIntermediateSizeWithNullsForPooledTopN(
       ColumnInspector columnInspector,
       AggregatorFactory aggregatorFactory
   )

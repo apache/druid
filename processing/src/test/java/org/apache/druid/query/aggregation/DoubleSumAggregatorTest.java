@@ -162,6 +162,28 @@ public class DoubleSumAggregatorTest
   }
 
   @Test
+  public void testPooledTopNUsesNullableBufferAggregatorWhenInputNullsAreUnknown()
+  {
+    ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(new double[]{1.0d});
+    ColumnCapabilitiesImpl capabilities =
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+    DoubleSumAggregatorFactory factory = new DoubleSumAggregatorFactory("sum", "metric");
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("metric")).andReturn(selector);
+    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(4);
+    EasyMock.replay(selectorFactory);
+
+    BufferAggregator aggregator = factory.factorizeBufferedForPooledTopN(selectorFactory);
+
+    Assertions.assertTrue(aggregator instanceof NullableNumericBufferAggregator);
+    Assertions.assertEquals(
+        Double.BYTES + Byte.BYTES,
+        factory.getMaxIntermediateSizeWithNullsForPooledTopN(selectorFactory)
+    );
+    EasyMock.verify(selectorFactory);
+  }
+
+  @Test
   public void testUsesNullableAggregatorWhenInputNullsAreUnknown()
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);

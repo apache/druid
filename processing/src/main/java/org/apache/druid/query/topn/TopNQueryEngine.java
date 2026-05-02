@@ -172,7 +172,10 @@ public class TopNQueryEngine
 
     int numBytesPerRecord = 0;
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSizeWithNulls();
+      numBytesPerRecord += PooledTopNAlgorithm.getMaxIntermediateSizeWithNullsForPooledTopN(
+          cursorInspector.getColumnInspector(),
+          aggregatorFactory
+      );
     }
 
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(
