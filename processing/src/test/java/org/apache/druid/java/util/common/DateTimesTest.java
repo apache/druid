@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.TimeZone;
 
@@ -36,26 +36,26 @@ public class DateTimesTest
     DateTime dt3 = new DateTime(System.currentTimeMillis(), DateTimeZone.forOffsetHoursMinutes(1, 30));
 
     for (DateTime dt : new DateTime[]{dt1, dt2, dt3}) {
-      Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
+      Assertions.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
     }
   }
 
   @Test
   public void testinferTzFromStringWithKnownTzId()
   {
-    Assert.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("UTC"));
+    Assertions.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("UTC"));
   }
 
   @Test
   public void testinferTzFromStringWithOffset()
   {
-    Assert.assertEquals(DateTimeZone.forOffsetHoursMinutes(10, 30), DateTimes.inferTzFromString("+1030"));
+    Assertions.assertEquals(DateTimeZone.forOffsetHoursMinutes(10, 30), DateTimes.inferTzFromString("+1030"));
   }
 
   @Test
   public void testinferTzFromStringWithJavaTimeZone()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DateTimeZone.forTimeZone(TimeZone.getTimeZone("ACT")),
         DateTimes.inferTzFromString("ACT")
     );
@@ -64,7 +64,7 @@ public class DateTimesTest
   @Test
   public void testinferTzFromStringWithJavaTimeZoneAndNoFallback()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DateTimeZone.forTimeZone(TimeZone.getTimeZone("ACT")),
         DateTimes.inferTzFromString("ACT", false)
     );
@@ -73,13 +73,16 @@ public class DateTimesTest
   @Test
   public void testinferTzFromStringWithUnknownTimeZoneShouldReturnUTC()
   {
-    Assert.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("America/Unknown"));
+    Assertions.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("America/Unknown"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testinferTzFromStringWithUnknownTimeZoneAndNoFallbackShouldThrowException()
   {
-    Assert.assertEquals(DateTimeZone.getDefault(), DateTimes.inferTzFromString("America/Unknown", false));
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> DateTimes.inferTzFromString("America/Unknown", false)
+    );
   }
 
   @Test
@@ -87,39 +90,39 @@ public class DateTimesTest
   {
     String seconds = "2018-01-30T06:00:00";
     DateTime dt2 = DateTimes.of(seconds);
-    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt2.toString());
+    Assertions.assertEquals("2018-01-30T06:00:00.000Z", dt2.toString());
 
     String milis = "1517292000000";
     DateTime dt1 = DateTimes.of(milis);
-    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt1.toString());
+    Assertions.assertEquals("2018-01-30T06:00:00.000Z", dt1.toString());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testStringToDateTimeConverstion_RethrowInitialException()
   {
     String invalid = "51729200AZ";
-    DateTimes.of(invalid);
+    Assertions.assertThrows(IllegalArgumentException.class, () -> DateTimes.of(invalid));
   }
 
   @Test
   public void testCanCompareAsString()
   {
-    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.EPOCH));
-    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("0000-01-01")));
+    Assertions.assertTrue(DateTimes.canCompareAsString(DateTimes.EPOCH));
+    Assertions.assertTrue(DateTimes.canCompareAsString(DateTimes.of("0000-01-01")));
 
-    Assert.assertEquals("0000-01-01T00:00:00.000Z", DateTimes.COMPARE_DATE_AS_STRING_MIN.toString());
-    Assert.assertEquals("9999-12-31T23:59:59.999Z", DateTimes.COMPARE_DATE_AS_STRING_MAX.toString());
+    Assertions.assertEquals("0000-01-01T00:00:00.000Z", DateTimes.COMPARE_DATE_AS_STRING_MIN.toString());
+    Assertions.assertEquals("9999-12-31T23:59:59.999Z", DateTimes.COMPARE_DATE_AS_STRING_MAX.toString());
 
-    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("9999")));
-    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("2000")));
+    Assertions.assertTrue(DateTimes.canCompareAsString(DateTimes.of("9999")));
+    Assertions.assertTrue(DateTimes.canCompareAsString(DateTimes.of("2000")));
 
-    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.MIN));
-    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.MAX));
-    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.of("-1-01-01T00:00:00")));
-    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.of("10000-01-01")));
+    Assertions.assertFalse(DateTimes.canCompareAsString(DateTimes.MIN));
+    Assertions.assertFalse(DateTimes.canCompareAsString(DateTimes.MAX));
+    Assertions.assertFalse(DateTimes.canCompareAsString(DateTimes.of("-1-01-01T00:00:00")));
+    Assertions.assertFalse(DateTimes.canCompareAsString(DateTimes.of("10000-01-01")));
 
     // Can't compare as string with mixed time zones.
-    Assert.assertFalse(DateTimes.canCompareAsString(
+    Assertions.assertFalse(DateTimes.canCompareAsString(
         DateTimes.of("2000").withZone(DateTimes.inferTzFromString("America/Los_Angeles")))
     );
   }
@@ -127,30 +130,30 @@ public class DateTimesTest
   @Test
   public void testEarlierOf()
   {
-    Assert.assertNull(DateTimes.earlierOf(null, null));
+    Assertions.assertNull(DateTimes.earlierOf(null, null));
 
     final DateTime jan14 = DateTimes.of("2013-01-14");
-    Assert.assertEquals(jan14, DateTimes.earlierOf(null, jan14));
-    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, null));
-    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, jan14));
+    Assertions.assertEquals(jan14, DateTimes.earlierOf(null, jan14));
+    Assertions.assertEquals(jan14, DateTimes.earlierOf(jan14, null));
+    Assertions.assertEquals(jan14, DateTimes.earlierOf(jan14, jan14));
 
     final DateTime jan15 = DateTimes.of("2013-01-15");
-    Assert.assertEquals(jan14, DateTimes.earlierOf(jan15, jan14));
-    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, jan15));
+    Assertions.assertEquals(jan14, DateTimes.earlierOf(jan15, jan14));
+    Assertions.assertEquals(jan14, DateTimes.earlierOf(jan14, jan15));
   }
 
   @Test
   public void testLaterOf()
   {
-    Assert.assertNull(DateTimes.laterOf(null, null));
+    Assertions.assertNull(DateTimes.laterOf(null, null));
 
     final DateTime jan14 = DateTimes.of("2013-01-14");
-    Assert.assertEquals(jan14, DateTimes.laterOf(null, jan14));
-    Assert.assertEquals(jan14, DateTimes.laterOf(jan14, null));
-    Assert.assertEquals(jan14, DateTimes.laterOf(jan14, jan14));
+    Assertions.assertEquals(jan14, DateTimes.laterOf(null, jan14));
+    Assertions.assertEquals(jan14, DateTimes.laterOf(jan14, null));
+    Assertions.assertEquals(jan14, DateTimes.laterOf(jan14, jan14));
 
     final DateTime jan15 = DateTimes.of("2013-01-15");
-    Assert.assertEquals(jan15, DateTimes.laterOf(jan15, jan14));
-    Assert.assertEquals(jan15, DateTimes.laterOf(jan14, jan15));
+    Assertions.assertEquals(jan15, DateTimes.laterOf(jan15, jan14));
+    Assertions.assertEquals(jan15, DateTimes.laterOf(jan14, jan15));
   }
 }

@@ -53,6 +53,8 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
 
   static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
   static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
+  static final String SERVERVIEW_TYPE_CONFIG_STRING = "druid.serverview.type";
+  static final String SERVERVIEW_TYPE_HTTP = "http";
 
   public StartupInjectorBuilder()
   {
@@ -166,6 +168,28 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
       }
 
       validateRemovedProcessingConfigs();
+      validateServerViewType();
+    }
+
+    /**
+     * Rejects any value of {@code druid.serverview.type} other than {@code "http"}. The
+     * ZooKeeper-based "batch" server view has been removed; only the HTTP-based server view is
+     * supported.
+     */
+    private void validateServerViewType()
+    {
+      String configuredType = properties.getProperty(SERVERVIEW_TYPE_CONFIG_STRING);
+      if (configuredType != null && !SERVERVIEW_TYPE_HTTP.equals(configuredType)) {
+        throw new ISE(
+            "Invalid value[%s] for property[%s]. Only [%s] is supported; the ZooKeeper-based"
+            + " 'batch' server view has been removed. Remove this property or set it to '%s'."
+            + " See the Druid upgrade notes for details.",
+            configuredType,
+            SERVERVIEW_TYPE_CONFIG_STRING,
+            SERVERVIEW_TYPE_HTTP,
+            SERVERVIEW_TYPE_HTTP
+        );
+      }
     }
 
     private void validateRemovedProcessingConfigs()

@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -60,13 +60,13 @@ public class CompactionStateTest
         .granularitySpec(granularitySpec)
         .build();
 
-    Assert.assertEquals(partitionsSpec, state.getPartitionsSpec());
-    Assert.assertEquals(dimensionsSpec, state.getDimensionsSpec());
-    Assert.assertEquals(metricsSpec, state.getMetricsSpec());
-    Assert.assertEquals(transformSpec, state.getTransformSpec());
-    Assert.assertEquals(indexSpec, state.getIndexSpec());
-    Assert.assertEquals(granularitySpec, state.getGranularitySpec());
-    Assert.assertNull(state.getProjections());
+    Assertions.assertEquals(partitionsSpec, state.getPartitionsSpec());
+    Assertions.assertEquals(dimensionsSpec, state.getDimensionsSpec());
+    Assertions.assertEquals(metricsSpec, state.getMetricsSpec());
+    Assertions.assertEquals(transformSpec, state.getTransformSpec());
+    Assertions.assertEquals(indexSpec, state.getIndexSpec());
+    Assertions.assertEquals(granularitySpec, state.getGranularitySpec());
+    Assertions.assertNull(state.getProjections());
   }
 
   @Test
@@ -102,7 +102,7 @@ public class CompactionStateTest
         .projections(projections)
         .build();
 
-    Assert.assertEquals(projections, state.getProjections());
+    Assertions.assertEquals(projections, state.getProjections());
   }
 
   @Test
@@ -140,14 +140,14 @@ public class CompactionStateTest
 
     CompactionState rebuiltState = originalState.toBuilder().build();
 
-    Assert.assertEquals(originalState, rebuiltState);
-    Assert.assertEquals(originalState.getPartitionsSpec(), rebuiltState.getPartitionsSpec());
-    Assert.assertEquals(originalState.getDimensionsSpec(), rebuiltState.getDimensionsSpec());
-    Assert.assertEquals(originalState.getMetricsSpec(), rebuiltState.getMetricsSpec());
-    Assert.assertEquals(originalState.getTransformSpec(), rebuiltState.getTransformSpec());
-    Assert.assertEquals(originalState.getIndexSpec(), rebuiltState.getIndexSpec());
-    Assert.assertEquals(originalState.getGranularitySpec(), rebuiltState.getGranularitySpec());
-    Assert.assertEquals(originalState.getProjections(), rebuiltState.getProjections());
+    Assertions.assertEquals(originalState, rebuiltState);
+    Assertions.assertEquals(originalState.getPartitionsSpec(), rebuiltState.getPartitionsSpec());
+    Assertions.assertEquals(originalState.getDimensionsSpec(), rebuiltState.getDimensionsSpec());
+    Assertions.assertEquals(originalState.getMetricsSpec(), rebuiltState.getMetricsSpec());
+    Assertions.assertEquals(originalState.getTransformSpec(), rebuiltState.getTransformSpec());
+    Assertions.assertEquals(originalState.getIndexSpec(), rebuiltState.getIndexSpec());
+    Assertions.assertEquals(originalState.getGranularitySpec(), rebuiltState.getGranularitySpec());
+    Assertions.assertEquals(originalState.getProjections(), rebuiltState.getProjections());
   }
 
   @Test
@@ -183,11 +183,11 @@ public class CompactionStateTest
         .dimensionsSpec(newDimensionsSpec)
         .build();
 
-    Assert.assertNotEquals(originalState, modifiedState);
-    Assert.assertEquals(originalState.getPartitionsSpec(), modifiedState.getPartitionsSpec());
-    Assert.assertNotEquals(originalState.getDimensionsSpec(), modifiedState.getDimensionsSpec());
-    Assert.assertEquals(newDimensionsSpec, modifiedState.getDimensionsSpec());
-    Assert.assertEquals(originalState.getMetricsSpec(), modifiedState.getMetricsSpec());
+    Assertions.assertNotEquals(originalState, modifiedState);
+    Assertions.assertEquals(originalState.getPartitionsSpec(), modifiedState.getPartitionsSpec());
+    Assertions.assertNotEquals(originalState.getDimensionsSpec(), modifiedState.getDimensionsSpec());
+    Assertions.assertEquals(newDimensionsSpec, modifiedState.getDimensionsSpec());
+    Assertions.assertEquals(originalState.getMetricsSpec(), modifiedState.getMetricsSpec());
   }
 
   @Test
@@ -221,8 +221,8 @@ public class CompactionStateTest
     CompactionState modifiedState = builder.build();
 
     // Original state should be unchanged
-    Assert.assertEquals(partitionsSpec1, originalState.getPartitionsSpec());
+    Assertions.assertEquals(partitionsSpec1, originalState.getPartitionsSpec());
     // Modified state should have the new partitionsSpec
-    Assert.assertEquals(partitionsSpec2, modifiedState.getPartitionsSpec());
+    Assertions.assertEquals(partitionsSpec2, modifiedState.getPartitionsSpec());
   }
 }

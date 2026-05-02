@@ -44,10 +44,8 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Configuration;
 import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
-import org.reflections.util.ClasspathHelper;
+import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
-import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -66,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -244,6 +243,8 @@ public class SqlTestFrameworkConfig
 
   public static class SqlTestFrameworkConfigStore implements Closeable
   {
+    private static final int MAX_CACHED_CONFIGS = 32;
+
     private final Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper;
 
     public SqlTestFrameworkConfigStore(
@@ -252,13 +253,24 @@ public class SqlTestFrameworkConfig
       this.queryComponentSupplierWrapper = queryComponentSupplierWrapper;
     }
 
-    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
+    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new LinkedHashMap<>(16, 0.75f, true)
+    {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<SqlTestFrameworkConfig, ConfigurationInstance> eldest)
+      {
+        if (size() > MAX_CACHED_CONFIGS) {
+          eldest.getValue().close();
+          return true;
+        }
+        return false;
+      }
+    };
 
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfig config) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
-      if (!configMap.containsKey(config)) {
+      if (ret == null) {
         ret = new ConfigurationInstance(config, queryComponentSupplierWrapper);
         configMap.put(config, ret);
       }
@@ -514,13 +526,9 @@ public class SqlTestFrameworkConfig
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
           Configuration cfg = new ConfigurationBuilder()
-              .setScanners(new SubTypesScanner(true))
-              .setUrls(ClasspathHelper.forJavaClassPath())
-              .filterInputsBy(
-                  new FilterBuilder()
-                      .includePackage(pkg)
-                      .and(s -> s.contains("ComponentSupplier"))
-              );
+              .setScanners(Scanners.SubTypes)
+              .forPackage(pkg.isEmpty() ? "org.apache.druid" : pkg)
+              .filterInputsBy(s -> s.contains("ComponentSupplier"));
           final Set<Class<? extends QueryComponentSupplier>> baseComponentClazzes =
               new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
           LinkedHashSet<Class<? extends QueryComponentSupplier>> retVal = new LinkedHashSet<>(baseComponentClazzes);

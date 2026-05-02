@@ -218,6 +218,7 @@ public class IndexMergerV10 extends IndexMergerBase
       /************ Create Inverted Indexes and Finalize Build Columns *************/
       final String section = "build inverted index and columns";
       progress.startSection(section);
+      v10Smoosher.startFileGroup(Projections.BASE_TABLE_PROJECTION_NAME);
       makeTimeColumn(v10Smoosher, progress, timeWriter, indexSpec, basePrefix + ColumnHolder.TIME_COLUMN_NAME);
       makeMetricsColumns(
           v10Smoosher,

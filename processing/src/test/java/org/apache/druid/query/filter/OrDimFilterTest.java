@@ -23,8 +23,8 @@ import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
 import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OrDimFilterTest extends InitializedNullHandlingTest
 {
@@ -50,7 +50,7 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
         ),
         FilterTestUtils.selector("col3", "3")
     );
-    Assert.assertEquals(expected, dimFilter.toFilter());
+    Assertions.assertEquals(expected, dimFilter.toFilter());
   }
 
   @Test
@@ -60,14 +60,14 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "1"),
         TrueDimFilter.instance()
     );
-    Assert.assertTrue(filter.toFilter() instanceof TrueFilter);
+    Assertions.assertTrue(filter.toFilter() instanceof TrueFilter);
   }
 
   @Test
   public void testToFilterOringFalseFilters()
   {
     DimFilter filter = DimFilterTestUtils.or(FalseDimFilter.instance(), FalseDimFilter.instance());
-    Assert.assertSame(FalseFilter.instance(), filter.toFilter());
+    Assertions.assertSame(FalseFilter.instance(), filter.toFilter());
   }
 
   @Test
@@ -75,7 +75,7 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
   {
     DimFilter expected = DimFilterTestUtils.selector("col1", "1");
     DimFilter filter = DimFilterTestUtils.or(expected);
-    Assert.assertEquals(expected.toFilter(), filter.toFilter());
+    Assertions.assertEquals(expected.toFilter(), filter.toFilter());
   }
 
   @Test
@@ -85,6 +85,6 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "1"),
         DimFilterTestUtils.selector("col1", "2")
     );
-    Assert.assertEquals(filter.toFilter(), filter.toFilter());
+    Assertions.assertEquals(filter.toFilter(), filter.toFilter());
   }
 }

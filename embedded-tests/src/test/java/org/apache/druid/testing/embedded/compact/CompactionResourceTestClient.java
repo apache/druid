@@ -34,6 +34,7 @@ import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
 import java.util.Map;
@@ -124,6 +125,7 @@ public class CompactionResourceTestClient
         clusterConfig.getCompactionTaskSlotRatio(),
         clusterConfig.getMaxCompactionTaskSlots()
     );
+    Assertions.assertFalse(clusterConfig.isUseSupervisors());
     final CompactionSimulateResult simulateResult = simulateRunOnCoordinator();
     log.info(
         "Triggering compaction duty on Coordinator. Expected jobs: %s",

@@ -22,8 +22,8 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -48,7 +48,7 @@ public class TaskStatusPlusTest
         null
     );
     final String json = jsonMapper.writeValueAsString(status);
-    Assert.assertEquals(status, jsonMapper.readValue(json, TaskStatusPlus.class));
+    Assertions.assertEquals(status, jsonMapper.readValue(json, TaskStatusPlus.class));
   }
 
   @Test
@@ -73,15 +73,15 @@ public class TaskStatusPlusTest
                         + "\"errorMsg\": null\n"
                         + "}";
     TaskStatusPlus taskStatusPlus = jsonMapper.readValue(json, TaskStatusPlus.class);
-    Assert.assertNotNull(taskStatusPlus);
-    Assert.assertNotNull(taskStatusPlus.getStatusCode());
-    Assert.assertTrue(taskStatusPlus.getStatusCode().isRunnable());
-    Assert.assertNotNull(taskStatusPlus.getRunnerStatusCode());
+    Assertions.assertNotNull(taskStatusPlus);
+    Assertions.assertNotNull(taskStatusPlus.getStatusCode());
+    Assertions.assertTrue(taskStatusPlus.getStatusCode().isRunnable());
+    Assertions.assertNotNull(taskStatusPlus.getRunnerStatusCode());
 
     String serialized = jsonMapper.writeValueAsString(taskStatusPlus);
 
-    Assert.assertTrue(serialized.contains("\"status\":"));
-    Assert.assertTrue(serialized.contains("\"statusCode\":"));
-    Assert.assertTrue(serialized.contains("\"runnerStatusCode\":"));
+    Assertions.assertTrue(serialized.contains("\"status\":"));
+    Assertions.assertTrue(serialized.contains("\"statusCode\":"));
+    Assertions.assertTrue(serialized.contains("\"runnerStatusCode\":"));
   }
 }

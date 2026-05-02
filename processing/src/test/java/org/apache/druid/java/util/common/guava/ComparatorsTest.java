@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common.guava;
 
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -36,11 +36,11 @@ public class ComparatorsTest
   {
     Comparator<Interval> comp = Comparators.intervalsByStartThenEnd();
 
-    Assert.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-03-31/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
-    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-03-31/2011-04-02")));
-    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
+    Assertions.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assertions.assertEquals(-1, comp.compare(Intervals.of("2011-03-31/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assertions.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-03-31/2011-04-02")));
+    Assertions.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-02")));
+    Assertions.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
 
     Interval[] intervals = new Interval[]{
         Intervals.of("2011-04-01T18/2011-04-02T13"),
@@ -53,7 +53,7 @@ public class ComparatorsTest
     };
     Arrays.sort(intervals, comp);
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Interval[]{
             Intervals.of("2011-04-01/2011-04-02"),
             Intervals.of("2011-04-01/2011-04-03"),
@@ -72,11 +72,11 @@ public class ComparatorsTest
   {
     Comparator<Interval> comp = Comparators.intervalsByEndThenStart();
 
-    Assert.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
-    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-04-01/2011-04-01")));
-    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-02/2011-04-03")));
-    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-03-31/2011-04-03")));
+    Assertions.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assertions.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
+    Assertions.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-04-01/2011-04-01")));
+    Assertions.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-02/2011-04-03")));
+    Assertions.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-03-31/2011-04-03")));
 
     Interval[] intervals = new Interval[]{
         Intervals.of("2011-04-01T18/2011-04-02T13"),
@@ -89,7 +89,7 @@ public class ComparatorsTest
     };
     Arrays.sort(intervals, comp);
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Interval[]{
             Intervals.of("2011-04-01/2011-04-02"),
             Intervals.of("2011-04-01T18/2011-04-02T13"),
@@ -107,16 +107,16 @@ public class ComparatorsTest
   public void testAlwaysFirst()
   {
     final Comparator<Integer> comparator = Comparators.alwaysFirst(25);
-    Assert.assertEquals(0, comparator.compare(25, 25));
-    Assert.assertEquals(-1, comparator.compare(25, 1000));
-    Assert.assertEquals(1, comparator.compare(1000, 25));
-    Assert.assertEquals(-1, comparator.compare(25, 1));
-    Assert.assertEquals(1, comparator.compare(1, 25));
-    Assert.assertEquals(0, comparator.compare(10, 12));
+    Assertions.assertEquals(0, comparator.compare(25, 25));
+    Assertions.assertEquals(-1, comparator.compare(25, 1000));
+    Assertions.assertEquals(1, comparator.compare(1000, 25));
+    Assertions.assertEquals(-1, comparator.compare(25, 1));
+    Assertions.assertEquals(1, comparator.compare(1, 25));
+    Assertions.assertEquals(0, comparator.compare(10, 12));
 
     Integer[] array = {25, 0, 1, 25, -10, 100, 31, 77, 89, 25};
     Arrays.sort(array, comparator);
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Integer[]{25, 25, 25, 0, 1, -10, 100, 31, 77, 89},
         array
     );

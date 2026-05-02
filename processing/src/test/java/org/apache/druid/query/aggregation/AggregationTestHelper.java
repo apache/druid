@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -105,10 +104,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * This class provides general utility to test any druid aggregation implementation given raw data,
- * parser spec, aggregator specs and a group-by query.
- * It allows you to create index from raw data, run a group by query on it which simulates query processing inside
- * of a druid cluster exercising most of the features from aggregation and returns the results that you could verify.
+ * General utility for testing Druid aggregation implementations. Given raw data, an input schema,
+ * ingestion aggregator specs, and a query, it creates a segment from the raw data and runs the
+ * query against it, simulating query processing inside a Druid cluster and returning results for
+ * verification.
  */
 public class AggregationTestHelper implements Closeable
 {
@@ -328,23 +327,7 @@ public class AggregationTestHelper implements Closeable
       File inputDataFile,
       InputRowSchema inputSchema,
       InputFormat inputFormat,
-      String aggregators,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      String queryJson
-  ) throws Exception
-  {
-    File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
-    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
-  }
-
-  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
-      File inputDataFile,
-      InputRowSchema inputSchema,
-      InputFormat inputFormat,
-      String aggregators,
+      List<AggregatorFactory> aggregators,
       long minTimestamp,
       Granularity gran,
       int maxRowCount,
@@ -352,103 +335,31 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(
-        inputDataFile,
-        inputSchema,
-        inputFormat,
-        aggregators,
-        segmentDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        true
-    );
+    createIndex(inputDataFile, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
     return runQueryOnSegments(Collections.singletonList(segmentDir), query);
   }
 
   public <T> Sequence<T> createIndexAndRunQueryOnSegment(
-      File inputDataFile,
-      InputRowSchema inputSchema,
-      InputFormat inputFormat,
-      String aggregators,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      boolean rollup,
-      String queryJson
-  ) throws Exception
-  {
-    File segmentDir = tempFolder.newFolder();
-    createIndex(
-        inputDataFile,
-        inputSchema,
-        inputFormat,
-        aggregators,
-        segmentDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        rollup
-    );
-    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
-  }
-
-  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
       InputRowSchema inputSchema,
       InputFormat inputFormat,
-      String aggregators,
+      List<AggregatorFactory> aggregators,
       long minTimestamp,
       Granularity gran,
       int maxRowCount,
-      String queryJson
-  ) throws Exception
-  {
-    return createIndexAndRunQueryOnSegment(
-        inputDataStream,
-        inputSchema,
-        inputFormat,
-        aggregators,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        true,
-        queryJson
-    );
-  }
-
-  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
-      InputStream inputDataStream,
-      InputRowSchema inputSchema,
-      InputFormat inputFormat,
-      String aggregators,
-      long minTimestamp,
-      Granularity gran,
-      int maxRowCount,
-      boolean rollup,
-      String queryJson
+      Query<T> query
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(
-        inputDataStream,
-        inputSchema,
-        inputFormat,
-        aggregators,
-        segmentDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        rollup
-    );
-    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
+    createIndex(inputDataStream, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), query);
   }
 
   public void createIndex(
       File inputDataFile,
       InputRowSchema inputSchema,
       InputFormat inputFormat,
-      String aggregators,
+      List<AggregatorFactory> aggregators,
       File outDir,
       long minTimestamp,
       Granularity gran,
@@ -472,7 +383,7 @@ public class AggregationTestHelper implements Closeable
       File inputDataFile,
       InputRowSchema inputSchema,
       InputFormat inputFormat,
-      String aggregators,
+      List<AggregatorFactory> aggregators,
       File outDir,
       long minTimestamp,
       Granularity gran,
@@ -497,7 +408,7 @@ public class AggregationTestHelper implements Closeable
       InputStream inputDataStream,
       InputRowSchema inputSchema,
       InputFormat inputFormat,
-      String aggregators,
+      List<AggregatorFactory> aggregators,
       File outDir,
       long minTimestamp,
       Granularity gran,
@@ -525,11 +436,7 @@ public class AggregationTestHelper implements Closeable
         }
       };
       InputEntityReader reader = inputFormat.createReader(inputSchema, streamEntity, tempFolder.newFolder());
-      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
-          aggregators,
-          new TypeReference<>() {}
-      );
-      AggregatorFactory[] metrics = aggregatorSpecs.toArray(new AggregatorFactory[0]);
+      AggregatorFactory[] metrics = aggregators.toArray(new AggregatorFactory[0]);
       index = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
@@ -593,16 +500,6 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  public Query readQuery(final String queryJson)
-  {
-    try {
-      return mapper.readValue(queryJson, Query.class);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   public Segment persistIncrementalIndex(
       IncrementalIndex index,
       File outDir
@@ -618,11 +515,6 @@ public class AggregationTestHelper implements Closeable
 
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
   //from each segment, later deserialize and merge and finally return the results
-  public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
-  {
-    return runQueryOnSegments(segmentDirs, readQuery(queryJson).withOverriddenContext(queryContext));
-  }
-
   public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final Query<T> query)
   {
     final List<Segment> segments = Lists.transform(
@@ -643,7 +535,7 @@ public class AggregationTestHelper implements Closeable
     );
 
     try {
-      return runQueryOnSegmentsObjs(segments, query);
+      return runQueryOnSegmentsObjs(segments, query.withOverriddenContext(queryContext));
     }
     finally {
       for (Segment segment : segments) {
@@ -691,7 +583,7 @@ public class AggregationTestHelper implements Closeable
     return baseRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)));
   }
 
-  public QueryRunner<ResultRow> makeStringSerdeQueryRunner(
+  private QueryRunner<ResultRow> makeStringSerdeQueryRunner(
       final ObjectMapper mapper,
       final QueryToolChest toolChest,
       final QueryRunner<ResultRow> baseRunner

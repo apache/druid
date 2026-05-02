@@ -19,20 +19,22 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 public class GenericIndexedWriterTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
 
   @Test
   public void writeLargeValueIntoLargeColumn() throws IOException
@@ -53,8 +55,8 @@ public class GenericIndexedWriterTest
     writer.write("i really like writing strings i really like writing strings i really like writing strings");
     writer.write("i really like writing strings");
     writer.writeTo(
-        FileChannel.open(temporaryFolder.newFile().toPath(), StandardOpenOption.WRITE),
-        new FileSmoosher(temporaryFolder.newFolder())
+        FileChannel.open(Files.createTempFile(tempDir, "junit", null), StandardOpenOption.WRITE),
+        new FileSmoosher(FileUtils.createTempDirInLocation(tempDir, "smoosh"))
     );
   }
 }

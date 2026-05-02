@@ -20,8 +20,8 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class NoopOshiSysMonitorTest
@@ -33,6 +33,6 @@ public class NoopOshiSysMonitorTest
     ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
     NoopOshiSysMonitor noopOshiSysMonitor = new NoopOshiSysMonitor();
 
-    Assert.assertFalse(noopOshiSysMonitor.doMonitor(serviceEmitter));
+    Assertions.assertFalse(noopOshiSysMonitor.doMonitor(serviceEmitter));
   }
 }

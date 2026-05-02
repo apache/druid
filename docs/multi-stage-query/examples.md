@@ -29,7 +29,7 @@ This page describes SQL-based batch ingestion using the [multi-stage query task 
 These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the web console and run them to see what they do.
 
 :::tip
-When you insert or replace data with SQL-based ingestion, set the context parameter `finalizeAggregations` to `false`. This context parameter is automatically set for you if you use the Druid console. If you use the API, you must explicitly set it. For an example, see [SQL-based ingestion API](../api-reference/sql-ingestion-api#sample-request). For details on aggregations, see [Rollup](./concepts.md#rollup).
+When you insert or replace data with SQL-based ingestion, set the context parameter `finalizeAggregations` to `false`. This context parameter is automatically set for you if you use the Druid console. If you use the API, you must explicitly set it. For an example, see [SQL-based ingestion API](../api-reference/sql-ingestion-api.md#sample-request). For details on aggregations, see [Rollup](./concepts.md#rollup).
 :::
 
 ## INSERT with no rollup

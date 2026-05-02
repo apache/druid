@@ -35,6 +35,7 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
@@ -55,6 +56,17 @@ public class Projections
   public static final String BASE_TABLE_PROJECTION_NAME = "__base";
 
   private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
+
+  public static String validateProjectionName(@Nullable String name)
+  {
+    if (name == null || name.isEmpty()) {
+      throw InvalidInput.exception("projection name cannot be null or empty");
+    }
+    if (name.startsWith("__")) {
+      throw InvalidInput.exception("projection cannot use reserved name[%s], names cannot start with '__'", name);
+    }
+    return name;
+  }
 
   @Nullable
   public static <T> QueryableProjection<T> findMatchingProjection(
@@ -405,7 +417,10 @@ public class Projections
   )
   {
     // check to see if we have an equivalent virtual column defined in the projection, if so we can
-    final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(queryVirtualColumn);
+    final VirtualColumns.Node queryNode =
+        queryCursorBuildSpec.getVirtualColumns().getNode(queryVirtualColumn.getOutputName());
+    final VirtualColumn projectionEquivalent =
+        queryNode != null ? projection.getVirtualColumns().findEquivalent(queryNode) : null;
     if (projectionEquivalent != null) {
       final String remapColumnName;
       if (Objects.equals(projectionEquivalent.getOutputName(), projection.getTimeColumnName())) {
@@ -505,12 +520,12 @@ public class Projections
     return projectionSpec.getSchema().getName() + "/";
   }
 
-  public static String getProjectionSmooshFileName(ProjectionSchema schema, String columnName)
+  public static String getProjectionSegmentInternalFileName(ProjectionSchema schema, String columnName)
   {
-    return getProjectionSmooshPrefix(schema) + columnName;
+    return getProjectionSegmentInternalFilePrefix(schema) + columnName;
   }
 
-  public static String getProjectionSmooshPrefix(ProjectionSchema projectionSchema)
+  public static String getProjectionSegmentInternalFilePrefix(ProjectionSchema projectionSchema)
   {
     return projectionSchema.getName() + "/";
   }

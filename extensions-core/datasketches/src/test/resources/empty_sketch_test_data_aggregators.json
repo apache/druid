@@ -1,9 +1,0 @@
-[
-  {
-    "type": "thetaSketch",
-    "name": "product_sketch",
-    "fieldName": "product_sketch",
-    "isInputThetaSketch": true,
-    "size": 16384
-  }
-]

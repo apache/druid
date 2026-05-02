@@ -29,13 +29,15 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class GroupByResourcesReservationPoolTest
 {
@@ -73,11 +75,12 @@ public class GroupByResourcesReservationPoolTest
    * The test should complete under 10 seconds, and the majority of the time would be consumed by waiting for the thread
    * that sleeps for 5 seconds
    */
-  @Ignore(
+  @Disabled(
       "Isn't run as a part of CI since it sleeps for 5 seconds. Callers must run the test manually if any changes are made "
       + "to the corresponding class"
   )
-  @Test(timeout = 100_000L)
+  @Test
+  @Timeout(value = 100_000L, unit = TimeUnit.MILLISECONDS)
   public void testInterleavedReserveAndRemove()
   {
     ExecutorService executor = Execs.multiThreaded(3, "group-by-resources-reservation-pool-test-%d");
@@ -85,7 +88,7 @@ public class GroupByResourcesReservationPoolTest
     // Sanity checks that the query will acquire exactly one merge buffer. This safeguards the test being useful in
     // case the merge buffer acquisition code changes to acquire less than one merge buffer (the test would be
     // useless in that case) or more than one merge buffer (the test would incorrectly fail in that case)
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(CONFIG, QUERY)
         + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(QUERY)
@@ -137,7 +140,7 @@ public class GroupByResourcesReservationPoolTest
         reserveCalledBySecondThread.await();
       }
       catch (InterruptedException e) {
-        Assert.fail("Interrupted while waiting for second reserve call to be made");
+        Assertions.fail("Interrupted while waiting for second reserve call to be made");
       }
       groupByResourcesReservationPool.clean(queryResourceId1);
       threadsCompleted.countDown();
@@ -149,7 +152,7 @@ public class GroupByResourcesReservationPoolTest
         reserveCalledByFirstThread.await();
       }
       catch (InterruptedException e) {
-        Assert.fail("Interrupted while waiting for first reserve call to be made");
+        Assertions.fail("Interrupted while waiting for first reserve call to be made");
       }
 
       QueryResourceId queryResourceId2 = new QueryResourceId("test-id-2")
@@ -185,7 +188,7 @@ public class GroupByResourcesReservationPoolTest
         Thread.sleep(5_000);
       }
       catch (InterruptedException e) {
-        Assert.fail("Interrupted while sleeping");
+        Assertions.fail("Interrupted while sleeping");
       }
       reserveCalledBySecondThread.countDown();
     });
@@ -194,7 +197,7 @@ public class GroupByResourcesReservationPoolTest
       threadsCompleted.await();
     }
     catch (InterruptedException e) {
-      Assert.fail("Interrupted while waiting for the threads to complete");
+      Assertions.fail("Interrupted while waiting for the threads to complete");
     }
   }
 
@@ -213,7 +216,7 @@ public class GroupByResourcesReservationPoolTest
         new GroupByStatsProvider.PerQueryStats()
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> groupByResourcesReservationPool.reserve(
             queryResourceId,
@@ -251,8 +254,8 @@ public class GroupByResourcesReservationPoolTest
         new GroupByStatsProvider.PerQueryStats()
     );
     GroupByQueryResources newResources = groupByResourcesReservationPool.fetch(queryResourceId);
-    Assert.assertNotNull(newResources);
+    Assertions.assertNotNull(newResources);
 
-    Assert.assertNotSame(oldResources, newResources);
+    Assertions.assertNotSame(oldResources, newResources);
   }
 }

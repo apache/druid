@@ -26,9 +26,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -55,7 +55,7 @@ public class DoubleMaxAggregationTest
     doubleMaxVectorAggFactory = TestHelper.makeJsonMapper().readValue(vectorAggSpecJson, DoubleMaxAggregatorFactory.class);
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     selector = new TestDoubleColumnSelectorImpl(values);
@@ -86,9 +86,9 @@ public class DoubleMaxAggregationTest
     aggregate(selector, agg);
     aggregate(selector, agg);
 
-    Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
-    Assert.assertEquals((long) values[2], agg.getLong());
-    Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
+    Assertions.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
+    Assertions.assertEquals((long) values[2], agg.getLong());
+    Assertions.assertEquals(values[2], agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -104,43 +104,43 @@ public class DoubleMaxAggregationTest
     aggregate(selector, agg, buffer, 0);
     aggregate(selector, agg, buffer, 0);
 
-    Assert.assertEquals(values[2], ((Double) agg.get(buffer, 0)).doubleValue(), 0.0001);
-    Assert.assertEquals((long) values[2], agg.getLong(buffer, 0));
-    Assert.assertEquals(values[2], agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(values[2], ((Double) agg.get(buffer, 0)).doubleValue(), 0.0001);
+    Assertions.assertEquals((long) values[2], agg.getLong(buffer, 0));
+    Assertions.assertEquals(values[2], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
   public void testDoubleMaxVectorAggregator()
   {
     // Some sanity.
-    Assert.assertTrue(doubleMaxVectorAggFactory.canVectorize(vectorColumnSelectorFactory));
+    Assertions.assertTrue(doubleMaxVectorAggFactory.canVectorize(vectorColumnSelectorFactory));
     VectorValueSelector vectorValueSelector = doubleMaxVectorAggFactory.vectorSelector(vectorColumnSelectorFactory);
-    Assert.assertEquals(doubleValues1, vectorValueSelector.getDoubleVector());
+    Assertions.assertEquals(doubleValues1, vectorValueSelector.getDoubleVector());
 
     VectorAggregator vectorAggregator = doubleMaxVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
 
     final ByteBuffer buf = ByteBuffer.allocate(doubleMaxVectorAggFactory.getMaxIntermediateSizeWithNulls() * 3);
     vectorAggregator.init(buf, 0);
     vectorAggregator.aggregate(buf, 0, 0, 3);
-    Assert.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 0));
+    Assertions.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 0));
 
     vectorAggregator.init(buf, 8);
     vectorAggregator.aggregate(buf, 8, 0, 3);
-    Assert.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 8));
+    Assertions.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 8));
 
     vectorAggregator.init(buf, 16);
     vectorAggregator.aggregate(buf, 16, 4, 7);
-    Assert.assertEquals(doubleValues1[5], vectorAggregator.get(buf, 16));
+    Assertions.assertEquals(doubleValues1[5], vectorAggregator.get(buf, 16));
 
     vectorAggregator.init(buf, 0);
     vectorAggregator.aggregate(buf, 0, 0, 10);
-    Assert.assertEquals(doubleValues1[3], vectorAggregator.get(buf, 0));
+    Assertions.assertEquals(doubleValues1[3], vectorAggregator.get(buf, 0));
   }
 
   @Test
   public void testCombine()
   {
-    Assert.assertEquals(3.4d, ((Double) doubleMaxAggFactory.combine(1.2, 3.4)).doubleValue(), 0.0001);
+    Assertions.assertEquals(3.4d, ((Double) doubleMaxAggFactory.combine(1.2, 3.4)).doubleValue(), 0.0001);
   }
 
   @Test
@@ -150,10 +150,10 @@ public class DoubleMaxAggregationTest
     DoubleMaxAggregatorFactory oneMore = new DoubleMaxAggregatorFactory("name1", "fieldName1");
     DoubleMaxAggregatorFactory two = new DoubleMaxAggregatorFactory("name2", "fieldName2");
 
-    Assert.assertEquals(one.hashCode(), oneMore.hashCode());
+    Assertions.assertEquals(one.hashCode(), oneMore.hashCode());
 
-    Assert.assertTrue(one.equals(oneMore));
-    Assert.assertFalse(one.equals(two));
+    Assertions.assertEquals(one, oneMore);
+    Assertions.assertNotEquals(one, two);
   }
 
   private void aggregate(TestDoubleColumnSelectorImpl selector, Aggregator agg)

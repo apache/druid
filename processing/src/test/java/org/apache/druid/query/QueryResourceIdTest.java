@@ -20,8 +20,8 @@
 package org.apache.druid.query;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +32,7 @@ public class QueryResourceIdTest
   @Test
   public void testConstructorWithNullString()
   {
-    Assert.assertThrows(NullPointerException.class, () -> new QueryResourceId(null));
+    Assertions.assertThrows(NullPointerException.class, () -> new QueryResourceId(null));
   }
 
   @Test
@@ -49,7 +49,7 @@ public class QueryResourceIdTest
   {
     Map<QueryResourceId, Integer> map = new HashMap<>();
     map.put(new QueryResourceId("abc"), 1);
-    Assert.assertEquals(1, (int) map.get(new QueryResourceId("abc")));
+    Assertions.assertEquals(1, (int) map.get(new QueryResourceId("abc")));
 
   }
 }

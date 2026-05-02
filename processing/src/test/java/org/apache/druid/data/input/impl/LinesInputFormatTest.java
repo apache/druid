@@ -25,9 +25,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -36,7 +36,7 @@ public class LinesInputFormatTest
 {
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     mapper = TestHelper.makeJsonMapper();
@@ -51,7 +51,7 @@ public class LinesInputFormatTest
 
     // Read as map
     final Map<String, Object> map = mapper.readValue(json, Map.class);
-    Assert.assertEquals("lines", map.get("type"));
+    Assertions.assertEquals("lines", map.get("type"));
 
     // Read as InputFormat
     final InputFormat fromJson = mapper.readValue(json, InputFormat.class);
@@ -63,7 +63,7 @@ public class LinesInputFormatTest
   {
     final LinesInputFormat format = new LinesInputFormat();
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.txt", unweightedSize));
+    Assertions.assertEquals(unweightedSize, format.getWeightedSize("file.txt", unweightedSize));
   }
 
   @Test
@@ -71,7 +71,7 @@ public class LinesInputFormatTest
   {
     final LinesInputFormat format = new LinesInputFormat();
     final long unweightedSize = 100L;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
         format.getWeightedSize("file.txt.gz", unweightedSize)
     );

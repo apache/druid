@@ -64,6 +64,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.ScaleDirection;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -499,11 +500,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     supervisorId,
                     dataSource
           );
-          final Integer desiredTaskCount = computeDesiredTaskCount.call();
+          final int desiredTaskCount = computeDesiredTaskCount.call();
+          final int currentTaskCount = getCurrentTaskCount();
+
+          if (desiredTaskCount <= 0) {
+            return;
+          }
+
           ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
                                                                .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+
+          // 1) This should already be handled by the auto-scaler implementation, but make sure we catch/record these for auditability
+          if (desiredTaskCount == currentTaskCount) {
+            log.warn(
+                "Skipping scaling for supervisor[%s] for dataSource[%s]: already at desired task count [%d]",
+                supervisorId,
+                dataSource,
+                desiredTaskCount
+            );
+            emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, "desired capacity reached")
+                             .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            return;
+          }
+
+          // 2) Make sure we wait for any pending completion tasks to finish.
+          // At this point there could be 3 generations of tasks: pending completion tasks (old generation), running tasks (current generation), and (after our scale) pending tasks (new generation).
+          // We want to avoid killing any old generation tasks preemptively, as that might cause the current generation tasks' offsets to become invalid.
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             // There are expected to be pending tasks if this scaling is happening on task rollover
             if (!list.isEmpty() && !isScalingTasksOnRollover.get()) {
@@ -513,45 +537,59 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   dataSource,
                   list
               );
-              if (desiredTaskCount > 0) {
-                emitter.emit(event.setDimension(
-                                      AUTOSCALER_SKIP_REASON_DIMENSION,
-                                      "There are tasks pending completion"
-                                  )
-                                  .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
-              }
+              emitter.emit(event.setDimension(
+                                    AUTOSCALER_SKIP_REASON_DIMENSION,
+                                    "There are tasks pending completion"
+                                )
+                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
               return;
             }
           }
-          if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
+
+          // 3) Make sure we are not breaching any scaling cooldown limits.
+          // Scaling operations are disruptive — scale-down in particular can leave the supervisor
+          // under-resourced while it recovers from lag induced by the scale event, so callers may
+          // configure a longer cooldown for scale-down than for scale-up. Both directions are measured against the same
+          // last-scale timestamp so that a rapid up/down oscillation is still subject to the appropriate cooldown,
+          // regardless of which direction triggered last.
+          final ScaleDirection scaleDirection;
+          final long cooldownMillis;
+
+          if (desiredTaskCount > currentTaskCount) {
+            scaleDirection = ScaleDirection.SCALE_UP;
+            cooldownMillis = autoScalerConfig.getMinScaleUpDelay().getMillis();
+          } else { // desiredTaskCount < currentTaskCount
+            scaleDirection = ScaleDirection.SCALE_DOWN;
+            cooldownMillis = autoScalerConfig.getMinScaleDownDelay().getMillis();
+          }
+
+          if (nowTime - dynamicTriggerLastScaleRunTime < cooldownMillis) {
             log.info(
-                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for supervisor[%s] for dataSource[%s], skipping it! desired task count is [%s], active task count is [%s]",
-                nowTime - dynamicTriggerLastRunTime,
-                autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
+                "DynamicAllocationTasksNotice submitted again in [%d]ms, [%s] cooldown is [%d]ms for supervisor[%s] for dataSource[%s], skipping it! desired task count is [%d], current task count is [%d]",
+                nowTime - dynamicTriggerLastScaleRunTime,
+                scaleDirection,
+                cooldownMillis,
                 supervisorId,
                 dataSource,
                 desiredTaskCount,
-                getActiveTaskGroupsCount()
+                currentTaskCount
             );
 
-            if (desiredTaskCount > 0) {
-              emitter.emit(event.setDimension(
-                                    AUTOSCALER_SKIP_REASON_DIMENSION,
-                                    "minTriggerScaleActionFrequencyMillis not elapsed yet"
-                                )
-                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
-            }
+            emitter.emit(event.setDimension(
+                                  AUTOSCALER_SKIP_REASON_DIMENSION,
+                                  "Scale cooldown not elapsed yet"
+                              )
+                              .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
             return;
           }
 
-          if (desiredTaskCount > 0) {
-            emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
-          }
+          // At this point, we can reasonably attempt a scaling action, so emit our required task count
+          emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
 
           boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
             onSuccessfulScale.run();
-            dynamicTriggerLastRunTime = nowTime;
+            dynamicTriggerLastScaleRunTime = nowTime;
           }
         }
         catch (Exception ex) {
@@ -586,8 +624,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
-   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerScaleActionFrequencyMillis' before next 'changeTaskCount'.
-   * If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
+   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least the configured
+   *         'minScaleUpDelay' or 'minScaleDownDelay' (whichever matches the direction of the next scale) before the
+   *         next 'changeTaskCount'. If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
    * @throws InterruptedException
    * @throws ExecutionException
    */
@@ -958,7 +997,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
   private long lastRunTime;
-  private long dynamicTriggerLastRunTime;
+  private long dynamicTriggerLastScaleRunTime;
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
@@ -1422,6 +1461,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
+  }
+
+  @VisibleForTesting
+  void handleDynamicAllocationTasksNotice(
+      Callable<Integer> scaleAction,
+      Runnable onSuccessfulScale,
+      ServiceEmitter emitter
+  )
+  {
+    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter).handle();
   }
 
   private Runnable buildRunTask()

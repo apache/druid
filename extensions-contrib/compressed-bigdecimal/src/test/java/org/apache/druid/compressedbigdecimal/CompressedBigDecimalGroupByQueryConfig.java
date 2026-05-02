@@ -19,37 +19,42 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
+
+import java.util.List;
+
 public class CompressedBigDecimalGroupByQueryConfig
 {
-  private final String jsonQueryFile;
-  private final String jsonAggregatorsFile;
+  private final List<AggregatorFactory> ingestionAggregators;
+  private final GroupByQuery query;
   private final String stringRevenue;
   private final String longRevenue;
   private final String doubleRevenue;
 
   public CompressedBigDecimalGroupByQueryConfig(
-      String jsonQueryFile,
-      String jsonAggregatorsFile,
+      List<AggregatorFactory> ingestionAggregators,
+      GroupByQuery query,
       String stringRevenue,
       String longRevenue,
       String doubleRevenue
   )
   {
-    this.jsonQueryFile = jsonQueryFile;
-    this.jsonAggregatorsFile = jsonAggregatorsFile;
+    this.ingestionAggregators = ingestionAggregators;
+    this.query = query;
     this.stringRevenue = stringRevenue;
     this.longRevenue = longRevenue;
     this.doubleRevenue = doubleRevenue;
   }
 
-  public String getJsonQueryFile()
+  public List<AggregatorFactory> getIngestionAggregators()
   {
-    return jsonQueryFile;
+    return ingestionAggregators;
   }
 
-  public String getJsonAggregatorsFile()
+  public GroupByQuery getQuery()
   {
-    return jsonAggregatorsFile;
+    return query;
   }
 
   public String getStringRevenue()

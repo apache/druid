@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=17
+ARG JDK_VERSION=21
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012

@@ -19,68 +19,36 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Properties;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
 public class MainTest
 {
-  @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder()
+  private static Stream<ServerRunnable> runnables()
   {
-    return ImmutableList.of(
-        new Object[]{new CliOverlord()},
-        new Object[]{new CliBroker()},
-        new Object[]{new CliHistorical()},
-        new Object[]{new CliCoordinator()},
-        new Object[]{new CliMiddleManager()},
-        new Object[]{new CliRouter()},
-        new Object[]{new CliIndexer()}
+    return Stream.of(
+        new CliOverlord(),
+        new CliBroker(),
+        new CliHistorical(),
+        new CliCoordinator(),
+        new CliMiddleManager(),
+        new CliRouter(),
+        new CliIndexer()
     );
   }
 
-  private final ServerRunnable runnable;
-
-  public MainTest(ServerRunnable runnable)
-  {
-    this.runnable = runnable;
-  }
-
-  @Test
-  public void testSimpleInjection()
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("runnables")
+  public void testSimpleInjection(ServerRunnable runnable)
   {
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testSimpleInjection_centralizedDatasourceSchemaEnabled()
-  {
-    // Do not run the test for CliRouter or CliHistorical
-    Assume.assumeFalse(runnable instanceof CliRouter || runnable instanceof CliHistorical);
-
-    try {
-      System.setProperty("druid.centralizedDatasourceSchema.enabled", "true");
-      System.setProperty("druid.serverview.type", "batch");
-      System.setProperty("druid.server.http.numThreads", "2");
-
-      final Injector injector = GuiceInjectors.makeStartupInjector();
-      injector.injectMembers(runnable);
-      Assert.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
-    }
-    finally {
-      System.clearProperty("druid.centralizedDatasourceSchema.enabled");
-      System.clearProperty("druid.serverview.type");
-      System.clearProperty("druid.server.http.numThreads");
-    }
+    Assertions.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
   }
 }

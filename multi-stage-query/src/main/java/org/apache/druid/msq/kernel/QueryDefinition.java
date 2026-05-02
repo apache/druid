@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -206,5 +207,38 @@ public class QueryDefinition
   public QueryDefinition withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new QueryDefinition(stageDefinitions, finalStage, context.override(contextOverride));
+  }
+
+  /**
+   * Returns a new {@link QueryDefinition} with runtime bounds applied:
+   * <ul>
+   *   <li>All stages {@link StageDefinition#getMaxWorkerCount()} are capped to {@code maxWorkerCount}.</li>
+   *   <li>All nonleaf stages {@link StageDefinition#getMaxWorkerCount()} are further capped to
+   *       {@code maxNonLeafWorkerCount}.</li>
+   *   <li>All stage shuffle specs, if {@link ShuffleSpec#isAdjustable()}, have their partition count set to
+   *       the capped max worker count times {@code targetPartitionsPerWorker}.</li>
+   * </ul>
+   */
+  public QueryDefinition withRuntimeBounds(
+      final int maxWorkerCount,
+      final int maxNonLeafWorkerCount,
+      final int targetPartitionsPerWorker
+  )
+  {
+    boolean anyChanged = false;
+    final Map<StageId, StageDefinition> newStageDefinitions = new LinkedHashMap<>();
+    for (Map.Entry<StageId, StageDefinition> entry : stageDefinitions.entrySet()) {
+      final StageDefinition stageDef = entry.getValue();
+      final StageDefinition adjustedStageDef =
+          stageDef.withRuntimeBounds(maxWorkerCount, maxNonLeafWorkerCount, targetPartitionsPerWorker);
+      newStageDefinitions.put(entry.getKey(), adjustedStageDef);
+      if (!Objects.equals(adjustedStageDef, stageDef)) {
+        anyChanged = true;
+      }
+    }
+    if (!anyChanged) {
+      return this;
+    }
+    return new QueryDefinition(newStageDefinitions, finalStage, context);
   }
 }
