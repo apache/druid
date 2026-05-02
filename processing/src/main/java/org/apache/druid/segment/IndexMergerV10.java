@@ -251,7 +251,13 @@ public class IndexMergerV10 extends IndexMergerBase
       final List<ProjectionMetadata> projections = new ArrayList<>();
       // ingestion current builds v9 metadata... translate v9 metadata and projection stuff to v10 format
       projections.add(
-          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensionsWithTime, segmentMetadata)
+          ProjectionMetadata.forBaseTable(
+              indexMergeResult.rowCount,
+              indexMergeResult.minTime,
+              indexMergeResult.maxTime,
+              mergedDimensionsWithTime,
+              segmentMetadata
+          )
       );
 
       // make the projections

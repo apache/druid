@@ -108,6 +108,15 @@ public class SegmentFileMetadata
     return files;
   }
 
+  /**
+   * The segment's declared interval (the bucket-aligned time range it covers), as supplied by the writer at build
+   * time and serialized as an ISO-8601 interval string. May be wider than the actual data's time range, the start
+   * typically reflects the schema's bucket minimum (e.g. start-of-day for a daily-granularity segment) and the end
+   * is rounded up to the next query-granularity bucket boundary after the latest row. For exact, data-derived
+   * bounds (e.g. for time-boundary queries) use {@link ProjectionMetadata#getMinTime} / {@link
+   * ProjectionMetadata#getMaxTime} on the entries in {@link #projections}, which are populated by newer writers and
+   * reflect the true per-projection min/max {@code __time} across all rows.
+   */
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getInterval()

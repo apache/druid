@@ -20,11 +20,13 @@
 package org.apache.druid.segment.projections;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import org.apache.druid.segment.Metadata;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,7 +37,13 @@ public class ProjectionMetadata
 {
   public static final Interner<ProjectionSchema> SCHEMA_INTERNER = Interners.newWeakInterner();
 
-  public static ProjectionMetadata forBaseTable(int numRows, List<String> dims, Metadata metadata)
+  public static ProjectionMetadata forBaseTable(
+      int numRows,
+      @Nullable Long minTime,
+      @Nullable Long maxTime,
+      List<String> dims,
+      Metadata metadata
+  )
   {
     final ProjectionSchema schema;
     if (Boolean.TRUE.equals(metadata.isRollup())) {
@@ -43,20 +51,46 @@ public class ProjectionMetadata
     } else {
       schema = TableProjectionSchema.fromMetadata(dims, metadata);
     }
-    return new ProjectionMetadata(numRows, schema);
+    return new ProjectionMetadata(numRows, schema, minTime, maxTime);
   }
 
   private final int numRows;
   private final ProjectionSchema schema;
+  /**
+   * Minimum {@code __time} value across all rows in this projection, or {@code null} if the writer didn't supply one
+   * (e.g. older segments written before this field existed, or projections that don't track it). Populated by
+   * {@link org.apache.druid.segment.IndexMergerV10} so that readers can answer time-boundary queries from metadata
+   * alone without scanning the projection's {@code __time} column.
+   * <p>
+   * The value is independent of row order: it reflects the actual minimum timestamp across all walked rows even when
+   * the projection is not time-sorted (e.g. when ingested with {@code DimensionsSpec.forceSegmentSortByTime = false}).
+   * Readers can therefore treat both this field and {@link #maxTime} as exact bounds whenever they are present.
+   */
+  @Nullable
+  private final Long minTime;
+  /**
+   * Maximum {@code __time} value across all rows in this projection. See {@link #minTime} for semantics.
+   */
+  @Nullable
+  private final Long maxTime;
 
   @JsonCreator
   public ProjectionMetadata(
       @JsonProperty("numRows") int numRows,
-      @JsonProperty("schema") ProjectionSchema schema
+      @JsonProperty("schema") ProjectionSchema schema,
+      @JsonProperty("minTime") @Nullable Long minTime,
+      @JsonProperty("maxTime") @Nullable Long maxTime
   )
   {
     this.numRows = numRows;
     this.schema = SCHEMA_INTERNER.intern(schema);
+    this.minTime = minTime;
+    this.maxTime = maxTime;
+  }
+
+  public ProjectionMetadata(int numRows, ProjectionSchema schema)
+  {
+    this(numRows, schema, null, null);
   }
 
   @JsonProperty
@@ -71,6 +105,22 @@ public class ProjectionMetadata
     return schema;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Long getMinTime()
+  {
+    return minTime;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Long getMaxTime()
+  {
+    return maxTime;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -78,13 +128,16 @@ public class ProjectionMetadata
       return false;
     }
     ProjectionMetadata that = (ProjectionMetadata) o;
-    return numRows == that.numRows && Objects.equals(schema, that.schema);
+    return numRows == that.numRows
+           && Objects.equals(schema, that.schema)
+           && Objects.equals(minTime, that.minTime)
+           && Objects.equals(maxTime, that.maxTime);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows, schema);
+    return Objects.hash(numRows, schema, minTime, maxTime);
   }
 
   @Override
@@ -93,6 +146,8 @@ public class ProjectionMetadata
     return "ProjectionMetadata{" +
            "numRows=" + numRows +
            ", schema=" + schema +
+           ", minTime=" + minTime +
+           ", maxTime=" + maxTime +
            '}';
   }
 }
