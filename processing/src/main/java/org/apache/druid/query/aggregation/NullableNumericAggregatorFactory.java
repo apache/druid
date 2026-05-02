@@ -68,7 +68,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    if (!useNullableNumericAggregators(columnSelectorFactory)) {
+    if (forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -79,7 +79,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    if (!useNullableNumericAggregators(columnSelectorFactory)) {
+    if (forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -91,10 +91,33 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    if (!useNullableNumericAggregators(columnSelectorFactory)) {
+    if (forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericVectorAggregator(aggregator, selector);
+  }
+
+  /**
+   * Factorizes a buffer aggregator for Pooled TopN. Unlike general aggregation engines, Pooled TopN creates aggregate
+   * state only after a dimension value is seen. If the input column is known to be numeric and non-null, the nullable
+   * wrapper cannot affect the result, so TopN may skip it to keep hot-loop specialization effective.
+   */
+  public final BufferAggregator factorizeBufferedForPooledTopN(ColumnSelectorFactory columnSelectorFactory)
+  {
+    T selector = selector(columnSelectorFactory);
+    BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
+    if (!useNullableNumericAggregatorsForPooledTopN(columnSelectorFactory)) {
+      return aggregator;
+    }
+    return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
+  }
+
+  public final int getMaxIntermediateSizeWithNullsForPooledTopN(ColumnInspector columnInspector)
+  {
+    if (!useNullableNumericAggregatorsForPooledTopN(columnInspector)) {
+      return getMaxIntermediateSize();
+    }
+    return getMaxIntermediateSizeWithNulls();
   }
 
   @Override
@@ -116,7 +139,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     return getMaxIntermediateSize() + Byte.BYTES;
   }
 
-  private boolean useNullableNumericAggregators(ColumnInspector columnInspector)
+  private boolean useNullableNumericAggregatorsForPooledTopN(ColumnInspector columnInspector)
   {
     if (forceNotNullable()) {
       return false;

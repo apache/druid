@@ -80,7 +80,7 @@ public class DoubleSumAggregatorTest
   }
 
   @Test
-  public void testSkipsNullableBufferAggregatorWhenInputHasNoNulls()
+  public void testUsesNullableBufferAggregatorWhenInputHasNoNulls()
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(new double[]{1.0d});
@@ -92,16 +92,17 @@ public class DoubleSumAggregatorTest
 
     BufferAggregator aggregator = new DoubleSumAggregatorFactory("sum", "metric").factorizeBuffered(selectorFactory);
 
-    Assertions.assertTrue(aggregator instanceof DoubleSumBufferAggregator);
-    ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES);
+    Assertions.assertTrue(aggregator instanceof NullableNumericBufferAggregator);
+    ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES + Byte.BYTES);
     aggregator.init(buffer, 0);
+    Assertions.assertNull(aggregator.get(buffer, 0));
     aggregator.aggregate(buffer, 0);
     Assertions.assertEquals(1.0d, aggregator.getDouble(buffer, 0), 0.0d);
     EasyMock.verify(selectorFactory);
   }
 
   @Test
-  public void testSkipsNullableAggregatorWhenInputHasNoNulls()
+  public void testUsesNullableAggregatorWhenInputHasNoNulls()
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(new double[]{1.0d});
@@ -113,9 +114,33 @@ public class DoubleSumAggregatorTest
 
     Aggregator aggregator = new DoubleSumAggregatorFactory("sum", "metric").factorize(selectorFactory);
 
-    Assertions.assertTrue(aggregator instanceof DoubleSumAggregator);
+    Assertions.assertTrue(aggregator instanceof NullableNumericAggregator);
+    Assertions.assertNull(aggregator.get());
     aggregator.aggregate();
     Assertions.assertEquals(1.0d, aggregator.getDouble(), 0.0d);
+    EasyMock.verify(selectorFactory);
+  }
+
+  @Test
+  public void testPooledTopNSkipsNullableBufferAggregatorWhenInputHasNoNulls()
+  {
+    ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(new double[]{1.0d});
+    ColumnCapabilitiesImpl capabilities =
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE).setHasNulls(false);
+    DoubleSumAggregatorFactory factory = new DoubleSumAggregatorFactory("sum", "metric");
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("metric")).andReturn(selector);
+    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(3);
+    EasyMock.replay(selectorFactory);
+
+    BufferAggregator aggregator = factory.factorizeBufferedForPooledTopN(selectorFactory);
+
+    Assertions.assertTrue(aggregator instanceof DoubleSumBufferAggregator);
+    Assertions.assertEquals(Double.BYTES, factory.getMaxIntermediateSizeWithNullsForPooledTopN(selectorFactory));
+    ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES);
+    aggregator.init(buffer, 0);
+    aggregator.aggregate(buffer, 0);
+    Assertions.assertEquals(1.0d, aggregator.getDouble(buffer, 0), 0.0d);
     EasyMock.verify(selectorFactory);
   }
 
@@ -127,7 +152,7 @@ public class DoubleSumAggregatorTest
     ColumnCapabilitiesImpl capabilities =
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
     EasyMock.expect(selectorFactory.makeColumnValueSelector("metric")).andReturn(selector);
-    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(3);
+    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(2);
     EasyMock.replay(selectorFactory);
 
     BufferAggregator aggregator = new DoubleSumAggregatorFactory("sum", "metric").factorizeBuffered(selectorFactory);
@@ -144,7 +169,7 @@ public class DoubleSumAggregatorTest
     ColumnCapabilitiesImpl capabilities =
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
     EasyMock.expect(selectorFactory.makeColumnValueSelector("metric")).andReturn(selector);
-    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(3);
+    EasyMock.expect(selectorFactory.getColumnCapabilities("metric")).andReturn(capabilities).times(2);
     EasyMock.replay(selectorFactory);
 
     Aggregator aggregator = new DoubleSumAggregatorFactory("sum", "metric").factorize(selectorFactory);
