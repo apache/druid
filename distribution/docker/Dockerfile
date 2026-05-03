@@ -17,35 +17,149 @@
 # under the License.
 #
 
-FROM alpine as extractor
+ARG JDK_VERSION=17
+ARG BASE_IMAGE=gcr.io/distroless/java$JDK_VERSION-debian12
 
-ARG VERSION=
+# The platform is explicitly specified as x64 to build the Druid distribution.
+# This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
+# Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
+# Once the web-console dependency problem is resolved, we can remove the --platform directive.
+FROM --platform=linux/amd64 maven:3.9 as builder
 
+# Rebuild from source in this stage
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
+
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -qq update \
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
+
+COPY . /src
 WORKDIR /src
-COPY ./target/apache-druid-${VERSION}-bin.tar.gz .
+RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      mvn -B -ff -q dependency:go-offline \
+      install \
+      -Pdist,bundle-contrib-exts \
+      -Pskip-static-checks,skip-tests \
+      -Dmaven.javadoc.skip=true -T1C \
+      ; fi
 
-RUN tar -zxf /src/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
+RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+      -Dexpression=project.version -DforceStdout=true \
+    ) \
+ && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
+ && mv /opt/apache-druid-${VERSION} /opt/druid
 
-FROM amd64/busybox:1.30.0-glibc as busybox
+FROM busybox:1.34.1-glibc as busybox
 
-FROM gcr.io/distroless/java:8
+FROM $BASE_IMAGE
+
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
+USER root
+
 COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
+RUN ["/busybox/busybox", "sh", "-c", "if [ ! -x \"$(command -v bash)\" ]; then \
+                                        /busybox/busybox --install /bin; \
+                                      else \
+                                        rm /busybox/busybox; \
+                                      fi;"]
+# Predefined builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+ARG TARGETARCH
 
-COPY --from=extractor /opt /opt
-COPY ./docker/druid.sh /druid.sh
+#
+# Download bash-static binary to execute scripts that require bash.
+# Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
+#
+ARG BASH_URL_BASE="https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3"
+RUN if [ ! -x "$(command -v bash)" ]; then \
+      if [ "$TARGETARCH" = "arm64" ]; then \
+        BASH_URL="${BASH_URL_BASE}/bash-linux-aarch64" ; \
+      elif [ "$TARGETARCH" = "amd64" ]; then \
+        BASH_URL="${BASH_URL_BASE}/bash-linux-x86_64" ; \
+      else \
+        echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
+      fi; \
+      echo "Downloading bash-static from ${BASH_URL}" \
+      && wget ${BASH_URL} -O /bin/bash \
+      && chmod 755 /bin/bash; \
+    fi;
 
-RUN addgroup -S -g 1000 druid \
- && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid \
- && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt \
- && chmod 775 /opt/druid/var
+RUN if [ ! -x "$(command -v useradd)" ]; then \
+      addgroup -S -g 1000 druid \
+      && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid; \
+    else \
+      groupadd --system --gid 1000 druid \
+      && useradd --system --uid 1000 -M --home /opt/druid --shell /bin/sh -c '' --gid 1000 druid; \
+    fi;
+
+COPY --chown=druid:druid --from=builder /opt /opt
+COPY distribution/docker/druid.sh /druid.sh
+COPY distribution/docker/peon.sh /peon.sh
+COPY --chown=druid:druid distribution/docker/extra_jars/ /opt/druid/lib/
+
+# create necessary directories which could be mounted as volume
+#   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
+#   /opt/shared is used to keep segments and task logs shared among Druid services
+RUN mkdir /opt/druid/var /opt/shared \
+ && chown druid:druid /opt/druid/var /opt/shared \
+ && chmod 775 /opt/druid/var /opt/shared
+
+# Install iproute2 to get the ip command needed to set config of druid.host IP address
+# Command needed in druid.sh Line 140;
+RUN if [ ! -x "$(command -v ip)" ]; then \
+      if [ -x "$(command -v apt)" ]; then \
+        apt update \
+        && apt install -y iproute2; \
+      else \
+        apk add iproute2; \
+      fi; \
+    fi;
+
+# OBSDATA-13070: Bake AWS CLI v2 and async-profiler into the image.
+# Skipped for local dev builds due to OpenSSL version incompatibility with base image.
+# ARG AWS_CLI_VERSION=2.34.11
+# ARG ASYNC_PROFILER_VERSION=4.3
+# RUN set -e \
+#     && if [ "$TARGETARCH" = "arm64" ]; then ARCH=aarch64; AP_ARCH=arm64; else ARCH=x86_64; AP_ARCH=x64; fi \
+#     && if [ -x "$(command -v apt)" ]; then \
+#          apt-get update && apt-get install -y --no-install-recommends curl htop strace bind-tools netcat unzip \
+#          && CLEANUP="apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*"; \
+#        else \
+#          apk add --no-cache curl htop strace bind-tools netcat-openbsd unzip \
+#          && CLEANUP="apk del unzip"; \
+#        fi \
+#     && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}-${AWS_CLI_VERSION}.zip" -o /tmp/awscli.zip \
+#     && unzip -q /tmp/awscli.zip -d /tmp \
+#     && /tmp/aws/install \
+#     && rm -rf /tmp/aws /tmp/awscli.zip \
+#     && curl -fsSL "https://github.com/async-profiler/async-profiler/releases/download/v${ASYNC_PROFILER_VERSION}/async-profiler-${ASYNC_PROFILER_VERSION}-linux-${AP_ARCH}.tar.gz" \
+#        -o /tmp/ap.tar.gz \
+#     && mkdir -p /opt/async-profiler \
+#     && tar xzf /tmp/ap.tar.gz -C /opt/async-profiler --strip-components=1 \
+#     && rm /tmp/ap.tar.gz \
+#     && ln -s /opt/async-profiler/bin/asprof /usr/local/bin/asprof \
+#     && eval "$CLEANUP" \
+#     && aws --version \
+#     && asprof --version
 
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
+
+# org.apache.derby:derby is impacted by https://github.com/advisories/GHSA-rcjc-c4pj-xxrp.
+# Fixing it requires upgrading to Java 21 and Derby to 10.17.1.0.
+# However, since Derby is not used in production, we can safely exclude it from the Druid image.
+RUN rm /opt/druid/lib/derby-10.14.2.0.jar /opt/druid/lib/derbyclient-10.14.2.0.jar /opt/druid/lib/derbynet-10.14.2.0.jar
+
+# Create directory for PostgreSQL certificates
+RUN mkdir -p /opt/druid/.postgresql
+
+# Download RDS root CA certificates for both commercial and us-gov regions
+# Skipped for local dev builds (curl not available without the tools install step above)
+# RUN curl -s https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root.crt && \
+#     curl -s https://truststore.pki.us-gov-west-1.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root-fedramp.crt && \
+#     chmod 644 /opt/druid/.postgresql/root.crt /opt/druid/.postgresql/root-fedramp.crt && \
+#     chown -R druid:druid /opt/druid/.postgresql
 
 ENTRYPOINT ["/druid.sh"]
