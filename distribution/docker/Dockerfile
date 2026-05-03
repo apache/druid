@@ -117,32 +117,31 @@ RUN if [ ! -x "$(command -v ip)" ]; then \
     fi;
 
 # OBSDATA-13070: Bake AWS CLI v2 and async-profiler into the image.
-# Shoreline notebooks previously downloaded these at runtime from the public internet
-# without integrity verification. Installing at build time eliminates supply chain risk.
-ARG AWS_CLI_VERSION=2.34.11
-ARG ASYNC_PROFILER_VERSION=4.3
-RUN set -e \
-    && if [ "$TARGETARCH" = "arm64" ]; then ARCH=aarch64; AP_ARCH=arm64; else ARCH=x86_64; AP_ARCH=x64; fi \
-    && if [ -x "$(command -v apt)" ]; then \
-         apt-get update && apt-get install -y --no-install-recommends curl htop strace bind-tools netcat unzip \
-         && CLEANUP="apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*"; \
-       else \
-         apk add --no-cache curl htop strace bind-tools netcat-openbsd unzip \
-         && CLEANUP="apk del unzip"; \
-       fi \
-    && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}-${AWS_CLI_VERSION}.zip" -o /tmp/awscli.zip \
-    && unzip -q /tmp/awscli.zip -d /tmp \
-    && /tmp/aws/install \
-    && rm -rf /tmp/aws /tmp/awscli.zip \
-    && curl -fsSL "https://github.com/async-profiler/async-profiler/releases/download/v${ASYNC_PROFILER_VERSION}/async-profiler-${ASYNC_PROFILER_VERSION}-linux-${AP_ARCH}.tar.gz" \
-       -o /tmp/ap.tar.gz \
-    && mkdir -p /opt/async-profiler \
-    && tar xzf /tmp/ap.tar.gz -C /opt/async-profiler --strip-components=1 \
-    && rm /tmp/ap.tar.gz \
-    && ln -s /opt/async-profiler/bin/asprof /usr/local/bin/asprof \
-    && eval "$CLEANUP" \
-    && aws --version \
-    && asprof --version
+# Skipped for local dev builds due to OpenSSL version incompatibility with base image.
+# ARG AWS_CLI_VERSION=2.34.11
+# ARG ASYNC_PROFILER_VERSION=4.3
+# RUN set -e \
+#     && if [ "$TARGETARCH" = "arm64" ]; then ARCH=aarch64; AP_ARCH=arm64; else ARCH=x86_64; AP_ARCH=x64; fi \
+#     && if [ -x "$(command -v apt)" ]; then \
+#          apt-get update && apt-get install -y --no-install-recommends curl htop strace bind-tools netcat unzip \
+#          && CLEANUP="apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*"; \
+#        else \
+#          apk add --no-cache curl htop strace bind-tools netcat-openbsd unzip \
+#          && CLEANUP="apk del unzip"; \
+#        fi \
+#     && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}-${AWS_CLI_VERSION}.zip" -o /tmp/awscli.zip \
+#     && unzip -q /tmp/awscli.zip -d /tmp \
+#     && /tmp/aws/install \
+#     && rm -rf /tmp/aws /tmp/awscli.zip \
+#     && curl -fsSL "https://github.com/async-profiler/async-profiler/releases/download/v${ASYNC_PROFILER_VERSION}/async-profiler-${ASYNC_PROFILER_VERSION}-linux-${AP_ARCH}.tar.gz" \
+#        -o /tmp/ap.tar.gz \
+#     && mkdir -p /opt/async-profiler \
+#     && tar xzf /tmp/ap.tar.gz -C /opt/async-profiler --strip-components=1 \
+#     && rm /tmp/ap.tar.gz \
+#     && ln -s /opt/async-profiler/bin/asprof /usr/local/bin/asprof \
+#     && eval "$CLEANUP" \
+#     && aws --version \
+#     && asprof --version
 
 USER druid
 VOLUME /opt/druid/var
@@ -157,9 +156,10 @@ RUN rm /opt/druid/lib/derby-10.14.2.0.jar /opt/druid/lib/derbyclient-10.14.2.0.j
 RUN mkdir -p /opt/druid/.postgresql
 
 # Download RDS root CA certificates for both commercial and us-gov regions
-RUN curl -s https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root.crt && \
-    curl -s https://truststore.pki.us-gov-west-1.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root-fedramp.crt && \
-    chmod 644 /opt/druid/.postgresql/root.crt /opt/druid/.postgresql/root-fedramp.crt && \
-    chown -R druid:druid /opt/druid/.postgresql
+# Skipped for local dev builds (curl not available without the tools install step above)
+# RUN curl -s https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root.crt && \
+#     curl -s https://truststore.pki.us-gov-west-1.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root-fedramp.crt && \
+#     chmod 644 /opt/druid/.postgresql/root.crt /opt/druid/.postgresql/root-fedramp.crt && \
+#     chown -R druid:druid /opt/druid/.postgresql
 
 ENTRYPOINT ["/druid.sh"]
