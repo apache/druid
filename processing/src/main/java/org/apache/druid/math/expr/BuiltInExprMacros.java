@@ -274,8 +274,7 @@ public class BuiltInExprMacros
       @Override
       public BindingAnalysis analyzeInputs()
       {
-        // Synthetic dummy binding so the planner does not treat now() as constant.
-        return new BindingAnalysis(new IdentifierExpr("__dummy__"));
+        return new BindingAnalysis().withNonDeterministic();
       }
 
       @Nullable
