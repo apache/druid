@@ -2886,50 +2886,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test
-  public void testComputeUnassignedServerPriorities_ignoresOrphanedPriorityEntries()
-  {
-    // Reproduces the orphan scenario: a previously-created task with an assigned server priority was never
-    // observed by discoverTasks() (e.g. it failed before the next supervisor run), so its entry lives on in
-    // taskIdToServerPriority even though the task is absent from group.tasks. The computation must derive
-    // assigned priorities from the live task set, not from stale entries.
-    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(2, Map.of(0, 1, 1, 1));
-
-    Assert.assertEquals(2, (int) ioConfig.getReplicas());
-
-    EasyMock.reset(spec);
-    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
-    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
-    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
-    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
-    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
-    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-
-    replayAll();
-
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-
-    // Only "task_survivor" is actually in the task group; "task_failed_orphan" died before being discovered,
-    // but its priority(1) entry was never cleaned up.
-    final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup =
-        supervisor.addTaskGroupToActivelyReadingTaskGroup(
-            0,
-            ImmutableMap.of("0", "0"),
-            null,
-            null,
-            Set.of("task_survivor"),
-            Set.of(),
-            Map.of("task_failed_orphan", 1, "task_survivor", 0)
-        );
-
-    // With the orphan priority(1) ignored, the only unassigned priority is 1 — enough for the 1 new replica.
-    Assert.assertEquals(List.of(1), supervisor.computeUnassignedServerPriorities(taskGroup, 1));
-
-    verifyAll();
-  }
-
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();
@@ -3638,6 +3594,127 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(Integer.valueOf(10), taskIdToServerPriority.get("task3"));
 
     verifyAll();
+  }
+
+  /**
+   * Regression test for a bug where {@code taskIdToServerPriority} could retain a stale entry for a task that
+   * was submitted in run 1 but died before the next supervisor run, causing
+   * {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} to see a fully-assigned priority set and
+   * throw {@link DruidException} on run 2 even though {@code group.tasks} was short by a replica.
+   *
+   * <p>Without the fix (single-writer of {@code taskIdToServerPriority} via {@code discoverTasks}), run 2's
+   * {@code createNewTasks} throws. With the fix, it silently submits a replacement task with the missing
+   * priority.
+   */
+  @Test
+  public void testTaskFailingBeforeDiscoveryDoesNotBlockReplacement()
+  {
+    // replicas=2, taskCount=1, priorities {0:1, 1:1} — matches the observed prod config.
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
+
+    Assert.assertEquals(2, (int) ioConfig.getReplicas());
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+
+    // Run 1 starts with no active tasks in the overlord. After runInternal() we reset & replay the mock
+    // below to simulate run 2, where one replica is missing from activeTaskMap.
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of())
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID, "5")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    final Capture<Task> submittedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(submittedTasks))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    // Custom supervisor that honors serverPrioritiesToAssign when creating tasks so run 1 produces
+    // two replicas carrying real priorities (matching prod behavior).
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
+          int replicas,
+          String baseSequenceName,
+          ObjectMapper sortingMapper,
+          TreeMap<Integer, Map<String, String>> sequenceOffsets,
+          SeekableStreamIndexTaskIOConfig taskIoConfig,
+          SeekableStreamIndexTaskTuningConfig taskTuningConfig,
+          RowIngestionMetersFactory rowIngestionMetersFactory,
+          @Nullable List<Integer> serverPrioritiesToAssign
+      )
+      {
+        final List<SeekableStreamIndexTask<String, String, ByteEntity>> tasks = new ArrayList<>();
+        for (int i = 0; i < replicas; i++) {
+          final Integer priority = serverPrioritiesToAssign == null ? null : serverPrioritiesToAssign.get(i);
+          tasks.add(createTestTask(
+              baseSequenceName + "_replica_" + i + "_p" + priority,
+              "0",
+              priority,
+              taskIoConfig,
+              recordSupplier
+          ));
+        }
+        return tasks;
+      }
+    };
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Run 1 should have submitted 2 replicas.
+    final List<Task> run1Tasks = submittedTasks.getValues();
+    Assert.assertEquals(2, run1Tasks.size());
+    final TestSeekableStreamIndexTask orphan = (TestSeekableStreamIndexTask) run1Tasks.get(0);
+    final TestSeekableStreamIndexTask survivor = (TestSeekableStreamIndexTask) run1Tasks.get(1);
+    Assert.assertEquals(
+        Set.of(0, 1),
+        Set.of(orphan.getServerPriority(), survivor.getServerPriority())
+    );
+
+    // Run 2: only the survivor is still active. The orphan died before discoverTasks() could observe it,
+    // so with the old eager-write bug it would linger in taskIdToServerPriority and block replacement.
+    EasyMock.reset(taskQueue, taskStorage);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(survivor.getId(), survivor))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus(survivor.getId()))
+            .andReturn(Optional.of(TaskStatus.running(survivor.getId())))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getTask(survivor.getId())).andReturn(Optional.of(survivor)).anyTimes();
+    final Capture<Task> replacementCapture = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(replacementCapture))).andReturn(true).once();
+    EasyMock.replay(taskQueue, taskStorage);
+
+    // Must not throw.
+    supervisor.runInternal();
+
+    // Replacement task should carry the orphan's missing priority, not duplicate the survivor's.
+    final TestSeekableStreamIndexTask replacement = (TestSeekableStreamIndexTask) replacementCapture.getValue();
+    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
   }
 
 
