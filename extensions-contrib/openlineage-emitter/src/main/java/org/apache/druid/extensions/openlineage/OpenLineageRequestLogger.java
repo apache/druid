@@ -49,7 +49,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 
 import javax.annotation.Nullable;
@@ -101,15 +100,13 @@ public class OpenLineageRequestLogger implements RequestLogger
       .withQuotedCasing(Casing.UNCHANGED)
       .withQuoting(Quoting.DOUBLE_QUOTE);
 
-  // Matches: INSERT INTO <table> ... (fallback when EXTERN prevents standard Calcite parsing)
-  // Handles both quoted ("table") and unquoted (table) identifiers.
-  private static final Pattern INSERT_INTO_PATTERN =
-      Pattern.compile("(?i)^\\s*INSERT\\s+INTO\\s+\"?([^\"\\s]+)\"?");
-  // Matches: REPLACE INTO <table> OVERWRITE ... (Druid-specific, not parseable by standard Calcite)
-  private static final Pattern REPLACE_INTO_PATTERN =
-      Pattern.compile("(?i)^\\s*REPLACE\\s+INTO\\s+\"?([^\"\\s]+)\"?");
-  // Extracts the SELECT subquery from a REPLACE INTO statement for input lineage
-  private static final Pattern REPLACE_SELECT_PATTERN =
+  // Matches INSERT INTO or REPLACE INTO when the standard Calcite parser fails (e.g. EXTERN,
+  // PARTITIONED BY). Captures the output table name; handles quoted and unquoted identifiers.
+  private static final Pattern WRITE_INTO_PATTERN =
+      Pattern.compile("(?i)^\\s*(?:INSERT|REPLACE)\\s+INTO\\s+\"?([^\"\\s]+)\"?");
+  // Extracts the SELECT subquery from INSERT INTO or REPLACE INTO for input lineage.
+  // Stops before PARTITIONED BY / CLUSTERED BY which are Druid-specific clauses.
+  private static final Pattern SELECT_FROM_WRITE_PATTERN =
       Pattern.compile("(?is)\\b(SELECT\\s+.+?)(?:\\s+PARTITIONED\\s+BY|\\s+CLUSTERED\\s+BY|$)");
 
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
@@ -139,21 +136,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   )
   {
     this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
-         DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT);
-  }
-
-  public OpenLineageRequestLogger(
-      ObjectMapper jsonMapper,
-      String namespace,
-      OpenLineageRequestLoggerProvider.TransportType transportType,
-      @Nullable String transportUrl,
-      Set<String> excludedNativeQueryTypes,
-      int emitQueueCapacity,
-      int emitThreadCount
-  )
-  {
-    this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
-         emitQueueCapacity, emitThreadCount, null);
+         DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT, null);
   }
 
   public OpenLineageRequestLogger(
@@ -178,7 +161,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       );
     }
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP) {
-      this.httpClient = httpClient != null ? httpClient : HttpClientBuilder.create().build();
+      this.httpClient = httpClient;
       // Bounded queue: if the queue is full, drop the event rather than blocking the query thread.
       // A warning is logged on the first drop and every DISCARD_WARNING_INTERVAL drops thereafter.
       this.emitExecutor = new ThreadPoolExecutor(
@@ -277,16 +260,15 @@ public class OpenLineageRequestLogger implements RequestLogger
         output = extractOutput(parsed);
       }
       catch (SqlParseException e) {
-        // Druid-specific SQL extensions (REPLACE INTO, EXTERN, etc.) may not parse with the
-        // standard Calcite parser. Attempt to extract lineage via regex fallback;
+        // Druid-specific SQL extensions (INSERT/REPLACE INTO with PARTITIONED BY, EXTERN, etc.)
+        // may not parse with the standard Calcite parser. Attempt to extract lineage via regex;
         // for other unparseable statements, emit the event without table-level lineage.
-        Matcher insertMatcher = INSERT_INTO_PATTERN.matcher(sql);
-        if (insertMatcher.find()) {
-          output = insertMatcher.group(1);
-          // Also try to extract inputs from the SELECT subquery (handles PARTITIONED BY and
-          // other Druid-specific clauses that prevent full parsing). EXTERN-sourced inputs
-          // will fail to re-parse and fall through with empty inputs, which is correct.
-          Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
+        Matcher writeMatcher = WRITE_INTO_PATTERN.matcher(sql);
+        if (writeMatcher.find()) {
+          output = writeMatcher.group(1);
+          // Also try to extract inputs from the SELECT subquery. EXTERN-sourced inputs will
+          // fail to re-parse and fall through with empty inputs, which is correct.
+          Matcher selectMatcher = SELECT_FROM_WRITE_PATTERN.matcher(sql);
           if (selectMatcher.find()) {
             try {
               SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
@@ -294,20 +276,6 @@ public class OpenLineageRequestLogger implements RequestLogger
             }
             catch (SqlParseException ignored) {
               // EXTERN or other non-standard sources — inputs left empty
-            }
-          }
-        }
-        Matcher m = REPLACE_INTO_PATTERN.matcher(sql);
-        if (m.find()) {
-          output = m.group(1);
-          Matcher selectMatcher = REPLACE_SELECT_PATTERN.matcher(sql);
-          if (selectMatcher.find()) {
-            try {
-              SqlNode selectNode = SqlParser.create(selectMatcher.group(1), SQL_PARSER_CONFIG).parseQuery();
-              inputs = extractInputs(selectNode);
-            }
-            catch (SqlParseException ignored) {
-              // fall through with empty inputs
             }
           }
         }
@@ -371,7 +339,8 @@ public class OpenLineageRequestLogger implements RequestLogger
     if (identity != null) {
       contextFacet.put("identity", identity.toString());
     }
-    Object nativeQueryIds = requestLogLine.getSqlQueryContext().get("nativeQueryIds");
+    Map<String, Object> sqlQueryContext = requestLogLine.getSqlQueryContext();
+    Object nativeQueryIds = sqlQueryContext != null ? sqlQueryContext.get("nativeQueryIds") : null;
     if (nativeQueryIds != null) {
       contextFacet.put("nativeQueryIds", nativeQueryIds.toString());
     }
@@ -554,8 +523,10 @@ public class OpenLineageRequestLogger implements RequestLogger
     } else if (node instanceof SqlBasicCall && node.getKind() == SqlKind.AS) {
       // Alias: the table reference is the first operand.
       collectFromPosition(((SqlBasicCall) node).operand(0), tables, excludeNames);
-    } else if (node instanceof SqlCall) {
-      // LATERAL, UNNEST, or other FROM-position nodes: walk operands.
+    } else if (node instanceof SqlCall && node.getKind() == SqlKind.LATERAL) {
+      // LATERAL (subquery): the single operand is a SELECT whose tables we should collect.
+      // Other SqlCalls in FROM position (UNNEST, TABLE, etc.) are not table references —
+      // their operands are column expressions, not datasource names.
       for (SqlNode operand : ((SqlCall) node).getOperandList()) {
         collectFromPosition(operand, tables, excludeNames);
       }
@@ -603,7 +574,8 @@ public class OpenLineageRequestLogger implements RequestLogger
 
   private String extractSqlQueryId(RequestLogLine requestLogLine)
   {
-    Object id = requestLogLine.getSqlQueryContext().get(BaseQuery.SQL_QUERY_ID);
+    Map<String, Object> sqlQueryContext = requestLogLine.getSqlQueryContext();
+    Object id = sqlQueryContext != null ? sqlQueryContext.get(BaseQuery.SQL_QUERY_ID) : null;
     if (id != null) {
       return id.toString();
     }

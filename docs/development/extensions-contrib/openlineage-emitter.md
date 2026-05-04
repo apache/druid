@@ -45,6 +45,12 @@ All configuration parameters are under `druid.request.logging`.
 | `druid.request.logging.transportType` | Where to send events. `CONSOLE` logs JSON to the Druid log; `HTTP` POSTs to an OpenLineage API endpoint. | no | `CONSOLE` |
 | `druid.request.logging.transportUrl` | OpenLineage API endpoint URL. Required when `transportType=HTTP`. | no | — |
 | `druid.request.logging.excludedNativeQueryTypes` | Native query types to exclude from lineage emission. Internal broker queries like segment metadata lookups produce noisy, low-value events. | no | `["segmentMetadata", "dataSourceMetadata", "timeBoundary"]` |
+| `druid.request.logging.emitQueueCapacity` | Maximum number of events buffered in the async HTTP emit queue. Events are dropped (with a warning) when the queue is full. Only applies when `transportType=HTTP`. | no | `1000` |
+| `druid.request.logging.emitThreadCount` | Number of background threads used to POST events to the HTTP endpoint. Only applies when `transportType=HTTP`. | no | `1` |
+| `druid.request.logging.trustStorePath` | Path to the TrustStore file for HTTPS transport. Only applies when `transportType=HTTP`. | no | — |
+| `druid.request.logging.trustStorePassword` | Password for the TrustStore. Only applies when `transportType=HTTP`. | no | — |
+| `druid.request.logging.keyStorePath` | Path to the KeyStore file for mutual TLS. Only applies when `transportType=HTTP`. | no | — |
+| `druid.request.logging.keyStorePassword` | Password for the KeyStore. Only applies when `transportType=HTTP`. | no | — |
 
 ### Examples
 
