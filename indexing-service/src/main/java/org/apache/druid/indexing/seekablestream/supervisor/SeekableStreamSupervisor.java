@@ -545,8 +545,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
 
-          // Auto-scaler contract: a negative return is pathological (scaler couldn't compute a
-          // useful answer, e.g. insufficient metrics).
+          // Negative return is the scaler's error signal (see SupervisorTaskAutoScaler).
           if (desiredTaskCount < 0) {
             log.warn(
                 "Auto-scaler returned pathological taskCount[%d] for supervisor[%s] for dataSource[%s]; skipping scale.",
@@ -559,12 +558,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             return;
           }
 
-          // Clamp the scaler's preferred count to the supervisor's configured bounds. The scaler
-          // is responsible only for computing what it wants; bounds enforcement and the
-          // corresponding skip-reason emissions live here. Partition count is a hard ceiling — we
-          // cannot usefully run more tasks than partitions for stream ingestion — so it caps both
-          // configured min and max (protects against misconfigurations where an operator-set min
-          // exceeds partitionCount, which would otherwise force us to allocate idle tasks).
           final int partitionCount = getPartitionCount();
           final int rawMin = autoScalerConfig.getTaskCountMin();
           final int rawMax = autoScalerConfig.getTaskCountMax();
@@ -572,9 +565,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final int taskCountMax = partitionCount > 0 ? Math.min(rawMax, partitionCount) : rawMax;
           final int clampedTaskCount = Math.min(taskCountMax, Math.max(taskCountMin, desiredTaskCount));
 
-          // When the clamped value equals the current count there is nothing to do. Emit a specific
-          // skip reason reflecting *why* we stopped: at a configured bound if clamping was the cause,
-          // otherwise the scaler simply prefers the status quo.
           if (clampedTaskCount == currentTaskCount) {
             final String skipReason;
             if (desiredTaskCount > taskCountMax) {
@@ -594,7 +584,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 taskCountMin,
                 taskCountMax
             );
-            // Emit the *unclamped* desired count so operators see what the scaler actually wants.
             emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, skipReason)
                              .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
             return;
@@ -626,8 +615,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // under-resourced while it recovers from lag induced by the scale event, so callers may
           // configure a longer cooldown for scale-down than for scale-up. Both directions are measured against the same
           // last-scale timestamp so that a rapid up/down oscillation is still subject to the appropriate cooldown,
-          // regardless of which direction triggered last. Direction is computed against the
-          // *clamped* value — that is the scale we would actually apply.
+          // regardless of which direction triggered last.
           final ScaleDirection scaleDirection;
           final long cooldownMillis;
 
@@ -660,9 +648,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             return;
           }
 
-          // At this point we can reasonably attempt a scaling action. Emit the scaler's unclamped
-          // preferred count as the operator hint: that number tells operators "the scaler wants
-          // taskCount[N]" regardless of whether we can give it the full amount.
+          // Emit the scaler's unclamped preferred count so operators see what it wants.
           emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
 
           boolean allocationSuccess = changeTaskCount(clampedTaskCount);
