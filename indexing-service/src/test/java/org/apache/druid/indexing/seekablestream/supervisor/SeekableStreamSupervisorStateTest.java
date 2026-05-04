@@ -2886,6 +2886,50 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testComputeUnassignedServerPriorities_ignoresOrphanedPriorityEntries()
+  {
+    // Reproduces the orphan scenario: a previously-created task with an assigned server priority was never
+    // observed by discoverTasks() (e.g. it failed before the next supervisor run), so its entry lives on in
+    // taskIdToServerPriority even though the task is absent from group.tasks. The computation must derive
+    // assigned priorities from the live task set, not from stale entries.
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(2, Map.of(0, 1, 1, 1));
+
+    Assert.assertEquals(2, (int) ioConfig.getReplicas());
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    replayAll();
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Only "task_survivor" is actually in the task group; "task_failed_orphan" died before being discovered,
+    // but its priority(1) entry was never cleaned up.
+    final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            0,
+            ImmutableMap.of("0", "0"),
+            null,
+            null,
+            Set.of("task_survivor"),
+            Set.of(),
+            Map.of("task_failed_orphan", 1, "task_survivor", 0)
+        );
+
+    // With the orphan priority(1) ignored, the only unassigned priority is 1 — enough for the 1 new replica.
+    Assert.assertEquals(List.of(1), supervisor.computeUnassignedServerPriorities(taskGroup, 1));
+
+    verifyAll();
+  }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();

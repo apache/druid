@@ -4463,6 +4463,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     allRequiredPriorities.sort(Collections.reverseOrder());
 
+    // Drop any stale taskIdToServerPriority entries for tasks no longer in the group. Entries can linger if a
+    // task was created (priority recorded) but failed before being observed by discoverTasks(), since the usual
+    // removeTask() cleanup only runs for tasks that make it into group.tasks.
+    final Set<String> orphanedTaskIds = Sets.difference(group.taskIdToServerPriority.keySet(), group.taskIds());
+    if (!orphanedTaskIds.isEmpty()) {
+      log.warn(
+          "Dropping orphaned taskIdToServerPriority entries[%s] in taskGroupId[%d]; these tasks are not in group.tasks[%s].",
+          orphanedTaskIds, group.groupId, group.taskIds()
+      );
+      group.taskIdToServerPriority.keySet().removeAll(orphanedTaskIds);
+    }
+
     // Remove already assigned priorities
     final List<Integer> assignedPriorities = new ArrayList<>(group.taskIdToServerPriority.values());
     final List<Integer> unassignedServerPriorities = new ArrayList<>(allRequiredPriorities);
