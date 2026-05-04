@@ -190,24 +190,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     };
   }
 
-  /**
-   * Returns the task count this scaler wants to reach based on collected lag points. The value
-   * is the scaler's preferred count, unclamped by the autoscaler's min/max bounds — the supervisor
-   * is responsible for clamping to {@code [taskCountMin, taskCountMax]} and for deciding whether
-   * to actually scale.
-   * <p>
-   * Contract:
-   * <ul>
-   *   <li>Returns {@code -1} only for pathological cases (e.g., {@code partitionCount <= 0}).</li>
-   *   <li>Returns {@code currentActiveTaskCount + scaleOutStep} (capped at partition count) on
-   *       scale-out trigger.</li>
-   *   <li>Returns {@code currentActiveTaskCount - scaleInStep} on scale-in trigger.</li>
-   *   <li>Returns the current task count when neither trigger fires — the scaler's preferred count
-   *       is to stay put.</li>
-   * </ul>
-   * The partition count remains a hard upper cap here because task count &gt; partition count is
-   * nonsensical for stream ingestion and is not a min/max-config concern.
-   */
   @VisibleForTesting
   int computeDesiredTaskCount(List<Long> lags)
   {

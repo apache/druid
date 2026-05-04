@@ -164,37 +164,19 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
-  /**
-   * Returns the task count the scaler wants to reach — the "optimal" count computed from current
-   * metrics, unclamped by the autoscaler's min/max bounds. The supervisor is responsible for
-   * clamping the return value to {@code [taskCountMin, taskCountMax]} and for deciding whether
-   * to actually scale.
-   * <p>
-   * Contract:
-   * <ul>
-   *   <li>Returns {@code -1} only for pathological cases (metrics unavailable / optimal cannot be
-   *       computed). This signals to the supervisor that there is no useful hint for operators.</li>
-   *   <li>Returns the current task count when scale-down is configured to happen on rollover only
-   *       and the optimal would otherwise be a scale-down — the scaler's "preferred" count in that
-   *       mode is to stay put.</li>
-   *   <li>Otherwise returns the optimal task count unchanged.</li>
-   * </ul>
-   */
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     if (optimalTaskCount <= 0) {
-      // computeOptimalTaskCount returns -1 for pathological metrics states; propagate it.
       return -1;
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
 
+    // Rollover-only scale-down mode: don't proactively scale down here.
     if (config.isScaleDownOnTaskRolloverOnly() && optimalTaskCount < currentTaskCount) {
-      // In rollover-only scale-down mode, the scaler's preferred count is the current count — it
-      // explicitly does not want a proactive scale-down here.
       return currentTaskCount;
     }
 
@@ -213,15 +195,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Computes the optimal task count based on current metrics.
-   * <p>
-   * Returns -1 (no scaling needed) in the following cases:
-   * <ul>
-   *   <li>Metrics are not available</li>
-   *   <li>Current task count already optimal</li>
-   * </ul>
-   *
-   * @return optimal task count, or -1 if no scaling action is needed
+   * Returns the lowest-cost task count given {@code metrics}, or {@code -1} when metrics are
+   * unavailable or otherwise unusable (the only error signal). Returning the current task
+   * count is a valid result and means current task count is already optimal.
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -308,9 +284,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
     emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
 
-    if (optimalTaskCount == currentTaskCount) {
-      return -1;
-    } else {
+    if (optimalTaskCount != currentTaskCount) {
       log.info(
           "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
           optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
