@@ -1727,24 +1727,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   /**
-   * Regression test for a bug where {@code taskIdToServerPriority} could retain a stale entry for a task that
-   * was submitted in run 1 but died before the next supervisor run, causing
-   * {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} to see a fully-assigned priority set and
-   * throw {@link org.apache.druid.error.DruidException} on run 2 even though {@code group.tasks} was short by a
-   * replica.
-   *
-   * <p>The repro is identical to the production stack trace:
-   * <pre>
-   *   Found unassignedServerPriorities[[]] of size[0] &lt; total replicas[1] for taskGroupId[0].
-   *   Task server priorities[[1, 0]] have already been assigned to tasks[[&lt;surviving_task&gt;]].
-   * </pre>
-   *
-   * <p>Without the fix (single-writer of {@code taskIdToServerPriority} via {@code discoverTasks}),
-   * run 2's {@code createNewTasks} throws. With the fix, it silently submits a replacement task with the
-   * missing priority.
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
    */
   @Test
-  public void testTaskFailingBeforeDiscoveryDoesNotBlockReplacement() throws Exception
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery() throws Exception
   {
     // replicas=2, taskCount=1, priorities {0:1, 1:1} — matches the observed prod config.
     supervisor = getTestableSupervisor(null, 2, 1, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(0, 1, 1, 1));

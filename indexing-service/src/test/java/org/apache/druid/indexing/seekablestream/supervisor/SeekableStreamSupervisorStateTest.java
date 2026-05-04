@@ -3597,17 +3597,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   /**
-   * Regression test for a bug where {@code taskIdToServerPriority} could retain a stale entry for a task that
-   * was submitted in run 1 but died before the next supervisor run, causing
-   * {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} to see a fully-assigned priority set and
-   * throw {@link DruidException} on run 2 even though {@code group.tasks} was short by a replica.
-   *
-   * <p>Without the fix (single-writer of {@code taskIdToServerPriority} via {@code discoverTasks}), run 2's
-   * {@code createNewTasks} throws. With the fix, it silently submits a replacement task with the missing
-   * priority.
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
    */
   @Test
-  public void testTaskFailingBeforeDiscoveryDoesNotBlockReplacement()
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery()
   {
     // replicas=2, taskCount=1, priorities {0:1, 1:1} — matches the observed prod config.
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
