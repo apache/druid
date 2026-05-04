@@ -752,8 +752,8 @@ FROM "wikiticker"
 This query returns:
 
 | `kafka.header.env` | `kafka.key` | `kafka.partition` | `kafka.offset` | `kafka.timestamp` | `kafka.topic` |
-|--------------------|-------------|-------------------|----------------|-------------------|---------------|
-| `development`      | `wiki-edit` | `0`               | `12345`        | `1680795276351`   | `wiki-edits`  |
+|--------------------|-----------|-------------------|----------------|---------------|---------------|
+| `development`      |`wiki-edit`|`0`|`12345`| `1680795276351`| `wiki-edits`  |
 
 ### Kinesis
 

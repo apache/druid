@@ -254,7 +254,7 @@ You can have Druid infer the schema and types for your data partially or fully b
 Before you use type-aware schema discovery, keep the following in mind:
 
 - There maybe impact on downstream BI tools depending on how they handle ARRAY-typed columns.
-- You may ingest more columns than you intend if you don't maintain an exclusion list. For example, if you use type-aware schema discovery and the Kafka input format, you'll ingest optional dimensions like the Kafka offset and partition unless you add them to the exclusion list.
+- You may ingest more columns than you intend if you don't maintain an exclusion list. For example, if you use type-aware schema discovery and the Kafka input format, you'll ingest optional dimensions like the Kafka offset and partition unless you add them to the exclusion list or explicitly list the columns you want Druid to discover the type for.
 
 When performing type-aware schema discovery, Druid can discover all the columns of your input data (that are not present in
 the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
