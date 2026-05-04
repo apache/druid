@@ -371,6 +371,22 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
+  public void testSqlUnnestDoesNotAddColumnAsInput() throws IOException
+  {
+    // UNNEST operands are column references, not table names — they must not appear in inputs.
+    logger.logSqlQuery(sqlLine(
+        "SELECT a FROM \"myTable\", UNNEST(\"arrayCol\") AS u(a)",
+        ImmutableMap.of("sqlQueryId", "qid-unnest"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Set<String> names = inputNames(capturedEvents.get(0));
+    Assertions.assertTrue(names.contains("myTable"));
+    Assertions.assertFalse(names.contains("arrayCol"));
+  }
+
+  @Test
   public void testSqlUnionAll() throws IOException
   {
     logger.logSqlQuery(sqlLine(
