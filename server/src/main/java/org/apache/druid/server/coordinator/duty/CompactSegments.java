@@ -32,15 +32,18 @@ import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientMinorCompactionInputSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -295,6 +298,13 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   /**
+   * Default percent applied to {@code maxNumTasks} for MSQ minor compactions
+   * when the supervisor's {@code taskContext} does not specify
+   * {@link ClientMSQContext#CTX_MINOR_COMPACTION_TASK_PERCENT}.
+   */
+  public static final int DEFAULT_MINOR_COMPACTION_TASK_PERCENT = 40;
+
+  /**
    * Creates a {@link ClientCompactionTaskQuery} which can be submitted to an
    * {@link OverlordClient} to start a compaction task.
    */
@@ -448,6 +458,52 @@ public class CompactSegments implements CoordinatorCustomDuty
     return autoCompactionSnapshotPerDataSource.get();
   }
 
+  /**
+   * Reduces {@code maxNumTasks} on the task context for MSQ minor compactions
+   * by the percent specified under
+   * {@link ClientMSQContext#CTX_MINOR_COMPACTION_TASK_PERCENT} in the same
+   * context, defaulting to {@link #DEFAULT_MINOR_COMPACTION_TASK_PERCENT} when
+   * absent. The scaled value is floored at {@link ClientMSQContext#DEFAULT_MAX_NUM_TASKS}
+   * (the MSQ minimum of 1 controller + 1 worker). No-op when the engine is
+   * native, the mode is full, or the percent is 100.
+   */
+  private static void maybeScaleMaxNumTasksForMinorCompaction(
+      Map<String, Object> context,
+      CompactionMode compactionMode,
+      ClientCompactionRunnerInfo compactionRunner
+  )
+  {
+    if (compactionMode != CompactionMode.UNCOMPACTED_SEGMENTS_ONLY
+        || !CompactionEngine.MSQ.equals(compactionRunner.getType())) {
+      return;
+    }
+
+    final int percent = QueryContext.of(context).getInt(
+        ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT,
+        DEFAULT_MINOR_COMPACTION_TASK_PERCENT
+    );
+    if (percent < 1 || percent > 100) {
+      throw InvalidInput.exception(
+          "'%s'[%d] must be between 1 and 100",
+          ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT,
+          percent
+      );
+    }
+    if (percent == 100) {
+      return;
+    }
+
+    final int originalMaxNumTasks = QueryContext.of(context).getInt(
+        ClientMSQContext.CTX_MAX_NUM_TASKS,
+        ClientMSQContext.DEFAULT_MAX_NUM_TASKS
+    );
+    final int scaledMaxNumTasks = Math.max(
+        ClientMSQContext.DEFAULT_MAX_NUM_TASKS,
+        (int) Math.round(originalMaxNumTasks * percent / 100.0)
+    );
+    context.put(ClientMSQContext.CTX_MAX_NUM_TASKS, scaledMaxNumTasks);
+  }
+
   private static ClientCompactionTaskQuery compactSegments(
       CompactionCandidate entry,
       Eligibility eligibility,
@@ -479,6 +535,8 @@ public class CompactSegments implements CoordinatorCustomDuty
     if (eligibility.getReason() != null) {
       context.put(COMPACTION_POLICY_RESULT, eligibility.getReason());
     }
+
+    maybeScaleMaxNumTasksForMinorCompaction(context, compactionMode, compactionRunner);
 
     String taskIdPrefix = compactionMode == CompactionMode.UNCOMPACTED_SEGMENTS_ONLY
         ? TASK_ID_PREFIX + "-minor"
