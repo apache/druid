@@ -1025,6 +1025,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private File storageDir;
     private ReferenceCountedSegmentProvider referenceProvider;
     private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
+    // switched from synchronized to use a ReentrantLock to avoid pinning virtual threads to platform threads until
+    // https://openjdk.org/jeps/491, we could consider switching back after java 24+ is the minimum version
     private final ReentrantLock entryLock = new ReentrantLock();
 
     private SegmentCacheEntry(final DataSegment dataSegment)
