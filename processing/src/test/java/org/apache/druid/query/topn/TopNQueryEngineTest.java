@@ -22,6 +22,7 @@ package org.apache.druid.query.topn;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -36,7 +37,6 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -44,10 +44,10 @@ public class TopNQueryEngineTest
 {
   private static final String DIMENSION = "dim";
   private static final String METRIC = "metric";
-  private static final Interval INTERVAL = new Interval("2000/2001");
+  private static final Interval INTERVAL = Intervals.of("2000/2001");
 
   @Test
-  public void testUsesReducedPooledTopNSizeForPooledVsHeapSelection() throws Exception
+  public void testUsesReducedPooledTopNSizeForPooledVsHeapSelection()
   {
     final TopNAlgorithm algorithm = selectAlgorithm(
         10,
@@ -58,11 +58,11 @@ public class TopNQueryEngineTest
         Granularities.DAY
     );
 
-    Assertions.assertTrue(algorithm instanceof PooledTopNAlgorithm);
+    Assertions.assertInstanceOf(PooledTopNAlgorithm.class, algorithm);
   }
 
   @Test
-  public void testUsesNullableSizeForUnknownNullabilityInPooledVsHeapSelection() throws Exception
+  public void testUsesNullableSizeForUnknownNullabilityInPooledVsHeapSelection()
   {
     final TopNAlgorithm algorithm = selectAlgorithm(
         10,
@@ -73,11 +73,11 @@ public class TopNQueryEngineTest
         Granularities.DAY
     );
 
-    Assertions.assertTrue(algorithm instanceof HeapBasedTopNAlgorithm);
+    Assertions.assertInstanceOf(HeapBasedTopNAlgorithm.class, algorithm);
   }
 
   @Test
-  public void testReducedPooledTopNSizeAvoidsAggregateMetricFirstThreshold() throws Exception
+  public void testReducedPooledTopNSizeAvoidsAggregateMetricFirstThreshold()
   {
     final TopNAlgorithm algorithm = selectAlgorithm(
         400001,
@@ -92,7 +92,7 @@ public class TopNQueryEngineTest
   }
 
   @Test
-  public void testUnknownNullabilityStillUsesAggregateMetricFirstThreshold() throws Exception
+  public void testUnknownNullabilityStillUsesAggregateMetricFirstThreshold()
   {
     final TopNAlgorithm algorithm = selectAlgorithm(
         400001,
@@ -103,7 +103,7 @@ public class TopNQueryEngineTest
         Granularities.ALL
     );
 
-    Assertions.assertTrue(algorithm instanceof AggregateTopNMetricFirstAlgorithm);
+    Assertions.assertInstanceOf(AggregateTopNMetricFirstAlgorithm.class, algorithm);
   }
 
   private static TopNAlgorithm selectAlgorithm(
@@ -113,7 +113,7 @@ public class TopNQueryEngineTest
       final List<AggregatorFactory> aggregatorFactories,
       final TopNMetricSpec metricSpec,
       final Granularity granularity
-  ) throws Exception
+  )
   {
     final TopNQuery query = new TopNQueryBuilder()
         .dataSource("test")
@@ -127,8 +127,7 @@ public class TopNQueryEngineTest
     final CapturingTopNQueryMetrics queryMetrics = new CapturingTopNQueryMetrics();
     final TopNQueryEngine queryEngine = new TopNQueryEngine(new TestBufferPool(bufferSize));
 
-    getMapFn().invoke(
-        queryEngine,
+    queryEngine.getMapFn(
         query,
         new TopNCursorInspector(
             new TestColumnInspector(metricCapabilities),
@@ -140,18 +139,6 @@ public class TopNQueryEngineTest
     );
 
     return queryMetrics.algorithm;
-  }
-
-  private static Method getMapFn() throws NoSuchMethodException
-  {
-    final Method method = TopNQueryEngine.class.getDeclaredMethod(
-        "getMapFn",
-        TopNQuery.class,
-        TopNCursorInspector.class,
-        TopNQueryMetrics.class
-    );
-    method.setAccessible(true);
-    return method;
   }
 
   private static List<AggregatorFactory> doubleSumAggregators(final int count)
@@ -217,7 +204,7 @@ public class TopNQueryEngineTest
     @Override
     public ResourceHolder<ByteBuffer> take()
     {
-      return new ResourceHolder<ByteBuffer>()
+      return new ResourceHolder<>()
       {
         @Override
         public ByteBuffer get()

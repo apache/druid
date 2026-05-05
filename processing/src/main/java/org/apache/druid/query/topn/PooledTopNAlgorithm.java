@@ -344,7 +344,7 @@ public class PooledTopNAlgorithm
   )
   {
     if (aggregatorFactory instanceof NullableNumericAggregatorFactory) {
-      return ((NullableNumericAggregatorFactory) aggregatorFactory).getMaxIntermediateSizeWithNullsForPooledTopN(
+      return ((NullableNumericAggregatorFactory<?>) aggregatorFactory).getMaxIntermediateSizeWithNullsForPooledTopN(
           columnInspector
       );
     }
