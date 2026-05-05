@@ -165,11 +165,11 @@ You can use [MSQ task engine context parameters](../multi-stage-query/reference.
 
 #### Scaling task count for minor compactions
 
-[Minor compactions](../api-reference/automatic-compaction-api.md#compaction-policy-mostfragmentedfirst) typically rewrite a small subset of segments and do less work than full compactions. To avoid spawning a full-sized MSQ task topology for that lighter workload, set `spec.taskContext.minorCompactionTaskPercent` to a value between 1 and 100. The percent is applied to `maxNumTasks` to derive the task count for minor compaction tasks; the result is floored at 2 (the MSQ minimum of one controller and one worker).
+[Minor compactions](../api-reference/automatic-compaction-api.md#compaction-policy-mostfragmentedfirst) typically rewrite a small subset of segments and do less work than full compactions. To avoid spawning a full-sized MSQ task topology for that lighter workload, opt in by setting `spec.taskContext.minorCompactionTaskPercent` to a value between 1 and 100. The percent is applied to `maxNumTasks` to derive the task count for minor compaction tasks; the result is floored at 2 (the MSQ minimum of one controller and one worker).
 
 | Parameter | Description | Default value |
 |---|---|---|
-| `minorCompactionTaskPercent` | Percent (1-100) used to scale `maxNumTasks` for MSQ minor compactions. Has no effect on full compactions or on the native compaction engine. Set to `100` to disable scaling. | 40 |
+| `minorCompactionTaskPercent` | Percent (1-100) used to scale `maxNumTasks` for MSQ minor compactions. Has no effect on full compactions or on the native compaction engine. By default, minor compactions use the same task count as full compactions; set this parameter to opt into scaling. A starting value in the range of 40 to 50 is reasonable for most workloads. | 100 (no scaling) |
 
 For example, with `maxNumTasks` set to 5 and `minorCompactionTaskPercent` set to 40, a minor compaction task launches with `maxNumTasks` of 2 (40% of 5, rounded, then floored at 2), while a full compaction task on the same datasource still launches with `maxNumTasks` of 5.
 
