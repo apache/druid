@@ -191,7 +191,7 @@ configuring [dimensions](./schema-model.md#dimensions).
 You can either manually specify the dimensions or take advantage of type-aware schema auto-discovery where you allow Druid to infer all or some of the schema for your data. This means that you don't have to explicitly specify your dimensions and their type. 
 
 :::caution
-When using type-aware schema auto-discovery, Druid discovers the type for all dimensions unless you explicitly specify dimensions for Druid to discover or list dimensions in the exclusion list. This helps you control storage costs by preventing Druid from ingesting dimensions unintentionally.
+When using type-aware schema auto-discovery, Druid discovers the type for all dimensions unless you explicitly specify dimensions for Druid to ignore by using the `dimensionExclusions` field. This helps you control storage costs by preventing Druid from ingesting dimensions unintentionally.
 :::
 
 To use type-aware schema auto-discovery, set `useSchemaDiscovery` to `true`. 
