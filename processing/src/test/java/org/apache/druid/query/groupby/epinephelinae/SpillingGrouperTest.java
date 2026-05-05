@@ -222,7 +222,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testDiskFull() throws IOException
   {
-    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 100, 100)) {
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 10, 100)) {
       AggregateResult lastResult = AggregateResult.ok();
       for (int i = 0; i < 10000 && lastResult.isOk(); i++) {
         lastResult = grouper.aggregate(new IntKey(i));

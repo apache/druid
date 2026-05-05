@@ -122,6 +122,7 @@ public class LimitedTemporaryStorage implements Closeable
   {
     synchronized (files) {
       if (files.contains(file)) {
+        final long fileSize = file.length();
         try {
           Files.delete(file.toPath());
         }
@@ -129,6 +130,7 @@ public class LimitedTemporaryStorage implements Closeable
           log.warn(e, "Cannot delete file: %s", file);
         }
         files.remove(file);
+        bytesUsed.addAndGet(-fileSize);
       }
     }
   }
