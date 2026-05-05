@@ -1734,7 +1734,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery() throws Exception
   {
-    // replicas=2, taskCount=1, priorities {0:1, 1:1} — matches the observed prod config.
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
     supervisor = getTestableSupervisor(null, 2, 1, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(0, 1, 1, 1));
     addSomeEvents(1);
 

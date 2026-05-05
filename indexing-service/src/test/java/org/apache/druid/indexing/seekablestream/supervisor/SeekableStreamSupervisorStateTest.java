@@ -3604,7 +3604,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   @Test
   public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery()
   {
-    // replicas=2, taskCount=1, priorities {0:1, 1:1} — matches the observed prod config.
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
 
     Assert.assertEquals(2, (int) ioConfig.getReplicas());
@@ -3647,7 +3647,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     replayAll();
 
     // Custom supervisor that honors serverPrioritiesToAssign when creating tasks so run 1 produces
-    // two replicas carrying real priorities (matching prod behavior).
+    // two replicas carrying priorities
     final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
     {
       @Override
