@@ -300,9 +300,13 @@ public class CompactSegments implements CoordinatorCustomDuty
   /**
    * Default percent applied to {@code maxNumTasks} for MSQ minor compactions
    * when the supervisor's {@code taskContext} does not specify
-   * {@link ClientMSQContext#CTX_MINOR_COMPACTION_TASK_PERCENT}.
+   * {@link ClientMSQContext#CTX_MINOR_COMPACTION_TASK_PERCENT}. The default of
+   * 100 disables scaling, matching the opt-in shape of the minor compaction
+   * feature itself (which is gated by non-zero
+   * {@code minUncompactedBytesPercentForFullCompaction} or
+   * {@code minUncompactedRowsPercentForFullCompaction} on the policy).
    */
-  public static final int DEFAULT_MINOR_COMPACTION_TASK_PERCENT = 40;
+  public static final int DEFAULT_MINOR_COMPACTION_TASK_PERCENT = 100;
 
   /**
    * Creates a {@link ClientCompactionTaskQuery} which can be submitted to an

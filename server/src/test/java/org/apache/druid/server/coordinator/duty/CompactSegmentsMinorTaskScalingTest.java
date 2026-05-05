@@ -49,14 +49,14 @@ public class CompactSegmentsMinorTaskScalingTest
   private static final String DATA_SOURCE = "wiki";
 
   @Test
-  public void testMinor_msq_appliesDefaultPercentWhenAbsent()
+  public void testMinor_msq_defaultDoesNotScale()
   {
     final ClientCompactionTaskQuery task = buildTask(
         Eligibility.minor("uncompacted ratio below threshold"),
         CompactionEngine.MSQ,
         contextWithMaxNumTasks(10)
     );
-    Assert.assertEquals(4, getMaxNumTasks(task));
+    Assert.assertEquals(10, getMaxNumTasks(task));
   }
 
   @Test
@@ -99,18 +99,19 @@ public class CompactSegmentsMinorTaskScalingTest
   }
 
   @Test
-  public void testMinor_msq_noExistingMaxNumTasks_scalesFromDefault()
+  public void testMinor_msq_outOfRangePercentBelowOneThrows()
   {
-    final ClientCompactionTaskQuery task = buildTask(
-        Eligibility.minor("uncompacted ratio below threshold"),
-        CompactionEngine.MSQ,
-        new HashMap<>()
+    final Map<String, Object> ctx = contextWithMaxNumTasks(10);
+    ctx.put(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, 0);
+    final DruidException thrown = Assert.assertThrows(
+        DruidException.class,
+        () -> buildTask(
+            Eligibility.minor("uncompacted ratio below threshold"),
+            CompactionEngine.MSQ,
+            ctx
+        )
     );
-    // Default maxNumTasks is 2; default percent 40% scales to floor of 2.
-    Assert.assertEquals(
-        ClientMSQContext.DEFAULT_MAX_NUM_TASKS,
-        getMaxNumTasks(task)
-    );
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT, thrown.getCategory());
   }
 
   @Test
