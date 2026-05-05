@@ -151,6 +151,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
+      if (config.getVirtualStorageLoadThreads() <= 0) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
+                                config.getVirtualStorageLoadThreads()
+                            );
+      }
       if (config.isVirtualStorageEphemeral()) {
         for (StorageLocation location : locations) {
           location.setAreWeakEntriesEphemeral(true);
