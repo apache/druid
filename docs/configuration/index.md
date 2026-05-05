@@ -716,6 +716,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 ##### Coordinator operation
 
@@ -961,6 +962,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 ##### Overlord operations
 
@@ -1314,6 +1316,7 @@ These Middle Manager and Peon configurations can be defined in the `middleManage
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 #### Middle Manager configuration
 
@@ -1443,6 +1446,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 #### Indexer general configuration
 
@@ -1540,6 +1544,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 #### Historical general configuration
 
@@ -1655,6 +1660,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 #### Query configuration
 
@@ -1911,6 +1917,8 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
 |`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
+|`druid.broker.segment.watchedDeploymentGroups`|List of strings|Restricts the Broker's segment view to data servers whose `druid.deploymentGroup` matches one of the listed values. Realtime servers (peons and indexers) bypass this filter unless `druid.broker.segment.strictRealtimeDeploymentGroupFilter` is true. Used to isolate query traffic during red/black upgrades while still allowing both clusters to query in-flight realtime data. Empty means no filtering.|none|
+|`druid.broker.segment.strictRealtimeDeploymentGroupFilter`|Boolean|When true, `druid.broker.segment.watchedDeploymentGroups` also applies to realtime servers (peons, indexers). Default false: realtime servers are always watched regardless of deployment group, so red and black brokers can both serve queries against in-flight ingestion during a rollover.|false|
 
 ## Metrics monitors
 
@@ -2280,6 +2288,7 @@ Supported query contexts:
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
+|`druid.deploymentGroup`|Optional tag identifying the deployment group this service belongs to (for example `red` or `black` during a red/black upgrade). Used by version-aware query routing on Brokers (`druid.broker.segment.watchedDeploymentGroups`) and Routers (`druid.router.acceptableDeploymentGroups`) to isolate query traffic between two parallel control planes that share the same metadata, deep storage, and discovery. Surfaced as the `deployment_group` column of `sys.servers`. Master services (Coordinator, Overlord) typically leave this unset so they can manage both groups during cutover.|`null`|
 
 #### Runtime configuration
 
@@ -2291,6 +2300,7 @@ Supported query contexts:
 |`druid.router.pollPeriod`|How often to poll for new rules.|`PT1M`|
 |`druid.router.sql.enable`|Enable routing of SQL queries using strategies. When`true`, the Router uses the  strategies defined in `druid.router.strategies` to determine the broker service for a given SQL query. When `false`, the Router uses the `defaultBrokerServiceName`.|`false`|
 |`druid.router.strategies`|Please see [Router Strategies](../design/router.md#router-strategies) for details.|`[{"type":"timeBoundary"},{"type":"priority"}]`|
+|`druid.router.acceptableDeploymentGroups`|List of strings|If non-empty, the Router only routes queries to Brokers whose `druid.deploymentGroup` is in this set. Brokers without a deployment group tag match only when this is empty. When a query's serviceName has no matching Broker after filtering, the selector returns no server and the request fails with a clear error (a warning is logged). Use during red/black upgrades to direct user traffic to one cluster's Brokers while the other cluster is still discoverable.|none|
 |`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|`rendezvousHash`|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|

@@ -588,7 +588,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(16, serverFields.size());
+    Assert.assertEquals(17, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
 
@@ -1241,7 +1241,8 @@ public class SystemSchemaTest extends CalciteTestBase
         buildRevision,
         labels,
         availableProcessors,
-        totalMemory
+        totalMemory,
+        null
     };
   }
 

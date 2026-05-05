@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -124,6 +125,10 @@ public class BrokerServerView implements TimelineServerView
         return false;
       }
 
+      if (!isDeploymentGroupAllowed(metadataAndSegment.lhs)) {
+        return false;
+      }
+
       // Include realtime tasks only if they are watched
       return metadataAndSegment.lhs.getType() != ServerType.INDEXER_EXECUTOR
              || segmentWatcherConfig.isWatchRealtimeTasks();
@@ -172,7 +177,7 @@ public class BrokerServerView implements TimelineServerView
           public CallbackAction serverAdded(DruidServer server)
           {
             // We don't track brokers in this view.
-            if (!server.getType().equals(ServerType.BROKER)) {
+            if (!server.getType().equals(ServerType.BROKER) && isDeploymentGroupAllowed(server.getMetadata())) {
               addServer(server);
             }
             return CallbackAction.CONTINUE;
@@ -246,6 +251,30 @@ public class BrokerServerView implements TimelineServerView
         && watcherConfig.getIgnoredTiers().isEmpty()) {
       throw new ISE("If configured, 'druid.broker.segment.ignoredTiers' must be non-empty");
     }
+
+    if (watcherConfig.getWatchedDeploymentGroups() != null
+        && watcherConfig.getWatchedDeploymentGroups().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.watchedDeploymentGroups' must be non-empty");
+    }
+  }
+
+  /**
+   * Returns true if the server's deploymentGroup passes the watched filter, or if the server is
+   * a realtime server type and the strict-realtime toggle is off (the default).
+   */
+  private boolean isDeploymentGroupAllowed(DruidServerMetadata server)
+  {
+    final boolean isRealtime =
+        server.getType() == ServerType.INDEXER_EXECUTOR || server.getType() == ServerType.REALTIME;
+    if (isRealtime && !segmentWatcherConfig.isStrictRealtimeDeploymentGroupFilter()) {
+      return true;
+    }
+
+    final Set<String> watched = segmentWatcherConfig.getWatchedDeploymentGroups();
+    if (watched != null && !watched.contains(server.getDeploymentGroup())) {
+      return false;
+    }
+    return true;
   }
 
   private QueryableDruidServer addServer(DruidServer server)

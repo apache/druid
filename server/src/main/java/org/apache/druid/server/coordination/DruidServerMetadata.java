@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
@@ -40,6 +41,22 @@ public class DruidServerMetadata
   private final String tier;
   private final ServerType type;
   private final int priority;
+  @Nullable
+  private final String deploymentGroup;
+
+  public DruidServerMetadata(
+      String name,
+      @Nullable String hostAndPort,
+      @Nullable String hostAndTlsPort,
+      long maxSize,
+      @Nullable Long storageSize,
+      ServerType type,
+      String tier,
+      int priority
+  )
+  {
+    this(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, type, tier, priority, null);
+  }
 
   // Either hostAndPort or hostAndTlsPort would be null depending on the type of connection.
   @JsonCreator
@@ -51,7 +68,8 @@ public class DruidServerMetadata
       @JsonProperty("storageSize") @Nullable Long storageSize,
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
-      @JsonProperty("priority") int priority
+      @JsonProperty("priority") int priority,
+      @JsonProperty("deploymentGroup") @Nullable String deploymentGroup
   )
   {
     this.name = Preconditions.checkNotNull(name);
@@ -63,6 +81,7 @@ public class DruidServerMetadata
     this.tier = tier;
     this.type = type;
     this.priority = priority;
+    this.deploymentGroup = deploymentGroup;
   }
 
   @JsonProperty
@@ -120,6 +139,19 @@ public class DruidServerMetadata
     return priority;
   }
 
+  /**
+   * Operator-set tag identifying the deployment group of this server (e.g. red/black for R/B upgrades).
+   * Null means unset. Used by version-aware query routing on the broker.
+   * Omitted from JSON when null so older consumers that don't know about this field see unchanged output.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getDeploymentGroup()
+  {
+    return deploymentGroup;
+  }
+
   public boolean isSegmentReplicationTarget()
   {
     return type.isSegmentReplicationTarget();
@@ -163,13 +195,16 @@ public class DruidServerMetadata
     if (type != that.type) {
       return false;
     }
-    return priority == that.priority;
+    if (priority != that.priority) {
+      return false;
+    }
+    return Objects.equals(deploymentGroup, that.deploymentGroup);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, tier, type, priority);
+    return Objects.hash(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, tier, type, priority, deploymentGroup);
   }
 
   @Override
@@ -184,6 +219,7 @@ public class DruidServerMetadata
            ", tier='" + tier + '\'' +
            ", type=" + type +
            ", priority=" + priority +
+           ", deploymentGroup='" + deploymentGroup + '\'' +
            '}';
   }
 }

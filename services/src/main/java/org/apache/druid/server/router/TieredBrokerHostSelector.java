@@ -31,6 +31,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -46,6 +47,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -124,12 +126,19 @@ public class TieredBrokerHostSelector
         return;
       }
 
+      final Set<String> acceptable = tierConfig.getAcceptableDeploymentGroups();
+      if (acceptable != null && acceptable.isEmpty()) {
+        throw new ISE("If configured, 'druid.router.acceptableDeploymentGroups' must be non-empty");
+      }
+
       for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
         servers.put(entry.getValue(), new NodesHolder());
       }
 
       DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER);
       druidNodeDiscovery.registerListener(
+          // The deploymentGroup filter is applied only on add; if a broker's tag changes in place,
+          // discovery emits remove + add, so the new tag is re-evaluated on the next add event.
           new DruidNodeDiscovery.Listener()
           {
             @Override
@@ -137,6 +146,15 @@ public class TieredBrokerHostSelector
             {
               nodes.forEach(
                   (node) -> {
+                    if (!isDeploymentGroupAllowed(node)) {
+                      log.debug(
+                          "Excluding broker[%s] with deploymentGroup[%s] (acceptable=%s)",
+                          node.getDruidNode().getHostAndPortToUse(),
+                          node.getDruidNode().getDeploymentGroup(),
+                          tierConfig.getAcceptableDeploymentGroups()
+                      );
+                      return;
+                    }
                     NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
                     if (nodesHolder != null) {
                       nodesHolder.add(node.getDruidNode().getHostAndPortToUse(), TO_SERVER.apply(node));
@@ -266,7 +284,26 @@ public class TieredBrokerHostSelector
       nodesHolder = servers.get(tierConfig.getDefaultBrokerServiceName());
     }
 
-    return new Pair<>(brokerServiceName, nodesHolder.pick());
+    Server picked = nodesHolder.pick();
+    if (picked == null && tierConfig.getAcceptableDeploymentGroups() != null
+        && !tierConfig.getAcceptableDeploymentGroups().isEmpty()) {
+      log.warn(
+          "No brokers available for serviceName[%s] after applying deploymentGroup filter[%s]. "
+          + "Check that brokers with a matching deploymentGroup are running.",
+          brokerServiceName,
+          tierConfig.getAcceptableDeploymentGroups()
+      );
+    }
+    return new Pair<>(brokerServiceName, picked);
+  }
+
+  private boolean isDeploymentGroupAllowed(DiscoveryDruidNode node)
+  {
+    final Set<String> acceptable = tierConfig.getAcceptableDeploymentGroups();
+    if (acceptable == null || acceptable.isEmpty()) {
+      return true;
+    }
+    return acceptable.contains(node.getDruidNode().getDeploymentGroup());
   }
 
   public Pair<String, Server> selectForSql(SqlQuery sqlQuery)

@@ -542,6 +542,154 @@ public class BrokerServerViewTest
     setupViews(null, Collections.emptySet(), true);
   }
 
+  @Test(expected = ISE.class)
+  public void testEmptyWatchedDeploymentGroupsConfig() throws Exception
+  {
+    setupViewsWithDeploymentGroupConfig(Collections.emptySet(), false);
+  }
+
+  @Test
+  public void testWatchedDeploymentGroupsExcludesNonMatchingHistorical() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    // black historical adds 1 segment; red historical's add is filtered out before reaching the latch
+    segmentAddedLatch = new CountDownLatch(1);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), false);
+
+    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+        ServerType.HISTORICAL,
+        "default_tier",
+        "black-historical:1",
+        0,
+        "black"
+    );
+    final DruidServer redHistorical = setupDataServerWithDeploymentGroup(
+        ServerType.HISTORICAL,
+        "default_tier",
+        "red-historical:1",
+        0,
+        "red"
+    );
+
+    final DataSegment segment = dataSegmentWithIntervalAndVersion("2024-01-01/P1D", "v1");
+    baseView.addSegment(blackHistorical, segment);
+    baseView.addSegment(redHistorical, segment);
+
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
+
+    TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
+        new TableDataSource(segment.getDataSource())
+    ).get();
+    List<TimelineObjectHolder<String, ServerSelector>> holders = timeline.lookup(segment.getInterval());
+    Assert.assertEquals(1, holders.size());
+    ServerSelector selector = holders.get(0).getObject().iterator().next().getObject();
+    // Only the black historical should be selectable.
+    Assert.assertEquals(
+        List.of(blackHistorical.getMetadata()),
+        selector.getAllServers(CloneQueryMode.EXCLUDECLONES)
+    );
+  }
+
+  @Test
+  public void testWatchedDeploymentGroupsAllowsRealtimeByDefault() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    // both realtimes are watched (bypass), black historical adds 1 = 3 total
+    segmentAddedLatch = new CountDownLatch(3);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), false);
+
+    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+        ServerType.HISTORICAL,
+        "default_tier",
+        "black-historical:1",
+        0,
+        "black"
+    );
+    final DruidServer redPeon = setupDataServerWithDeploymentGroup(
+        ServerType.INDEXER_EXECUTOR,
+        null,
+        "red-peon:1",
+        0,
+        "red"
+    );
+    final DruidServer blackPeon = setupDataServerWithDeploymentGroup(
+        ServerType.INDEXER_EXECUTOR,
+        null,
+        "black-peon:1",
+        0,
+        "black"
+    );
+
+    final DataSegment historicalSegment = dataSegmentWithIntervalAndVersion("2024-01-01/P1D", "v1");
+    final DataSegment redPeonSegment = dataSegmentWithIntervalAndVersion("2024-01-02/P1D", "v1");
+    final DataSegment blackPeonSegment = dataSegmentWithIntervalAndVersion("2024-01-03/P1D", "v1");
+    baseView.addSegment(blackHistorical, historicalSegment);
+    baseView.addSegment(redPeon, redPeonSegment);
+    baseView.addSegment(blackPeon, blackPeonSegment);
+
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
+
+    Set<String> serverNames = brokerServerView.getDruidServerMetadatas().stream()
+                                              .map(DruidServerMetadata::getName)
+                                              .collect(Collectors.toSet());
+    Assert.assertTrue(serverNames.contains(blackHistorical.getName()));
+    Assert.assertTrue(serverNames.contains(redPeon.getName()));
+    Assert.assertTrue(serverNames.contains(blackPeon.getName()));
+  }
+
+  @Test
+  public void testStrictRealtimeDeploymentGroupFilterExcludesRealtime() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    // strict mode: only black historical + black peon = 2; red peon is filtered.
+    segmentAddedLatch = new CountDownLatch(2);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), true);
+
+    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+        ServerType.HISTORICAL,
+        "default_tier",
+        "black-historical:1",
+        0,
+        "black"
+    );
+    final DruidServer redPeon = setupDataServerWithDeploymentGroup(
+        ServerType.INDEXER_EXECUTOR,
+        null,
+        "red-peon:1",
+        0,
+        "red"
+    );
+    final DruidServer blackPeon = setupDataServerWithDeploymentGroup(
+        ServerType.INDEXER_EXECUTOR,
+        null,
+        "black-peon:1",
+        0,
+        "black"
+    );
+
+    baseView.addSegment(blackHistorical, dataSegmentWithIntervalAndVersion("2024-01-01/P1D", "v1"));
+    baseView.addSegment(redPeon, dataSegmentWithIntervalAndVersion("2024-01-02/P1D", "v1"));
+    baseView.addSegment(blackPeon, dataSegmentWithIntervalAndVersion("2024-01-03/P1D", "v1"));
+
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
+
+    Set<String> serverNames = brokerServerView.getDruidServerMetadatas().stream()
+                                              .map(DruidServerMetadata::getName)
+                                              .collect(Collectors.toSet());
+    Assert.assertTrue(serverNames.contains(blackHistorical.getName()));
+    Assert.assertTrue(serverNames.contains(blackPeon.getName()));
+    Assert.assertFalse("red peon must be filtered under strict mode", serverNames.contains(redPeon.getName()));
+  }
+
   @Test
   public void testDifferentTierStrategiesForHistoricalAndRealtimeServers() throws Exception
   {
@@ -651,6 +799,21 @@ public class BrokerServerViewTest
     return druidServer;
   }
 
+  private DruidServer setupDataServerWithDeploymentGroup(
+      ServerType serverType,
+      String tier,
+      String name,
+      int priority,
+      String deploymentGroup
+  )
+  {
+    final DruidServer druidServer = new DruidServer(
+        new DruidServerMetadata(name, name, null, 1000000, null, serverType, tier, priority, deploymentGroup)
+    );
+    baseView.addServer(druidServer);
+    return druidServer;
+  }
+
   private boolean awaitLatch(CountDownLatch latch) throws InterruptedException
   {
     return latch.await(AWAIT_SECONDS, TimeUnit.SECONDS);
@@ -699,6 +862,29 @@ public class BrokerServerViewTest
   private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy) throws InterruptedException
   {
     setupViews(historicalStrategy, realtimeStrategy, new BrokerSegmentWatcherConfig());
+  }
+
+  private void setupViewsWithDeploymentGroupConfig(Set<String> watchedDeploymentGroups, boolean strict)
+      throws InterruptedException
+  {
+    setupViews(
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public Set<String> getWatchedDeploymentGroups()
+          {
+            return watchedDeploymentGroups;
+          }
+
+          @Override
+          public boolean isStrictRealtimeDeploymentGroupFilter()
+          {
+            return strict;
+          }
+        }
+    );
   }
 
   private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws InterruptedException
