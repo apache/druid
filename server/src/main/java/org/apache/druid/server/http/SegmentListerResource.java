@@ -299,7 +299,7 @@ public class SegmentListerResource
 
     SegmentLoaderConfig config = loadDropRequestHandler.getSegmentLoaderConfig();
     SegmentLoadingCapabilities capabilitiesResponse =
-        new SegmentLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads());
+        new SegmentLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads(), true);
 
     return Response.status(Response.Status.OK).entity(capabilitiesResponse).build();
   }
