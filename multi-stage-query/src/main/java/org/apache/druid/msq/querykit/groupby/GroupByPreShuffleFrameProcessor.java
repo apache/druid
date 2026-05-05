@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit.groupby;
 
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -57,8 +58,10 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
@@ -93,13 +96,18 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private SegmentsInputSlice handedOffSegments = null;
   private Yielder<Yielder<ResultRow>> currentResultsYielder;
   private ListenableFuture<DataServerQueryResult<ResultRow>> dataServerQueryResultFuture;
+  @Nullable
+  private CursorFactory currentCursorFactory;
+  @Nullable
+  private TimeBoundaryInspector currentTimeBoundaryInspector;
   /**
-   * In-flight {@link GroupingEngine#processAsync} future for the current segment, when {@link #resultYielder} has not
-   * yet been derived. Cleared after the future completes and the yielder is set. Allows the processor to yield via
-   * {@link ReturnOrAwait#awaitAllFutures} while the future is pending instead of blocking on a download.
+   * In-flight {@link GroupingEngine#makeCursorHolderAsync} handle for the current segment, when {@link #resultYielder}
+   * has not yet been derived. Registered on {@link #closer} so the produced {@link CursorHolder} is always disposed
+   * regardless of where the underlying load is in its lifecycle. Cleared after we transfer ownership of the holder to
+   * {@link GroupingEngine#processCursorHolder} (which moves it onto the resulting Sequence's baggage closer).
    */
   @Nullable
-  private ListenableFuture<Sequence<ResultRow>> pendingResultSequenceFuture;
+  private AsyncCursorHolder asyncCursorHolder;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -191,34 +199,54 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      if (pendingResultSequenceFuture == null) {
+      if (asyncCursorHolder == null && currentCursorFactory == null) {
+        // First invocation for this segment: map it, check the TimeBoundary fast path, otherwise kick off the async
+        // cursor-holder load and cache the cursor factory + time-boundary inspector for the follow-up invocation.
         final Segment segment = mapSegment(segmentHolder, closer);
-        final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
+        currentTimeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
 
-        if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
+        if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(
+            query,
+            currentTimeBoundaryInspector,
+            segmentHolder.getDescriptor()
+        )) {
           // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
           resultYielder = Yielders.each(
-              Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)))
+              Sequences.simple(
+                  List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, currentTimeBoundaryInspector))
+              )
           );
         } else {
-          // Resolve this query using a cursor; let the cursor factory acquire the cursor holder asynchronously so we
-          // can yield via ReturnOrAwait.awaitAllFutures while it does any I/O it needs.
-          pendingResultSequenceFuture = groupingEngine.processAsync(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-              Objects.requireNonNull(segment.as(CursorFactory.class)),
-              tbi,
-              bufferPool,
-              null
+          currentCursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
+          asyncCursorHolder = closer.register(
+              groupingEngine.makeCursorHolderAsync(
+                  query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+                  currentCursorFactory,
+                  null
+              )
           );
         }
       }
 
-      if (pendingResultSequenceFuture != null) {
-        if (!pendingResultSequenceFuture.isDone()) {
-          return ReturnOrAwait.awaitAllFutures(List.of(pendingResultSequenceFuture));
+      if (asyncCursorHolder != null) {
+        if (!asyncCursorHolder.isReady()) {
+          final SettableFuture<?> awaitFuture = SettableFuture.create();
+          asyncCursorHolder.addReadyCallback(() -> awaitFuture.set(null));
+          return ReturnOrAwait.awaitAllFutures(List.of(awaitFuture));
         }
-        final Sequence<ResultRow> rowSequence = FutureUtils.getUncheckedImmediately(pendingResultSequenceFuture);
-        pendingResultSequenceFuture = null;
+        // The holder is ready, ownership of the holder transitions onto the returned Sequence's baggage closer
+        final CursorHolder holder = asyncCursorHolder.release();
+        asyncCursorHolder = null;
+        // currentCursorFactory is non-null whenever asyncCursorHolder is non-null (both are set together in the
+        // first-invocation branch above). The requireNonNull pins the invariant for static analysis.
+        final Sequence<ResultRow> rowSequence = groupingEngine.processCursorHolder(
+            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+            Objects.requireNonNull(currentCursorFactory),
+            holder,
+            currentTimeBoundaryInspector,
+            bufferPool,
+            null
+        );
         resultYielder = Yielders.each(rowSequence);
       }
     }

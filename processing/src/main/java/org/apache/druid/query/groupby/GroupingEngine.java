@@ -27,13 +27,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
@@ -77,6 +75,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -491,17 +490,30 @@ public class GroupingEngine
   }
 
   /**
-   * Asynchronous variant of {@link #process} that obtains the {@link CursorHolder} from
-   * {@link CursorFactory#makeCursorHolderAsync} so callers running on threads that must not block on I/O
-   * (e.g. MSQ frame processors) can yield via {@link org.apache.druid.frame.processor.ReturnOrAwait#awaitAllFutures}
-   * until the cursor holder is ready.
-   * <p>
-   * The processing-buffer reservation from {@code bufferPool} is deferred until the cursor holder is available, so
-   * the buffer is not held during cursor-holder I/O.
+   * Obtain an {@link AsyncCursorHolder} for this query's cursor build spec. Pairs with {@link #processCursorHolder},
+   * allowing a non-blocking caller to call this, yield until the returned holder is ready, and then call
+   * {@link #processCursorHolder} on its processing thread to run the actual aggregation.
    */
-  public ListenableFuture<Sequence<ResultRow>> processAsync(
+  public AsyncCursorHolder makeCursorHolderAsync(
       GroupByQuery query,
       CursorFactory cursorFactory,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
+  {
+    validateForProcess(query, cursorFactory);
+    final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
+    return cursorFactory.makeCursorHolderAsync(buildSpec);
+  }
+
+  /**
+   * Run the aggregation against an already-loaded {@link CursorHolder}. The caller is responsible for acquiring the
+   * holder (either directly from a {@link CursorFactory#makeCursorHolder} as we do in {@link #process} or using
+   * {@link #makeCursorHolderAsync} + {@link AsyncCursorHolder#release})
+   */
+  public Sequence<ResultRow> processCursorHolder(
+      GroupByQuery query,
+      CursorFactory cursorFactory,
+      CursorHolder cursorHolder,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       NonBlockingPool<ByteBuffer> bufferPool,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
@@ -509,17 +521,7 @@ public class GroupingEngine
   {
     validateForProcess(query, cursorFactory);
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
-    return FutureUtils.transform(
-        cursorFactory.makeCursorHolderAsync(buildSpec),
-        cursorHolder -> processWithCursorHolder(
-            query,
-            cursorFactory,
-            cursorHolder,
-            timeBoundaryInspector,
-            bufferPool,
-            buildSpec
-        )
-    );
+    return processWithCursorHolder(query, cursorFactory, cursorHolder, timeBoundaryInspector, bufferPool, buildSpec);
   }
 
   private static void validateForProcess(GroupByQuery query, @Nullable CursorFactory cursorFactory)
@@ -545,23 +547,20 @@ public class GroupingEngine
       CursorBuildSpec buildSpec
   )
   {
-    final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
-
-    final ResourceHolder<ByteBuffer> bufferHolder;
-    try {
-      bufferHolder = bufferPool.take();
-    }
-    catch (Throwable e) {
-      CloseableUtils.closeAndWrapExceptions(cursorHolder);
-      throw e;
-    }
-
-    Closer closer = Closer.create();
-    closer.register(bufferHolder);
+    // Register the cursor holder on the closer before any work that could throw, so a single catch path covers
+    // every cleanup scenario (bufferPool.take() failure, pipeline construction failure, etc.) and the original
+    // exception is preserved with any close errors as suppressed.
+    final Closer closer = Closer.create();
     closer.register(cursorHolder);
-    try {
-      final String fudgeTimestampString = query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP);
 
+    final GroupByQueryConfig querySpecificConfig;
+    try {
+      querySpecificConfig = configSupplier.get().withOverrides(query);
+
+      final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
+      closer.register(bufferHolder);
+
+      final String fudgeTimestampString = query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP);
       final DateTime fudgeTimestamp = fudgeTimestampString == null
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
@@ -603,8 +602,7 @@ public class GroupingEngine
       return result.withBaggage(closer);
     }
     catch (Throwable e) {
-      CloseableUtils.closeAndWrapExceptions(closer);
-      throw e;
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
     }
   }
 

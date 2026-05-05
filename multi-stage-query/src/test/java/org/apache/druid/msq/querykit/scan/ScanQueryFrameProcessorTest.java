@@ -49,6 +49,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
@@ -277,8 +278,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   /**
    * Verifies that {@link ScanQueryFrameProcessor#runWithSegment} yields via {@link
    * org.apache.druid.frame.processor.ReturnOrAwait#awaitAllFutures} when {@link CursorFactory#makeCursorHolderAsync}
-   * returns a future that has not yet completed, and resumes after the future completes. Exercises the partial /
-   * non-blocking I/O integration path on the MSQ side without requiring a real partial segment.
+   * returns an {@link AsyncCursorHolder} that has not yet completed, and resumes after it does. Exercises the partial
+   * / non-blocking I/O integration path on the MSQ side without requiring a real partial segment.
    */
   @Test
   public void test_runWithSegments_asyncCursorHolderAwaits() throws Exception
@@ -296,9 +297,9 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
       }
 
       @Override
-      public ListenableFuture<CursorHolder> makeCursorHolderAsync(CursorBuildSpec spec)
+      public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
       {
-        return deferredHolder;
+        return AsyncCursorHolder.fromFuture(deferredHolder);
       }
 
       @Override
@@ -425,9 +426,9 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     final ListenableFuture<Object> retVal = exec.runFully(processor, null);
 
-    // Processor should be awaiting the deferred future and have produced no rows yet.
+    // Processor should be awaiting the deferred holder and have produced no rows yet.
     Thread.sleep(200);
-    Assertions.assertFalse(retVal.isDone(), "processor should be awaiting the deferred cursor holder future");
+    Assertions.assertFalse(retVal.isDone(), "processor should be awaiting the deferred AsyncCursorHolder");
     Assertions.assertFalse(outputChannel.readable().canRead(), "no frames should have been written yet");
 
     // Complete the future and verify the processor proceeds to produce all rows.

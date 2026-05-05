@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -69,6 +70,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
@@ -119,12 +121,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private Cursor cursor;
   /**
-   * In-flight {@link CursorFactory#makeCursorHolderAsync} future for the current segment, when {@link #cursor} has not
-   * yet been derived. Cleared after the future completes and the cursor is set up. Allows the processor to yield via
-   * {@link ReturnOrAwait#awaitAllFutures} while the future is pending instead of blocking on a download.
+   * In-flight {@link CursorFactory#makeCursorHolderAsync} handle for the current segment, when {@link #cursor} has not
+   * yet been derived. Registered on {@link #closer} as soon as it is created so the produced {@link CursorHolder} is
+   * always disposed regardless of where the underlying load is in its lifecycle. Cleared after the holder is consumed
+   * and ownership transitions to {@link #cursorCloser}.
    */
   @Nullable
-  private ListenableFuture<CursorHolder> cursorHolderFuture;
+  private AsyncCursorHolder asyncCursorHolder;
   private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   /**
@@ -304,7 +307,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      if (cursorHolderFuture == null) {
+      if (asyncCursorHolder == null) {
         final Segment segment = mapSegment(segmentHolder, closer);
         final CursorFactory cursorFactory = segment.as(CursorFactory.class);
         if (cursorFactory == null) {
@@ -313,20 +316,27 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           );
         }
 
-        cursorHolderFuture = cursorFactory.makeCursorHolderAsync(
-            ScanQueryEngine.makeCursorBuildSpec(
-                query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-                null
+        asyncCursorHolder = closer.register(
+            cursorFactory.makeCursorHolderAsync(
+                ScanQueryEngine.makeCursorBuildSpec(
+                    query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+                    null
+                )
             )
         );
       }
 
-      if (!cursorHolderFuture.isDone()) {
-        return ReturnOrAwait.awaitAllFutures(ImmutableList.of(cursorHolderFuture));
+      if (!asyncCursorHolder.isReady()) {
+        final SettableFuture<?> awaitFuture = SettableFuture.create();
+        asyncCursorHolder.addReadyCallback(() -> awaitFuture.set(null));
+        return ReturnOrAwait.awaitAllFutures(ImmutableList.of(awaitFuture));
       }
 
-      final CursorHolder nextCursorHolder = FutureUtils.getUncheckedImmediately(cursorHolderFuture);
-      cursorHolderFuture = null;
+      // Transfer ownership of the holder out of the AsyncCursorHolder; setNextCursor manages the holder's lifecycle
+      // from here on. The wrapper stays registered on closer (close() is now a no-op since release was called) so
+      // we don't need to track it further.
+      final CursorHolder nextCursorHolder = asyncCursorHolder.release();
+      asyncCursorHolder = null;
 
       final Cursor nextCursor;
 
