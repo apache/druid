@@ -35,7 +35,11 @@ public class StringDictionaryEncodedColumnFormatTest
   public void testGetColumnSchemaWithSpec()
   {
     StringDictionaryEncodedColumnFormat format = new StringDictionaryEncodedColumnFormat(
-        false, false, true, false, SPEC
+        false,
+        false,
+        true,
+        false,
+        SPEC
     );
     DimensionSchema schema = format.getColumnSchema("city");
     StringDimensionSchema stringSchema = (StringDimensionSchema) schema;
@@ -47,10 +51,18 @@ public class StringDictionaryEncodedColumnFormatTest
   public void testMergeTwoFormatsKeepsSpec()
   {
     StringDictionaryEncodedColumnFormat formatWithSpec = new StringDictionaryEncodedColumnFormat(
-        false, false, true, false, SPEC
+        false,
+        false,
+        true,
+        false,
+        SPEC
     );
     StringDictionaryEncodedColumnFormat formatWithoutSpec = new StringDictionaryEncodedColumnFormat(
-        false, true, true, false, null
+        false,
+        true,
+        true,
+        false,
+        null
     );
     ColumnFormat merged = formatWithSpec.merge(formatWithoutSpec);
 
@@ -62,7 +74,11 @@ public class StringDictionaryEncodedColumnFormatTest
   public void testCapabilitiesBasedFormatMergesDelegatesToStringFormat()
   {
     StringDictionaryEncodedColumnFormat formatWithSpec = new StringDictionaryEncodedColumnFormat(
-        false, false, true, false, SPEC
+        false,
+        false,
+        true,
+        false,
+        SPEC
     );
     ColumnCapabilities caps = ColumnCapabilitiesImpl.createDefault()
         .setType(ColumnType.STRING)

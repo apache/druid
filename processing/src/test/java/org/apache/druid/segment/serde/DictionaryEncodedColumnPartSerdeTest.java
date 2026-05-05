@@ -20,7 +20,6 @@
 package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
