@@ -512,7 +512,7 @@ public abstract class IndexMergerBase implements IndexMerger
         columnFormats.put(dimension, dimensionFormat);
         DimensionHandler handler = dimensionFormat.getColumnHandler(dimension);
         DimensionMergerV9 merger = handler.makeMerger(
-            Projections.getProjectionSmooshFileName(spec.getSchema(), dimension),
+            Projections.getProjectionSegmentInternalFileName(spec.getSchema(), dimension),
             indexSpec,
             segmentWriteOutMedium,
             dimensionFormat.toColumnCapabilities(),
@@ -543,7 +543,7 @@ public abstract class IndexMergerBase implements IndexMerger
               metrics,
               columnFormats,
               indexSpec,
-              Projections.getProjectionSmooshPrefix(spec.getSchema())
+              Projections.getProjectionSegmentInternalFilePrefix(spec.getSchema())
           );
 
       Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn =
@@ -630,13 +630,14 @@ public abstract class IndexMergerBase implements IndexMerger
 
       final String section2 = "build projection[" + projectionSchema.getName() + "] inverted index and columns";
       progress.startSection(section2);
+      segmentFileBuilder.startFileGroup(projectionSchema.getName());
       if (projectionSchema.getTimeColumnName() != null) {
         makeTimeColumn(
             segmentFileBuilder,
             progress,
             timeWriter,
             indexSpec,
-            Projections.getProjectionSmooshFileName(spec.getSchema(), projectionSchema.getTimeColumnName())
+            Projections.getProjectionSegmentInternalFileName(spec.getSchema(), projectionSchema.getTimeColumnName())
         );
       }
       makeMetricsColumns(
@@ -646,7 +647,7 @@ public abstract class IndexMergerBase implements IndexMerger
           columnFormats,
           metricWriters,
           indexSpec,
-          Projections.getProjectionSmooshPrefix(spec.getSchema())
+          Projections.getProjectionSegmentInternalFilePrefix(spec.getSchema())
       );
 
       for (int i = 0; i < dimensions.size(); i++) {
@@ -664,7 +665,7 @@ public abstract class IndexMergerBase implements IndexMerger
           // use merger descriptor, merger either has values or handles it own null column storage details
           columnDesc = merger.makeColumnDescriptor();
         }
-        makeColumn(segmentFileBuilder, Projections.getProjectionSmooshFileName(spec.getSchema(), dimension), columnDesc);
+        makeColumn(segmentFileBuilder, Projections.getProjectionSegmentInternalFileName(spec.getSchema(), dimension), columnDesc);
       }
 
       progress.stopSection(section2);

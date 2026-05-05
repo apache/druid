@@ -29,7 +29,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>37.0.0-SNAPSHOT</version>
+    <version>38.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -111,8 +111,8 @@
       <scope>runtime</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-bundle</artifactId>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

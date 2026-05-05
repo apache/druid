@@ -32,8 +32,8 @@ import org.apache.druid.query.rowsandcols.NoAsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("unchecked")
 public class WindowFramedAggregateProcessorTest
@@ -47,7 +47,7 @@ public class WindowFramedAggregateProcessorTest
         new DoubleSumAggregatorFactory("cummSum", "doubleCol")
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
-    Assert.assertEquals(ImmutableList.of("cummMax", "cummSum"), proc.getOutputColumnNames());
+    Assertions.assertEquals(ImmutableList.of("cummMax", "cummSum"), proc.getOutputColumnNames());
 
     final MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(ImmutableMap.of(
         "yay", new IntArrayColumn(new int[]{1, 2, 3})
@@ -58,16 +58,16 @@ public class WindowFramedAggregateProcessorTest
       @Override
       public <T> T as(Class<T> clazz)
       {
-        Assert.assertEquals(clazz, FramedOnHeapAggregatable.class);
+        Assertions.assertEquals(clazz, FramedOnHeapAggregatable.class);
         return (T) (FramedOnHeapAggregatable) (frame, aggFactories) -> {
-          Assert.assertEquals(theFrame, frame);
-          Assert.assertArrayEquals(theAggs, aggFactories);
+          Assertions.assertEquals(theFrame, frame);
+          Assertions.assertArrayEquals(theAggs, aggFactories);
           return rac;
         };
       }
     });
 
-    Assert.assertSame(rac, processed);
+    Assertions.assertSame(rac, processed);
   }
 
   @Test

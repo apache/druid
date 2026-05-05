@@ -29,8 +29,8 @@ import com.google.inject.ProvisionException;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import org.apache.druid.error.ExceptionMatcher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -95,17 +95,17 @@ public class PolyBindTest
     );
 
 
-    Assert.assertEquals("A", injector.getInstance(Gogo.class).go());
-    Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
+    Assertions.assertEquals("A", injector.getInstance(Gogo.class).go());
+    Assertions.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
     props.setProperty("billy", "b");
-    Assert.assertEquals("B", injector.getInstance(Gogo.class).go());
-    Assert.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
+    Assertions.assertEquals("B", injector.getInstance(Gogo.class).go());
+    Assertions.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
     props.setProperty("billy", "a");
-    Assert.assertEquals("A", injector.getInstance(Gogo.class).go());
-    Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
+    Assertions.assertEquals("A", injector.getInstance(Gogo.class).go());
+    Assertions.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
     props.setProperty("billy", "b");
-    Assert.assertEquals("B", injector.getInstance(Gogo.class).go());
-    Assert.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
+    Assertions.assertEquals("B", injector.getInstance(Gogo.class).go());
+    Assertions.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
     props.setProperty("billy", "c");
 
     ExceptionMatcher
@@ -119,11 +119,11 @@ public class PolyBindTest
         .assertThrowsAndMatches(() -> injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
 
     // test default property value
-    Assert.assertEquals("B", injector.getInstance(GogoSally.class).go());
+    Assertions.assertEquals("B", injector.getInstance(GogoSally.class).go());
     props.setProperty("sally", "a");
-    Assert.assertEquals("A", injector.getInstance(GogoSally.class).go());
+    Assertions.assertEquals("A", injector.getInstance(GogoSally.class).go());
     props.setProperty("sally", "b");
-    Assert.assertEquals("B", injector.getInstance(GogoSally.class).go());
+    Assertions.assertEquals("B", injector.getInstance(GogoSally.class).go());
     props.setProperty("sally", "c");
 
     ExceptionMatcher

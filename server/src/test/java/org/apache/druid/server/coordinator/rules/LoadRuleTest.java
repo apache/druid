@@ -58,6 +58,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -523,10 +524,136 @@ public class LoadRuleTest
     );
   }
 
+  /**
+   * Verifies that a load rule targeting a virtual alias tier is applied only to
+   * the real tiers in the alias set — the alias key itself receives no assignment.
+   */
+  @Test
+  public void testHistoricalTierAliasesAppliesOnlyToAliasTiers()
+  {
+    // T1 is the virtual alias key and has no servers; T2 and T3 are the real tiers
+    final ServerHolder hot1Server = createServer(Tier.T2);
+    final ServerHolder hot2Server = createServer(Tier.T3);
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, hot1Server)
+        .addTier(Tier.T3, hot2Server)
+        .build();
+
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        segment,
+        makeCoordinatorRuntimeParams(
+            cluster,
+            ImmutableMap.of(Tier.T1, Set.of(Tier.T2, Tier.T3)),
+            segment
+        )
+    );
+
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T3, TestDataSource.WIKI));
+  }
+
+  /**
+   * Verifies that an alias key tier with no servers does not fire an invalid-tier
+   * alert, but an alias value tier with no servers does.
+   */
+  @Test
+  public void testHistoricalTierAliasesInvalidTierAlerts()
+  {
+    // Only T2 and T3 have servers; T1 ("hot") is a pure alias key with no servers
+    final ServerHolder t2Server = createServer(Tier.T2);
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, t2Server)
+        .build();
+
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+
+    // T1 is an alias key -> no invalid-tier alert for T1.
+    // T3 is an alias value with no servers -> invalid-tier alert fires for T3.
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(
+        cluster,
+        ImmutableMap.of(Tier.T1, Set.of(Tier.T2, Tier.T3)),
+        segment
+    );
+    rule.run(segment, params.getSegmentAssigner());
+    Map<String, Set<String>> invalidTiers = params.getSegmentAssigner().getDatasourceToInvalidLoadTiers();
+
+    Assert.assertFalse(
+        "Alias key tier should not trigger an invalid-tier alert",
+        invalidTiers.getOrDefault(TestDataSource.WIKI, Collections.emptySet()).contains(Tier.T1)
+    );
+    Assert.assertTrue(
+        "Alias value tier with no servers should trigger an invalid-tier alert",
+        invalidTiers.getOrDefault(TestDataSource.WIKI, Collections.emptySet()).contains(Tier.T3)
+    );
+  }
+
+  /**
+   * Verifies that an explicit replica count for an alias value tier in the rule
+   * is not overwritten by the alias expansion, and the virtual alias key tier
+   * itself receives no assignment.
+   */
+  @Test
+  public void testHistoricalTierAliasesDoesNotOverwriteExplicitCount()
+  {
+    final ServerHolder t2Server1 = createServer(Tier.T2);
+    final ServerHolder t2Server2 = createServer(Tier.T2);
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, t2Server1, t2Server2)
+        .build();
+
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+    // Rule explicitly sets T2 to 2; T1 is a virtual alias for T2 with count 1.
+    // T2's explicit count of 2 must win over the alias-derived count of 1.
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 2));
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        segment,
+        makeCoordinatorRuntimeParams(
+            cluster,
+            ImmutableMap.of(Tier.T1, Set.of(Tier.T2)),
+            segment
+        )
+    );
+
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
+  }
+
+  private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParams(
+      DruidCluster druidCluster,
+      Map<String, Set<String>> historicalTierAliases,
+      DataSegment... usedSegments
+  )
+  {
+    return DruidCoordinatorRuntimeParams
+        .builder()
+        .withDruidCluster(druidCluster)
+        .withBalancerStrategy(balancerStrategy)
+        .withUsedSegments(usedSegments)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig.builder()
+                                    .withSmartSegmentLoading(false)
+                                    .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
+                                    .withHistoricalTierAliases(historicalTierAliases)
+                                    .build()
+        )
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+  }
+
   private static class Tier
   {
     static final String T1 = "tier1";
     static final String T2 = "tier2";
+    static final String T3 = "tier3";
   }
 
   @Test

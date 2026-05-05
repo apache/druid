@@ -17,23 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.curator.discovery;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import org.apache.druid.server.DruidNode;
-
-/**
- * Does nothing.
- */
-@Deprecated
-public class NoopServiceAnnouncer implements ServiceAnnouncer
+public enum ScaleDirection
 {
-  @Override
-  public void announce(DruidNode node)
+  SCALE_UP("scale-up"), SCALE_DOWN("scale-down");
+
+  private final String label;
+
+  ScaleDirection(String label)
   {
+    this.label = label;
   }
 
   @Override
-  public void unannounce(DruidNode node)
+  public String toString()
   {
+    return label;
   }
 }

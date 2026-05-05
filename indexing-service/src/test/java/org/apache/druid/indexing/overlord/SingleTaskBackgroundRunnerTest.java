@@ -113,7 +113,6 @@ public class SingleTaskBackgroundRunnerTest
         new NoopDataSegmentAnnouncer(),
         null,
         null,
-        null,
         DruidProcessingConfig::new,
         null,
         NoopJoinableFactory.INSTANCE,

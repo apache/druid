@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -84,12 +85,17 @@ public class CompactionSupervisor implements Supervisor
     if (supervisorSpec.isSuspended()) {
       log.info("Suspending compaction for dataSource[%s].", dataSource);
       scheduler.stopCompaction(dataSource);
-    } else if (!supervisorSpec.getValidationResult().isValid()) {
+      return;
+    }
+
+    final CompactionConfigValidationResult validationResult =
+        scheduler.validateCompactionConfig(supervisorSpec.getSpec());
+    if (!validationResult.isValid()) {
       log.warn(
           "Cannot start compaction supervisor for datasource[%s] since the compaction supervisor spec is invalid. "
           + "Reason[%s].",
           dataSource,
-          supervisorSpec.getValidationResult().getReason()
+          validationResult.getReason()
       );
     } else {
       log.info("Starting compaction for dataSource[%s].", dataSource);
@@ -112,15 +118,19 @@ public class CompactionSupervisor implements Supervisor
       snapshot = AutoCompactionSnapshot.builder(dataSource)
                                        .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                                        .build();
-    } else if (!supervisorSpec.getValidationResult().isValid()) {
-      snapshot = AutoCompactionSnapshot.builder(dataSource)
-                                       .withMessage(StringUtils.format(
-                                           "Compaction supervisor spec is invalid. Reason[%s].",
-                                           supervisorSpec.getValidationResult().getReason()
-                                       ))
-                                       .build();
     } else {
-      snapshot = scheduler.getCompactionSnapshot(dataSource);
+      final CompactionConfigValidationResult validationResult =
+          scheduler.validateCompactionConfig(supervisorSpec.getSpec());
+      if (!validationResult.isValid()) {
+        snapshot = AutoCompactionSnapshot.builder(dataSource)
+                                         .withMessage(StringUtils.format(
+                                             "Compaction supervisor spec is invalid. Reason[%s].",
+                                             validationResult.getReason()
+                                         ))
+                                         .build();
+      } else {
+        snapshot = scheduler.getCompactionSnapshot(dataSource);
+      }
     }
 
     return new SupervisorReport<>(supervisorSpec.getId(), DateTimes.nowUtc(), snapshot);
@@ -133,7 +143,7 @@ public class CompactionSupervisor implements Supervisor
       return State.SCHEDULER_STOPPED;
     } else if (supervisorSpec.isSuspended()) {
       return State.SUSPENDED;
-    } else if (!supervisorSpec.getValidationResult().isValid()) {
+    } else if (!scheduler.validateCompactionConfig(supervisorSpec.getSpec()).isValid()) {
       return State.INVALID_SPEC;
     } else {
       return State.RUNNING;

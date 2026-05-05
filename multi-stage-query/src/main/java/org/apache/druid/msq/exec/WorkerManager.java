@@ -90,6 +90,12 @@ public interface WorkerManager
   Map<Integer, List<WorkerStats>> getWorkerStats();
 
   /**
+   * Maximum number of workers that can be used by this manager. Used at runtime to cap
+   * {@link org.apache.druid.msq.kernel.StageDefinition#getMaxWorkerCount()}.
+   */
+  int getMaxWorkerCount();
+
+  /**
    * Stop all workers.
    *
    * The task-based implementation blocks until all tasks exit. Dart's implementation sends stop commands and waits

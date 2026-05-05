@@ -454,7 +454,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              task.newTaskRecordSupplier(toolbox)) {
       this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
-        toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       }
       appenderator = task.newAppenderator(toolbox, segmentGenerationMetrics, rowIngestionMeters, parseExceptionHandler);
@@ -811,7 +810,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // (1) catch all exceptions while reading from kafka
         if (Throwables.getRootCause(e) instanceof InterruptedException) {
           // Suppress InterruptedException stack trace to avoid flooding the logs
-          log.error("Encounted InterrupedException in run() before persisting");
+          log.error("Encountered InterruptedException in run() before persisting");
         } else {
           log.error(e, "Encountered exception in run() before persisting.");
         }
@@ -949,7 +948,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         toolbox.removeMonitor(metricsMonitor);
         if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
-          toolbox.getDataSegmentServerAnnouncer().unannounce();
         }
         rejectionPeriodUpdaterExec.shutdown();
       }

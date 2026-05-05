@@ -19,8 +19,8 @@
 
 package org.apache.druid.timeline.partition;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TombstonePartitionedChunkTest
 {
@@ -32,50 +32,50 @@ public class TombstonePartitionedChunkTest
   @Test
   public void make()
   {
-    Assert.assertTrue(TombstonePartitionedChunk.make(tombstoneShardSpec) != null);
+    Assertions.assertTrue(TombstonePartitionedChunk.make(tombstoneShardSpec) != null);
   }
 
   @Test
   public void getObject()
   {
-    Assert.assertEquals(tombstoneShardSpec, tombstonePartitionedChunk.getObject());
+    Assertions.assertEquals(tombstoneShardSpec, tombstonePartitionedChunk.getObject());
   }
 
   @Test
   public void abuts()
   {
-    Assert.assertFalse(tombstonePartitionedChunk.abuts(tombstonePartitionedChunk));
+    Assertions.assertFalse(tombstonePartitionedChunk.abuts(tombstonePartitionedChunk));
   }
 
   @Test
   public void isStart()
   {
-    Assert.assertTrue(tombstonePartitionedChunk.isStart());
+    Assertions.assertTrue(tombstonePartitionedChunk.isStart());
   }
 
   @Test
   public void isEnd()
   {
-    Assert.assertTrue(tombstonePartitionedChunk.isEnd());
+    Assertions.assertTrue(tombstonePartitionedChunk.isEnd());
   }
 
   @Test
   public void getChunkNumber()
   {
-    Assert.assertEquals(0, tombstonePartitionedChunk.getChunkNumber());
+    Assertions.assertEquals(0, tombstonePartitionedChunk.getChunkNumber());
   }
 
   @Test
   public void compareTo()
   {
-    Assert.assertEquals(0, tombstonePartitionedChunk.compareTo(
+    Assertions.assertEquals(0, tombstonePartitionedChunk.compareTo(
         TombstonePartitionedChunk.make(new Object())));
-    Exception exception = Assert.assertThrows(
+    Exception exception = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> tombstonePartitionedChunk.compareTo(
             new NumberedPartitionChunk<>(0, 1, new Object()))
     );
-    Assert.assertEquals("Cannot compare against something that is not a TombstonePartitionedChunk.",
+    Assertions.assertEquals("Cannot compare against something that is not a TombstonePartitionedChunk.",
                         exception.getMessage());
   }
 
@@ -83,18 +83,18 @@ public class TombstonePartitionedChunkTest
   public void equalsTest()
   {
     TombstonePartitionedChunk aCopy = tombstonePartitionedChunk;
-    Assert.assertTrue(tombstonePartitionedChunk.equals(aCopy));
-    Assert.assertFalse(tombstonePartitionedChunk.equals(null));
-    Assert.assertFalse(tombstonePartitionedChunk.equals(new Object()));
-    Assert.assertTrue(tombstonePartitionedChunk.equals(TombstonePartitionedChunk.make(new Object())));
+    Assertions.assertTrue(tombstonePartitionedChunk.equals(aCopy));
+    Assertions.assertFalse(tombstonePartitionedChunk.equals(null));
+    Assertions.assertFalse(tombstonePartitionedChunk.equals(new Object()));
+    Assertions.assertTrue(tombstonePartitionedChunk.equals(TombstonePartitionedChunk.make(new Object())));
   }
 
   // make jacoco happy:
   @Test
   public void minutia()
   {
-    Assert.assertTrue(tombstonePartitionedChunk.hashCode() > 0);
-    Assert.assertNotNull(tombstonePartitionedChunk.toString());
+    Assertions.assertTrue(tombstonePartitionedChunk.hashCode() > 0);
+    Assertions.assertNotNull(tombstonePartitionedChunk.toString());
   }
 
 }

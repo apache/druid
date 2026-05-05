@@ -22,7 +22,6 @@ package org.apache.druid.cli;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -44,7 +43,6 @@ import org.apache.druid.client.selector.PreferredTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.StrictTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.TierSelectorStrategy;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
@@ -81,7 +79,6 @@ import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.SubqueryGuardrailHelperProvider;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
@@ -108,17 +105,9 @@ public class CliBroker extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
 
-  private boolean isZkEnabled = true;
-
   public CliBroker()
   {
     super(log);
-  }
-
-  @Inject
-  public void configure(Properties properties)
-  {
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -190,14 +179,10 @@ public class CliBroker extends ServerRunnable
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(BrokerViewOfCoordinatorConfig.class).in(ManageLifecycle.class);
           binder.bind(BrokerViewOfBrokerConfig.class).in(ManageLifecycle.class);
-          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
 
-          if (isZkEnabled) {
-            LifecycleModule.register(binder, ZkCoordinator.class);
-          }
           LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 
           bindAnnouncer(

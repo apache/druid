@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -51,6 +53,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
+  private final Duration minScaleUpDelay;
+  private final Duration minScaleDownDelay;
   private final AggregateFunction lagAggregate;
   private final Double stopTaskCountRatio;
 
@@ -71,6 +75,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
           @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
+          @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
+          @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
           @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate,
           @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio
   )
@@ -105,10 +111,20 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis =
         minTriggerScaleActionFrequencyMillis != null ? minTriggerScaleActionFrequencyMillis : 600000;
+    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, Duration.millis(this.minTriggerScaleActionFrequencyMillis));
+    this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, Duration.millis(this.minTriggerScaleActionFrequencyMillis));
 
     Preconditions.checkArgument(
         stopTaskCountRatio == null || (stopTaskCountRatio > 0.0 && stopTaskCountRatio <= 1.0),
         "0.0 < stopTaskCountRatio <= 1.0"
+    );
+    Preconditions.checkArgument(
+        this.minScaleUpDelay.getMillis() >= 0,
+        "minScaleUpDelay must be a duration >= 0 millis"
+    );
+    Preconditions.checkArgument(
+        this.minScaleDownDelay.getMillis() >= 0,
+        "minScaleDownDelay must be a duration >= 0 millis"
     );
     this.stopTaskCountRatio = stopTaskCountRatio;
   }
@@ -213,11 +229,26 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     return enableTaskAutoScaler;
   }
 
+  @Deprecated
   @Override
   @JsonProperty
   public long getMinTriggerScaleActionFrequencyMillis()
   {
     return minTriggerScaleActionFrequencyMillis;
+  }
+
+  @Override
+  @JsonProperty
+  public Duration getMinScaleUpDelay()
+  {
+    return minScaleUpDelay;
+  }
+
+  @Override
+  @JsonProperty
+  public Duration getMinScaleDownDelay()
+  {
+    return minScaleDownDelay;
   }
 
   @JsonProperty
@@ -244,8 +275,10 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", taskCountMin=" + taskCountMin +
             ", taskCountStart=" + taskCountStart +
             ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
+            ", minScaleUpDelay=" + minScaleUpDelay +
+            ", minScaleDownDelay=" + minScaleDownDelay +
             ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
-            ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
+            ", lagCollectionRangeMillis=" + lagCollectionRangeMillis +
             ", scaleOutThreshold=" + scaleOutThreshold +
             ", triggerScaleOutFractionThreshold=" + triggerScaleOutFractionThreshold +
             ", scaleInThreshold=" + scaleInThreshold +
@@ -286,6 +319,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
            scaleOutStep == that.scaleOutStep &&
            enableTaskAutoScaler == that.enableTaskAutoScaler &&
            minTriggerScaleActionFrequencyMillis == that.minTriggerScaleActionFrequencyMillis &&
+           Objects.equals(minScaleUpDelay, that.minScaleUpDelay) &&
+           Objects.equals(minScaleDownDelay, that.minScaleDownDelay) &&
            Objects.equals(taskCountStart, that.taskCountStart) &&
            lagAggregate == that.lagAggregate &&
            Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
@@ -310,6 +345,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
         scaleOutStep,
         enableTaskAutoScaler,
         minTriggerScaleActionFrequencyMillis,
+        minScaleUpDelay,
+        minScaleDownDelay,
         lagAggregate,
         stopTaskCountRatio
     );

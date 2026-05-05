@@ -76,6 +76,7 @@
   "kafka/consumer/fetchSizeMax": [],
   "kafka/consumer/incomingBytes": [],
   "kafka/consumer/outgoingBytes": [],
+  "kafka/consumer/pollIdleRatio": [],
   "kafka/consumer/recordsConsumed": [],
   "kafka/consumer/recordsLag": [],
   "kafka/consumer/recordsPerRequestAvg": [],

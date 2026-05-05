@@ -27,9 +27,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -46,7 +46,7 @@ public class StringAnyAggregationTest
   private String[] stringsWithNullFirst = {null, "1111", "2222", "3333", null, "4444"};
 
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     stringAnyAggFactory = new StringAnyAggregatorFactory("billy", "nilly", MAX_STRING_SIZE, true);
@@ -74,7 +74,7 @@ public class StringAnyAggregationTest
 
     String result = (String) agg.get();
 
-    Assert.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
   }
 
   @Test
@@ -95,7 +95,7 @@ public class StringAnyAggregationTest
     aggregate(agg);
 
     String result = (String) agg.get();
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -114,7 +114,7 @@ public class StringAnyAggregationTest
 
     String result = (String) agg.get(buffer, 0);
 
-    Assert.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
   }
 
   @Test
@@ -139,7 +139,7 @@ public class StringAnyAggregationTest
     aggregate(agg, buffer, 0);
 
     String result = (String) agg.get(buffer, 0);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -147,7 +147,7 @@ public class StringAnyAggregationTest
   {
     String s1 = "aaaaaa";
     String s2 = "aaaaaa";
-    Assert.assertEquals(s1, stringAnyAggFactory.combine(s1, s2));
+    Assertions.assertEquals(s1, stringAnyAggFactory.combine(s1, s2));
   }
 
   @Test
@@ -162,8 +162,8 @@ public class StringAnyAggregationTest
 
     String result = (String) agg.get();
 
-    Assert.assertEquals(strings[0], result);
-    Assert.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
   }
 
   @Test
@@ -182,8 +182,8 @@ public class StringAnyAggregationTest
 
     String result = (String) agg.get(buffer, 0);
 
-    Assert.assertEquals(strings[0], result);
-    Assert.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
+    Assertions.assertEquals(strings[0], result);
   }
 
   private void aggregate(

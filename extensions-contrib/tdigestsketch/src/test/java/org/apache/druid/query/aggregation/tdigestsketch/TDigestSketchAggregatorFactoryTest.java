@@ -43,7 +43,7 @@ public class TDigestSketchAggregatorFactoryTest
               .granularity(Granularities.HOUR)
               .aggregators(
                   new CountAggregatorFactory("count"),
-                  new TDigestSketchAggregatorFactory("tdigest", "col", null)
+                  new TDigestSketchAggregatorFactory("tdigest", "col", null, TDigestConfig.builder().maxCompression(200).build())
               )
               .postAggregators(
                   new FieldAccessPostAggregator("tdigest-access", "tdigest"),
@@ -66,8 +66,24 @@ public class TDigestSketchAggregatorFactoryTest
   @Test
   public void testWithName()
   {
-    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", null);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", null, TDigestConfig.builder().maxCompression(200).build());
     Assert.assertEquals(factory, factory.withName("tdigest"));
     Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+  @Test
+  public void testCompressionCappedAtMaxCompression()
+  {
+    TDigestConfig config = TDigestConfig.builder().maxCompression(150).build();
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", 300, config);
+    Assert.assertEquals(150, factory.getCompression());
+  }
+
+  @Test
+  public void testCompressionBelowMaxCompressionUnchanged()
+  {
+    TDigestConfig config = TDigestConfig.builder().maxCompression(150).build();
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", 100, config);
+    Assert.assertEquals(100, factory.getCompression());
   }
 }

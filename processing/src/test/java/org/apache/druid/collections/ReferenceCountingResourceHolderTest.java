@@ -19,12 +19,14 @@
 
 package org.apache.druid.collections;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ReferenceCountingResourceHolderTest
@@ -65,9 +67,9 @@ public class ReferenceCountingResourceHolderTest
         throw new RuntimeException(e);
       }
     }
-    Assert.assertFalse(released.get());
+    Assertions.assertFalse(released.get());
     resourceHolder.close();
-    Assert.assertTrue(released.get());
+    Assertions.assertTrue(released.get());
   }
 
   private ReferenceCountingResourceHolder<Closeable> makeReleasingHandler(final AtomicBoolean released)
@@ -83,7 +85,8 @@ public class ReferenceCountingResourceHolderTest
           });
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();
@@ -92,7 +95,8 @@ public class ReferenceCountingResourceHolderTest
     verifyCleanerRun(released, initialLeakedResources);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testResourceHandlerWithReleaserClearedByJVM() throws InterruptedException
   {
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();
@@ -119,8 +123,8 @@ public class ReferenceCountingResourceHolderTest
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }
-    Assert.assertEquals(initialLeakedResources + 1, ReferenceCountingResourceHolder.leakedResources());
+    Assertions.assertEquals(initialLeakedResources + 1, ReferenceCountingResourceHolder.leakedResources());
     // Cleaner also runs the closer
-    Assert.assertTrue(released.get());
+    Assertions.assertTrue(released.get());
   }
 }

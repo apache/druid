@@ -28,8 +28,8 @@ import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NestedDataColumnSchemaTest
 {
@@ -75,7 +75,7 @@ public class NestedDataColumnSchemaTest
   public void testSerdeRoundTrip() throws JsonProcessingException
   {
     final NestedDataColumnSchema v5 = new NestedDataColumnSchema("test", 5, DEFAULT_NESTED_SPEC, DEFAULT_CONFIG);
-    Assert.assertEquals(v5, MAPPER.readValue(MAPPER.writeValueAsString(v5), NestedDataColumnSchema.class));
+    Assertions.assertEquals(v5, MAPPER.readValue(MAPPER.writeValueAsString(v5), NestedDataColumnSchema.class));
   }
 
   @Test
@@ -83,7 +83,7 @@ public class NestedDataColumnSchemaTest
   {
     final String there = "{\"type\":\"json\", \"name\":\"test\"}";
     NestedDataColumnSchema andBack = MAPPER.readValue(there, NestedDataColumnSchema.class);
-    Assert.assertEquals(new NestedDataColumnSchema("test", 5), andBack);
+    Assertions.assertEquals(new NestedDataColumnSchema("test", 5), andBack);
   }
 
   @Test
@@ -91,7 +91,7 @@ public class NestedDataColumnSchemaTest
   {
     final String there = "{\"type\":\"json\", \"name\":\"test\"}";
     NestedDataColumnSchema andBack = DEFAULT_NESTED_SPEC_MAPPER.readValue(there, NestedDataColumnSchema.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new NestedDataColumnSchema("test", 5, DEFAULT_NESTED_SPEC, DEFAULT_NESTED_SPEC_CONFIG),
         andBack
     );

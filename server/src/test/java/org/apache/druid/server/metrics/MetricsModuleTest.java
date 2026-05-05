@@ -243,7 +243,9 @@ public class MetricsModuleTest
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
     Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
-    final Injector injector = createInjector(new Properties(), ImmutableSet.of(NodeRole.PEON));
+    final Properties properties = new Properties();
+    properties.setProperty(MetricsModule.PROPERTY_PEON_MANAGED, "true");
+    final Injector injector = createInjector(properties, ImmutableSet.of(NodeRole.PEON));
     final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
@@ -269,8 +271,9 @@ public class MetricsModuleTest
   @Test
   public void testGetOshiSysMonitorViaInjector()
   {
-
-    final Injector injector = createInjector(new Properties(), ImmutableSet.of(NodeRole.PEON));
+    final Properties properties = new Properties();
+    properties.setProperty(MetricsModule.PROPERTY_PEON_MANAGED, "true");
+    final Injector injector = createInjector(properties, ImmutableSet.of(NodeRole.PEON));
     final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);

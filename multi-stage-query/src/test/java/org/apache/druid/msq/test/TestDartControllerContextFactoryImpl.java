@@ -108,6 +108,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       {
         serviceEmitter.emit(metricBuilder.build("controller", queryId()));
       }
+
+      @Override
+      public boolean isDebug()
+      {
+        return true;
+      }
     };
   }
 
@@ -116,7 +122,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
     public DartTestWorkerClient()
     {
-      super(workerMap, jsonMapper);
+      super(workerMap, jsonMapper, true);
     }
 
     @Override

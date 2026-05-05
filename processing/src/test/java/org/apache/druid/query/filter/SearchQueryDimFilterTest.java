@@ -22,8 +22,8 @@ package org.apache.druid.query.filter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.search.SearchQuerySpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -70,7 +70,7 @@ public class SearchQueryDimFilterTest
         },
         null
     );
-    Assert.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter2.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter2.getCacheKey()));
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
@@ -91,7 +91,7 @@ public class SearchQueryDimFilterTest
         },
         regexFn
     );
-    Assert.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter3.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter3.getCacheKey()));
   }
 
   @Test
@@ -134,7 +134,7 @@ public class SearchQueryDimFilterTest
         },
         null
     );
-    Assert.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter2);
+    Assertions.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter2);
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
@@ -155,7 +155,7 @@ public class SearchQueryDimFilterTest
         },
         regexFn
     );
-    Assert.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter3);
+    Assertions.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter3);
   }
 
   @Test
@@ -198,7 +198,7 @@ public class SearchQueryDimFilterTest
         },
         null
     );
-    Assert.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter2.hashCode());
+    Assertions.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter2.hashCode());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
@@ -219,6 +219,6 @@ public class SearchQueryDimFilterTest
         },
         regexFn
     );
-    Assert.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter3.hashCode());
+    Assertions.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter3.hashCode());
   }
 }
