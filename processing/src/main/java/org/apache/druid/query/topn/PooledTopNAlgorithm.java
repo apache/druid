@@ -361,7 +361,7 @@ public class PooledTopNAlgorithm
     for (AggregatorFactory spec : aggregatorSpecs) {
       if (spec instanceof NullableNumericAggregatorFactory) {
         aggregators[aggregatorIndex] =
-            ((NullableNumericAggregatorFactory) spec).factorizeBufferedForPooledTopN(cursor.getColumnSelectorFactory());
+            ((NullableNumericAggregatorFactory<?>) spec).factorizeBufferedForPooledTopN(cursor.getColumnSelectorFactory());
       } else {
         aggregators[aggregatorIndex] = spec.factorizeBuffered(cursor.getColumnSelectorFactory());
       }

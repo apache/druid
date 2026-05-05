@@ -68,7 +68,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    if (forceNotNullable()) {
+    if (this.forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -79,7 +79,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    if (forceNotNullable()) {
+    if (this.forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -91,7 +91,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    if (forceNotNullable()) {
+    if (this.forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericVectorAggregator(aggregator, selector);
@@ -141,7 +141,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
 
   private boolean useNullableNumericAggregatorsForPooledTopN(ColumnInspector columnInspector)
   {
-    if (forceNotNullable()) {
+    if (this.forceNotNullable()) {
       return false;
     }
 
