@@ -102,6 +102,10 @@ public class CapabilitiesBasedFormat implements ColumnFormat
       return this;
     }
 
+    if (otherFormat instanceof StringDictionaryEncodedColumnFormat) {
+      return otherFormat.merge(this);
+    }
+
     ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.copyOf(this.toColumnCapabilities());
     ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.copyOf(otherFormat.toColumnCapabilities());
     final String mergedType = merged.getType() == null ? null : merged.asTypeString();

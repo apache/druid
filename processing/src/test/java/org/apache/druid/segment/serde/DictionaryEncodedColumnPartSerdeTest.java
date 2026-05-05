@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -70,4 +71,30 @@ public class DictionaryEncodedColumnPartSerdeTest
     Assertions.assertEquals(ByteOrder.LITTLE_ENDIAN, serde.getByteOrder());
     Assertions.assertTrue(serde.getBitmapSerdeFactory() instanceof RoaringBitmapSerdeFactory);
   }
+
+  @Test
+  public void testSerdeWithColumnFormatSpec() throws Exception
+  {
+    String json = "{\n"
+                  + "\"type\": \"stringDictionary\",\n"
+                  + "\"byteOrder\": \"LITTLE_ENDIAN\",\n"
+                  + "\"bitmapSerdeFactory\": { \"type\": \"roaring\" },\n"
+                  + "\"columnFormatSpec\": { \"maxStringLength\": 100 }\n"
+                  + "}";
+
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    DictionaryEncodedColumnPartSerde serde = (DictionaryEncodedColumnPartSerde) mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(json, ColumnPartSerde.class)
+        ),
+        ColumnPartSerde.class
+    );
+
+    Assertions.assertEquals(ByteOrder.LITTLE_ENDIAN, serde.getByteOrder());
+    Assertions.assertTrue(serde.getBitmapSerdeFactory() instanceof RoaringBitmapSerdeFactory);
+    Assertions.assertNotNull(serde.getColumnFormatSpec());
+    Assertions.assertEquals(Integer.valueOf(100), serde.getColumnFormatSpec().getMaxStringLength());
+  }
+
 }
