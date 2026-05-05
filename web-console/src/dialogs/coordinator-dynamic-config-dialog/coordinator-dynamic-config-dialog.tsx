@@ -43,9 +43,59 @@ export interface CoordinatorDynamicConfigDialogProps {
   onClose(): void;
 }
 
+interface ConnectedServerMultiSelectDialogProps {
+  capabilities: Capabilities;
+  title: string;
+  selectedServers: string[];
+  onSave(servers: string[]): void;
+  onClose(): void;
+}
+
+const ConnectedServerMultiSelectDialog = React.memo(function ConnectedServerMultiSelectDialog(
+  props: ConnectedServerMultiSelectDialogProps,
+) {
+  const { capabilities, title, selectedServers, onSave, onClose } = props;
+  const [serversState] = useQueryManager<Capabilities, TieredServers>({
+    initQuery: capabilities,
+    processQuery: async (capabilities, signal) => {
+      if (capabilities.hasSql()) {
+        const sqlResp = await queryDruidSql<{ server: string; tier: string }>(
+          {
+            query: `SELECT "server", "tier"
+FROM "sys"."servers"
+WHERE "server_type" = 'historical'
+ORDER BY "tier", "server"`,
+            context: { engine: 'native' },
+          },
+          signal,
+        );
+        return buildTieredServers(sqlResp);
+      } else if (capabilities.hasCoordinatorAccess()) {
+        const servers = await getApiArray('/druid/coordinator/v1/servers?simple', signal);
+        const rows = filterMap(servers, (s: any) =>
+          s.type === 'historical' ? { server: s.host, tier: s.tier } : undefined,
+        );
+        return buildTieredServers(rows);
+      } else {
+        throw new Error('Must have SQL or coordinator access');
+      }
+    },
+  });
+
+  return (
+    <ServerMultiSelectDialog
+      title={title}
+      servers={serversState.data}
+      selectedServers={selectedServers}
+      onSave={onSave}
+      onClose={onClose}
+    />
+  );
+});
+
 function attachServerPickerDialogs(
   fields: Field<CoordinatorDynamicConfig>[],
-  servers: TieredServers | undefined,
+  capabilities: Capabilities,
 ): Field<CoordinatorDynamicConfig>[] {
   return fields.map(field => {
     switch (field.name) {
@@ -53,9 +103,9 @@ function attachServerPickerDialogs(
         return {
           ...field,
           customDialog: ({ value, onValueChange, onClose }) => (
-            <ServerMultiSelectDialog
+            <ConnectedServerMultiSelectDialog
+              capabilities={capabilities}
               title="Decommissioning nodes"
-              servers={servers}
               selectedServers={value || []}
               onSave={v => onValueChange(v)}
               onClose={onClose}
@@ -66,9 +116,9 @@ function attachServerPickerDialogs(
         return {
           ...field,
           customDialog: ({ value, onValueChange, onClose }) => (
-            <ServerMultiSelectDialog
+            <ConnectedServerMultiSelectDialog
+              capabilities={capabilities}
               title="Turbo loading nodes"
-              servers={servers}
               selectedServers={value || []}
               onSave={v => onValueChange(v)}
               onClose={onClose}
@@ -114,36 +164,9 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     },
   });
 
-  const [serversState] = useQueryManager<Capabilities, TieredServers>({
-    initQuery: capabilities,
-    processQuery: async (capabilities, signal) => {
-      if (capabilities.hasSql()) {
-        const sqlResp = await queryDruidSql<{ server: string; tier: string }>(
-          {
-            query: `SELECT "server", "tier"
-FROM "sys"."servers"
-WHERE "server_type" = 'historical'
-ORDER BY "tier", "server"`,
-            context: { engine: 'native' },
-          },
-          signal,
-        );
-        return buildTieredServers(sqlResp);
-      } else if (capabilities.hasCoordinatorAccess()) {
-        const servers = await getApiArray('/druid/coordinator/v1/servers?simple', signal);
-        const rows = filterMap(servers, (s: any) =>
-          s.type === 'historical' ? { server: s.host, tier: s.tier } : undefined,
-        );
-        return buildTieredServers(rows);
-      } else {
-        throw new Error('Must have SQL or coordinator access');
-      }
-    },
-  });
-
   const fields = useMemo(
-    () => attachServerPickerDialogs(COORDINATOR_DYNAMIC_CONFIG_FIELDS, serversState.data),
-    [serversState.data],
+    () => attachServerPickerDialogs(COORDINATOR_DYNAMIC_CONFIG_FIELDS, capabilities),
+    [capabilities],
   );
 
   async function saveConfig(comment: string) {
