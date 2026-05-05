@@ -20,6 +20,8 @@
 package org.apache.druid.segment.column;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandler;
@@ -27,6 +29,7 @@ import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.StringDimensionHandler;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 
 public class StringDictionaryEncodedColumnFormat implements ColumnFormat
 {
@@ -78,7 +81,7 @@ public class StringDictionaryEncodedColumnFormat implements ColumnFormat
     Integer maxStringLength = columnFormatSpec != null ? columnFormatSpec.getMaxStringLength() : null;
     return new StringDimensionHandler(
         columnName,
-        null,
+        MultiValueHandling.ofDefault(),
         hasBitmapIndexes,
         hasSpatialIndexes,
         maxStringLength,
@@ -89,6 +92,9 @@ public class StringDictionaryEncodedColumnFormat implements ColumnFormat
   @Override
   public DimensionSchema getColumnSchema(String columnName)
   {
+    if (hasSpatialIndexes) {
+      return new NewSpatialDimensionSchema(columnName, Collections.singletonList(columnName));
+    }
     return new StringDimensionSchema(columnName, null, hasBitmapIndexes, columnFormatSpec);
   }
 
