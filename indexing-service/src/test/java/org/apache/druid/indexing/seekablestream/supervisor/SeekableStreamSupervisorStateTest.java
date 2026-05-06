@@ -3725,7 +3725,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3744,11 +3744,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-up succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3771,7 +3771,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3790,11 +3790,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-down succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
-    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);

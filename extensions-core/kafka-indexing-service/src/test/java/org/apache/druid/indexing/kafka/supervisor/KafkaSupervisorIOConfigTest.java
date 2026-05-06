@@ -381,7 +381,7 @@ public class KafkaSupervisorIOConfigTest
         false,
         null
     );
-    Assert.assertEquals(5, kafkaSupervisorIOConfig.getTaskCount().intValue());
+    Assert.assertEquals(1, kafkaSupervisorIOConfig.getTaskCount());
 
     Assert.assertThrows(
         "taskCountMin <= taskCountStart <= taskCountMax",
@@ -397,6 +397,51 @@ public class KafkaSupervisorIOConfigTest
           autoScalerConfig.put("taskCountStart", 0); // < min task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
         }
+    );
+  }
+
+  @Test
+  public void testTaskCountStartFallbackAndExplicitFlag()
+  {
+    final Map<String, Object> autoScalerConfig = ImmutableMap.of(
+        "enableTaskAutoScaler", true,
+        "taskCountMin", 1,
+        "taskCountMax", 10,
+        "taskCountStart", 5
+    );
+
+    Assert.assertEquals(7, makeIOConfig(7, autoScalerConfig).getTaskCount());
+    Assert.assertTrue(makeIOConfig(7, autoScalerConfig).isTaskCountExplicit());
+
+    Assert.assertEquals(5, makeIOConfig(null, autoScalerConfig).getTaskCount());
+    Assert.assertFalse(makeIOConfig(null, autoScalerConfig).isTaskCountExplicit());
+  }
+
+  private KafkaSupervisorIOConfig makeIOConfig(Integer taskCount, Map<String, Object> autoScalerConfig)
+  {
+    return new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        null,
+        1,
+        taskCount,
+        new Period("PT1H"),
+        ImmutableMap.of("bootstrap.servers", "localhost:8082"),
+        mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        LagAggregator.DEFAULT,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null
     );
   }
 
