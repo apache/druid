@@ -249,6 +249,15 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
     perQueryStats.maxMergeBufferUsedBytes(getMaxMergeBufferUsedBytes());
+    // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
+    long spilledBytes = 0;
+    for (final File file : files) {
+      spilledBytes += file.length();
+    }
+    for (final File file : dictionaryFiles) {
+      spilledBytes += file.length();
+    }
+    perQueryStats.spilledBytes(spilledBytes);
     grouper.close();
     keySerde.reset();
     pendingSpillRuns.clear();

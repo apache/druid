@@ -163,8 +163,6 @@ public class LimitedTemporaryStorage implements Closeable
       }
       closed = true;
 
-      perQueryStatsContainer.spilledBytes(bytesUsed.get());
-
       bytesUsed.set(0);
 
       for (File file : ImmutableSet.copyOf(files)) {
