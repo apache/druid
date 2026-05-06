@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
@@ -342,5 +344,63 @@ public class DynamicConfigPodTemplateSelectorTest
     Assertions.assertTrue(actual.isPresent());
     Assertions.assertEquals("base", actual.get().getName());
     Assertions.assertEquals(expected, actual.get().getPodTemplate());
+  }
+
+  @Test
+  public void test_fromTask_contextPodTemplateSelectionKey_returnsRequestedTemplate() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Path lowThroughputTemplatePath = Files.createFile(tempDir.resolve("low-throughput.yaml"));
+    PodTemplate lowThroughputPodTemplate = new PodTemplateBuilder(podTemplateSpec)
+        .editTemplate()
+        .editSpec()
+        .setNewVolumeLike(0, new VolumeBuilder().withName("volume").build())
+        .endVolume()
+        .endSpec()
+        .endTemplate()
+        .build();
+    mapper.writeValue(lowThroughputTemplatePath.toFile(), lowThroughputPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
+
+    Task task = new NoopTask(
+        "id", "id", "datasource", 0, 0,
+        ImmutableMap.of(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY, "lowThroughput")
+    );
+    Optional<PodTemplateWithName> actual = selector.getPodTemplateForTask(task);
+
+    Assertions.assertTrue(actual.isPresent());
+    Assertions.assertEquals("lowThroughput", actual.get().getName());
+    Assertions.assertEquals(1, actual.get().getPodTemplate().getTemplate().getSpec().getVolumes().size());
+  }
+
+  @Test
+  public void test_fromTask_contextPodTemplateSelectionKey_unknownName_throwsIAE() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
+
+    Task task = new NoopTask(
+        "id", "id", "datasource", 0, 0,
+        ImmutableMap.of(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY, "doesNotExist")
+    );
+
+    Exception exception = Assertions.assertThrows(
+        IAE.class,
+        () -> selector.getPodTemplateForTask(task)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("[id]"));
+    Assertions.assertTrue(exception.getMessage().contains("[doesNotExist]"));
   }
 }
