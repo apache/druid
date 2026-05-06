@@ -286,6 +286,19 @@ class FilterSegmentPrunerTest
                   .verify();
   }
 
+  @Test
+  void testPruneNumericRange()
+  {
+    // Regression test for https://github.com/apache/druid/issues/19408
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment segLargeIds = makeDataSegment(interval, makeRange("id", 0, "100", "200"));
+
+    final DimFilter filter = new RangeFilter("id", ColumnType.LONG, 80L, null, false, false, null);
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, null);
+
+    Assertions.assertTrue(pruner.include(segLargeIds));
+  }
+
   private ShardSpec makeRange(
       String column,
       int partitionNumber,
