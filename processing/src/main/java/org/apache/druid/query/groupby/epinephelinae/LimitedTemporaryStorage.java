@@ -146,6 +146,14 @@ public class LimitedTemporaryStorage implements Closeable
     return bytesUsed.get();
   }
 
+  @VisibleForTesting
+  public int currentFileCount()
+  {
+    synchronized (files) {
+      return files.size();
+    }
+  }
+
   @Override
   public void close()
   {

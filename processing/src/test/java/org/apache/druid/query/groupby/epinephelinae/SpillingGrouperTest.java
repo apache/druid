@@ -191,6 +191,73 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDiskQuotaReclaimedWhenSmallSpillsDeleted() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final LimitedTemporaryStorage temporaryStorage =
+        new LimitedTemporaryStorage(storageDir, 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats());
+    final int bufferSize = 50;
+    final int numKeys = 100;
+
+    int maxUsableEntries = computeMaxUsableEntries(bufferSize);
+    Assert.assertEquals(
+        "buffer should hold at most 1 entry, guaranteeing a spill on every key",
+        1,
+        maxUsableEntries
+    );
+
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, temporaryStorage)) {
+      for (int i = 0; i < numKeys; i++) {
+        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      // Before iterator(): small spills were created and deleted during batching, so the
+      // temporary storage should have reclaimed their bytes. Only the final merged file(s)
+      // from flushPendingRunsToDisk() should remain on disk.
+      long sizeBeforeIterator = temporaryStorage.currentSize();
+      int fileCountBeforeIterator = temporaryStorage.currentFileCount();
+
+      // With a 50-byte buffer and 100 keys, many individual spills occur. Batching deletes
+      // each small temp file immediately, so the file count should be much less than numKeys.
+      Assert.assertTrue(
+          "file count (" + fileCountBeforeIterator + ") should be much less than numKeys (" + numKeys
+          + ") because small spill files are deleted after being read into memory",
+          fileCountBeforeIterator < numKeys
+      );
+
+      // The tracked bytes should reflect only the files still on disk, not the deleted ones.
+      long actualDiskBytes = 0;
+      File[] diskFiles = storageDir.listFiles();
+      Assert.assertNotNull(diskFiles);
+      for (File f : diskFiles) {
+        actualDiskBytes += f.length();
+      }
+      Assert.assertEquals(
+          "tracked bytes should match actual bytes on disk",
+          actualDiskBytes,
+          sizeBeforeIterator
+      );
+
+      // Calling iterator() flushes remaining pending runs; verify results are still correct.
+      assertResultsCorrect(grouper, numKeys, 1);
+
+      // After iterator, check that the final state is also consistent.
+      long sizeAfterIterator = temporaryStorage.currentSize();
+      long actualDiskBytesAfter = 0;
+      File[] diskFilesAfter = storageDir.listFiles();
+      Assert.assertNotNull(diskFilesAfter);
+      for (File f : diskFilesAfter) {
+        actualDiskBytesAfter += f.length();
+      }
+      Assert.assertEquals(
+          "tracked bytes should match actual bytes on disk after iterator",
+          actualDiskBytesAfter,
+          sizeAfterIterator
+      );
+    }
+  }
+
+  @Test
   public void testResetClearsPendingState() throws IOException
   {
     try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 1024 * 1024, 100)) {
@@ -279,6 +346,17 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       int maxFileCount
   )
   {
+    return makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats())
+    );
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage
+  )
+  {
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
 
@@ -290,12 +368,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         Integer.MAX_VALUE,
         MAX_LOAD_FACTOR,
         INITIAL_BUCKETS,
-        new LimitedTemporaryStorage(
-            storageDir,
-            maxStorageBytes,
-            maxFileCount,
-            new GroupByStatsProvider.PerQueryStats()
-        ),
+        temporaryStorage,
         new ObjectMapper(),
         true,
         null,
