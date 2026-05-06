@@ -120,8 +120,8 @@
   "segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/availableDeepStorageOnly/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/unneededEternityTombstone/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "segment/clone/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "segment/clone/dropped/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "segment/clone/assigned/count" : { "dimensions" : ["dataSource", "server"], "type" : "count" },
+  "segment/clone/dropped/count" : { "dimensions" : ["server"], "type" : "count" },
 
   "segment/loading/rateKbps" : { "dimensions" : ["server"], "type" : "gauge" },
   "segment/loadQueue/assigned" : { "dimensions" : ["dataSource", "description"], "type" : "gauge" },
@@ -202,7 +202,7 @@
   "compact/createJobs/time" : { "dimensions" : [], "type" : "timer" },
   "compact/createJobs/count" : { "dimensions" : [], "type" : "count" },
   "compact/runScheduler/time" : { "dimensions" : [], "type" : "timer" },
-  "compactTask/cancelled/count" : { "dimensions" : [], "type" : "count" },
+  "compactTask/cancelled/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
   "segment/waitCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
@@ -236,7 +236,7 @@
 
   "segment/balancer/compute/error" : { "dimensions" : ["tier", "dataSource", "description"], "type" : "count" },
 
-  "config/brokerSync/time" : { "dimensions" : [], "type" : "timer" },
-  "config/brokerSync/total/time" : { "dimensions" : [], "type" : "timer" },
-  "config/brokerSync/error" : { "dimensions" : [], "type" : "count" }
+  "config/brokerSync/time" : { "dimensions" : ["configType", "server"], "type" : "timer" },
+  "config/brokerSync/total/time" : { "dimensions" : ["configType"], "type" : "timer" },
+  "config/brokerSync/error" : { "dimensions" : ["configType", "server"], "type" : "count" }
 }
