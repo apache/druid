@@ -226,12 +226,11 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     T value = null;
     Node<T> node = root;
     while (node != null) {
-      int cmp = compareInterval(interval, node.interval);
+      int cmp = compareInterval(node.getKey(), interval);
       if (cmp == 0) {
         value = node.value;
         break;
-      }
-      if (cmp < 0) {
+      } else if (cmp > 0) {
         node = node.left;
       } else {
         node = node.right;
@@ -461,11 +460,11 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     Node<T> fnode = null;
     Node<T> node = root;
     while (node != null) {
-      if (node.getKey().equals(key)) {
+      int cmp = compareInterval(node.getKey(), key);
+      if (cmp == 0) {
         fnode = node;
         break;
-      }
-      if (compareInterval(key, node.getKey()) < 0) {
+      } else if (cmp > 0) {
         node = node.left;
       } else {
         fnode = node;
@@ -488,11 +487,11 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     Node<T> cnode = null;
     Node<T> node = root;
     while (node != null) {
-      if (node.getKey().equals(key)) {
+      int cmp = compareInterval(node.getKey(), key);
+      if (cmp == 0) {
         cnode = node;
         break;
-      }
-      if (compareInterval(key, node.getKey()) < 0) {
+      } else if (cmp > 0) {
         cnode = node;
         node = node.left;
       } else {
