@@ -106,6 +106,13 @@ public class GroupByQueryConfig
   private HumanReadableBytes maxOnDiskStorage = HumanReadableBytes.valueOf(0);
 
   @JsonProperty
+  // Minimum number of serialized bytes that must accumulate across pending in-memory spill runs before they are
+  // flushed as a single file to disk. Aggregators like ThetaSketch pre-allocate a large fixed buffer per row
+  // (e.g. ~131KB for ThetaSketch(K=16384)), causing the in-memory grouper to flush frequently. However, when
+  // each key has been seen only a few times, the sketch serializes to just a handful of bytes in compact form.
+  // Without batching, this produces thousands of tiny spill files. By accumulating runs in heap memory first
+  // and writing to disk only once this threshold is reached, we avoid that explosion in file count without any
+  // extra disk I/O for small spills.
   private HumanReadableBytes minSpillFileSize = HumanReadableBytes.valueOf(1024 * 1024L);
 
   @JsonProperty

@@ -125,12 +125,12 @@ public class LimitedTemporaryStorage implements Closeable
         final long fileSize = file.length();
         try {
           Files.delete(file.toPath());
+          bytesUsed.addAndGet(-fileSize);
         }
         catch (IOException e) {
           log.warn(e, "Cannot delete file: %s", file);
         }
         files.remove(file);
-        bytesUsed.addAndGet(-fileSize);
       }
     }
   }
