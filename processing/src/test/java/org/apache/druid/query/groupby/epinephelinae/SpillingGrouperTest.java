@@ -301,6 +301,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         null,
         false,
         bufferSize,
+        1024 * 1024L,
         new GroupByStatsProvider.PerQueryStats()
     );
     grouper.init();

@@ -74,17 +74,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       "Maximum number of spill files reached for this query. Try raising druid.query.groupBy.maxSpillFileCount."
   );
 
-  /**
-   * Minimum number of serialized bytes that must accumulate across pending in-memory spill runs before they are
-   * flushed as a single file to disk. Aggregators like ThetaSketch pre-allocate a large fixed buffer per row
-   * (e.g. ~131KB for ThetaSketch(K=16384)), causing the in-memory grouper to flush frequently. However, when
-   * each key has been seen only a few times, the sketch serializes to just a handful of bytes in compact form.
-   * Without batching, this produces thousands of tiny spill files. By accumulating runs in heap memory first
-   * and writing to disk only once this threshold is reached, we avoid that explosion in file count without any
-   * extra disk I/O for small spills.
-   */
-  private static final long MIN_SPILL_FILE_BYTES = 1024 * 1024L; // 1MB
-
   private final AbstractBufferHashGrouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
@@ -93,6 +82,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
   private final GroupByStatsProvider.PerQueryStats perQueryStats;
+  private final long minSpillFileSize;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -101,7 +91,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   // Pending spill runs not yet written to disk. Each entry is one buffer flush serialized as a
   // LZ4-compressed JSON byte array — the same format as an on-disk spill file, so it can be
   // re-read with the same read() path. Runs are held in heap memory and merged into a single
-  // sorted file only when pendingSpillBytes reaches MIN_SPILL_FILE_BYTES.
+  // sorted file only when pendingSpillBytes reaches minSpillFileSize.
   private final List<byte[]> pendingSpillRuns = new ArrayList<>();
   private final Set<String> pendingDictionaryEntries = new HashSet<>();
   private long pendingSpillBytes = 0;
@@ -124,6 +114,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
       final int mergeBufferSize,
+      final long minSpillFileSize,
       final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
@@ -184,6 +175,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
+    this.minSpillFileSize = minSpillFileSize;
     this.perQueryStats = perQueryStats;
   }
 
@@ -320,7 +312,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(final boolean sorted)
   {
-    // Flush any runs that did not reach MIN_SPILL_FILE_BYTES during the spill phase.
+    // Flush any runs that did not reach minSpillFileSize during the spill phase.
     try {
       flushPendingRunsToDisk();
     }
@@ -374,12 +366,12 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     grouper.reset();
 
     final long fileSize = file.length();
-    if (fileSize < MIN_SPILL_FILE_BYTES) {
+    if (fileSize < minSpillFileSize) {
       pendingSpillRuns.add(Files.readAllBytes(file.toPath()));
       pendingSpillBytes += fileSize;
       temporaryStorage.delete(file);
 
-      if (pendingSpillBytes >= MIN_SPILL_FILE_BYTES) {
+      if (pendingSpillBytes >= minSpillFileSize) {
         flushPendingRunsToDisk();
       }
     } else {

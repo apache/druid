@@ -96,6 +96,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
+  private final long minSpillFileSize;
   private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private volatile boolean initialized = false;
@@ -142,6 +143,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
         groupByQueryConfig.isMergeThreadLocal(),
+        groupByQueryConfig.getMinSpillFileSize(),
         perQueryStats
     );
   }
@@ -168,6 +170,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
       final boolean mergeThreadLocal,
+      final long minSpillFileSize,
       final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
@@ -218,6 +221,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
+    this.minSpillFileSize = minSpillFileSize;
     this.perQueryStats = perQueryStats;
   }
 
@@ -246,6 +250,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 limitSpec,
                 sortHasNonGroupingFields,
                 sliceSize,
+                minSpillFileSize,
                 perQueryStats
             );
             grouper.init();

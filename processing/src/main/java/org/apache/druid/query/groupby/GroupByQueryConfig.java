@@ -54,6 +54,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_MAX_SPILL_FILE_COUNT = "maxSpillFileCount";
+  private static final String CTX_KEY_MIN_SPILL_FILE_SIZE = "minSpillFileSize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
@@ -103,6 +104,9 @@ public class GroupByQueryConfig
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private HumanReadableBytes maxOnDiskStorage = HumanReadableBytes.valueOf(0);
+
+  @JsonProperty
+  private HumanReadableBytes minSpillFileSize = HumanReadableBytes.valueOf(1024 * 1024L);
 
   @JsonProperty
   private HumanReadableBytes defaultOnDiskStorage = HumanReadableBytes.valueOf(-1);
@@ -251,6 +255,11 @@ public class GroupByQueryConfig
     return maxSpillFileCount;
   }
 
+  public long getMinSpillFileSize()
+  {
+    return minSpillFileSize.getBytes();
+  }
+
   /**
    * Mirror maxOnDiskStorage if defaultOnDiskStorage's default is not overridden by cluster operator.
    *
@@ -357,6 +366,11 @@ public class GroupByQueryConfig
         getMaxSpillFileCount()
     );
 
+    newConfig.minSpillFileSize = queryContext.getHumanReadableBytes(
+        CTX_KEY_MIN_SPILL_FILE_SIZE,
+        getMinSpillFileSize()
+    );
+
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
@@ -400,6 +414,7 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage.getBytes() +
+           ", minSpillFileSize=" + minSpillFileSize.getBytes() +
            ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
