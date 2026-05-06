@@ -309,6 +309,17 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillingAllowed = spillingAllowed;
   }
 
+  /**
+   * Returns an iterator over all grouped entries, merging results from the in-memory grouper and
+   * any spill files on disk. When sorted is true, uses a merge-sorted iterator across all sources;
+   * when false, simply concatenates them.
+   *
+   * <p>In practice, sorted is always true. {@link RowBasedGrouperHelper} hardcodes
+   * {@code grouper.iterator(true)} because the merge layer above — CombiningIterator in
+   * {@link ConcurrentGrouper} and the broker merge — detects duplicate keys by comparing
+   * consecutive sorted entries. So sorted=true is required for merge correctness, not output
+   * ordering. The sorted=false path exists but is unreachable through any production query path.
+   */
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(final boolean sorted)
   {
@@ -385,6 +396,16 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
    * Merge-sorts all pending in-memory spill runs and writes them as a single sorted file to disk.
    * Each run is already individually sorted (from grouper.iterator(true)); this method merges them
    * so the output file is fully sorted, as required by iterator()'s mergeSorted across files.
+   * <p>
+   * We always merge-sort rather than concatenating runs (regardless of sorted / sortHasNonGroupingFields flags).
+   * The processing cost is dominated by JSON deserialization and re-serialization; the merge-sort comparison itself
+   * is O(N log K) key comparisons and negligible relative to the serde overhead, so concatenation would save little.
+   * <p>
+   * An alternative approach of writing each pending run's raw byte[] sequentially into one file
+   * (avoiding serde entirely) was rejected because at read time each sub-stream would require its own
+   * LZ4BlockInputStream with an internal buffer. With large amount of small spills we can end up with large number of
+   * sub-streams, each with its own buffer, which can lead to OOM. By merging runs together, we ensure that the number
+   * of spill files (and thus sub-streams) is small regardless of spill pattern.
    */
   private void flushPendingRunsToDisk() throws IOException
   {
