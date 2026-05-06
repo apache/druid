@@ -490,5 +490,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       temporaryStorage.delete(file);
     }
     files.clear();
+    for (final File file : dictionaryFiles) {
+      temporaryStorage.delete(file);
+    }
+    dictionaryFiles.clear();
   }
 }
