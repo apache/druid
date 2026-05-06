@@ -26,21 +26,22 @@ import org.apache.druid.timeline.DataSegment;
 
 /**
  * A {@link BalancerStrategy} which normalizes the cost of placing a segment on a
- * server as calculated by {@link CostBalancerStrategy} by multiplying it by the
- * server's disk usage ratio.
+ * server as calculated by {@link CostBalancerStrategy} by dividing by the
+ * server's available disk headroom.
  * <pre>
- * normalizedCost = cost * usageRatio
+ * normalizedCost = cost / max(EPSILON, 1 - usageRatio)
  *     where usageRatio = diskUsed / totalDiskSpace
  * </pre>
- * This penalizes servers that are more full, driving disk utilization to equalize
- * across the tier. When all servers have equal disk usage, the behavior is identical
- * to {@link CostBalancerStrategy}. When historicals have different disk capacities,
- * this naturally accounts for both fill level and total capacity.
+ * The denominator diverges as a server approaches full, so disk fullness has
+ * more weight over the placement decision when servers are nearly full,
+ * regardless of asymmetries in the locality cost. {@link #EPSILON} is a small
+ * numerical floor on the divisor to guard against division by zero (or by
+ * negative values during in-flight loads).
  * <p>
- * To prevent oscillation when servers have similar utilization, any server that
+ * To prevent oscillation when servers have similar headroom, any server that
  * is already projected to hold the segment (the source on a move, or a currently
  * serving node on a drop) receives a cost discount equal to
- * {@link #DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
+ * {@link DiskNormalizedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
  * the destination saves at least this fraction of the source's cost. The default
  * is configurable via
  * {@code druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold}.
@@ -48,18 +49,17 @@ import org.apache.druid.timeline.DataSegment;
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
   /**
-   * Default minimum fractional cost reduction required before a segment will
-   * be moved off a server that is already projected to hold it. A value of
-   * {@code 0.05} means the destination must be at least 5% cheaper than the
-   * source for the move to happen.
+   * Numerical floor on the headroom divisor to prevent division by zero or by
+   * negative values when {@code usageRatio >= 1.0} (possible for over-allocated
+   * servers or during in-flight loads).
    */
-  static final double DEFAULT_MOVE_COST_SAVINGS_THRESHOLD = 0.05;
+  static final double EPSILON = 1e-6;
 
   private final double sourceCostMultiplier;
 
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
-    this(exec, DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+    this(exec, DiskNormalizedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
   }
 
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
@@ -85,17 +85,16 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
       return cost;
     }
 
-    // Guard against NaN propagation in the cost comparator if a server
-    // somehow reports a non-positive maxSize. Such a server cannot hold
-    // anything and will be rejected by canLoadSegment, so returning the
-    // raw cost is safe.
+    // A server with non-positive maxSize cannot hold anything and will be
+    // rejected by canLoadSegment; return the raw cost to avoid NaN propagation.
     final long maxSize = server.getMaxSize();
     if (maxSize <= 0) {
       return cost;
     }
 
-    double usageRatio = (double) server.getSizeUsed() / maxSize;
-    double normalizedCost = cost * usageRatio;
+    final double usageRatio = (double) server.getSizeUsed() / maxSize;
+    final double headroom = Math.max(EPSILON, 1.0 - usageRatio);
+    double normalizedCost = cost / headroom;
 
     if (server.isProjectedSegment(proposalSegment)) {
       normalizedCost *= sourceCostMultiplier;
