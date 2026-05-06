@@ -48,13 +48,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,6 +62,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -153,39 +150,31 @@ public class HdfsInputSource
       return Collections.emptySet();
     }
 
-    // Use FileInputFormat to read splits. To do this, we need to make a fake Job.
-    Job job = Job.getInstance(configuration);
-
-    // Add paths to the fake JobContext.
-    for (String inputPath : inputPaths) {
-      FileInputFormat.addInputPaths(job, inputPath);
+    final Set<Path> paths = new LinkedHashSet<>();
+    for (final String inputPath : inputPaths) {
+      final Path p = new Path(inputPath);
+      final FileSystem fs = p.getFileSystem(configuration);
+      final FileStatus[] statuses = fs.globStatus(p);
+      if (statuses != null) {
+        for (final FileStatus status : statuses) {
+          addFilesRecursively(fs, status, paths);
+        }
+      }
     }
-
-    return new HdfsFileInputFormat().getSplits(job)
-                                    .stream()
-                                    .filter(split -> ((FileSplit) split).getLength() > 0)
-                                    .map(split -> ((FileSplit) split).getPath())
-                                    .collect(Collectors.toSet());
+    return paths;
   }
 
-  /**
-   * Helper for leveraging hadoop code to interpret HDFS paths with globs
-   */
-  private static class HdfsFileInputFormat extends FileInputFormat<Object, Object>
+  private static void addFilesRecursively(FileSystem fs, FileStatus status, Set<Path> paths) throws IOException
   {
-    @Override
-    public RecordReader<Object, Object> createRecordReader(
-        org.apache.hadoop.mapreduce.InputSplit inputSplit,
-        TaskAttemptContext taskAttemptContext
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean isSplitable(JobContext context, Path filename)
-    {
-      return false;  // prevent generating extra paths
+    if (status.isDirectory()) {
+      final FileStatus[] children = fs.listStatus(status.getPath());
+      if (children != null) {
+        for (final FileStatus child : children) {
+          addFilesRecursively(fs, child, paths);
+        }
+      }
+    } else if (status.getLen() > 0) {
+      paths.add(status.getPath());
     }
   }
 

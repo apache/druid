@@ -65,6 +65,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -487,6 +488,95 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           StringUtils.format("%s/bar", System.getProperty("user.dir")),
           inputSource.getSystemFieldValue(entity3, SystemField.PATH)
       );
+    }
+  }
+
+  public static class GetPathsTest
+  {
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    private FileSystem fileSystem;
+    private Configuration configuration;
+
+    @Before
+    public void setup() throws IOException
+    {
+      final File dir = temporaryFolder.getRoot();
+      configuration = new Configuration(true);
+      fileSystem = new LocalFileSystem();
+      fileSystem.initialize(dir.toURI(), configuration);
+      fileSystem.setWorkingDirectory(new Path(dir.getAbsolutePath()));
+    }
+
+    @After
+    public void teardown() throws IOException
+    {
+      fileSystem.close();
+    }
+
+    @Test
+    public void testGetPathsWithGlobMatchingNoFiles() throws IOException
+    {
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.getWorkingDirectory() + "/nonexistent*"),
+          configuration
+      );
+      Assert.assertTrue(paths.isEmpty());
+    }
+
+    @Test
+    public void testGetPathsFiltersZeroLengthFiles() throws IOException
+    {
+      // Create an empty file (zero length)
+      final Path emptyFile = new Path("empty_file");
+      fileSystem.create(emptyFile).close();
+
+      // Create a non-empty file
+      final Path nonEmptyFile = new Path("non_empty_file");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(nonEmptyFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.makeQualified(new Path("*_file")).toString()),
+          configuration
+      );
+
+      Assert.assertEquals(1, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(nonEmptyFile)));
+    }
+
+    @Test
+    public void testGetPathsWithMultipleInputPaths() throws IOException
+    {
+      final Path fileA = new Path("groupA_1");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileA), StandardCharsets.UTF_8)
+      )) {
+        writer.write("a");
+      }
+
+      final Path fileB = new Path("groupB_1");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileB), StandardCharsets.UTF_8)
+      )) {
+        writer.write("b");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Arrays.asList(
+              fileSystem.makeQualified(new Path("groupA*")).toString(),
+              fileSystem.makeQualified(new Path("groupB*")).toString()
+          ),
+          configuration
+      );
+
+      Assert.assertEquals(2, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
     }
   }
 
