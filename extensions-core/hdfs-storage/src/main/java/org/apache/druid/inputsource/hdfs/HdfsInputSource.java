@@ -144,6 +144,15 @@ public class HdfsInputSource
     }
   }
 
+  /**
+   * Matches Hadoop's FileInputFormat hidden-file filter: rejects paths whose name starts with '_' or '.'.
+   */
+  private static boolean isHiddenPath(Path path)
+  {
+    final String name = path.getName();
+    return name.startsWith("_") || name.startsWith(".");
+  }
+
   public static Collection<Path> getPaths(List<String> inputPaths, Configuration configuration) throws IOException
   {
     if (inputPaths.isEmpty()) {
@@ -152,29 +161,42 @@ public class HdfsInputSource
 
     final Set<Path> paths = new LinkedHashSet<>();
     for (final String inputPath : inputPaths) {
-      final Path p = new Path(inputPath);
-      final FileSystem fs = p.getFileSystem(configuration);
-      final FileStatus[] statuses = fs.globStatus(p);
-      if (statuses != null) {
-        for (final FileStatus status : statuses) {
-          addFilesRecursively(fs, status, paths);
+      final String[] splitPaths = org.apache.hadoop.util.StringUtils.split(inputPath);
+      for (final String singlePath : splitPaths) {
+        final Path p = new Path(singlePath);
+        final FileSystem fs = p.getFileSystem(configuration);
+        final FileStatus[] statuses = fs.globStatus(p);
+        if (statuses != null) {
+          for (final FileStatus status : statuses) {
+            if (isHiddenPath(status.getPath())) {
+              continue;
+            }
+            if (status.isDirectory()) {
+              addFilesFromDirectory(fs, status.getPath(), paths);
+            } else if (status.getLen() > 0) {
+              paths.add(status.getPath());
+            }
+          }
         }
       }
     }
     return paths;
   }
 
-  private static void addFilesRecursively(FileSystem fs, FileStatus status, Set<Path> paths) throws IOException
+  /**
+   * Lists files in a directory non-recursively, matching the behavior of Hadoop's FileInputFormat
+   * when mapreduce.input.fileinputformat.input.dir.recursive is not set (the default).
+   * Hidden files (names starting with '_' or '.') and subdirectories are skipped.
+   */
+  private static void addFilesFromDirectory(FileSystem fs, Path dir, Set<Path> paths) throws IOException
   {
-    if (status.isDirectory()) {
-      final FileStatus[] children = fs.listStatus(status.getPath());
-      if (children != null) {
-        for (final FileStatus child : children) {
-          addFilesRecursively(fs, child, paths);
+    final FileStatus[] children = fs.listStatus(dir);
+    if (children != null) {
+      for (final FileStatus child : children) {
+        if (!child.isDirectory() && !isHiddenPath(child.getPath()) && child.getLen() > 0) {
+          paths.add(child.getPath());
         }
       }
-    } else if (status.getLen() > 0) {
-      paths.add(status.getPath());
     }
   }
 
