@@ -947,6 +947,50 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testVirtualStorageRejectsNonPositiveLoadThreads()
+  {
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return ImmutableList.of(locationConfig);
+      }
+
+      @Override
+      public boolean isVirtualStorage()
+      {
+        return true;
+      }
+
+      @Override
+      public int getVirtualStorageLoadThreads()
+      {
+        return 0;
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new SegmentLocalCacheManager(
+                storageLocations,
+                loaderConfig,
+                new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+                TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+                jsonMapper
+            )
+        ),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.INVALID_INPUT,
+            "general"
+        ).expectMessageIs("virtualStorageLoadThreads must be greater than 0, got [0]")
+    );
+  }
+
+  @Test
   public void testGetBootstrapSegmentVirtualStorage() throws Exception
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
