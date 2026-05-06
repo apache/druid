@@ -68,6 +68,7 @@
 
   "ingest/notices/time" : { "dimensions" : ["dataSource", "noticeType"], "type" : "timer" },
   "ingest/notices/queueSize" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/supervisor/taskCount" : { "dimensions" : ["dataSource", "supervisor"], "type" : "gauge" },
 
   "ingest/pause/time" : { "dimensions" : ["dataSource", "taskId"], "type" : "timer" },
 
