@@ -118,7 +118,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
                                                 + "%sright = %s\n"
                                                 + "%s}";
 
-    public String print(int level)
+    private String print(int level)
     {
       String prefix = "\t".repeat(level);
       String eprefix = "\t".repeat(level - 1);
@@ -768,7 +768,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     }
   }
 
-
+  @VisibleForTesting
   public String print()
   {
     return (root != null) ? root.print(1) : null;
