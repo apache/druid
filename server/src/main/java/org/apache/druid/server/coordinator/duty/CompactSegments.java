@@ -38,7 +38,6 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -470,6 +469,10 @@ public class CompactSegments implements CoordinatorCustomDuty
    * absent. The scaled value is floored at {@link ClientMSQContext#DEFAULT_MAX_NUM_TASKS}
    * (the MSQ minimum of 1 controller + 1 worker). No-op when the engine is
    * native, the mode is full, or the percent is 100.
+   *
+   * <p>The percent is validated at config-acceptance time by
+   * {@link ClientCompactionRunnerInfo#validateMinorCompactionTaskPercentForMSQ},
+   * so an out-of-range value here indicates a bug.
    */
   private static void maybeScaleMaxNumTasksForMinorCompaction(
       Map<String, Object> context,
@@ -487,8 +490,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         DEFAULT_MINOR_COMPACTION_TASK_PERCENT
     );
     if (percent < 1 || percent > 100) {
-      throw InvalidInput.exception(
-          "'%s'[%d] must be between 1 and 100",
+      throw DruidException.defensive(
+          "'%s'[%d] must be between 1 and 100; should have been rejected at config-acceptance time",
           ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT,
           percent
       );

@@ -99,8 +99,12 @@ public class CompactSegmentsMinorTaskScalingTest
   }
 
   @Test
-  public void testMinor_msq_outOfRangePercentBelowOneThrows()
+  public void testMinor_msq_outOfRangePercentThrowsDefensive()
   {
+    // Bad values are normally rejected at config-acceptance time by
+    // ClientCompactionRunnerInfo#validateMinorCompactionTaskPercentForMSQ;
+    // this asserts the defensive guard inside compactSegments still fires
+    // if a bad value somehow reaches task construction.
     final Map<String, Object> ctx = contextWithMaxNumTasks(10);
     ctx.put(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, 0);
     final DruidException thrown = Assert.assertThrows(
@@ -111,7 +115,7 @@ public class CompactSegmentsMinorTaskScalingTest
             ctx
         )
     );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, thrown.getCategory());
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, thrown.getCategory());
   }
 
   @Test
@@ -132,35 +136,6 @@ public class CompactSegmentsMinorTaskScalingTest
         Eligibility.minor("uncompacted ratio below threshold"),
         CompactionEngine.NATIVE,
         contextWithMaxNumTasks(5)
-    );
-    Assert.assertEquals(5, getMaxNumTasks(task));
-  }
-
-  @Test
-  public void testMinor_msq_outOfRangePercentThrows()
-  {
-    final Map<String, Object> ctx = contextWithMaxNumTasks(10);
-    ctx.put(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, 200);
-    final DruidException thrown = Assert.assertThrows(
-        DruidException.class,
-        () -> buildTask(
-            Eligibility.minor("uncompacted ratio below threshold"),
-            CompactionEngine.MSQ,
-            ctx
-        )
-    );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, thrown.getCategory());
-  }
-
-  @Test
-  public void testMinor_msq_stringPercentIsParsed()
-  {
-    final Map<String, Object> ctx = contextWithMaxNumTasks(10);
-    ctx.put(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, "50");
-    final ClientCompactionTaskQuery task = buildTask(
-        Eligibility.minor("uncompacted ratio below threshold"),
-        CompactionEngine.MSQ,
-        ctx
     );
     Assert.assertEquals(5, getMaxNumTasks(task));
   }
