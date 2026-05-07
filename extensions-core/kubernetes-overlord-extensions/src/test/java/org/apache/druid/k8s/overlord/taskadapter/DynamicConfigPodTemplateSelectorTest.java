@@ -57,6 +57,7 @@ public class DynamicConfigPodTemplateSelectorTest
   private Path tempDir;
   private ObjectMapper mapper;
   private PodTemplate podTemplateSpec;
+  private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
   private KubernetesTaskRunnerEffectiveConfig effectiveConfig;
 
   @BeforeEach
@@ -64,7 +65,7 @@ public class DynamicConfigPodTemplateSelectorTest
   {
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
-    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, 1);
+    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, 1);
     KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder().build();
     effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
   }
@@ -367,6 +368,11 @@ public class DynamicConfigPodTemplateSelectorTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
 
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder()
+        .withAllowTaskPodTemplateSelection(true)
+        .build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
+
     DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
 
     Task task = new NoopTask(
@@ -389,6 +395,11 @@ public class DynamicConfigPodTemplateSelectorTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
 
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder()
+        .withAllowTaskPodTemplateSelection(true)
+        .build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
+
     DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
 
     Task task = new NoopTask(
@@ -402,5 +413,38 @@ public class DynamicConfigPodTemplateSelectorTest
     );
     Assertions.assertTrue(exception.getMessage().contains("[id]"));
     Assertions.assertTrue(exception.getMessage().contains("[doesNotExist]"));
+  }
+
+  @Test
+  public void test_fromTask_contextPodTemplateSelectionKey_disabledByDefault_isIgnored() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Path lowThroughputTemplatePath = Files.createFile(tempDir.resolve("low-throughput.yaml"));
+    PodTemplate lowThroughputPodTemplate = new PodTemplateBuilder(podTemplateSpec)
+        .editTemplate()
+        .editSpec()
+        .setNewVolumeLike(0, new VolumeBuilder().withName("volume").build())
+        .endVolume()
+        .endSpec()
+        .endTemplate()
+        .build();
+    mapper.writeValue(lowThroughputTemplatePath.toFile(), lowThroughputPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
+
+    Task task = new NoopTask(
+        "id", "id", "datasource", 0, 0,
+        ImmutableMap.of(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY, "lowThroughput")
+    );
+    Optional<PodTemplateWithName> actual = selector.getPodTemplateForTask(task);
+
+    Assertions.assertTrue(actual.isPresent());
+    Assertions.assertEquals("base", actual.get().getName());
   }
 }

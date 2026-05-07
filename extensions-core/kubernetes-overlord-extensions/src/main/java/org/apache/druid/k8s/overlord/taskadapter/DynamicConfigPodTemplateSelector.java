@@ -119,16 +119,18 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
   @Override
   public Optional<PodTemplateWithName> getPodTemplateForTask(Task task)
   {
-    String requested = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY);
-    if (requested != null) {
-      Supplier<PodTemplate> supplier = podTemplates.get(requested);
-      if (supplier == null) {
-        throw new IAE(
-            "Task [%s] requested pod template [%s] via context key, but no such template is configured.",
-            task.getId(), requested
-        );
+    if (effectiveConfig.isAllowTaskPodTemplateSelection()) {
+      String requested = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY);
+      if (requested != null) {
+        Supplier<PodTemplate> supplier = podTemplates.get(requested);
+        if (supplier == null) {
+          throw new IAE(
+              "Task [%s] requested pod template [%s] via context key, but no such template is configured.",
+              task.getId(), requested
+          );
+        }
+        return Optional.of(new PodTemplateWithName(requested, supplier.get()));
       }
-      return Optional.of(new PodTemplateWithName(requested, supplier.get()));
     }
 
     return Optional.of(effectiveConfig.getPodTemplateSelectStrategy().getPodTemplateForTask(task, podTemplates));

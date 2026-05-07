@@ -771,7 +771,7 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 "context": { "podTemplateSelectionKey": "podSpec1" }
 ```
 
-If the key doesn't match any configured template, the task fails to launch.
+This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
 #### Running Task Pods in Another Namespace
 
