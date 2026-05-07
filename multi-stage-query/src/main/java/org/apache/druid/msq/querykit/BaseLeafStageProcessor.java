@@ -116,6 +116,10 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
       outstandingProcessors = Math.min(totalProcessors, context.threadCount());
     }
 
+    if (usesProcessingBuffers()) {
+      frameContext.acquireProcessingBuffers(outstandingProcessors);
+    }
+
     final Queue<FrameWriterFactory> frameWriterFactoryQueue = new ArrayDeque<>(outstandingProcessors);
     final Queue<WritableFrameChannel> channelQueue = new ArrayDeque<>(outstandingProcessors);
     final List<OutputChannel> outputChannels = new ArrayList<>(outstandingProcessors);
