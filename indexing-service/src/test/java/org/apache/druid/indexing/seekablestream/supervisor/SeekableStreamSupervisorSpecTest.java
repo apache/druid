@@ -52,6 +52,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -1219,7 +1221,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
     Thread.sleep(1000); // ensure a dynamic allocation notice completes
 
-    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount());
     Assert.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
@@ -1337,71 +1339,83 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   }
 
   @Test
-  public void testMergeSpecConfigs()
+  public void testMerge_withExistingSpec()
   {
+    // Resolution rules on user POST when an existing spec is in the DB:
+    //   1. new spec's taskCountStart wins (over both explicit taskCount and existing).
+    //   2. else new spec's explicit taskCount wins.
+    //   3. else carry forward existing.taskCount (so autoscaler progress is not lost).
     mockIngestionSchema();
 
-    // Given
-    // Create existing spec with autoscaler config and taskCount set to 5
-    HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
-    existingAutoScalerConfig.put("enableTaskAutoScaler", true);
-    existingAutoScalerConfig.put("taskCountMax", 8);
-    existingAutoScalerConfig.put("taskCountMin", 1);
+    // existing(taskCount=5, autoscaler) + new(no taskCount, no start) -> carry forward 5.
+    assertMergeResult(spec(5, 1, 8, null), spec(null, 1, 8, null), 5);
 
-    SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(existingIoConfig.getAutoScalerConfig())
-            .andReturn(mapper.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(5).anyTimes();
-    EasyMock.replay(existingIoConfig);
+    // existing(5) + new(taskCount=7) -> keep 7.
+    assertMergeResult(spec(5, 1, 8, null), spec(7, 1, 8, null), 7);
 
-    SeekableStreamSupervisorIngestionSpec existingIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(existingIngestionSchema.getIOConfig()).andReturn(existingIoConfig).anyTimes();
-    EasyMock.expect(existingIngestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(existingIngestionSchema.getTuningConfig())
-            .andReturn(seekableStreamSupervisorTuningConfig)
-            .anyTimes();
-    EasyMock.replay(existingIngestionSchema);
+    // existing(5) + new(taskCountStart=3) -> 3.
+    assertMergeResult(spec(5, 1, 8, null), spec(null, 1, 8, 3), 3);
 
-    TestSeekableStreamSupervisorSpec existingSpec = buildDefaultSupervisorSpecWithIngestionSchema(
-        "id123",
-        existingIngestionSchema
-    );
+    // existing(5) + new(taskCount=7, taskCountStart=3) -> 3 (start beats explicit).
+    assertMergeResult(spec(5, 1, 8, null), spec(7, 1, 8, 3), 3);
 
-    // Create new spec with autoscaler config that has taskCountStart not set (null) and no taskCount set
-    HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
-    newAutoScalerConfig.put("enableTaskAutoScaler", true);
-    newAutoScalerConfig.put("taskCountMax", 8);
-    newAutoScalerConfig.put("taskCountMin", 1);
+    // No autoscaler on new spec -> merge is a no-op; new spec's taskCount stands.
+    assertMergeResult(spec(5, 1, 8, null), buildSpecWithIoConfig("new", createIOConfig(7, null)), 7);
 
-    SeekableStreamSupervisorIOConfig newIoConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(newIoConfig.getAutoScalerConfig())
-            .andReturn(mapper.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(null).anyTimes();
-    newIoConfig.setTaskCount(5);
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(newIoConfig);
+    // existing already has an explicit taskCount=6 (e.g. metadata-store round-trip). The
+    // *new* spec's isTaskCountExplicit must drive carry-forward, not the existing's.
+    assertMergeResult(spec(6, 1, 8, 3), spec(null, 1, 8, 3), 3);
+    assertMergeResult(spec(6, 1, 8, 3), spec(null, 1, 8, null), 6);
+  }
 
-    SeekableStreamSupervisorIngestionSpec newIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(newIngestionSchema.getIOConfig()).andReturn(newIoConfig).anyTimes();
-    EasyMock.expect(newIngestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(newIngestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
-    EasyMock.replay(newIngestionSchema);
+  @Test
+  public void testMerge_withNullExistingSpec_appliesTaskCountStartOnFirstPost()
+  {
+    // First-POST coverage. SupervisorManager calls merge(existingSpec) unconditionally,
+    // including when there is no prior spec (existingSpec == null). The constructor prefers
+    // an explicit taskCount over taskCountStart, so merge() must re-apply the
+    // "taskCountStart wins on user POST" rule even on the very first submission.
+    mockIngestionSchema();
 
-    TestSeekableStreamSupervisorSpec newSpec = buildDefaultSupervisorSpecWithIngestionSchema(
-        "id124",
-        newIngestionSchema
-    );
+    assertMergeResult(null, spec(7, 1, 8, 3), 3);    // start beats explicit
+    assertMergeResult(null, spec(null, 1, 8, 3), 3); // start applied
+    assertMergeResult(null, spec(7, 1, 8, null), 7); // explicit kept
+    assertMergeResult(null, spec(null, 2, 8, null), 2); // taskCountMin from constructor
+  }
 
-    // Before merge, taskCountStart should be null
-    Assert.assertNull(newSpec.getIoConfig().getAutoScalerConfig().getTaskCountStart());
-
-    // When - merge should copy taskCount from existing spec since new spec has no taskCount
+  private void assertMergeResult(
+      @Nullable TestSeekableStreamSupervisorSpec existingSpec,
+      TestSeekableStreamSupervisorSpec newSpec,
+      int expectedTaskCount
+  )
+  {
     newSpec.merge(existingSpec);
+    Assert.assertEquals(expectedTaskCount, newSpec.getIoConfig().getTaskCount());
+  }
 
-    // Then - verify setTaskCount was called (EasyMock will verify the mock expectations)
-    EasyMock.verify(newIoConfig);
+  private TestSeekableStreamSupervisorSpec spec(
+      @Nullable Integer taskCount,
+      int taskCountMin,
+      int taskCountMax,
+      @Nullable Integer taskCountStart
+  )
+  {
+    return buildSpecWithIoConfig(
+        "id",
+        createIOConfig(taskCount, lagBasedAutoScalerConfig(taskCountMin, taskCountMax, taskCountStart))
+    );
+  }
+
+  private TestSeekableStreamSupervisorSpec buildSpecWithIoConfig(
+      String id,
+      SeekableStreamSupervisorIOConfig ioConfig
+  )
+  {
+    final SeekableStreamSupervisorIngestionSpec ingestionSchema =
+        new SeekableStreamSupervisorIngestionSpec(dataSchema, ioConfig, seekableStreamSupervisorTuningConfig)
+        {
+        };
+    return buildDefaultSupervisorSpecWithIngestionSchema(id, ingestionSchema);
   }
 
   private TestSeekableStreamSupervisorSpec buildDefaultSupervisorSpecWithIngestionSchema(

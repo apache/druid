@@ -38,7 +38,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
-import type { QueryWithContext } from '../../druid-models';
+import type { CoordinatorDynamicConfig, QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
@@ -59,6 +59,7 @@ import {
   formatDurationWithMsIfNeeded,
   formatInteger,
   getApiArray,
+  getApiArrayFromKey,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -167,13 +168,36 @@ interface ServiceResultRow {
   readonly total_memory: number;
 }
 
+interface CloneStatusInfo {
+  readonly sourceServer: string;
+  readonly targetServer: string;
+  readonly state: string;
+  readonly segmentLoadsRemaining: number;
+  readonly segmentDropsRemaining: number;
+  readonly bytesToLoad: number;
+}
+
+interface ServerModeInfo {
+  readonly turboLoadingNodes: Set<string>;
+  readonly decommissioningNodes: Set<string>;
+}
+
 interface ServicesWithAuxiliaryInfo {
   readonly services: ServiceResultRow[];
   readonly loadQueueInfo: Record<string, LoadQueueInfo>;
+  readonly cloneStatus: Record<string, CloneStatusInfo>;
+  readonly serverMode: ServerModeInfo;
   readonly workerInfo: Record<string, WorkerInfo>;
 }
 
 export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
+export const CloneStatusContext = createContext<Record<string, CloneStatusInfo>>({});
+
+const DEFAULT_SERVER_MODE: ServerModeInfo = {
+  turboLoadingNodes: new Set(),
+  decommissioningNodes: new Set(),
+};
+export const ServerModeContext = createContext<ServerModeInfo>(DEFAULT_SERVER_MODE);
 
 interface LoadQueueInfo {
   readonly segmentsToDrop: NumberLike;
@@ -218,6 +242,140 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
     segmentsToDropSize: sum(loadQueueInfos, s => Number(s.segmentsToDropSize) || 0),
     expectedLoadTimeMillis: max(loadQueueInfos, s => Number(s.expectedLoadTimeMillis) || 0) || 0,
   };
+}
+
+interface DetailCellProps {
+  original: ServiceResultRow;
+  workerInfoLookup: Record<string, WorkerInfo>;
+}
+
+function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
+  const { service_type, service, is_leader } = original;
+  const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+  const cloneStatusContext = useContext(CloneStatusContext);
+  const serverModeInfo = useContext(ServerModeContext);
+
+  switch (service_type) {
+    case 'middle_manager':
+    case 'indexer': {
+      const workerInfo = workerInfoLookup[service];
+      if (!workerInfo) return null;
+
+      if (workerInfo.worker.version === '') return <>Disabled</>;
+
+      const details: string[] = [];
+      if (workerInfo.lastCompletedTaskTime) {
+        details.push(`Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`);
+      }
+      if (workerInfo.blacklistedUntil) {
+        details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
+      }
+      return <>{details.join(' ') || null}</>;
+    }
+
+    case 'coordinator':
+    case 'overlord':
+      return <>{is_leader === 1 ? 'Leader' : ''}</>;
+
+    case 'historical': {
+      const loadQueueInfo = loadQueueInfoContext[service];
+      const cloneInfo = cloneStatusContext[service];
+
+      const parts: string[] = [];
+      if (serverModeInfo.decommissioningNodes.has(service)) {
+        parts.push('Decommissioning');
+      }
+      if (serverModeInfo.turboLoadingNodes.has(service)) {
+        parts.push('Turbo Loading');
+      }
+      if (loadQueueInfo) {
+        parts.push(formatLoadQueueInfo(loadQueueInfo));
+      }
+      if (cloneInfo) {
+        if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
+          parts.push(`Clone of ${cloneInfo.sourceServer} (source missing)`);
+        } else if (cloneInfo.segmentLoadsRemaining > 0 || cloneInfo.segmentDropsRemaining > 0) {
+          const details: string[] = [];
+          if (cloneInfo.segmentLoadsRemaining > 0) {
+            details.push(
+              `${pluralIfNeeded(
+                cloneInfo.segmentLoadsRemaining,
+                'segment',
+              )} to load (${formatBytesCompact(cloneInfo.bytesToLoad)})`,
+            );
+          }
+          if (cloneInfo.segmentDropsRemaining > 0) {
+            details.push(`${pluralIfNeeded(cloneInfo.segmentDropsRemaining, 'segment')} to drop`);
+          }
+          parts.push(`Cloning from ${cloneInfo.sourceServer}: ${details.join(', ')}`);
+        } else {
+          parts.push(`Clone of ${cloneInfo.sourceServer} (synced)`);
+        }
+      }
+      return <>{parts.join('; ') || null}</>;
+    }
+
+    default:
+      return null;
+  }
+}
+
+interface AggregatedDetailCellProps {
+  subRows: { _original: ServiceResultRow }[];
+}
+
+function AggregatedDetailCell({ subRows }: AggregatedDetailCellProps) {
+  const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+  const cloneStatusContext = useContext(CloneStatusContext);
+  const serverModeInfo = useContext(ServerModeContext);
+  const historicalRows = subRows.map(r => r._original).filter(r => r.service_type === 'historical');
+  if (!historicalRows.length) return null;
+
+  const parts: string[] = [];
+
+  const decommissioningCount = historicalRows.filter(r =>
+    serverModeInfo.decommissioningNodes.has(r.service),
+  ).length;
+  if (decommissioningCount) {
+    parts.push(`${decommissioningCount} Decommissioning`);
+  }
+
+  const turboLoadingCount = historicalRows.filter(r =>
+    serverModeInfo.turboLoadingNodes.has(r.service),
+  ).length;
+  if (turboLoadingCount) {
+    parts.push(`${turboLoadingCount} Turbo Loading`);
+  }
+
+  const loadQueueInfos: LoadQueueInfo[] = filterMap(
+    historicalRows,
+    r => loadQueueInfoContext[r.service],
+  );
+  if (loadQueueInfos.length) {
+    parts.push(formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos)));
+  }
+
+  let clonedCount = 0;
+  let cloningCount = 0;
+  let cloningErrorCount = 0;
+  for (const row of historicalRows) {
+    const cloneInfo = cloneStatusContext[row.service];
+    if (!cloneInfo) continue;
+    if (cloneInfo.state === 'SOURCE_SERVER_MISSING') {
+      cloningErrorCount++;
+    } else if (cloneInfo.segmentLoadsRemaining > 0 || cloneInfo.segmentDropsRemaining > 0) {
+      cloningCount++;
+    } else {
+      clonedCount++;
+    }
+  }
+  const cloneParts: string[] = [];
+  if (clonedCount) cloneParts.push(`${clonedCount} cloned`);
+  if (cloningCount) cloneParts.push(`${cloningCount} cloning`);
+  if (cloningErrorCount) cloneParts.push(pluralIfNeeded(cloningErrorCount, 'cloning error'));
+  if (cloneParts.length) parts.push(cloneParts.join(', '));
+
+  return <>{parts.join('; ') || null}</>;
 }
 
 function defaultDisplayFn(value: any): string {
@@ -366,6 +524,54 @@ ORDER BY
           });
         }
 
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            const [cloneStatusResp, configResp] = await Promise.all([
+              getApiArrayFromKey<CloneStatusInfo>(
+                '/druid/coordinator/v1/config/cloneStatus',
+                'cloneStatus',
+                signal,
+              ).catch(() => {
+                AppToaster.show({
+                  icon: IconNames.ERROR,
+                  intent: Intent.DANGER,
+                  message: 'There was an error getting the clone status map',
+                });
+                return [] as CloneStatusInfo[];
+              }),
+              Api.instance
+                .get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', { signal })
+                .then(r => r.data)
+                .catch(() => {
+                  AppToaster.show({
+                    icon: IconNames.ERROR,
+                    intent: Intent.DANGER,
+                    message: 'There was an error getting the coordinator dynamic config',
+                  });
+                  return null;
+                }),
+            ]);
+
+            const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
+              cloneStatusResp,
+              s => s.targetServer,
+            );
+
+            return {
+              ...servicesWithAuxiliaryInfo,
+              cloneStatus: cloneStatusLookup,
+              ...(configResp
+                ? {
+                    serverMode: {
+                      turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
+                      decommissioningNodes: new Set<string>(configResp.decommissioningNodes || []),
+                    },
+                  }
+                : {}),
+            };
+          });
+        }
+
         if (capabilities.hasOverlordAccess()) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
@@ -400,7 +606,13 @@ ORDER BY
         }
 
         return new ResultWithAuxiliaryWork<ServicesWithAuxiliaryInfo>(
-          { services, loadQueueInfo: {}, workerInfo: {} },
+          {
+            services,
+            loadQueueInfo: {},
+            cloneStatus: {},
+            serverMode: DEFAULT_SERVER_MODE,
+            workerInfo: {},
+          },
           auxiliaryQueries,
         );
       },
@@ -451,30 +663,36 @@ ORDER BY
     const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const { services, loadQueueInfo, workerInfo } = servicesState.data || {
+    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo } = servicesState.data || {
       services: [],
       loadQueueInfo: {},
+      cloneStatus: {},
+      serverMode: DEFAULT_SERVER_MODE,
       workerInfo: {},
     };
 
     return (
       <LoadQueueInfoContext.Provider value={loadQueueInfo}>
-        <ReactTable
-          data={services}
-          loading={servicesState.loading}
-          noDataText={
-            servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
-          }
-          filterable
-          filtered={filters.toFilters()}
-          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
-          onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
-          pivotBy={groupServicesBy ? [groupServicesBy] : []}
-          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
-          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-          showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-          columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
-        />
+        <CloneStatusContext.Provider value={cloneStatus}>
+          <ServerModeContext.Provider value={serverMode}>
+            <ReactTable
+              data={services}
+              loading={servicesState.loading}
+              noDataText={
+                servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+              }
+              filterable
+              filtered={filters.toFilters()}
+              className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
+              onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
+              pivotBy={groupServicesBy ? [groupServicesBy] : []}
+              defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+              pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+              showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
+              columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+            />
+          </ServerModeContext.Provider>
+        </CloneStatusContext.Provider>
       </LoadQueueInfoContext.Provider>
     );
   }
@@ -817,61 +1035,12 @@ ORDER BY
           id: 'queue',
           width: 400,
           filterable: false,
-          className: 'padded',
+          className: 'padded wrapped',
           accessor: 'service',
-          Cell: ({ original }) => {
-            const { service_type, service, is_leader } = original;
-            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
-
-            switch (service_type) {
-              case 'middle_manager':
-              case 'indexer': {
-                const workerInfo = workerInfoLookup[service];
-                if (!workerInfo) return null;
-
-                if (workerInfo.worker.version === '') return 'Disabled';
-
-                const details: string[] = [];
-                if (workerInfo.lastCompletedTaskTime) {
-                  details.push(
-                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
-                  );
-                }
-                if (workerInfo.blacklistedUntil) {
-                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
-                }
-                return details.join(' ') || null;
-              }
-
-              case 'coordinator':
-              case 'overlord':
-                return is_leader === 1 ? 'Leader' : '';
-
-              case 'historical': {
-                const loadQueueInfo = loadQueueInfoContext[service];
-                if (!loadQueueInfo) return null;
-
-                return formatLoadQueueInfo(loadQueueInfo);
-              }
-
-              default:
-                return null;
-            }
-          },
-          Aggregated: ({ subRows }) => {
-            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
-            const originalRows = subRows.map(r => r._original);
-            if (!originalRows.some(r => r.service_type === 'historical')) return '';
-
-            const loadQueueInfos: LoadQueueInfo[] = filterMap(
-              originalRows,
-              r => loadQueueInfoContext[r.service],
-            );
-
-            return loadQueueInfos.length
-              ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
-              : '';
-          },
+          Cell: ({ original }) => (
+            <DetailCell original={original} workerInfoLookup={workerInfoLookup} />
+          ),
+          Aggregated: ({ subRows }) => <AggregatedDetailCell subRows={subRows} />,
         },
         {
           Header: ACTION_COLUMN_LABEL,
