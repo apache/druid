@@ -103,6 +103,13 @@ public class CapabilitiesBasedFormat implements ColumnFormat
     }
 
     if (otherFormat instanceof StringDictionaryEncodedColumnFormat) {
+      if (!this.capabilities.is(ValueType.STRING)) {
+        throw new ISE(
+            "Cannot merge columns of type[%s] and [%s]",
+            this.capabilities.asTypeString(),
+            otherFormat.getLogicalType()
+        );
+      }
       return otherFormat.merge(this);
     }
 

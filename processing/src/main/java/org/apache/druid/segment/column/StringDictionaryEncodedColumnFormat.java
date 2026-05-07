@@ -79,9 +79,12 @@ public class StringDictionaryEncodedColumnFormat implements ColumnFormat
   public DimensionHandler getColumnHandler(String columnName)
   {
     Integer maxStringLength = columnFormatSpec != null ? columnFormatSpec.getMaxStringLength() : null;
+    MultiValueHandling mvh = (columnFormatSpec != null && columnFormatSpec.getMultiValueHandling() != null)
+        ? columnFormatSpec.getMultiValueHandling()
+        : MultiValueHandling.ofDefault();
     return new StringDimensionHandler(
         columnName,
-        MultiValueHandling.ofDefault(),
+        mvh,
         hasBitmapIndexes,
         hasSpatialIndexes,
         maxStringLength,
@@ -118,6 +121,15 @@ public class StringDictionaryEncodedColumnFormat implements ColumnFormat
 
     if (otherFormat instanceof CapabilitiesBasedFormat) {
       final ColumnCapabilities otherCaps = otherFormat.toColumnCapabilities();
+      if (!otherCaps.is(ValueType.STRING)) {
+        throw new ISE(
+            "Cannot merge columns of type[%s] and format[%s] with type[%s] and format[%s]",
+            ColumnType.STRING,
+            this.getClass().getName(),
+            otherFormat.getLogicalType(),
+            otherFormat.getClass().getName()
+        );
+      }
       return new StringDictionaryEncodedColumnFormat(
           hasMultipleValues || otherCaps.hasMultipleValues().isMaybeTrue(),
           hasNulls || otherCaps.hasNulls().isMaybeTrue(),
