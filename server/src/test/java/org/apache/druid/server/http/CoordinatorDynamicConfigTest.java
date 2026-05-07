@@ -281,6 +281,7 @@ public class CoordinatorDynamicConfigTest
         null,
         ImmutableSet.of("host1"),
         null,
+        null,
         null
     );
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
@@ -307,6 +308,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null,
         null
     );

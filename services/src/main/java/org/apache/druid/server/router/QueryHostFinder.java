@@ -135,6 +135,20 @@ public class QueryHostFinder
     Server server = selected == null ? null : selected.rhs;
 
     if (server == null) {
+      // Fail-closed when a deployment-group filter is configured: do not fall back to a cached
+      // backup, since the cached broker may now be outside the acceptable deployment groups
+      // (re-announced with a different tag, or removed while still cached). Clear any stale
+      // entries instead so a recovery later starts from a clean slate.
+      if (hostSelector.isDeploymentGroupFilterEnabled()) {
+        log.warn(
+            "No server found for serviceName[%s] under deployment-group filter; "
+            + "skipping backup fallback to preserve red/black isolation.",
+            serviceName
+        );
+        serverBackup.remove(serviceName);
+        return null;
+      }
+
       log.error(
           "No server found for serviceName[%s]. Using backup",
           serviceName

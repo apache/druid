@@ -110,7 +110,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "cloneServers": {},
     "historicalTierAliases": {
         "hot": ["hot_1", "hot_2"]
-    }
+    },
+    "coordinatingVersions": []
 
 }
 ```

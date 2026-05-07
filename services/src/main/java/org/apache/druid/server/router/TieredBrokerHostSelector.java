@@ -200,6 +200,17 @@ public class TieredBrokerHostSelector
     return tierConfig.getDefaultBrokerServiceName();
   }
 
+  /**
+   * Returns true if a deployment-group filter is configured. When enabled, callers must avoid
+   * any cached/backup routing that could surface a broker which has since fallen outside the
+   * acceptable groups; the filter is intended to be fail-closed.
+   */
+  public boolean isDeploymentGroupFilterEnabled()
+  {
+    final Set<String> acceptable = tierConfig.getAcceptableDeploymentGroups();
+    return acceptable != null && !acceptable.isEmpty();
+  }
+
   public <T> Pair<String, Server> select(final Query<T> query)
   {
     synchronized (lock) {

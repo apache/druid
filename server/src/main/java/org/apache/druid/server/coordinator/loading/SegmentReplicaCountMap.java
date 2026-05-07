@@ -27,36 +27,40 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Contains a mapping from tier to {@link SegmentReplicaCount}s.
+ * Contains a mapping from {@link ReplicaCountKey} to {@link SegmentReplicaCount}s.
  * <p>
  * Used by the {@link StrategicSegmentAssigner} to make assignment decisions.
  */
 public class SegmentReplicaCountMap
 {
-  private final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCounts = new HashMap<>();
+  private final Map<SegmentId, Map<ReplicaCountKey, SegmentReplicaCount>> replicaCounts = new HashMap<>();
 
-  static SegmentReplicaCountMap create(DruidCluster cluster)
+  static SegmentReplicaCountMap create(DruidCluster cluster, Set<String> coordinatingVersions)
   {
     final SegmentReplicaCountMap replicaCountMap = new SegmentReplicaCountMap();
-    replicaCountMap.initReplicaCounts(cluster);
+    replicaCountMap.initReplicaCounts(cluster, coordinatingVersions);
     return replicaCountMap;
   }
 
-  private void initReplicaCounts(DruidCluster cluster)
+  private void initReplicaCounts(DruidCluster cluster, Set<String> coordinatingVersions)
   {
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
+              final String group = serverHolder.getServer().getMetadata().getDeploymentGroup();
+              final ReplicaCountKey key = ReplicaCountKey.from(tier, group, coordinatingVersions);
+
               // Add segments already loaded on this server
               for (DataSegment segment : serverHolder.getServedSegments()) {
-                computeIfAbsent(segment.getId(), tier).incrementLoaded();
+                computeIfAbsent(segment.getId(), key).incrementLoaded();
               }
 
               // Add segments queued for load, drop or move on this server
               serverHolder.getQueuedSegments().forEach(
-                  (segment, state) -> computeIfAbsent(segment.getId(), tier)
+                  (segment, state) -> computeIfAbsent(segment.getId(), key)
                       .incrementQueued(state)
               );
             }
@@ -66,7 +70,7 @@ public class SegmentReplicaCountMap
     cluster.getBrokers().forEach(broker -> {
       final ImmutableDruidServer server = broker.getServer();
       for (DataSegment segment : server.iterateAllSegments()) {
-        computeIfAbsent(segment.getId(), server.getTier())
+        computeIfAbsent(segment.getId(), ReplicaCountKey.forTier(server.getTier()))
             .incrementLoadedOnNonHistoricalServer();
       }
     });
@@ -74,16 +78,16 @@ public class SegmentReplicaCountMap
     cluster.getRealtimes().forEach(realtime -> {
       final ImmutableDruidServer server = realtime.getServer();
       for (DataSegment segment : server.iterateAllSegments()) {
-        computeIfAbsent(segment.getId(), server.getTier())
+        computeIfAbsent(segment.getId(), ReplicaCountKey.forTier(server.getTier()))
             .incrementLoadedOnNonHistoricalServer();
       }
     });
   }
 
-  SegmentReplicaCount get(SegmentId segmentId, String tier)
+  SegmentReplicaCount get(SegmentId segmentId, ReplicaCountKey key)
   {
     SegmentReplicaCount count = replicaCounts.getOrDefault(segmentId, Collections.emptyMap())
-                                             .get(tier);
+                                             .get(key);
     return count == null ? new SegmentReplicaCount() : count;
   }
 
@@ -95,10 +99,10 @@ public class SegmentReplicaCountMap
     return total;
   }
 
-  public SegmentReplicaCount computeIfAbsent(SegmentId segmentId, String tier)
+  public SegmentReplicaCount computeIfAbsent(SegmentId segmentId, ReplicaCountKey key)
   {
     return replicaCounts.computeIfAbsent(segmentId, s -> new HashMap<>())
-                        .computeIfAbsent(tier, t -> new SegmentReplicaCount());
+                        .computeIfAbsent(key, t -> new SegmentReplicaCount());
   }
 
   public SegmentReplicationStatus toReplicationStatus()

@@ -19,11 +19,13 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -287,6 +289,36 @@ public class BalanceSegmentsTest
   }
 
   @Test
+  public void testMaxSegmentsToMoveIsHonoredAcrossDeploymentGroups()
+  {
+    final ServerHolder redHolder1 = createHolder(createHistorical("red1", "red"), segment1, segment2);
+    final ServerHolder redHolder2 = createHolder(createHistorical("red2", "red"));
+    final ServerHolder blueHolder1 = createHolder(createHistorical("blue1", "blue"), segment3, segment4);
+    final ServerHolder blueHolder2 = createHolder(createHistorical("blue2", "blue"));
+
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
+                                .withMaxSegmentsToMove(1)
+                                .withCoordinatingVersions(ImmutableSet.of("red", "blue"))
+                                .build();
+    final DruidCoordinatorRuntimeParams params =
+        defaultRuntimeParamsBuilder(redHolder1, redHolder2, blueHolder1, blueHolder2)
+            .withDynamicConfigs(dynamicConfig)
+            .build();
+
+    final CoordinatorRunStats stats = runBalancer(params);
+    final long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
+                            + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
+
+    Assert.assertEquals(1L, totalMoved);
+    Assert.assertEquals(
+        1,
+        redHolder2.getPeon().getSegmentsToLoad().size() + blueHolder2.getPeon().getSegmentsToLoad().size()
+    );
+  }
+
+  @Test
   public void testMoveForMultipleDatasources()
   {
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
@@ -308,6 +340,73 @@ public class BalanceSegmentsTest
     long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
                       + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
     Assert.assertEquals(2L, totalMoved);
+  }
+
+  @Test
+  public void testBalancerDoesNotMoveSegmentsAcrossDeploymentGroups()
+  {
+    // Two red servers (one full, one empty) and two blue servers (one full, one empty).
+    // With coordinatingVersions configured, balancing must stay within each group:
+    // segments from server1 may only move to server2 (red), segments from server3 may only move to server4 (blue).
+    final DruidServer redServer1 = new DruidServer(
+        new DruidServerMetadata("red1", "red1", null, 100L, null, ServerType.HISTORICAL, "normal", 0, "red")
+    );
+    final DruidServer redServer2 = new DruidServer(
+        new DruidServerMetadata("red2", "red2", null, 100L, null, ServerType.HISTORICAL, "normal", 0, "red")
+    );
+    final DruidServer blueServer1 = new DruidServer(
+        new DruidServerMetadata("blue1", "blue1", null, 100L, null, ServerType.HISTORICAL, "normal", 0, "blue")
+    );
+    final DruidServer blueServer2 = new DruidServer(
+        new DruidServerMetadata("blue2", "blue2", null, 100L, null, ServerType.HISTORICAL, "normal", 0, "blue")
+    );
+
+    // Put segment1+segment2 on redServer1 only, and segment3+segment4 on blueServer1 only.
+    final ServerHolder redHolder1 = createHolder(redServer1, segment1, segment2);
+    final ServerHolder redHolder2 = createHolder(redServer2);
+    final ServerHolder blueHolder1 = createHolder(blueServer1, segment3, segment4);
+    final ServerHolder blueHolder2 = createHolder(blueServer2);
+
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
+                                .withMaxSegmentsToMove(4)
+                                .withCoordinatingVersions(ImmutableSet.of("red", "blue"))
+                                .build();
+    DruidCoordinatorRuntimeParams params =
+        defaultRuntimeParamsBuilder(redHolder1, redHolder2, blueHolder1, blueHolder2)
+            .withDynamicConfigs(dynamicConfig)
+            .withBalancerStrategy(balancerStrategy)
+            .withSegmentAssignerUsing(loadQueueManager)
+            .build();
+
+    runBalancer(params);
+
+    // Segments queued for load on red2 must only contain datasource1 (segment1/segment2 originated there).
+    for (DataSegment loaded : redHolder2.getPeon().getSegmentsToLoad()) {
+      Assert.assertEquals(
+          "Red destination must not receive blue segments",
+          "datasource1",
+          loaded.getDataSource()
+      );
+    }
+    // Segments queued for load on blue2 must only contain datasource2 (segment3/segment4 originated there).
+    for (DataSegment loaded : blueHolder2.getPeon().getSegmentsToLoad()) {
+      Assert.assertEquals(
+          "Blue destination must not receive red segments",
+          "datasource2",
+          loaded.getDataSource()
+      );
+    }
+    // Red servers should never receive blue segments and vice versa.
+    Assert.assertTrue(
+        redHolder1.getPeon().getSegmentsToLoad().stream()
+                  .noneMatch(s -> "datasource2".equals(s.getDataSource()))
+    );
+    Assert.assertTrue(
+        blueHolder1.getPeon().getSegmentsToLoad().stream()
+                   .noneMatch(s -> "datasource1".equals(s.getDataSource()))
+    );
   }
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
@@ -361,6 +460,13 @@ public class BalanceSegmentsTest
         isDecommissioning,
         maxSegmentsInLoadQueue,
         10
+    );
+  }
+
+  private DruidServer createHistorical(String name, String deploymentGroup)
+  {
+    return new DruidServer(
+        new DruidServerMetadata(name, name, null, 100L, null, ServerType.HISTORICAL, "normal", 0, deploymentGroup)
     );
   }
 

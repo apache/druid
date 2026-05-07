@@ -56,6 +56,7 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -121,6 +122,7 @@ public class DataSourcesResource
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
   private final AuditManager auditManager;
+  private final CoordinatorConfigManager coordinatorConfigManager;
 
   @Inject
   public DataSourcesResource(
@@ -130,7 +132,8 @@ public class DataSourcesResource
       OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
-      AuditManager auditManager
+      AuditManager auditManager,
+      CoordinatorConfigManager coordinatorConfigManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -140,6 +143,7 @@ public class DataSourcesResource
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
     this.auditManager = auditManager;
+    this.coordinatorConfigManager = coordinatorConfigManager;
   }
 
   @GET
@@ -934,6 +938,7 @@ public class DataSourcesResource
 
       // A segment that is not eligible for load will never be handed off
       boolean eligibleForLoad = false;
+      LoadRule matchingLoadRule = null;
       for (Rule rule : rules) {
         final boolean applies;
         if (rule.isIntervalBased()) {
@@ -947,7 +952,10 @@ public class DataSourcesResource
           applies = rule.appliesTo(segment, now);
         }
         if (applies) {
-          eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
+          if (rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded()) {
+            eligibleForLoad = true;
+            matchingLoadRule = (LoadRule) rule;
+          }
           break;
         }
       }
@@ -973,11 +981,32 @@ public class DataSourcesResource
 
       Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
           prepareServedSegmentsInInterval(timeline, theInterval);
-      if (isSegmentLoaded(servedSegmentsInInterval, descriptor)) {
-        return Response.ok(true).build();
+      if (!isSegmentLoaded(servedSegmentsInInterval, descriptor)) {
+        return Response.ok(false).build();
       }
 
-      return Response.ok(false).build();
+      // When coordinatingVersions is configured, additionally verify per-group coverage.
+      final Set<String> coordinatingVersions = coordinatorConfigManager == null
+          ? Set.of()
+          : coordinatorConfigManager.getCurrentDynamicConfig().getCoordinatingVersions();
+      if (!coordinatingVersions.isEmpty() && matchingLoadRule != null) {
+        final Map<String, Set<String>> activeGroupsByTier =
+            computeActiveDeploymentGroupsByTier(coordinatingVersions);
+        for (Map.Entry<String, Integer> tierEntry : matchingLoadRule.getTieredReplicants().entrySet()) {
+          if (tierEntry.getValue() <= 0) {
+            continue;
+          }
+          final Set<String> activeGroups =
+              activeGroupsByTier.getOrDefault(tierEntry.getKey(), Set.of());
+          for (String group : activeGroups) {
+            if (!isSegmentLoadedForDeploymentGroup(servedSegmentsInInterval, descriptor, tierEntry.getKey(), group)) {
+              return Response.ok(false).build();
+            }
+          }
+        }
+      }
+
+      return Response.ok(true).build();
     }
     catch (Exception e) {
       log.error(e, "Error while handling hand off check request");
@@ -1004,6 +1033,56 @@ public class DataSourcesResource
           && Iterables.any(
           segmentLoadInfo.getServers(), DruidServerMetadata::isSegmentReplicationTarget
       )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Builds a {@code tier -> activeGroups} map in a single pass over the server inventory. Only
+   * segment-replication-target servers whose {@code deploymentGroup} is in
+   * {@code coordinatingVersions} contribute. Tiers with no active groups are absent from the
+   * returned map. Groups with no online servers do not block handoff.
+   */
+  private Map<String, Set<String>> computeActiveDeploymentGroupsByTier(Set<String> coordinatingVersions)
+  {
+    final Map<String, Set<String>> activeGroupsByTier = new HashMap<>();
+    for (DruidServer server : serverInventoryView.getInventory()) {
+      if (!server.getType().isSegmentReplicationTarget()) {
+        continue;
+      }
+      final String group = server.getMetadata().getDeploymentGroup();
+      if (group == null || !coordinatingVersions.contains(group)) {
+        continue;
+      }
+      activeGroupsByTier.computeIfAbsent(server.getTier(), t -> new HashSet<>()).add(group);
+    }
+    return activeGroupsByTier;
+  }
+
+  /**
+   * Returns true if at least one segment-replication-target server in the given {@code tier} and
+   * {@code group} serves the segment described by {@code descriptor}. The tier check is required
+   * because the same {@code deploymentGroup} name may appear across multiple tiers, so a server
+   * outside the rule-required tier must not satisfy the per-tier handoff check.
+   */
+  static boolean isSegmentLoadedForDeploymentGroup(
+      Iterable<ImmutableSegmentLoadInfo> servedSegments,
+      SegmentDescriptor descriptor,
+      String tier,
+      String group
+  )
+  {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
+      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && segmentLoadInfo.getServers().stream().anyMatch(
+              s -> s.isSegmentReplicationTarget()
+                   && tier.equals(s.getTier())
+                   && group.equals(s.getDeploymentGroup())
+          )) {
         return true;
       }
     }
