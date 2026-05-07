@@ -2231,6 +2231,7 @@ Supported runtime properties:
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 |`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|Integer.MAX_VALUE (unlimited)|
+|`druid.query.groupBy.minSpillFileSize`|Minimum number of bytes that must accumulate across pending in-memory spill runs before they are flushed as a single file to disk. Smaller spills are batched in heap memory to avoid creating many tiny files. Higher values reduce file count but increase heap usage.|1048576 (1 MiB)|
 |`druid.query.groupBy.defaultOnDiskStorage`|Default amount of disk space to use, per-query, for spilling the result sets to disk when either the merging buffer or the dictionary fills up. Set to zero to disable disk spilling for queries which don't override `maxOnDiskStorage` in their context.|`druid.query.groupBy.maxOnDiskStorage`|
 
 Supported query contexts:
@@ -2241,6 +2242,7 @@ Supported query contexts:
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to set `maxOnDiskStorage` to a value between 0 and `druid.query.groupBy.maxOnDiskStorage` for this query. If this query context override exceeds `druid.query.groupBy.maxOnDiskStorage`, the query will use `druid.query.groupBy.maxOnDiskStorage`. Omitting this from the query context will cause the query to use `druid.query.groupBy.defaultOnDiskStorage` for `maxOnDiskStorage`|
 |`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
+|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.|
 
 ### Advanced configurations
 
