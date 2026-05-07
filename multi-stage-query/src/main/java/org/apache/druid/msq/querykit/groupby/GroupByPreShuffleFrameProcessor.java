@@ -49,6 +49,7 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
+import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -193,8 +194,11 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));
       } else {
         // Resolve this query using a cursor.
+        final GroupByQuery segmentQuery = (GroupByQuery) query
+            .withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor()))
+            .optimizeForSegment(new PerSegmentQueryOptimizationContext(segmentHolder.getDescriptor()));
         rowSequence = groupingEngine.process(
-            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+            segmentQuery,
             Objects.requireNonNull(segment.as(CursorFactory.class)),
             tbi,
             bufferPool,
