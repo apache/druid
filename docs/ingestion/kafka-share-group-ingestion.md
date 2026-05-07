@@ -92,24 +92,68 @@ Submit a `ShareGroupIndexTask` to the Overlord. Unlike standard Kafka ingestion,
 |----------|------|----------|---------|-------------|
 | `topic` | String | Yes | -- | Kafka topic to consume from. |
 | `groupId` | String | Yes | -- | Share group identifier. Multiple tasks with the same `groupId` share the workload. |
-| `consumerProperties` | Map | Yes | -- | Kafka consumer properties. Must include `bootstrap.servers`. |
+| `consumerProperties` | Map | Yes | -- | Kafka consumer properties. Must include `bootstrap.servers`. See [Consumer property restrictions](#consumer-property-restrictions) below. |
 | `inputFormat` | Object | Yes | -- | Input format for parsing records (json, csv, avro, etc.). |
 | `pollTimeout` | Long | No | 2000 | Poll timeout in milliseconds. |
+
+### Consumer property restrictions
+
+Kafka share consumers (KIP-932) reject a fixed set of consumer properties that are valid for regular consumer groups. To avoid broker-side `ConfigException` at task startup, Druid silently strips the following keys from `consumerProperties` (with a `WARN` log line per stripped key) before constructing the `KafkaShareConsumer`:
+
+| Stripped key | Why |
+|--------------|-----|
+| `auto.offset.reset` | Initial position is broker-controlled for share groups. |
+| `enable.auto.commit` | Share consumers always require explicit `acknowledge()` + `commitSync()`. |
+| `group.instance.id` | Share groups do not support static membership. |
+| `isolation.level` | Always read-committed for share groups. |
+| `partition.assignment.strategy` | Broker controls per-record delivery for share groups. |
+| `interceptor.classes` | Not supported for share consumers. |
+| `session.timeout.ms` | Share groups have no consumer-group session model. |
+| `heartbeat.interval.ms` | Share groups have no heartbeat. |
+| `group.protocol` | Always `SHARE` for share consumers. |
+| `group.remote.assignor` | Not applicable to share groups. |
+
+The internal property `share.acknowledgement.mode=explicit` is set automatically and must not be overridden.
+
+### Tuning configuration
+
+`tuningConfig` accepts the standard `KafkaTuningConfig` fields (e.g. `maxRowsPerSegment`, `maxRowsInMemory`, `intermediatePersistPeriod`, etc.). Phase 1 ingestion respects:
+
+- `maxRowsInMemory` / `maxBytesInMemory`: triggers a mid-batch persist when the appenderator signals `isPersistRequired`.
+- `maxRowsPerSegment`: when reached during a batch the runner logs the event; the over-threshold segments are pushed at the end-of-batch publish boundary.
+
+Phase 1 does not yet support mid-batch checkpoint/sequence rollover; that is a Phase 2 enhancement.
 
 ## How it works
 
 1. The task subscribes to the topic using a `KafkaShareConsumer` with the configured `groupId`.
-2. The broker delivers batches of records with acquisition locks.
-3. The task parses records, adds rows to an appenderator, and persists segments.
-4. Segments are published atomically to the metadata store.
-5. After successful publish, the task acknowledges all records in the batch with `ACCEPT`.
-6. The task calls `commitSync()` to commit acknowledgements to the broker.
-7. On task failure, unacknowledged records are redelivered by the broker to another consumer in the share group.
+2. The broker delivers batches of records with per-record acquisition locks.
+3. For each polled record the task uses the same multi-row parser that powers `KafkaIndexTask` (`StreamChunkReader`). A single Kafka record may produce zero (e.g. tombstones), one, or many `InputRow`s (e.g. JSON arrays). All resulting rows are added to the appenderator before the record is acknowledged.
+4. Parse failures are routed through `ParseExceptionHandler` (so `maxParseExceptions` etc. are honored). Bytes/processed/unparseable/thrown-away counters are incremented exactly once per row.
+5. Segments are persisted (mid-batch on memory pressure, end-of-batch unconditionally) and then published atomically to the metadata store via `SegmentTransactionalAppendAction`.
+6. After successful publish, the task acknowledges every offset polled in the batch with `ACCEPT` and calls `commitSync()` to commit acknowledgements to the broker.
+7. On task failure or graceful stop before publish, unacknowledged records are redelivered by the broker to another consumer in the share group after the acquisition lock expires.
 
 ## Safety invariants
 
-1. Records are acknowledged with `ACCEPT` only after the segment containing them is atomically registered in the metadata store. No data loss on task failure.
-2. Every polled record reaches exactly one terminal state: `ACCEPT` (processed), `RELEASE` (redelivered), or task crash (broker redelivers after lock timeout).
+1. **ACK after publish:** records are acknowledged with `ACCEPT` only after the segment containing them is atomically registered in the metadata store. No data loss on task failure.
+2. **Multi-row safe:** every row produced from a record (including all elements of a JSON-array record) is added to the appenderator before the record is acknowledged.
+3. **Resource safe:** `Appenderator` and `KafkaShareConsumer` are released on every exit path, including graceful stop and exceptions.
+4. **Terminal state:** every polled record reaches exactly one terminal state: `ACCEPT` (processed), `RELEASE` (redelivered), or task crash (broker redelivers after the acquisition lock expires).
+
+## Graceful stop
+
+When the Overlord asks a task to stop (rolling restart, supervisor reconfiguration, etc.), the task forwards the request to the runner which calls `KafkaShareConsumer.wakeup()`. The in-flight `poll()` throws `WakeupException`; the runner observes that `stopRequested` is set and exits the loop after committing any in-flight batch. Records polled but not yet published remain unacknowledged and are redelivered by the broker after the acquisition lock expires.
+
+## Acquisition lock duration
+
+The broker controls the per-record acquisition lock duration via `group.share.record.lock.duration.ms`. The runner logs the broker-effective value once after the first poll, e.g.:
+
+```
+Effective broker acquisition lock timeout for share-group[my-group]: 30000 ms
+```
+
+In Phase 1 the foreground ingestion thread does both poll and publish. If a single batch takes longer than the broker lock duration, in-flight records may be redelivered to another consumer (resulting in duplicates). To stay well under the lock duration, tune `pollTimeout`, `maxRowsInMemory`, and `maxRowsPerSegment` so each poll-publish cycle completes comfortably within the broker lock window. Background lock renewal via the `RENEW` acknowledge type is a Phase 2 enhancement.
 
 ## Scaling
 
@@ -127,12 +171,21 @@ Adding or removing tasks does not trigger a rebalancing pause. New tasks begin c
 
 Share group ingestion provides **at-least-once** delivery. On task failure, records between the last committed acknowledgement and the failure point are redelivered. Duplicate records may be ingested across task restarts. A deduplication cache is planned for a future release.
 
+## Metrics
+
+In addition to the standard ingestion metrics (`ingest/events/processed`, `ingest/events/unparseable`, `ingest/persists/count`, etc.), share-group ingestion emits:
+
+| Metric | Description |
+|--------|-------------|
+| `ingest/shareGroup/commitFailures` | Per-batch count of partitions whose `commitSync()` failed. A non-zero value implies the affected records will be redelivered by the broker. Operators should alert on sustained non-zero values. |
+
 ## Limitations (current release)
 
-- Single-threaded ingestion per task. Two-thread architecture with background lock renewal is planned.
-- No supervisor integration. Tasks must be submitted manually via the Overlord API.
-- No deduplication cache. Redelivered records after task failure may produce duplicates.
+- Single-threaded ingestion per task. Two-thread architecture with background lock renewal (using `AcknowledgeType.RENEW`) is a Phase 2 enhancement.
+- No supervisor integration. Tasks must be submitted manually via the Overlord API. A `KafkaShareGroupSupervisor` is planned for Phase 2.
+- No deduplication cache. Records redelivered after task failure or graceful stop before publish may produce duplicates (at-least-once).
 - Delivery order within a partition is not guaranteed.
+- Mid-batch checkpoint / sequence rollover is not supported. If a single batch grossly exceeds `maxRowsPerSegment`, the runner still publishes correctly (multiple segments per batch), but the per-segment row threshold is only checked at end-of-batch boundaries.
 
 ## Demo: end-to-end validation with Druid UI
 
@@ -243,7 +296,11 @@ Unit tests:
 
 ```bash
 mvn test -pl extensions-core/kafka-indexing-service \
-  -Dtest="org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfigTest,org.apache.druid.indexing.kafka.KafkaShareGroupRecordSupplierTest,org.apache.druid.indexing.kafka.ShareGroupIndexTaskTest" \
+  -Dtest="org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfigTest,\
+org.apache.druid.indexing.kafka.KafkaShareGroupRecordSupplierTest,\
+org.apache.druid.indexing.kafka.ShareGroupIndexTaskTest,\
+org.apache.druid.indexing.kafka.ShareGroupIndexTaskRunnerTest,\
+org.apache.druid.indexing.kafka.ShareGroupConsumerPropertiesTest" \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Pskip-static-checks -Dweb.console.skip=true -T1C
 ```
