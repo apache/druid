@@ -37,13 +37,8 @@ public interface CursorFactory extends ColumnInspector
    * (e.g. download column data from deep storage) before they can serve a cursor. Callers running on threads that
    * must not block should use this.
    * <p>
-   * Returns an {@link AsyncCursorHolder} rather than a raw {@link com.google.common.util.concurrent.ListenableFuture}
-   * so that lifecycle management is safe regardless of where the underlying load is in its lifecycle, see
-   * {@link AsyncCursorHolder} for the rationale and usage pattern.
-   * <p>
    * The default implementation completes synchronously by delegating to {@link #makeCursorHolder(CursorBuildSpec)},
-   * which keeps every existing implementation async-correct without changes. Implementations backed by partial /
-   * lazy storage can override to do their I/O off-thread.
+   * which keeps every existing implementation async-correct without changes.
    */
   default AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {

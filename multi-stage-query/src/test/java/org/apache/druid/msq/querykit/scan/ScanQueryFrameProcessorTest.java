@@ -21,7 +21,6 @@ package org.apache.druid.msq.querykit.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
@@ -286,7 +285,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   {
     final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
     final CursorFactory baseCursorFactory = new QueryableIndexCursorFactory(queryableIndex);
-    final SettableFuture<CursorHolder> deferredHolder = SettableFuture.create();
+    final AsyncCursorHolder deferredAsyncHolder = new AsyncCursorHolder(null);
 
     final CursorFactory deferredCursorFactory = new CursorFactory()
     {
@@ -299,7 +298,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
       @Override
       public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
       {
-        return AsyncCursorHolder.fromFuture(deferredHolder);
+        return deferredAsyncHolder;
       }
 
       @Override
@@ -431,8 +430,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     Assertions.assertFalse(retVal.isDone(), "processor should be awaiting the deferred AsyncCursorHolder");
     Assertions.assertFalse(outputChannel.readable().canRead(), "no frames should have been written yet");
 
-    // Complete the future and verify the processor proceeds to produce all rows.
-    deferredHolder.set(baseCursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null)));
+    // Complete the load and verify the processor proceeds to produce all rows.
+    deferredAsyncHolder.set(baseCursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null)));
 
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         outputChannel.readable(),
