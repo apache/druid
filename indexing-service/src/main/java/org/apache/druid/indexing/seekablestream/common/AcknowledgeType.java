@@ -44,5 +44,13 @@ public enum AcknowledgeType
    * Reject the record permanently. The broker will not redeliver it.
    * Used for poison-pill records that can never be processed.
    */
-  REJECT
+  REJECT,
+
+  /**
+   * Extend the acquisition lock on the record without releasing or accepting it.
+   * Used by background lock-renewal workers to keep records under lock while
+   * the foreground processing thread continues building segments. Maps to
+   * Kafka's {@code AcknowledgeType.RENEW}.
+   */
+  RENEW
 }
