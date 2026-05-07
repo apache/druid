@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 
@@ -38,6 +39,8 @@ import java.util.Set;
 
 public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
 {
+  private static final Logger log = new Logger(DynamicConfigPodTemplateSelector.class);
+
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                               + ".k8s.podTemplate.";
 
@@ -119,18 +122,24 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
   @Override
   public Optional<PodTemplateWithName> getPodTemplateForTask(Task task)
   {
-    if (effectiveConfig.isAllowTaskPodTemplateSelection()) {
-      String requested = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY);
-      if (requested != null) {
-        Supplier<PodTemplate> supplier = podTemplates.get(requested);
-        if (supplier == null) {
-          throw new IAE(
-              "Task [%s] requested pod template [%s] via context key, but no such template is configured.",
-              task.getId(), requested
-          );
-        }
-        return Optional.of(new PodTemplateWithName(requested, supplier.get()));
+    String requested = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY);
+
+    if (requested != null && effectiveConfig.isAllowTaskPodTemplateSelection()) {
+      Supplier<PodTemplate> supplier = podTemplates.get(requested);
+      if (supplier == null) {
+        throw new IAE(
+            "Task [%s] requested pod template [%s] via context key, but no such template is configured.",
+            task.getId(), requested
+        );
       }
+      log.debug("Pod template [%s] selected for task [%s] via context override.", requested, task.getId());
+      return Optional.of(new PodTemplateWithName(requested, supplier.get()));
+    } else if (requested != null) {
+      log.warn(
+          "Task [%s] set context key [%s] but pod template override is disabled; ignoring.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY
+      );
     }
 
     return Optional.of(effectiveConfig.getPodTemplateSelectStrategy().getPodTemplateForTask(task, podTemplates));
