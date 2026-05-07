@@ -58,13 +58,11 @@ public class ProjectionMetadata
   private final ProjectionSchema schema;
   /**
    * Minimum {@code __time} value across all rows in this projection, or {@code null} if the writer didn't supply one
-   * (e.g. older segments written before this field existed, or projections that don't track it). Populated by
-   * {@link org.apache.druid.segment.IndexMergerV10} so that readers can answer time-boundary queries from metadata
-   * alone without scanning the projection's {@code __time} column.
+   * (e.g. older segments written before this field existed, or projections that don't track it).
    * <p>
    * The value is independent of row order: it reflects the actual minimum timestamp across all walked rows even when
-   * the projection is not time-sorted (e.g. when ingested with {@code DimensionsSpec.forceSegmentSortByTime = false}).
-   * Readers can therefore treat both this field and {@link #maxTime} as exact bounds whenever they are present.
+   * the projection is not time-sorted. Readers can therefore treat both this field and {@link #maxTime} as exact
+   * bounds whenever they are present.
    */
   @Nullable
   private final Long minTime;
