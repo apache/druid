@@ -4601,6 +4601,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return true;
     }
 
+    // Offsets from a prior bounded run with a different config must not count as completion evidence.
+    // Returning false lets createNewTasks() run, which calls getOffsetFromStorageForPartition()
+    // and throws the documented mismatch error.
+    BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(retrieveDataSourceMetadata());
+    if (!boundedConfig.equals(metadataBoundedConfig)) {
+      return false;
+    }
     Map<PartitionIdType, SequenceOffsetType> currentOffsets = getOffsetsFromMetadataStorage();
 
     log.info(

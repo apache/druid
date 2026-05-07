@@ -183,10 +183,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("COMPLETED", status1.getState());
 
     // Now try to create a second bounded supervisor with different bounded config on the same datasource
-    // The key is that the second supervisor's range [50, 200] overlaps with the first supervisor's
-    // checkpointed offsets (~100), so the metadata mismatch will be detected. If the bounded end is less
-    // then the checkpointed offset then the Supervisor detects that no work is needed and the Supervisor
-    // completes silently.
     Map<String, Long> startOffsets2 = new HashMap<>();
     startOffsets2.put("0", 50L);  // Different start offset
     startOffsets2.put("1", 50L);
@@ -211,6 +207,60 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     waitForSupervisorToBeUnhealthy(supervisor2.getId());
 
     // Verify the supervisor is unhealthy
+    final SupervisorStatus status2 = cluster.callApi().getSupervisorStatus(supervisor2.getId());
+    Assertions.assertFalse(status2.isHealthy(), "Supervisor should be unhealthy after detecting metadata mismatch");
+    Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status2.getState(), "Supervisor state should be UNHEALTHY_SUPERVISOR");
+  }
+
+  /**
+   * Regression test: a new bounded run whose endOffset is less than the offset committed by a prior
+   * run must not silently reach COMPLETED. Before the fix, hasTaskGroupReachedBoundedEnd() compared
+   * the stale committed offset against the new endOffset (e.g. committed=100 >= newEnd=50) and
+   * returned true, bypassing task creation and the documented mismatch error entirely.
+   */
+  @Test
+  public void test_boundedSupervisor_doesNotSilentlyCompleteWhenStaleOffsetExceedsNewEnd()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+    publish1kRecords(topic, false);
+
+    // Run 1: ingest up to offset 100 on each partition and complete.
+    Map<String, Long> startOffsets1 = new HashMap<>();
+    startOffsets1.put("0", 0L);
+    startOffsets1.put("1", 0L);
+
+    Map<String, Long> endOffsets1 = new HashMap<>();
+    endOffsets1.put("0", 100L);
+    endOffsets1.put("1", 100L);
+
+    BoundedStreamConfig boundedConfig1 = new BoundedStreamConfig(startOffsets1, endOffsets1);
+    final KafkaSupervisorSpec supervisor1 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig1);
+
+    cluster.callApi().postSupervisor(supervisor1);
+    waitUntilPublishedRecordsAreIngested(200);
+    waitForSupervisorToComplete(supervisor1.getId());
+
+    final SupervisorStatus status1 = cluster.callApi().getSupervisorStatus(supervisor1.getId());
+    Assertions.assertEquals("COMPLETED", status1.getState());
+
+    // Run 2: same datasource, endOffset (50) < stale committed offset (100).
+    // Without the fix the supervisor reaches COMPLETED immediately without running tasks.
+    // With the fix it detects the config mismatch and becomes UNHEALTHY_SUPERVISOR.
+    Map<String, Long> startOffsets2 = new HashMap<>();
+    startOffsets2.put("0", 0L);
+    startOffsets2.put("1", 0L);
+
+    Map<String, Long> endOffsets2 = new HashMap<>();
+    endOffsets2.put("0", 50L);
+    endOffsets2.put("1", 50L);
+
+    BoundedStreamConfig boundedConfig2 = new BoundedStreamConfig(startOffsets2, endOffsets2);
+    final KafkaSupervisorSpec supervisor2 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig2);
+
+    cluster.callApi().postSupervisor(supervisor2);
+    waitForSupervisorToBeUnhealthy(supervisor2.getId());
+
     final SupervisorStatus status2 = cluster.callApi().getSupervisorStatus(supervisor2.getId());
     Assertions.assertFalse(status2.isHealthy(), "Supervisor should be unhealthy after detecting metadata mismatch");
     Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status2.getState(), "Supervisor state should be UNHEALTHY_SUPERVISOR");
