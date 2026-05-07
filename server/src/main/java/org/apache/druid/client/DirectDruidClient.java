@@ -43,7 +43,10 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -65,8 +68,10 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -92,6 +97,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private static final Logger log = new Logger(DirectDruidClient.class);
   private static final int VAL_TO_REDUCE_REMAINING_RESPONSES = -1;
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
+  private static final int HTTP_SERVICE_UNAVAILABLE = 503;
 
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final QueryWatcher queryWatcher;
@@ -253,6 +260,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
             }
+
+            final int statusCode = response.getStatus().getCode();
+            final String contentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+            if (statusCode >= 400 && !isStructuredResponseContent(contentType, response.getContent())) {
+              totalByteCount.addAndGet(response.getContent().readableBytes());
+              return ClientResponse.finished(
+                  new ByteArrayInputStream(
+                      objectMapper.writeValueAsBytes(
+                          makeSyntheticExceptionForUnstructuredErrorResponse(statusCode, contentType)
+                      )
+                  )
+              );
+            }
+
             continueReading = enqueue(response.getContent(), 0L);
           }
           catch (final IOException e) {
@@ -312,6 +333,59 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               ),
               continueReading
           );
+        }
+
+        private QueryException makeSyntheticExceptionForUnstructuredErrorResponse(
+            int statusCode,
+            @Nullable String contentType
+        )
+        {
+          final String errorMessage = StringUtils.format(
+              "Query[%s] to url[%s] failed with HTTP status[%d] and unstructured content type[%s].",
+              query.getId(),
+              url,
+              statusCode,
+              contentType
+          );
+          if (statusCode == HTTP_TOO_MANY_REQUESTS || statusCode == HTTP_SERVICE_UNAVAILABLE) {
+            // Jetty and proxy overload paths commonly surface 429/503 as HTML error pages.
+            return new QueryCapacityExceededException(
+                QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE,
+                errorMessage,
+                QueryCapacityExceededException.class.getName(),
+                host
+            );
+          }
+          return new QueryInterruptedException(
+              QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+              errorMessage,
+              QueryInterruptedException.class.getName(),
+              host
+          );
+        }
+
+        private boolean isStructuredResponseContent(
+            @Nullable String contentType,
+            ChannelBuffer content
+        )
+        {
+          if (contentType != null) {
+            final String normalizedContentType = StringUtils.toLowerCase(contentType);
+            if (normalizedContentType.contains(MediaType.APPLICATION_JSON)
+                || normalizedContentType.contains("+json")
+                || normalizedContentType.contains(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+                || normalizedContentType.contains("application/smile")) {
+              return true;
+            }
+          }
+
+          for (int i = content.readerIndex(); i < content.writerIndex(); i++) {
+            final byte value = content.getByte(i);
+            if (!Character.isWhitespace(value)) {
+              return value == '{' || value == '[';
+            }
+          }
+          return false;
         }
 
         @Override

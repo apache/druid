@@ -31,9 +31,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -53,8 +57,15 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
+import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -345,6 +356,92 @@ public class DirectDruidClientTest
         actualException.getMessage());
   }
 
+  @Test
+  public void testHttp429WithHtmlBodyThrowsQueryCapacityExceededException()
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        initHttpClientWithRawErrorResponse(
+            HttpResponseStatus.valueOf(429),
+            "text/html;charset=ISO-8859-1",
+            "<html><body><h2>HTTP ERROR 429 Too Many Requests</h2></body></html>"
+        )
+    );
+
+    Sequence results = client.run(getQueryPlus(), responseContext);
+    QueryCapacityExceededException actualException =
+        Assert.assertThrows(QueryCapacityExceededException.class, results::toList);
+
+    Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, actualException.getErrorCode());
+    Assert.assertEquals(hostName, actualException.getHost());
+    Assert.assertTrue(actualException.getMessage().contains("HTTP status[429]"));
+  }
+
+  @Test
+  public void testHttp503WithHtmlBodyThrowsQueryCapacityExceededException()
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        initHttpClientWithRawErrorResponse(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            "text/html;charset=ISO-8859-1",
+            "<html><body><h2>HTTP ERROR 503 Service Unavailable</h2></body></html>"
+        )
+    );
+
+    Sequence results = client.run(getQueryPlus(), responseContext);
+    QueryCapacityExceededException actualException =
+        Assert.assertThrows(QueryCapacityExceededException.class, results::toList);
+
+    Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, actualException.getErrorCode());
+    Assert.assertEquals(hostName, actualException.getHost());
+    Assert.assertTrue(actualException.getMessage().contains("HTTP status[503]"));
+  }
+
+  @Test
+  public void testHttp500WithHtmlBodyThrowsQueryInterruptedException()
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        initHttpClientWithRawErrorResponse(
+            HttpResponseStatus.INTERNAL_SERVER_ERROR,
+            "text/html;charset=ISO-8859-1",
+            "<html><body><h2>HTTP ERROR 500 Server Error</h2></body></html>"
+        )
+    );
+
+    Sequence results = client.run(getQueryPlus(), responseContext);
+    QueryInterruptedException actualException =
+        Assert.assertThrows(QueryInterruptedException.class, results::toList);
+
+    Assert.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, actualException.getErrorCode());
+    Assert.assertEquals(hostName, actualException.getHost());
+    Assert.assertTrue(actualException.getMessage().contains("HTTP status[500]"));
+  }
+
+  @Test
+  public void testJsonErrorWithoutContentTypeUsesOriginalQueryException() throws Exception
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        initHttpClientWithRawErrorResponse(
+            HttpResponseStatus.INTERNAL_SERVER_ERROR,
+            null,
+            objectMapper.writeValueAsString(
+                new QueryInterruptedException(
+                    QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+                    "original structured error",
+                    "test",
+                    "remote-host"
+                )
+            )
+        )
+    );
+
+    Sequence results = client.run(getQueryPlus(), responseContext);
+    QueryInterruptedException actualException =
+        Assert.assertThrows(QueryInterruptedException.class, results::toList);
+
+    Assert.assertEquals("original structured error", actualException.getMessage());
+    Assert.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, actualException.getErrorCode());
+  }
+
   private DirectDruidClient makeDirectDruidClient(HttpClient httpClient)
   {
     return new DirectDruidClient(
@@ -367,6 +464,51 @@ public class DirectDruidClientTest
   private HttpClient initHttpClientWithSuccessfulQuery()
   {
     return initHttpClientFromExistingClient(new TestHttpClient(objectMapper), false);
+  }
+
+  private HttpClient initHttpClientWithRawErrorResponse(
+      HttpResponseStatus status,
+      String contentType,
+      String body
+  )
+  {
+    return new HttpClient()
+    {
+      @Override
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler
+      )
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler,
+          Duration readTimeout
+      )
+      {
+        final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+        if (contentType != null) {
+          response.headers().set(HttpHeaders.Names.CONTENT_TYPE, contentType);
+        }
+
+        final byte[] serializedContent = StringUtils.toUtf8(body);
+        response.setContent(
+            HeapChannelBufferFactory.getInstance().getBuffer(
+                serializedContent,
+                0,
+                serializedContent.length
+            )
+        );
+
+        final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, checkNum -> 0L);
+        final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
+        return Futures.immediateFuture(finalClientResponse.getObj());
+      }
+    };
   }
 
   private HttpClient initHttpClientFromExistingClient(ListenableFuture future)
