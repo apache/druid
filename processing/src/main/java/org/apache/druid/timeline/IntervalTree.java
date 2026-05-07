@@ -267,10 +267,15 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
 
   public void forEachMatching(Predicate<Interval> condition, BiConsumer<Interval, T> action)
   {
-    forEachMatching(root, condition, action);
+    forEachMatching(condition, condition, action);
   }
 
-  private void forEachMatching(Node<T> node, Predicate<Interval> condition, BiConsumer<Interval, T> action)
+  public void forEachMatching(Predicate<Interval> condition, Predicate<Interval> renageCondition, BiConsumer<Interval, T> action)
+  {
+    forEachMatching(root, condition, renageCondition, action);
+  }
+
+  private void forEachMatching(Node<T> node, Predicate<Interval> condition, Predicate<Interval> rangeCondition, BiConsumer<Interval, T> action)
   {
 
     if (node == null) {
@@ -280,8 +285,8 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     // Process in-order
 
     // Search left
-    if ((node.left != null) && condition.apply(node.left.range)) {
-      forEachMatching(node.left, condition, action);
+    if ((node.left != null) && rangeCondition.apply(node.left.range)) {
+      forEachMatching(node.left, condition, rangeCondition, action);
     }
 
     if (condition.apply(node.interval)) {
@@ -289,8 +294,8 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     }
 
     // Search right
-    if (node.right != null && condition.apply(node.right.range)) {
-      forEachMatching(node.right, condition, action);
+    if (node.right != null && rangeCondition.apply(node.right.range)) {
+      forEachMatching(node.right, condition, rangeCondition, action);
     }
   }
 
