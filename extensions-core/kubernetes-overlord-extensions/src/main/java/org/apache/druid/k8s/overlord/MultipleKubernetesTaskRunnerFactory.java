@@ -27,23 +27,35 @@ import com.google.inject.Inject;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.taskadapter.DynamicConfigPodTemplateSelector;
+import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -57,7 +69,10 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
   private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier;
   private final ConfigManager configManager;
   private final MultipleKubernetesTaskRunnerConfig runnerConfig;
-  private final TaskAdapter taskAdapter;
+  private final TaskConfig taskConfig;
+  private final StartupLoggingConfig startupLoggingConfig;
+  private final DruidNode druidNode;
+  private final Properties properties;
   private final DruidKubernetesHttpClientFactory httpClientFactory;
   private TaskRunner runner;
 
@@ -71,7 +86,9 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
       ServiceEmitter emitter,
       Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier,
       @Nullable ConfigManager configManager,
-      TaskAdapter taskAdapter,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      @Self DruidNode druidNode,
       DruidKubernetesHttpClientFactory httpClientFactory
   )
   {
@@ -83,46 +100,51 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
     this.emitter = emitter;
     this.dynamicConfigSupplier = dynamicConfigSupplier;
     this.configManager = configManager;
-    this.taskAdapter = taskAdapter;
+    this.taskConfig = taskConfig;
+    this.startupLoggingConfig = startupLoggingConfig;
+    this.druidNode = druidNode;
+    this.properties = properties;
     this.httpClientFactory = httpClientFactory;
   }
 
   @Override
   public TaskRunner build()
   {
-    List<MultipleKubernetesTaskRunnerConfig.KubernetesCluster> enabledClusters = this.runnerConfig.getClusters()
-                                                                                                  .stream()
-                                                                                                  .filter(cluster -> !cluster.isDisabled())
-                                                                                                  .collect(Collectors.toList());
+    final List<MultipleKubernetesTaskRunnerConfig.KubernetesCluster> enabledClusters = this.runnerConfig.getClusters()
+                                                                                                        .stream()
+                                                                                                        .filter(cluster -> !cluster.isDisabled())
+                                                                                                        .collect(Collectors.toList());
 
     if (enabledClusters.isEmpty()) {
       throw new IllegalArgumentException("At least one task runner must be enabled");
     }
 
-    int totalCapacity = new KubernetesTaskRunnerEffectiveConfig(this.runnerConfig, this.dynamicConfigSupplier).getCapacity();
-    AutoscalableThreadPoolExecutor sharedExecutor = new AutoscalableThreadPoolExecutor(totalCapacity, this.configManager);
+    final int totalCapacity = new KubernetesTaskRunnerEffectiveConfig(this.runnerConfig, this.dynamicConfigSupplier).getCapacity();
+    final AutoscalableThreadPoolExecutor sharedExecutor = new AutoscalableThreadPoolExecutor(totalCapacity, this.configManager);
 
-    List<MultipleKubernetesTaskRunnerDelegate> taskRunners = new ArrayList<>();
+    final List<MultipleKubernetesTaskRunnerDelegate> taskRunners = new ArrayList<>();
     for (MultipleKubernetesTaskRunnerConfig.KubernetesCluster kubernetesCluster : this.runnerConfig.getClusters()) {
 
-      KubernetesTaskRunnerStaticConfig clusterConfig = getPerClusterConfiguration(kubernetesCluster);
-      KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+      final KubernetesTaskRunnerStaticConfig clusterConfig = getPerClusterConfiguration(kubernetesCluster);
+      final KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
           clusterConfig,
           this.dynamicConfigSupplier
       );
 
-      DruidKubernetesClient client = createClientForCluster(kubernetesCluster, clusterConfig);
+      final DruidKubernetesClient client = createClientForCluster(kubernetesCluster, clusterConfig);
+      final TaskAdapter clusterTaskAdapter = buildTaskAdapter(client, effectiveConfig);
+      final boolean useOverlordNamespace = PodTemplateTaskAdapter.TYPE.equals(clusterTaskAdapter.getAdapterType());
 
-      KubernetesPeonClient peonClient = new KubernetesPeonClient(
+      final KubernetesPeonClient peonClient = new KubernetesPeonClient(
           client,
           effectiveConfig.getNamespace(),
-          effectiveConfig.getOverlordNamespace(),
+          useOverlordNamespace ? effectiveConfig.getOverlordNamespace() : "",
           effectiveConfig.isDebugJobs(),
           emitter
       );
 
-      KubernetesTaskRunner clusterRunner = new KubernetesTaskRunner(
-          taskAdapter,
+      final KubernetesTaskRunner clusterRunner = new KubernetesTaskRunner(
+          clusterTaskAdapter,
           effectiveConfig,
           peonClient,
           httpClient,
@@ -133,6 +155,7 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
               effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis()
           ),
           emitter,
+          sharedExecutor,
           configManager
       );
 
@@ -170,8 +193,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
   )
   {
     Config config;
-    if (cluster.getKubeconfigPath() != null) {
-      config = Config.fromKubeconfig(cluster.getKubeconfigPath());
+    if (cluster.getKubeconfigPath() != null && !cluster.getKubeconfigPath().trim().isEmpty()) {
+      config = Config.fromKubeconfig(new File(cluster.getKubeconfigPath()));
     } else {
       config = new ConfigBuilder().build();
     }
@@ -184,6 +207,60 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
     config.setNamespace(clusterConfig.getNamespace());
 
     return new DruidKubernetesClient(httpClientFactory, config);
+  }
+
+  private TaskAdapter buildTaskAdapter(
+      DruidKubernetesClient client,
+      KubernetesTaskRunnerEffectiveConfig effectiveConfig
+  )
+  {
+    final String adapter = properties.getProperty(String.format(
+        Locale.ROOT,
+        "%s.%s.adapter.type",
+        IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX,
+        KubernetesTaskRunnerFactory.TYPE_NAME
+    ));
+
+    if (adapter != null
+        && !MultiContainerTaskAdapter.TYPE.equals(adapter)
+        && effectiveConfig.isSidecarSupport()) {
+      throw new IAE(
+          "Invalid pod adapter [%s], only pod adapter [%s] can be specified when sidecarSupport is enabled",
+          adapter,
+          MultiContainerTaskAdapter.TYPE
+      );
+    }
+
+    if (MultiContainerTaskAdapter.TYPE.equals(adapter) || effectiveConfig.isSidecarSupport()) {
+      return new MultiContainerTaskAdapter(
+          client,
+          effectiveConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper,
+          taskLogs
+      );
+    } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
+      return new PodTemplateTaskAdapter(
+          effectiveConfig,
+          taskConfig,
+          druidNode,
+          smileMapper,
+          taskLogs,
+          new DynamicConfigPodTemplateSelector(properties, effectiveConfig)
+      );
+    } else {
+      return new SingleContainerTaskAdapter(
+          client,
+          effectiveConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper,
+          taskLogs
+      );
+    }
   }
 
   private KubernetesTaskRunnerStaticConfig getPerClusterConfiguration(
