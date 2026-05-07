@@ -83,26 +83,28 @@ public class TierSegmentBalancer
     this.maxSegmentsToMove = maxSegmentsToMove;
   }
 
-  public void run()
+  public int run()
   {
-    int numDecommSegmentsToMove = getNumDecommSegmentsToMove(maxSegmentsToMove);
-    moveSegmentsFrom(decommissioningServers, numDecommSegmentsToMove, "decommissioning");
+    int movedCount = 0;
+    final int numDecommSegmentsToMove = getNumDecommSegmentsToMove(maxSegmentsToMove);
+    movedCount += moveSegmentsFrom(decommissioningServers, numDecommSegmentsToMove, "decommissioning");
 
-    int numActiveSegmentsToMove = getNumActiveSegmentsToMove(maxSegmentsToMove - numDecommSegmentsToMove);
-    moveSegmentsFrom(activeServers, numActiveSegmentsToMove, "active");
+    final int numActiveSegmentsToMove = getNumActiveSegmentsToMove(maxSegmentsToMove - numDecommSegmentsToMove);
+    movedCount += moveSegmentsFrom(activeServers, numActiveSegmentsToMove, "active");
+    return movedCount;
   }
 
   /**
    * Moves segments from the given source servers to the active servers in this tier.
    */
-  private void moveSegmentsFrom(
+  private int moveSegmentsFrom(
       final List<ServerHolder> sourceServers,
       final int numSegmentsToMove,
       final String sourceServerType
   )
   {
     if (numSegmentsToMove <= 0 || sourceServers.isEmpty() || activeServers.isEmpty()) {
-      return;
+      return 0;
     }
 
     final Set<String> broadcastDatasources = params.getBroadcastDatasources();
@@ -134,6 +136,7 @@ public class TierSegmentBalancer
         "Moved [%,d of %,d] segments from [%d] [%s] servers in tier [%s].",
         movedCount, numSegmentsToMove, sourceServers.size(), sourceServerType, tier
     );
+    return movedCount;
   }
 
   private int moveSegmentsTo(

@@ -53,6 +53,8 @@ import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatcher;
@@ -177,7 +179,8 @@ public class DataSourcesResourceTest
       overlordClient,
       AuthTestUtils.TEST_AUTHORIZER_MAPPER,
       null,
-      auditManager
+      auditManager,
+      null
     );
   }
 
@@ -289,7 +292,7 @@ public class DataSourcesResourceTest
     };
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, overlordClient, authMapper, null, auditManager);
+        new DataSourcesResource(inventoryView, null, null, overlordClient, authMapper, null, auditManager, null);
     Response response = dataSourcesResource.getQueryableDataSources("full", null, request);
     Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
 
@@ -667,7 +670,8 @@ public class DataSourcesResourceTest
             null,
             null,
             null,
-            auditManager
+            auditManager,
+            null
         );
 
     // test dropped
@@ -752,7 +756,8 @@ public class DataSourcesResourceTest
             null,
             null,
             null,
-            auditManager
+            auditManager,
+            null
         );
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
             .andReturn(ImmutableList.of(partialRule))
@@ -794,7 +799,8 @@ public class DataSourcesResourceTest
             null,
             null,
             null,
-            auditManager
+            auditManager,
+            null
         );
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
@@ -842,7 +848,8 @@ public class DataSourcesResourceTest
             null,
             null,
             null,
-            auditManager
+            auditManager,
+            null
         );
 
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
@@ -893,7 +900,8 @@ public class DataSourcesResourceTest
             null,
             null,
             null,
-            auditManager
+            auditManager,
+            null
         );
 
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
@@ -1882,7 +1890,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager, null);
     Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1941,7 +1949,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager, null);
     Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", "computeUsingClusterView");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1980,6 +1988,348 @@ public class DataSourcesResourceTest
         new NumberedShardSpec(partitionNumber, 100),
         0, 0
     );
+  }
+
+  // --- Deployment version tests ---
+
+  @Test
+  public void testIsSegmentLoadedForVersion_segmentServedByMatchingVersion()
+  {
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    final DruidServerMetadata redServer = createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red");
+    Assert.assertTrue(
+        DataSourcesResource.isSegmentLoadedForVersion(
+            Collections.singletonList(new ImmutableSegmentLoadInfo(
+                createSegment(interval, "v1", 1),
+                Sets.newHashSet(redServer)
+            )),
+            new SegmentDescriptor(interval, "v1", 1),
+            "tier1",
+            "red"
+        )
+    );
+  }
+
+  @Test
+  public void testIsSegmentLoadedForVersion_segmentServedByWrongVersion()
+  {
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    final DruidServerMetadata blueServer = createServerMetadataWithVersion("blue-host", ServerType.HISTORICAL, "blue");
+    Assert.assertFalse(
+        DataSourcesResource.isSegmentLoadedForVersion(
+            Collections.singletonList(new ImmutableSegmentLoadInfo(
+                createSegment(interval, "v1", 1),
+                Sets.newHashSet(blueServer)
+            )),
+            new SegmentDescriptor(interval, "v1", 1),
+            "tier1",
+            "red"
+        )
+    );
+  }
+
+  @Test
+  public void testIsSegmentLoadedForVersion_nonReplicationTargetIgnored()
+  {
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    // A realtime server in "red" version should not satisfy the check since it's not a replication target
+    final DruidServerMetadata realtimeRed = createServerMetadataWithVersion("rt-host", ServerType.REALTIME, "red");
+    Assert.assertFalse(
+        DataSourcesResource.isSegmentLoadedForVersion(
+            Collections.singletonList(new ImmutableSegmentLoadInfo(
+                createSegment(interval, "v1", 1),
+                Sets.newHashSet(realtimeRed)
+            )),
+            new SegmentDescriptor(interval, "v1", 1),
+            "tier1",
+            "red"
+        )
+    );
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithVersions_onlyOneVersionServes_returnsFalse()
+  {
+    // Timeline only contains the segment served by "red"; "blue" is online but doesn't have it.
+    final MetadataRuleManager ruleManager = EasyMock.createMock(MetadataRuleManager.class);
+    final CoordinatorConfigManager configManager = EasyMock.createMock(CoordinatorConfigManager.class);
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder()
+                                                                           .withCoordinatingVersions(ImmutableSet.of("red", "blue"))
+                                                                           .build();
+    EasyMock.expect(configManager.getCurrentDynamicConfig()).andReturn(dynamicConfig).anyTimes();
+
+    final Rule loadRule = new IntervalLoadRule(
+        Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"),
+        ImmutableMap.of("tier1", 1),
+        null
+    );
+    EasyMock.expect(ruleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+
+    final String interval = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    final SegmentLoadInfo redLoad = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    redLoad.addServer(createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red"));
+
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
+        new VersionedIntervalTimeline<>(null)
+        {
+          @Override
+          public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval i)
+          {
+            final PartitionHolder<SegmentLoadInfo> holder =
+                new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, redLoad));
+            return ImmutableList.of(new TimelineObjectHolder<>(Intervals.of(interval), "v1", holder));
+          }
+        };
+
+    final DruidServer redServer = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(redServer.getTier()).andReturn("tier1").anyTimes();
+    EasyMock.expect(redServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
+    EasyMock.expect(redServer.getMetadata()).andReturn(
+        createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red")
+    ).anyTimes();
+    final DruidServer blueServer = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(blueServer.getTier()).andReturn("tier1").anyTimes();
+    EasyMock.expect(blueServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
+    EasyMock.expect(blueServer.getMetadata()).andReturn(
+        createServerMetadataWithVersion("blue-host", ServerType.HISTORICAL, "blue")
+    ).anyTimes();
+
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(timeline)
+            .once();
+    EasyMock.expect(inventoryView.getInventory())
+            .andReturn(ImmutableList.of(redServer, blueServer))
+            .once();
+
+    EasyMock.replay(ruleManager, configManager, inventoryView, redServer, blueServer);
+
+    final DataSourcesResource resource = new DataSourcesResource(
+        inventoryView,
+        segmentsMetadataManager,
+        ruleManager,
+        null,
+        null,
+        null,
+        auditManager,
+        configManager
+    );
+
+    final Response response = resource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertFalse((boolean) response.getEntity());
+
+    EasyMock.verify(ruleManager, configManager, inventoryView, redServer, blueServer);
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithVersions_bothVersionsServe_returnsTrue()
+  {
+    // Both "red" and "blue" servers serve the segment — handoff is complete.
+    final MetadataRuleManager ruleManager = EasyMock.createMock(MetadataRuleManager.class);
+    final CoordinatorConfigManager configManager = EasyMock.createMock(CoordinatorConfigManager.class);
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder()
+                                                                           .withCoordinatingVersions(ImmutableSet.of("red", "blue"))
+                                                                           .build();
+    EasyMock.expect(configManager.getCurrentDynamicConfig()).andReturn(dynamicConfig).anyTimes();
+
+    final Rule loadRule = new IntervalLoadRule(
+        Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"),
+        ImmutableMap.of("tier1", 1),
+        null
+    );
+    EasyMock.expect(ruleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+
+    final String interval = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    // Single SegmentLoadInfo served by both versions — models a segment replicated to both fleets.
+    final SegmentLoadInfo bothLoad = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    bothLoad.addServer(createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red"));
+    bothLoad.addServer(createServerMetadataWithVersion("blue-host", ServerType.HISTORICAL, "blue"));
+
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
+        new VersionedIntervalTimeline<>(null)
+        {
+          @Override
+          public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval i)
+          {
+            final PartitionHolder<SegmentLoadInfo> holder =
+                new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, bothLoad));
+            return ImmutableList.of(new TimelineObjectHolder<>(Intervals.of(interval), "v1", holder));
+          }
+        };
+
+    final DruidServer redServer = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(redServer.getTier()).andReturn("tier1").anyTimes();
+    EasyMock.expect(redServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
+    EasyMock.expect(redServer.getMetadata()).andReturn(
+        createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red")
+    ).anyTimes();
+    final DruidServer blueServer = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(blueServer.getTier()).andReturn("tier1").anyTimes();
+    EasyMock.expect(blueServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
+    EasyMock.expect(blueServer.getMetadata()).andReturn(
+        createServerMetadataWithVersion("blue-host", ServerType.HISTORICAL, "blue")
+    ).anyTimes();
+
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(timeline)
+            .once();
+    EasyMock.expect(inventoryView.getInventory())
+            .andReturn(ImmutableList.of(redServer, blueServer))
+            .once();
+
+    EasyMock.replay(ruleManager, configManager, inventoryView, redServer, blueServer);
+
+    final DataSourcesResource resource = new DataSourcesResource(
+        inventoryView,
+        segmentsMetadataManager,
+        ruleManager,
+        null,
+        null,
+        null,
+        auditManager,
+        configManager
+    );
+
+    final Response response = resource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertTrue((boolean) response.getEntity());
+
+    EasyMock.verify(ruleManager, configManager, inventoryView, redServer, blueServer);
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithVersions_versionWithNoServersDoesNotBlock()
+  {
+    // "red" version has a server but "blue" has none — blue should not block handoff
+    final MetadataRuleManager ruleManager = EasyMock.createMock(MetadataRuleManager.class);
+    final CoordinatorConfigManager configManager = EasyMock.createMock(CoordinatorConfigManager.class);
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder()
+                                                                           .withCoordinatingVersions(ImmutableSet.of("red", "blue"))
+                                                                           .build();
+    EasyMock.expect(configManager.getCurrentDynamicConfig()).andReturn(dynamicConfig).anyTimes();
+
+    final Rule loadRule = new IntervalLoadRule(
+        Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"),
+        ImmutableMap.of("tier1", 1),
+        null
+    );
+    EasyMock.expect(ruleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+
+    final String interval = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    final SegmentLoadInfo redLoad = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    redLoad.addServer(createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red"));
+
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
+        new VersionedIntervalTimeline<>(null)
+        {
+          @Override
+          public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval i)
+          {
+            final PartitionHolder<SegmentLoadInfo> holder =
+                new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, redLoad));
+            return ImmutableList.of(new TimelineObjectHolder<>(Intervals.of(interval), "v1", holder));
+          }
+        };
+
+    // Only "red" server is online; "blue" is listed in coordinatingVersions but has no online server
+    final DruidServer redServer = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(redServer.getTier()).andReturn("tier1").anyTimes();
+    EasyMock.expect(redServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
+    EasyMock.expect(redServer.getMetadata()).andReturn(
+        createServerMetadataWithVersion("red-host", ServerType.HISTORICAL, "red")
+    ).anyTimes();
+
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(timeline)
+            .once();
+    EasyMock.expect(inventoryView.getInventory())
+            .andReturn(ImmutableList.of(redServer))
+            .once();
+
+    EasyMock.replay(ruleManager, configManager, inventoryView, redServer);
+
+    final DataSourcesResource resource = new DataSourcesResource(
+        inventoryView,
+        segmentsMetadataManager,
+        ruleManager,
+        null,
+        null,
+        null,
+        auditManager,
+        configManager
+    );
+
+    // Only "red" active; "red" has segment. "blue" absent — handoff complete.
+    final Response response = resource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertTrue((boolean) response.getEntity());
+
+    EasyMock.verify(ruleManager, configManager, inventoryView, redServer);
+  }
+
+  @Test
+  public void testIsHandOffCompleteWithVersions_emptyVersionsDefaultBehavior()
+  {
+    // coordinatingVersions is empty — existing single-version behavior unchanged
+    final MetadataRuleManager ruleManager = EasyMock.createMock(MetadataRuleManager.class);
+    final CoordinatorConfigManager configManager = EasyMock.createMock(CoordinatorConfigManager.class);
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
+    EasyMock.expect(configManager.getCurrentDynamicConfig()).andReturn(dynamicConfig).anyTimes();
+
+    final Rule loadRule = new IntervalLoadRule(
+        Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"),
+        ImmutableMap.of("tier1", 1),
+        null
+    );
+    EasyMock.expect(ruleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .once();
+
+    final String interval = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    final SegmentLoadInfo segLoad = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    segLoad.addServer(createHistoricalServerMetadata("hist-host"));
+
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
+        new VersionedIntervalTimeline<>(null)
+        {
+          @Override
+          public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval i)
+          {
+            final PartitionHolder<SegmentLoadInfo> holder =
+                new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segLoad));
+            return ImmutableList.of(new TimelineObjectHolder<>(Intervals.of(interval), "v1", holder));
+          }
+        };
+
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(timeline)
+            .once();
+
+    EasyMock.replay(ruleManager, configManager, inventoryView);
+
+    final DataSourcesResource resource = new DataSourcesResource(
+        inventoryView,
+        segmentsMetadataManager,
+        ruleManager,
+        null,
+        null,
+        null,
+        auditManager,
+        configManager
+    );
+
+    final Response response = resource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Assert.assertTrue((boolean) response.getEntity());
+
+    EasyMock.verify(ruleManager, configManager, inventoryView);
+  }
+
+  private DruidServerMetadata createServerMetadataWithVersion(String name, ServerType type, String version)
+  {
+    return new DruidServerMetadata(name, name, null, 10000, null, type, "tier1", 1, version);
   }
 
   private void prepareRequestForAudit()

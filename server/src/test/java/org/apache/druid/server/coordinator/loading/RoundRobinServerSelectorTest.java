@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
 
 public class RoundRobinServerSelectorTest
 {
@@ -64,7 +65,7 @@ public class RoundRobinServerSelectorTest
         .builder()
         .addTier(TIER, serverXL, serverM, serverXS, serverL)
         .build();
-    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
+    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster, Set.of());
 
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> pickedServers = selector.getServersInTierToLoadSegment(TIER, segment);
@@ -91,7 +92,7 @@ public class RoundRobinServerSelectorTest
         .builder()
         .addTier(TIER, serverXL, serverM, serverXS, serverL)
         .build();
-    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
+    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster, Set.of());
 
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> pickedServers = selector.getServersInTierToLoadSegment(TIER, segment);
@@ -113,7 +114,7 @@ public class RoundRobinServerSelectorTest
   public void testNoServersInTier()
   {
     DruidCluster cluster = DruidCluster.builder().addTier(TIER).build();
-    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
+    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster, Set.of());
 
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);
     Assert.assertFalse(eligibleServers.hasNext());
@@ -129,7 +130,7 @@ public class RoundRobinServerSelectorTest
         createHistorical("server3", 10),
         createHistorical("server4", 20)
     ).build();
-    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
+    final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster, Set.of());
 
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);

@@ -207,7 +207,8 @@ public class DiscoveryDruidNode
         dataNodeService.getStorageSize(),
         dataNodeService.getServerType(),
         dataNodeService.getTier(),
-        dataNodeService.getPriority()
+        dataNodeService.getPriority(),
+        druidNode.getVersion()
     );
   }
 

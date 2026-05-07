@@ -34,6 +34,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,6 +43,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -65,6 +67,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
   private final Map<String, Set<String>> historicalTierAliases;
+  private final Set<String> coordinatingVersions;
 
   private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
@@ -84,10 +87,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
-    this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
+    this.coordinatingVersions = loadingConfig.getCoordinatingVersions();
+    this.replicaCountMap = SegmentReplicaCountMap.create(cluster, coordinatingVersions);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
-    this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
+    this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster, coordinatingVersions) : null;
     this.historicalTierAliases = loadingConfig.getHistoricalTierAliases();
 
     cluster.getManagedHistoricals().forEach(
@@ -182,7 +186,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
-        int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
+        final String srcVersion = serverA.getServer().getMetadata().getVersion();
+        final ReplicaCountKey moveKey = ReplicaCountKey.from(tier, srcVersion, coordinatingVersions);
+        int loadedCountOnTier = replicaCountMap.get(segment.getId(), moveKey)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
           return replicateSegment(segment, serverB);
@@ -233,16 +239,39 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
     final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
+    // Pre-compute active versions per tier once; used in both the required-count loop and the
+    // update loop below to avoid calling Sets.intersection twice per tier per segment.
+    final Map<String, Set<String>> tierToActiveVersions = new HashMap<>();
+    if (!coordinatingVersions.isEmpty()) {
+      for (String tier : allTiersInCluster) {
+        final Set<String> versions = Sets.intersection(coordinatingVersions, cluster.getVersionsForTier(tier));
+        if (!versions.isEmpty()) {
+          tierToActiveVersions.put(tier, versions);
+        }
+      }
+    }
+
     if (effectiveTierToReplicaCount.isEmpty()) {
       // Track the counts for a segment even if it requires 0 replicas on all tiers
-      replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
+      replicaCountMap.computeIfAbsent(segment.getId(), ReplicaCountKey.forTier(DruidServer.DEFAULT_TIER));
     } else {
       // Identify empty tiers and determine total required replicas
       effectiveTierToReplicaCount.forEach((tier, requiredReplicas) -> {
         reportTierCapacityStats(segment, requiredReplicas, tier);
 
-        SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
-        replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+        final Set<String> versionsInTier = tierToActiveVersions.get(tier);
+        if (versionsInTier == null) {
+          SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), ReplicaCountKey.forTier(tier));
+          replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+        } else {
+          // For each version present in this tier, set required replicas under the (tier, version) key.
+          for (String version : versionsInTier) {
+            final ReplicaCountKey key = ReplicaCountKey.from(tier, version, coordinatingVersions);
+            final int versionServerCount = cluster.getManagedHistoricalsByTierAndVersion(tier, version).size();
+            replicaCountMap.computeIfAbsent(segment.getId(), key)
+                           .setRequired(requiredReplicas, versionServerCount);
+          }
+        }
 
         if (!allTiersInCluster.contains(tier)) {
           datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
@@ -264,34 +293,68 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Update replicas in every tier
     int dropsQueued = 0;
     for (String tier : allTiersInCluster) {
+      final int requiredReplicas = effectiveTierToReplicaCount.getOrDefault(tier, 0);
+      final Set<String> versionsInTier = tierToActiveVersions.get(tier);
+      if (versionsInTier != null) {
+        for (String version : versionsInTier) {
+          dropsQueued += updateReplicasInTier(
+              segment,
+              tier,
+              version,
+              requiredReplicas,
+              replicaSurplus - dropsQueued
+          );
+        }
+        // Also process uncoordinated servers in the tier (version null or not in
+        // coordinatingVersions). Their replicas roll up to the tier-wide ReplicaCountKey, so
+        // skipping this leg leaves their loads/drops unmanaged when the tier has at least one
+        // coordinated version active. The required replica count is 0 for the tier-wide scope when
+        // any version is coordinated, so this branch is effectively a "drop / cancel surplus" pass.
+        dropsQueued += updateReplicasInTier(
+            segment,
+            tier,
+            null,
+            0,
+            replicaSurplus - dropsQueued
+        );
+        continue;
+      }
       dropsQueued += updateReplicasInTier(
           segment,
           tier,
-          effectiveTierToReplicaCount.getOrDefault(tier, 0),
+          null,
+          requiredReplicas,
           replicaSurplus - dropsQueued
       );
     }
   }
 
   /**
-   * Queues load or drop operations on this tier based on the required
-   * number of replicas and the current state.
+   * Queues load or drop operations on this tier (or a single version within it) based on
+   * the required number of replicas and the current state.
+   * <p>
+   * When {@code version} is non-null, the scope is restricted to that version: replica counts are read
+   * under the (tier, version) composite key, eligible servers are restricted to that version, and the
+   * round-robin selector picks only from that version's servers. Throttling and stats keys still use
+   * the plain tier name.
    * <p>
    * The {@code maxReplicasToDrop} helps to maintain the required level of
    * replication in the cluster. This ensures that segment read concurrency does
    * not suffer during a tier shift or load rule change.
    * <p>
-   * Returns the number of new drop operations queued on this tier.
+   * Returns the number of new drop operations queued.
    */
   private int updateReplicasInTier(
       DataSegment segment,
       String tier,
+      @Nullable String version,
       int requiredReplicas,
       int maxReplicasToDrop
   )
   {
-    final SegmentReplicaCount replicaCountOnTier
-        = replicaCountMap.get(segment.getId(), tier);
+    // version is non-null only when it is in coordinatingVersions; from() falls back to tier-wide if not.
+    final ReplicaCountKey key = ReplicaCountKey.from(tier, version, coordinatingVersions);
+    final SegmentReplicaCount replicaCountOnTier = replicaCountMap.get(segment.getId(), key);
 
     final int projectedReplicas = replicaCountOnTier.loadedNotDropping()
                                   + replicaCountOnTier.loading()
@@ -305,8 +368,18 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final SegmentStatusInTier segmentStatus =
-        new SegmentStatusInTier(segment, cluster.getManagedHistoricalsByTier(tier));
+    // When version is null but the tier has at least one coordinated version, restrict
+    // tier-wide processing to uncoordinated servers only — otherwise version-scoped servers would
+    // be re-processed by the tier-wide pass and double-counted.
+    final NavigableSet<ServerHolder> serversInScope;
+    if (version != null) {
+      serversInScope = cluster.getManagedHistoricalsByTierAndVersion(tier, version);
+    } else if (!coordinatingVersions.isEmpty() && !cluster.getVersionsForTier(tier).isEmpty()) {
+      serversInScope = cluster.getUncoordinatedManagedHistoricalsByTier(tier, coordinatingVersions);
+    } else {
+      serversInScope = cluster.getManagedHistoricalsByTier(tier);
+    }
+    final SegmentStatusInTier segmentStatus = new SegmentStatusInTier(segment, serversInScope);
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
@@ -324,7 +397,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
       if (numReplicasToLoad > 0) {
         int numLoadedReplicas = replicaCountOnTier.loadedNotDropping() + cancelledDrops;
-        int numLoadsQueued = loadReplicas(numReplicasToLoad, numLoadedReplicas, segment, tier, segmentStatus);
+        int numLoadsQueued = loadReplicas(numReplicasToLoad, numLoadedReplicas, segment, tier, version, segmentStatus);
         incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
       }
     }
@@ -385,7 +458,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     // Update required replica counts
     tierToRequiredReplicas.object2IntEntrySet().fastForEach(
-        entry -> replicaCountMap.computeIfAbsent(segment.getId(), entry.getKey())
+        entry -> replicaCountMap.computeIfAbsent(segment.getId(), ReplicaCountKey.forTier(entry.getKey()))
                                 .setRequired(entry.getIntValue(), entry.getIntValue())
     );
 
@@ -527,13 +600,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Queues load of {@code numToLoad} replicas of the segment on a tier.
+   * Queues load of {@code numToLoad} replicas of the segment. When {@code version} is non-null,
+   * the round-robin selector is restricted to servers in that version; otherwise it ranges over
+   * the whole tier.
    */
   private int loadReplicas(
       int numToLoad,
       int numLoadedReplicas,
       DataSegment segment,
       String tier,
+      @Nullable String version,
       SegmentStatusInTier segmentStatus
   )
   {
@@ -550,10 +626,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final Iterator<ServerHolder> serverIterator =
-        useRoundRobinAssignment
-        ? serverSelector.getServersInTierToLoadSegment(tier, segment)
-        : strategy.findServersToLoadSegment(segment, eligibleServers);
+    final Iterator<ServerHolder> serverIterator;
+    if (useRoundRobinAssignment) {
+      serverIterator = version == null
+          ? serverSelector.getServersInTierToLoadSegment(tier, segment)
+          : serverSelector.getServersInTierAndVersionToLoadSegment(tier, version, segment);
+    } else {
+      serverIterator = strategy.findServersToLoadSegment(segment, eligibleServers);
+    }
     if (!serverIterator.hasNext()) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No strategic server", segment, tier);
       return 0;

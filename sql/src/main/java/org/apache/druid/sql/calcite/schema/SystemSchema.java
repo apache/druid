@@ -196,7 +196,6 @@ public class SystemSchema extends AbstractSchema
       .add("labels", ColumnType.STRING)
       .add("available_processors", ColumnType.LONG)
       .add("total_memory", ColumnType.LONG)
-      .add("deployment_group", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -702,8 +701,7 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory(),
-          node.getDeploymentGroup()
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -732,8 +730,7 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory(),
-          node.getDeploymentGroup()
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -774,8 +771,7 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory(),
-          node.getDeploymentGroup()
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -800,7 +796,8 @@ public class SystemSchema extends AbstractSchema
             dataNodeService.getStorageSize(),
             dataNodeService.getServerType(),
             dataNodeService.getTier(),
-            dataNodeService.getPriority()
+            dataNodeService.getPriority(),
+            druidNode.getVersion()
         );
       } else {
         throw new ISE("[%s] is not a discoverable data server", discoveryDruidNode);

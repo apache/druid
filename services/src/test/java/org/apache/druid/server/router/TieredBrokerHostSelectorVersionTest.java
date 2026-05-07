@@ -45,7 +45,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
-public class TieredBrokerHostSelectorDeploymentGroupTest
+public class TieredBrokerHostSelectorVersionTest
 {
   private TieredBrokerHostSelector brokerSelector;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -60,13 +60,13 @@ public class TieredBrokerHostSelectorDeploymentGroupTest
   }
 
   @Test
-  public void testFilterExcludesBrokersWithNonMatchingDeploymentGroup()
+  public void testFilterExcludesBrokersWithNonMatchingVersion()
   {
     final DiscoveryDruidNode blackBroker = makeBroker("black-broker", "blackHost", "black");
     final DiscoveryDruidNode redBroker = makeBroker("black-broker", "redHost", "red");
-    final DiscoveryDruidNode untaggedBroker = makeBroker("black-broker", "untaggedHost", null);
+    final DiscoveryDruidNode nullVersionBroker = makeBroker("black-broker", "nullVersionHost", null);
 
-    setupSelector(ImmutableSet.of("black"), blackBroker, redBroker, untaggedBroker);
+    setupSelector(ImmutableSet.of("black"), blackBroker, redBroker, nullVersionBroker);
 
     final Pair<String, Server> picked = brokerSelector.select(simpleQuery());
     Assert.assertEquals("black-broker", picked.lhs);
@@ -103,16 +103,34 @@ public class TieredBrokerHostSelectorDeploymentGroupTest
     Assert.assertNull("Filter should fail closed when no broker matches", picked.rhs);
   }
 
-  private DiscoveryDruidNode makeBroker(String serviceName, String host, String deploymentGroup)
+  private DiscoveryDruidNode makeBroker(String serviceName, String host, String version)
   {
+    final DruidNode druidNode = new DruidNode(
+        serviceName,
+        host,
+        false,
+        8080,
+        null,
+        null,
+        true,
+        false,
+        null
+    )
+    {
+      @Override
+      public String getVersion()
+      {
+        return version;
+      }
+    };
     return new DiscoveryDruidNode(
-        new DruidNode(serviceName, host, false, 8080, null, null, true, false, null, deploymentGroup),
+        druidNode,
         NodeRole.BROKER,
         ImmutableMap.of()
     );
   }
 
-  private void setupSelector(Set<String> acceptableDeploymentGroups, DiscoveryDruidNode... brokers)
+  private void setupSelector(Set<String> routableVersions, DiscoveryDruidNode... brokers)
   {
     druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
 
@@ -155,9 +173,9 @@ public class TieredBrokerHostSelectorDeploymentGroupTest
           }
 
           @Override
-          public Set<String> getAcceptableDeploymentGroups()
+          public Set<String> getRoutableVersions()
           {
-            return acceptableDeploymentGroups;
+            return routableVersions;
           }
         },
         druidNodeDiscoveryProvider,
@@ -184,7 +202,7 @@ public class TieredBrokerHostSelectorDeploymentGroupTest
     }
 
     // Returning false short-circuits select() to the default-lookup path, which is what
-    // these tests want to exercise — the filter is applied when nodes are added to the holder.
+    // these tests want to exercise: the filter is applied when nodes are added to the holder.
     @Override
     public boolean isStarted()
     {

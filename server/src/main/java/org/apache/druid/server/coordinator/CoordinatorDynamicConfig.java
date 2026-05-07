@@ -85,6 +85,15 @@ public class CoordinatorDynamicConfig
   private final Map<String, Set<String>> historicalTierAliases;
 
   /**
+   * Druid node versions the coordinator enforces per-version replication and handoff for.
+   * When non-empty, the coordinator ensures {@code requiredReplicas} per listed version rather
+   * than per tier, and the handoff endpoint requires at least one server in each listed version
+   * (that has online servers) to serve the segment before declaring handoff complete.
+   * An empty set disables this behavior and restores default tier-wide replication.
+   */
+  private final Set<String> coordinatingVersions;
+
+  /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
    * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
    */
@@ -135,7 +144,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
       @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
-      @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
+      @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases,
+      @JsonProperty("coordinatingVersions") @Nullable Set<String> coordinatingVersions
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -183,6 +193,7 @@ public class CoordinatorDynamicConfig
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
 
     this.historicalTierAliases = Configs.valueOrDefault(historicalTierAliases, Map.of());
+    this.coordinatingVersions = Configs.valueOrDefault(coordinatingVersions, Set.of());
     final Set<String> aliasKeys = this.historicalTierAliases.keySet();
     for (Set<String> mappedTiers : this.historicalTierAliases.values()) {
       if (!Sets.intersection(mappedTiers, aliasKeys).isEmpty()) {
@@ -364,6 +375,12 @@ public class CoordinatorDynamicConfig
     return historicalTierAliases;
   }
 
+  @JsonProperty
+  public Set<String> getCoordinatingVersions()
+  {
+    return coordinatingVersions;
+  }
+
   /**
    * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
    * segments. This causes decreases the average time taken to load segments. However, this also means less resources
@@ -398,6 +415,7 @@ public class CoordinatorDynamicConfig
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
            ", historicalTierAliases=" + historicalTierAliases +
+           ", coordinatingVersions=" + coordinatingVersions +
            '}';
   }
 
@@ -435,7 +453,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
            && Objects.equals(cloneServers, that.cloneServers)
-           && Objects.equals(historicalTierAliases, that.historicalTierAliases);
+           && Objects.equals(historicalTierAliases, that.historicalTierAliases)
+           && Objects.equals(coordinatingVersions, that.coordinatingVersions);
   }
 
   @Override
@@ -460,7 +479,8 @@ public class CoordinatorDynamicConfig
         debugDimensions,
         turboLoadingNodes,
         cloneServers,
-        historicalTierAliases
+        historicalTierAliases,
+        coordinatingVersions
     );
   }
 
@@ -518,6 +538,7 @@ public class CoordinatorDynamicConfig
     private Set<String> turboLoadingNodes;
     private Map<String, String> cloneServers;
     private Map<String, Set<String>> historicalTierAliases;
+    private Set<String> coordinatingVersions;
 
     public Builder()
     {
@@ -543,7 +564,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
         @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
-        @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
+        @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases,
+        @JsonProperty("coordinatingVersions") @Nullable Set<String> coordinatingVersions
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -565,6 +587,7 @@ public class CoordinatorDynamicConfig
       this.turboLoadingNodes = turboLoadingNodes;
       this.cloneServers = cloneServers;
       this.historicalTierAliases = historicalTierAliases;
+      this.coordinatingVersions = coordinatingVersions;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -669,6 +692,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withCoordinatingVersions(Set<String> coordinatingVersions)
+    {
+      this.coordinatingVersions = coordinatingVersions;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -697,7 +726,8 @@ public class CoordinatorDynamicConfig
           debugDimensions,
           turboLoadingNodes,
           cloneServers,
-          historicalTierAliases
+          historicalTierAliases,
+          coordinatingVersions
       );
     }
 
@@ -730,7 +760,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
           valueOrDefault(cloneServers, defaults.getCloneServers()),
-          valueOrDefault(historicalTierAliases, defaults.getHistoricalTierAliases())
+          valueOrDefault(historicalTierAliases, defaults.getHistoricalTierAliases()),
+          valueOrDefault(coordinatingVersions, defaults.getCoordinatingVersions())
       );
     }
   }

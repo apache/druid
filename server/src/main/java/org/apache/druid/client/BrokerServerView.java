@@ -125,7 +125,7 @@ public class BrokerServerView implements TimelineServerView
         return false;
       }
 
-      if (!isDeploymentGroupAllowed(metadataAndSegment.lhs)) {
+      if (!isVersionAllowed(metadataAndSegment.lhs)) {
         return false;
       }
 
@@ -177,7 +177,7 @@ public class BrokerServerView implements TimelineServerView
           public CallbackAction serverAdded(DruidServer server)
           {
             // We don't track brokers in this view.
-            if (!server.getType().equals(ServerType.BROKER) && isDeploymentGroupAllowed(server.getMetadata())) {
+            if (!server.getType().equals(ServerType.BROKER) && isVersionAllowed(server.getMetadata())) {
               addServer(server);
             }
             return CallbackAction.CONTINUE;
@@ -252,26 +252,26 @@ public class BrokerServerView implements TimelineServerView
       throw new ISE("If configured, 'druid.broker.segment.ignoredTiers' must be non-empty");
     }
 
-    if (watcherConfig.getWatchedDeploymentGroups() != null
-        && watcherConfig.getWatchedDeploymentGroups().isEmpty()) {
-      throw new ISE("If configured, 'druid.broker.segment.watchedDeploymentGroups' must be non-empty");
+    if (watcherConfig.getWatchedVersions() != null
+        && watcherConfig.getWatchedVersions().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.watchedVersions' must be non-empty");
     }
   }
 
   /**
-   * Returns true if the server's deploymentGroup passes the watched filter, or if the server is
+   * Returns true if the server's version passes the watched filter, or if the server is
    * a realtime server type and the strict-realtime toggle is off (the default).
    */
-  private boolean isDeploymentGroupAllowed(DruidServerMetadata server)
+  private boolean isVersionAllowed(DruidServerMetadata server)
   {
     final boolean isRealtime =
         server.getType() == ServerType.INDEXER_EXECUTOR || server.getType() == ServerType.REALTIME;
-    if (isRealtime && !segmentWatcherConfig.isStrictRealtimeDeploymentGroupFilter()) {
+    if (isRealtime && !segmentWatcherConfig.isStrictRealtimeVersionFilter()) {
       return true;
     }
 
-    final Set<String> watched = segmentWatcherConfig.getWatchedDeploymentGroups();
-    if (watched != null && !watched.contains(server.getDeploymentGroup())) {
+    final Set<String> watched = segmentWatcherConfig.getWatchedVersions();
+    if (watched != null && !watched.contains(server.getVersion())) {
       return false;
     }
     return true;

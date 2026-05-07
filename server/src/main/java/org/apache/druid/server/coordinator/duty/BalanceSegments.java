@@ -31,6 +31,9 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -60,11 +63,30 @@ public class BalanceSegments implements CoordinatorDuty
       return params;
     }
 
-    params.getDruidCluster().getManagedHistoricals().forEach(
-        (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
-    );
+    final Set<String> coordinatingVersions = params.getCoordinatorDynamicConfig().getCoordinatingVersions();
+    params.getDruidCluster().getManagedHistoricals().forEach((tier, servers) -> {
+      if (coordinatingVersions.isEmpty()) {
+        new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run();
+      } else {
+        // Partition tier servers by version so segments never move across versions.
+        // Servers with no version form their own partition keyed under the empty string.
+        final Map<String, Set<ServerHolder>> serversByVersion = partitionByVersion(servers);
+        int remainingVersions = serversByVersion.size();
+        int remainingSegmentsToMove = maxSegmentsToMove;
+        for (final Set<ServerHolder> versionServers : serversByVersion.values()) {
+          final int versionMaxSegmentsToMove =
+              (remainingSegmentsToMove + remainingVersions - 1) / remainingVersions;
+          if (versionMaxSegmentsToMove > 0) {
+            final int movedSegments =
+                new TierSegmentBalancer(tier, versionServers, versionMaxSegmentsToMove, params).run();
+            remainingSegmentsToMove = Math.max(0, remainingSegmentsToMove - movedSegments);
+          }
+          --remainingVersions;
+        }
+      }
+    });
 
-    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    final CoordinatorRunStats runStats = params.getCoordinatorStats();
     params.getBalancerStrategy()
           .getStats()
           .forEachStat(runStats::add);
@@ -123,4 +145,13 @@ public class BalanceSegments implements CoordinatorDuty
     return Pair.of(numHistoricals, numSegments);
   }
 
+  private static Map<String, Set<ServerHolder>> partitionByVersion(Set<ServerHolder> servers)
+  {
+    final Map<String, Set<ServerHolder>> byVersion = new LinkedHashMap<>();
+    for (final ServerHolder server : servers) {
+      final String version = server.getServer().getMetadata().getVersion();
+      byVersion.computeIfAbsent(version == null ? "" : version, g -> new LinkedHashSet<>()).add(server);
+    }
+    return byVersion;
+  }
 }

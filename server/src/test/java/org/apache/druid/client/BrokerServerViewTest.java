@@ -543,29 +543,29 @@ public class BrokerServerViewTest
   }
 
   @Test(expected = ISE.class)
-  public void testEmptyWatchedDeploymentGroupsConfig() throws Exception
+  public void testEmptyWatchedVersionsConfig() throws Exception
   {
-    setupViewsWithDeploymentGroupConfig(Collections.emptySet(), false);
+    setupViewsWithVersionConfig(Collections.emptySet(), false);
   }
 
   @Test
-  public void testWatchedDeploymentGroupsExcludesNonMatchingHistorical() throws Exception
+  public void testWatchedVersionsExcludesNonMatchingHistorical() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     // black historical adds 1 segment; red historical's add is filtered out before reaching the latch
     segmentAddedLatch = new CountDownLatch(1);
     segmentRemovedLatch = new CountDownLatch(0);
 
-    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), false);
+    setupViewsWithVersionConfig(ImmutableSet.of("black"), false);
 
-    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+    final DruidServer blackHistorical = setupDataServerWithVersion(
         ServerType.HISTORICAL,
         "default_tier",
         "black-historical:1",
         0,
         "black"
     );
-    final DruidServer redHistorical = setupDataServerWithDeploymentGroup(
+    final DruidServer redHistorical = setupDataServerWithVersion(
         ServerType.HISTORICAL,
         "default_tier",
         "red-historical:1",
@@ -594,30 +594,30 @@ public class BrokerServerViewTest
   }
 
   @Test
-  public void testWatchedDeploymentGroupsAllowsRealtimeByDefault() throws Exception
+  public void testWatchedVersionsAllowsRealtimeByDefault() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     // both realtimes are watched (bypass), black historical adds 1 = 3 total
     segmentAddedLatch = new CountDownLatch(3);
     segmentRemovedLatch = new CountDownLatch(0);
 
-    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), false);
+    setupViewsWithVersionConfig(ImmutableSet.of("black"), false);
 
-    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+    final DruidServer blackHistorical = setupDataServerWithVersion(
         ServerType.HISTORICAL,
         "default_tier",
         "black-historical:1",
         0,
         "black"
     );
-    final DruidServer redPeon = setupDataServerWithDeploymentGroup(
+    final DruidServer redPeon = setupDataServerWithVersion(
         ServerType.INDEXER_EXECUTOR,
         null,
         "red-peon:1",
         0,
         "red"
     );
-    final DruidServer blackPeon = setupDataServerWithDeploymentGroup(
+    final DruidServer blackPeon = setupDataServerWithVersion(
         ServerType.INDEXER_EXECUTOR,
         null,
         "black-peon:1",
@@ -644,30 +644,30 @@ public class BrokerServerViewTest
   }
 
   @Test
-  public void testStrictRealtimeDeploymentGroupFilterExcludesRealtime() throws Exception
+  public void testStrictRealtimeVersionFilterExcludesRealtime() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     // strict mode: only black historical + black peon = 2; red peon is filtered.
     segmentAddedLatch = new CountDownLatch(2);
     segmentRemovedLatch = new CountDownLatch(0);
 
-    setupViewsWithDeploymentGroupConfig(ImmutableSet.of("black"), true);
+    setupViewsWithVersionConfig(ImmutableSet.of("black"), true);
 
-    final DruidServer blackHistorical = setupDataServerWithDeploymentGroup(
+    final DruidServer blackHistorical = setupDataServerWithVersion(
         ServerType.HISTORICAL,
         "default_tier",
         "black-historical:1",
         0,
         "black"
     );
-    final DruidServer redPeon = setupDataServerWithDeploymentGroup(
+    final DruidServer redPeon = setupDataServerWithVersion(
         ServerType.INDEXER_EXECUTOR,
         null,
         "red-peon:1",
         0,
         "red"
     );
-    final DruidServer blackPeon = setupDataServerWithDeploymentGroup(
+    final DruidServer blackPeon = setupDataServerWithVersion(
         ServerType.INDEXER_EXECUTOR,
         null,
         "black-peon:1",
@@ -799,16 +799,16 @@ public class BrokerServerViewTest
     return druidServer;
   }
 
-  private DruidServer setupDataServerWithDeploymentGroup(
+  private DruidServer setupDataServerWithVersion(
       ServerType serverType,
       String tier,
       String name,
       int priority,
-      String deploymentGroup
+      String version
   )
   {
     final DruidServer druidServer = new DruidServer(
-        new DruidServerMetadata(name, name, null, 1000000, null, serverType, tier, priority, deploymentGroup)
+        new DruidServerMetadata(name, name, null, 1000000, null, serverType, tier, priority, version)
     );
     baseView.addServer(druidServer);
     return druidServer;
@@ -864,7 +864,7 @@ public class BrokerServerViewTest
     setupViews(historicalStrategy, realtimeStrategy, new BrokerSegmentWatcherConfig());
   }
 
-  private void setupViewsWithDeploymentGroupConfig(Set<String> watchedDeploymentGroups, boolean strict)
+  private void setupViewsWithVersionConfig(Set<String> watchedVersions, boolean strict)
       throws InterruptedException
   {
     setupViews(
@@ -873,13 +873,13 @@ public class BrokerServerViewTest
         new BrokerSegmentWatcherConfig()
         {
           @Override
-          public Set<String> getWatchedDeploymentGroups()
+          public Set<String> getWatchedVersions()
           {
-            return watchedDeploymentGroups;
+            return watchedVersions;
           }
 
           @Override
-          public boolean isStrictRealtimeDeploymentGroupFilter()
+          public boolean isStrictRealtimeVersionFilter()
           {
             return strict;
           }

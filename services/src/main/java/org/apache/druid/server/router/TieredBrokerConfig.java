@@ -62,11 +62,12 @@ public class TieredBrokerConfig
   );
 
   /**
-   * If non-empty, the router only routes to brokers whose deploymentGroup is in this set.
-   * Empty/null means no filtering. A broker with no deploymentGroup tag matches only when this is empty.
+   * If non-empty, the router only routes to brokers whose version is in this set. This filters
+   * broker nodes within the service selected by {@link TieredBrokerSelectorStrategy}; it does not
+   * change which broker service a strategy selects. Empty/null means no filtering.
    */
   @JsonProperty
-  private Set<String> acceptableDeploymentGroups = null;
+  private Set<String> routableVersions = null;
 
   // tier, <bard, numThreads>
   public LinkedHashMap<String, String> getTierToBrokerMap()
@@ -98,8 +99,8 @@ public class TieredBrokerConfig
     return ImmutableList.copyOf(strategies);
   }
 
-  public Set<String> getAcceptableDeploymentGroups()
+  public Set<String> getRoutableVersions()
   {
-    return acceptableDeploymentGroups;
+    return routableVersions;
   }
 }

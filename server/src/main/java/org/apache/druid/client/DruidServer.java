@@ -20,6 +20,7 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -69,8 +70,23 @@ public class DruidServer implements Comparable<DruidServer>
         config.getStorageSize(),
         type,
         config.getTier(),
-        DEFAULT_PRIORITY
+        DEFAULT_PRIORITY,
+        node.getVersion()
     );
+  }
+
+  public DruidServer(
+      String name,
+      String hostAndPort,
+      String hostAndTlsPort,
+      long maxSize,
+      @Nullable Long storageSize,
+      ServerType type,
+      String tier,
+      int priority
+  )
+  {
+    this(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, type, tier, priority, null);
   }
 
   @JsonCreator
@@ -82,10 +98,11 @@ public class DruidServer implements Comparable<DruidServer>
       @JsonProperty("storageSize") @Nullable Long storageSize,
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
-      @JsonProperty("priority") int priority
+      @JsonProperty("priority") int priority,
+      @JsonProperty("version") @Nullable String version
   )
   {
-    this(new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, type, tier, priority));
+    this(new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, type, tier, priority, version));
   }
 
   public DruidServer(DruidServerMetadata metadata)
@@ -169,6 +186,14 @@ public class DruidServer implements Comparable<DruidServer>
   public int getPriority()
   {
     return metadata.getPriority();
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getVersion()
+  {
+    return metadata.getVersion();
   }
 
   public String getScheme()
@@ -344,7 +369,8 @@ public class DruidServer implements Comparable<DruidServer>
         getStorageSize(),
         getType(),
         getTier(),
-        getPriority()
+        getPriority(),
+        getVersion()
     );
   }
 }

@@ -42,7 +42,7 @@ public class DruidServerMetadata
   private final ServerType type;
   private final int priority;
   @Nullable
-  private final String deploymentGroup;
+  private final String version;
 
   public DruidServerMetadata(
       String name,
@@ -69,7 +69,7 @@ public class DruidServerMetadata
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") int priority,
-      @JsonProperty("deploymentGroup") @Nullable String deploymentGroup
+      @JsonProperty("version") @Nullable String version
   )
   {
     this.name = Preconditions.checkNotNull(name);
@@ -81,7 +81,7 @@ public class DruidServerMetadata
     this.tier = tier;
     this.type = type;
     this.priority = priority;
-    this.deploymentGroup = deploymentGroup;
+    this.version = version;
   }
 
   @JsonProperty
@@ -140,16 +140,16 @@ public class DruidServerMetadata
   }
 
   /**
-   * Operator-set tag identifying the deployment group of this server (e.g. red/black for R/B upgrades).
-   * Null means unset. Used by version-aware query routing on the broker.
+   * Version announced by the Druid node for this server. Null means that the server metadata came
+   * from an older announcement path that did not include a node version.
    * Omitted from JSON when null so older consumers that don't know about this field see unchanged output.
    */
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getDeploymentGroup()
+  public String getVersion()
   {
-    return deploymentGroup;
+    return version;
   }
 
   public boolean isSegmentReplicationTarget()
@@ -198,13 +198,13 @@ public class DruidServerMetadata
     if (priority != that.priority) {
       return false;
     }
-    return Objects.equals(deploymentGroup, that.deploymentGroup);
+    return Objects.equals(version, that.version);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, tier, type, priority, deploymentGroup);
+    return Objects.hash(name, hostAndPort, hostAndTlsPort, maxSize, storageSize, tier, type, priority, version);
   }
 
   @Override
@@ -219,7 +219,7 @@ public class DruidServerMetadata
            ", tier='" + tier + '\'' +
            ", type=" + type +
            ", priority=" + priority +
-           ", deploymentGroup='" + deploymentGroup + '\'' +
+           ", version='" + version + '\'' +
            '}';
   }
 }

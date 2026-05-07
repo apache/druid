@@ -135,6 +135,20 @@ public class QueryHostFinder
     Server server = selected == null ? null : selected.rhs;
 
     if (server == null) {
+      // Fail-closed when a version filter is configured: do not fall back to a cached
+      // backup, since the cached broker may now be outside the routable versions
+      // (re-announced with a different version, or removed while still cached). Clear any stale
+      // entries instead so a recovery later starts from a clean slate.
+      if (hostSelector.isVersionFilterEnabled()) {
+        log.warn(
+            "No server found for serviceName[%s] under version filter; "
+            + "skipping backup fallback to preserve version isolation.",
+            serviceName
+        );
+        serverBackup.remove(serviceName);
+        return null;
+      }
+
       log.error(
           "No server found for serviceName[%s]. Using backup",
           serviceName

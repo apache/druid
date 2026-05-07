@@ -126,9 +126,9 @@ public class TieredBrokerHostSelector
         return;
       }
 
-      final Set<String> acceptable = tierConfig.getAcceptableDeploymentGroups();
-      if (acceptable != null && acceptable.isEmpty()) {
-        throw new ISE("If configured, 'druid.router.acceptableDeploymentGroups' must be non-empty");
+      final Set<String> routable = tierConfig.getRoutableVersions();
+      if (routable != null && routable.isEmpty()) {
+        throw new ISE("If configured, 'druid.router.routableVersions' must be non-empty");
       }
 
       for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
@@ -137,8 +137,8 @@ public class TieredBrokerHostSelector
 
       DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER);
       druidNodeDiscovery.registerListener(
-          // The deploymentGroup filter is applied only on add; if a broker's tag changes in place,
-          // discovery emits remove + add, so the new tag is re-evaluated on the next add event.
+          // The version filter is applied only on add; if a broker's announced version changes,
+          // discovery emits remove + add, so the new version is re-evaluated on the next add event.
           new DruidNodeDiscovery.Listener()
           {
             @Override
@@ -146,12 +146,12 @@ public class TieredBrokerHostSelector
             {
               nodes.forEach(
                   (node) -> {
-                    if (!isDeploymentGroupAllowed(node)) {
+                    if (!isVersionAllowed(node)) {
                       log.debug(
-                          "Excluding broker[%s] with deploymentGroup[%s] (acceptable=%s)",
+                          "Excluding broker[%s] with version[%s] (routable=%s)",
                           node.getDruidNode().getHostAndPortToUse(),
-                          node.getDruidNode().getDeploymentGroup(),
-                          tierConfig.getAcceptableDeploymentGroups()
+                          node.getDruidNode().getVersion(),
+                          tierConfig.getRoutableVersions()
                       );
                       return;
                     }
@@ -198,6 +198,17 @@ public class TieredBrokerHostSelector
   public String getDefaultServiceName()
   {
     return tierConfig.getDefaultBrokerServiceName();
+  }
+
+  /**
+   * Returns true if a version filter is configured. When enabled, callers must avoid
+   * any cached/backup routing that could surface a broker which has since fallen outside the
+   * routable versions; the filter is intended to be fail-closed.
+   */
+  public boolean isVersionFilterEnabled()
+  {
+    final Set<String> routable = tierConfig.getRoutableVersions();
+    return routable != null && !routable.isEmpty();
   }
 
   public <T> Pair<String, Server> select(final Query<T> query)
@@ -285,25 +296,25 @@ public class TieredBrokerHostSelector
     }
 
     Server picked = nodesHolder.pick();
-    if (picked == null && tierConfig.getAcceptableDeploymentGroups() != null
-        && !tierConfig.getAcceptableDeploymentGroups().isEmpty()) {
+    if (picked == null && tierConfig.getRoutableVersions() != null
+        && !tierConfig.getRoutableVersions().isEmpty()) {
       log.warn(
-          "No brokers available for serviceName[%s] after applying deploymentGroup filter[%s]. "
-          + "Check that brokers with a matching deploymentGroup are running.",
+          "No brokers available for serviceName[%s] after applying version filter[%s]. "
+          + "Check that brokers with a matching version are running.",
           brokerServiceName,
-          tierConfig.getAcceptableDeploymentGroups()
+          tierConfig.getRoutableVersions()
       );
     }
     return new Pair<>(brokerServiceName, picked);
   }
 
-  private boolean isDeploymentGroupAllowed(DiscoveryDruidNode node)
+  private boolean isVersionAllowed(DiscoveryDruidNode node)
   {
-    final Set<String> acceptable = tierConfig.getAcceptableDeploymentGroups();
-    if (acceptable == null || acceptable.isEmpty()) {
+    final Set<String> routable = tierConfig.getRoutableVersions();
+    if (routable == null || routable.isEmpty()) {
       return true;
     }
-    return acceptable.contains(node.getDruidNode().getDeploymentGroup());
+    return routable.contains(node.getDruidNode().getVersion());
   }
 
   public Pair<String, Server> selectForSql(SqlQuery sqlQuery)

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
@@ -128,5 +129,53 @@ public class DruidClusterTest
     final DruidCluster emptyCluster = DruidCluster.EMPTY;
     Assert.assertFalse(clusterBuilder.build().isEmpty());
     Assert.assertTrue(emptyCluster.isEmpty());
+  }
+
+  @Test
+  public void testGetVersionsForTier_multipleVersions()
+  {
+    final ServerHolder redServer = serverHolderWithVersion("tier1", "red");
+    final ServerHolder blueServer = serverHolderWithVersion("tier1", "blue");
+    final DruidCluster cluster = DruidCluster.builder().add(redServer).add(blueServer).build();
+
+    final Set<String> versions = cluster.getVersionsForTier("tier1");
+    Assert.assertEquals(Set.of("red", "blue"), versions);
+  }
+
+  @Test
+  public void testGetVersionsForTier_nullVersionExcluded()
+  {
+    // Servers without a version are not returned by getVersionsForTier
+    final ServerHolder unversioned = new ServerHolder(
+        new DruidServer("h1", "h1", null, 100L, null, ServerType.HISTORICAL, "tier1", 0)
+            .toImmutableDruidServer(),
+        new TestLoadQueuePeon()
+    );
+    final DruidCluster cluster = DruidCluster.builder().add(unversioned).build();
+
+    Assert.assertTrue(cluster.getVersionsForTier("tier1").isEmpty());
+  }
+
+  @Test
+  public void testGetManagedHistoricalsByTierAndVersion()
+  {
+    final ServerHolder redServer = serverHolderWithVersion("tier1", "red");
+    final ServerHolder blueServer = serverHolderWithVersion("tier1", "blue");
+    final DruidCluster cluster = DruidCluster.builder().add(redServer).add(blueServer).build();
+
+    Assert.assertEquals(Set.of(redServer), cluster.getManagedHistoricalsByTierAndVersion("tier1", "red"));
+    Assert.assertEquals(Set.of(blueServer), cluster.getManagedHistoricalsByTierAndVersion("tier1", "blue"));
+    Assert.assertTrue(cluster.getManagedHistoricalsByTierAndVersion("tier1", "green").isEmpty());
+  }
+
+  private static ServerHolder serverHolderWithVersion(String tier, String version)
+  {
+    final DruidServerMetadata metadata = new DruidServerMetadata(
+        version + "-host", version + "-host", null, 100L, null, ServerType.HISTORICAL, tier, 0, version
+    );
+    return new ServerHolder(
+        new DruidServer(metadata).toImmutableDruidServer(),
+        new TestLoadQueuePeon()
+    );
   }
 }

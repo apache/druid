@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +47,11 @@ public class DruidCluster
   private final Set<ServerHolder> realtimes;
   private final Map<String, NavigableSet<ServerHolder>> historicals;
   private final Map<String, NavigableSet<ServerHolder>> managedHistoricals;
+  /**
+   * Managed historicals indexed by tier and then by version. Only servers with a non-null
+   * version appear here. Used to support per-version replication and handoff enforcement.
+   */
+  private final Map<String, Map<String, NavigableSet<ServerHolder>>> managedHistoricalsByTierAndVersion;
   private final Set<ServerHolder> brokers;
   private final List<ServerHolder> allManagedServers;
 
@@ -70,6 +76,7 @@ public class DruidCluster
           return CollectionUtils.newTreeSet(Comparator.naturalOrder(), managedServers);
         }
     );
+    this.managedHistoricalsByTierAndVersion = initManagedHistoricalsByTierAndVersion();
     this.brokers = Collections.unmodifiableSet(brokers);
     this.allManagedServers = initAllManagedServers();
   }
@@ -109,6 +116,73 @@ public class DruidCluster
   public NavigableSet<ServerHolder> getManagedHistoricalsByTier(String tier)
   {
     return managedHistoricals.get(tier);
+  }
+
+  /**
+   * Returns the distinct non-null versions present among managed historicals in the given tier.
+   */
+  public Set<String> getVersionsForTier(String tier)
+  {
+    final Map<String, NavigableSet<ServerHolder>> versionMap = managedHistoricalsByTierAndVersion.get(tier);
+    return versionMap == null ? Collections.emptySet() : versionMap.keySet();
+  }
+
+  /**
+   * Returns managed historicals in the given tier that belong to the given version.
+   * Returns an empty set if no servers for that (tier, version) pair exist.
+   */
+  public NavigableSet<ServerHolder> getManagedHistoricalsByTierAndVersion(String tier, String version)
+  {
+    final Map<String, NavigableSet<ServerHolder>> versionMap = managedHistoricalsByTierAndVersion.get(tier);
+    if (versionMap == null) {
+      return Collections.emptyNavigableSet();
+    }
+    final NavigableSet<ServerHolder> servers = versionMap.get(version);
+    return servers == null ? Collections.emptyNavigableSet() : servers;
+  }
+
+  /**
+   * Returns managed historicals in the given tier whose {@code version} is null or is not
+   * present in {@code coordinatingVersions}. These are the "uncoordinated" servers whose replica
+   * counts roll up to the tier-wide {@link ReplicaCountKey}; they must still be visited by drop /
+   * cancellation passes when the rest of the tier is operating in per-version mode.
+   */
+  public NavigableSet<ServerHolder> getUncoordinatedManagedHistoricalsByTier(
+      String tier,
+      Set<String> coordinatingVersions
+  )
+  {
+    final NavigableSet<ServerHolder> all = managedHistoricals.get(tier);
+    if (all == null || all.isEmpty()) {
+      return Collections.emptyNavigableSet();
+    }
+    if (coordinatingVersions == null || coordinatingVersions.isEmpty()) {
+      return all;
+    }
+    final NavigableSet<ServerHolder> filtered = new TreeSet<>(Comparator.naturalOrder());
+    for (ServerHolder server : all) {
+      final String version = server.getServer().getMetadata().getVersion();
+      if (version == null || !coordinatingVersions.contains(version)) {
+        filtered.add(server);
+      }
+    }
+    return filtered;
+  }
+
+  private Map<String, Map<String, NavigableSet<ServerHolder>>> initManagedHistoricalsByTierAndVersion()
+  {
+    final Map<String, Map<String, NavigableSet<ServerHolder>>> result = new HashMap<>();
+    managedHistoricals.forEach((tier, servers) -> {
+      for (ServerHolder server : servers) {
+        final String version = server.getServer().getMetadata().getVersion();
+        if (version != null) {
+          result.computeIfAbsent(tier, t -> new HashMap<>())
+                .computeIfAbsent(version, g -> new TreeSet<>(Comparator.naturalOrder()))
+                .add(server);
+        }
+      }
+    });
+    return Collections.unmodifiableMap(result);
   }
 
   public List<ServerHolder> getAllManagedServers()

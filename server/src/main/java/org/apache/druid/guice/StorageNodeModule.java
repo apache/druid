@@ -88,7 +88,7 @@ public class StorageNodeModule implements Module
         serverTypeConfig.getServerType(),
         config.getTier(),
         config.getPriority(),
-        node.getDeploymentGroup()
+        node.getVersion()
     );
   }
 

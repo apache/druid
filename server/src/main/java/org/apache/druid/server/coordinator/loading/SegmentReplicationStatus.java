@@ -36,9 +36,9 @@ import java.util.Map;
 public class SegmentReplicationStatus
 {
   private final Map<SegmentId, SegmentReplicaCount> totalReplicaCounts;
-  private final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTier;
+  private final Map<SegmentId, Map<ReplicaCountKey, SegmentReplicaCount>> replicaCountsInTier;
 
-  public SegmentReplicationStatus(Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTier)
+  public SegmentReplicationStatus(Map<SegmentId, Map<ReplicaCountKey, SegmentReplicaCount>> replicaCountsInTier)
   {
     this.replicaCountsInTier = ImmutableMap.copyOf(replicaCountsInTier);
 
@@ -64,16 +64,16 @@ public class SegmentReplicationStatus
     final Map<String, Object2LongMap<String>> tierToUnderReplicated = new HashMap<>();
 
     for (DataSegment segment : usedSegments) {
-      final Map<String, SegmentReplicaCount> tierToReplicaCount = replicaCountsInTier.get(segment.getId());
+      final Map<ReplicaCountKey, SegmentReplicaCount> tierToReplicaCount = replicaCountsInTier.get(segment.getId());
       if (tierToReplicaCount == null) {
         continue;
       }
 
-      tierToReplicaCount.forEach((tier, counts) -> {
+      tierToReplicaCount.forEach((key, counts) -> {
         final int underReplicated = ignoreMissingServers ? counts.missing() : counts.missingAndLoadable();
         if (underReplicated >= 0) {
           Object2LongOpenHashMap<String> datasourceToUnderReplicated = (Object2LongOpenHashMap<String>)
-              tierToUnderReplicated.computeIfAbsent(tier, ds -> new Object2LongOpenHashMap<>());
+              tierToUnderReplicated.computeIfAbsent(key.tier(), ds -> new Object2LongOpenHashMap<>());
           datasourceToUnderReplicated.addTo(segment.getDataSource(), underReplicated);
         }
       });
