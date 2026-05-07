@@ -122,6 +122,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
+  private final boolean ownsExecutor;
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
@@ -137,6 +138,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       ConfigManager configManager
   )
   {
+    this(adapter, config, client, httpClient, peonLifecycleFactory, emitter, null, configManager);
+  }
+
+  public KubernetesTaskRunner(
+      TaskAdapter adapter,
+      KubernetesTaskRunnerConfig config,
+      KubernetesPeonClient client,
+      HttpClient httpClient,
+      PeonLifecycleFactory peonLifecycleFactory,
+      ServiceEmitter emitter,
+      @Nullable ThreadPoolExecutor sharedExecutor,
+      @Nullable ConfigManager configManager
+  )
+  {
     this.adapter = adapter;
     this.config = config;
     this.client = client;
@@ -146,9 +161,28 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.emitter = emitter;
 
     this.currentCapacity = new AtomicInteger(config.getCapacity());
-    this.tpe = new ThreadPoolExecutor(currentCapacity.get(), currentCapacity.get(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
+    if (sharedExecutor == null) {
+      this.tpe = new ThreadPoolExecutor(
+          currentCapacity.get(),
+          currentCapacity.get(),
+          0L,
+          TimeUnit.MILLISECONDS,
+          new LinkedBlockingQueue<Runnable>(),
+          Execs.makeThreadFactory("k8s-task-runner-%d", null)
+      );
+      this.ownsExecutor = true;
+    } else {
+      this.tpe = sharedExecutor;
+      this.ownsExecutor = false;
+    }
     this.exec = MoreExecutors.listeningDecorator(this.tpe);
-    configManager.addListener(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, StringUtils.format(OBSERVER_KEY, Thread.currentThread().getId()), this::syncCapacityWithDynamicConfig);
+    if (ownsExecutor && configManager != null) {
+      configManager.addListener(
+          KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+          StringUtils.format(OBSERVER_KEY, Thread.currentThread().getId()),
+          this::syncCapacityWithDynamicConfig
+      );
+    }
   }
 
   @Override
@@ -194,7 +228,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   private void syncCapacityWithDynamicConfig(KubernetesTaskRunnerDynamicConfig config)
   {
-    int newCapacity = config.getCapacity();
+    final int newCapacity = config.getCapacity();
     if (newCapacity == currentCapacity.get()) {
       return;
     }
@@ -443,7 +477,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     log.info("Stopping KubernetesTaskRunner");
     // Stop managing the running k8s jobs
-    exec.shutdownNow();
+    if (ownsExecutor) {
+      exec.shutdownNow();
+    }
     cleanupExecutor.shutdownNow();
     log.debug("Stopped KubernetesTaskRunner");
   }
