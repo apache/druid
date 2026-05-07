@@ -41,6 +41,8 @@ import javax.naming.Context;
 import javax.naming.Name;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
@@ -77,7 +79,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("credentialIterations") Integer credentialIterations,
       @JsonProperty("credentialVerifyDuration") Integer credentialVerifyDuration,
       @JsonProperty("credentialMaxDuration") Integer credentialMaxDuration,
-      @JsonProperty("credentialCacheSize") Integer credentialCacheSize
+      @JsonProperty("credentialCacheSize") Integer credentialCacheSize,
+      @JsonProperty("groupBaseDn") String groupBaseDn,
+      @JsonProperty("groupSearch") String groupSearch
   )
   {
     this.ldapConfig = new BasicAuthLDAPConfig(
@@ -90,7 +94,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
         credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
-        credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize
+        credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize,
+        groupBaseDn,
+        groupSearch
     );
 
     this.cache = new LruBlockCache(
@@ -237,19 +243,89 @@ public class LDAPCredentialsValidator implements CredentialsValidator
           ldapConfig.getBaseDn(),
           StringUtils.format(ldapConfig.getUserSearch(), encodedUsername),
           sc);
+      final SearchResult userResult;
       try {
         if (!results.hasMore()) {
           return null;
         }
-        return results.next();
+        userResult = results.next();
       }
       finally {
         results.close();
       }
+
+      // Some LDAP servers do not return memberOf in search results. When memberOf is
+      // absent and group search configuration is provided, fall back to a reverse
+      // group lookup.
+      if (ldapConfig.isGroupSearchConfigured() && !hasMemberOfAttribute(userResult)) {
+        populateMemberOfFromGroupSearch(ldapConfig, context, userResult);
+      }
+
+      return userResult;
     }
     catch (NamingException e) {
       LOG.debug(e, "Unable to find user '%s'", username);
       return null;
+    }
+  }
+
+  private static boolean hasMemberOfAttribute(SearchResult userResult)
+  {
+    return userResult.getAttributes() != null
+        && userResult.getAttributes().get("memberOf") != null;
+  }
+
+  @SuppressWarnings("BanJNDI")
+  private void populateMemberOfFromGroupSearch(
+      BasicAuthLDAPConfig ldapConfig,
+      DirContext context,
+      SearchResult userResult
+  )
+  {
+    try {
+      final String userDn = userResult.getNameInNamespace();
+      final SearchControls sc = new SearchControls();
+      sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
+      // Request only the DN by returning a minimal attribute. The group DN is
+      // obtained via getNameInNamespace() and does not depend on any returned attribute.
+      sc.setReturningAttributes(new String[]{"1.1"});
+
+      final String filter = StringUtils.format(ldapConfig.getGroupSearch(), encodeForLDAP(userDn, true));
+      final NamingEnumeration<SearchResult> groupResults = context.search(
+          ldapConfig.getGroupBaseDn(),
+          filter,
+          sc
+      );
+
+      final BasicAttribute memberOfAttr = new BasicAttribute("memberOf");
+      try {
+        while (groupResults.hasMore()) {
+          final SearchResult groupResult = groupResults.next();
+          final String groupDn = groupResult.getNameInNamespace();
+          memberOfAttr.add(groupDn);
+        }
+      }
+      finally {
+        groupResults.close();
+      }
+
+      if (memberOfAttr.size() > 0) {
+        if (userResult.getAttributes() != null) {
+          userResult.getAttributes().put(memberOfAttr);
+        } else {
+          final BasicAttributes attrs = new BasicAttributes(true);
+          attrs.put(memberOfAttr);
+          userResult.setAttributes(attrs);
+        }
+        LOG.debug(
+            "Populated memberOf for user '%s' with %d groups from reverse group search",
+            userDn,
+            memberOfAttr.size()
+        );
+      }
+    }
+    catch (NamingException e) {
+      LOG.error(e, "Exception during reverse group lookup, proceeding without group memberships");
     }
   }
 

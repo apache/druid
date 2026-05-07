@@ -261,6 +261,18 @@ The valid credentials cache size. The cache uses a LRU policy.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 100
 
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupBaseDn`**
+
+The base DN for searching LDAP groups. When set together with `groupSearch`, Druid performs a reverse group lookup to populate the `memberOf` attribute during authentication. This is needed when the LDAP server does not return `memberOf` in user search results. If not set, Druid relies on the `memberOf` attribute being returned directly by the user search.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupSearch`**
+
+The LDAP search filter for finding groups that contain a user. The `%s` placeholder is replaced with the user's full DN. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`**
 
 If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br />
