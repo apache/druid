@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.java.util.common.Either;
 
 import javax.annotation.Nullable;
@@ -53,7 +54,7 @@ import java.util.List;
  * the {@link CursorHolder} (or throw the producer exception). Calling {@link #release()} before {@link #isReady()}
  * returns {@code true}, multiple times, or after this holder has been closed will throw a {@link DruidException}.
  * <p>
- * For example:
+ * For example (using {@link ReturnOrAwait} to show intended yield-then-resume usage pattern):
  * <pre>{@code
  * if (asyncHolder == null) {
  *     asyncHolder = cursorFactory.makeCursorHolderAsync(spec);
