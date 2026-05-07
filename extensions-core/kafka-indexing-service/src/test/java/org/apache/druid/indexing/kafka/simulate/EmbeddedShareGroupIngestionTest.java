@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka.simulate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
@@ -45,6 +46,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -168,6 +170,82 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
   }
 
+  /**
+   * Validates the P1 multi-row fix (FrankChen021's review on PR 19311):
+   * a single Kafka record encoding a JSON array must produce N rows in Druid.
+   * Before the fix, the runner read only the first row from each record and
+   * then ACKed the record, silently dropping rows 2..K. With the fix, the
+   * runner uses {@link org.apache.druid.indexing.seekablestream.StreamChunkReader}
+   * which iterates all rows from a record before ACK.
+   *
+   * <p>Producing {@code numRecords} records each with a {@code rowsPerRecord}-element
+   * array; the assertion is that exactly {@code numRecords * rowsPerRecord} rows
+   * land in the datasource.</p>
+   */
+  @Test
+  public void test_shareGroupIngestion_multiRowJsonArray()
+  {
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final int numRecords = 5;
+    final int rowsPerRecord = 4;
+    kafkaServer.produceRecordsToTopic(
+        generateJsonArrayRecords(topic, numRecords, rowsPerRecord, DateTimes.of("2025-07-01"))
+    );
+
+    final DataSchema dataSchema = DataSchema.builder()
+        .withDataSource(dataSource)
+        .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
+        .withDimensions(DimensionsSpec.EMPTY)
+        .withGranularity(new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.NONE,
+            null
+        ))
+        .build();
+
+    final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
+        topic,
+        "druid-share-group-multirow-test",
+        kafkaServer.consumerProperties(),
+        new JsonInputFormat(null, Collections.emptyMap(), null, null, null),
+        null
+    );
+
+    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
+        null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null,
+        null, null
+    );
+
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final ShareGroupIndexTask task = new ShareGroupIndexTask(
+        null,
+        null,
+        dataSchema,
+        tuningConfig,
+        ioConfig,
+        null,
+        mapper
+    );
+
+    cluster.callApi().submitTask(task);
+
+    final long expectedRows = (long) numRecords * rowsPerRecord;
+
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(expectedRows)
+    );
+
+    Assertions.assertEquals(
+        String.valueOf(expectedRows),
+        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
+    );
+  }
+
   private List<ProducerRecord<byte[], byte[]>> generateRecords(
       String topic,
       int numRecords,
@@ -185,6 +263,42 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
       records.add(
           new ProducerRecord<>(topic, i % 2, null, StringUtils.toUtf8(csv))
       );
+    }
+    return records;
+  }
+
+  /**
+   * Produces {@code numRecords} Kafka records, each with a JSON array payload
+   * containing {@code rowsPerRecord} elements. Used to exercise the multi-row
+   * path in {@link org.apache.druid.indexing.seekablestream.StreamChunkReader}.
+   */
+  private List<ProducerRecord<byte[], byte[]>> generateJsonArrayRecords(
+      String topic,
+      int numRecords,
+      int rowsPerRecord,
+      DateTime startTime
+  )
+  {
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    for (int i = 0; i < numRecords; i++) {
+      final StringBuilder json = new StringBuilder("[");
+      for (int j = 0; j < rowsPerRecord; j++) {
+        if (j > 0) {
+          json.append(',');
+        }
+        json.append(StringUtils.format(
+            "{\"%s\":\"%s\",\"%s\":\"item_%d_%d\",\"%s\":%d}",
+            COL_TIMESTAMP,
+            startTime.plusHours(i * rowsPerRecord + j),
+            COL_ITEM,
+            i,
+            j,
+            COL_VALUE,
+            ThreadLocalRandom.current().nextInt(1000)
+        ));
+      }
+      json.append(']');
+      records.add(new ProducerRecord<>(topic, i % 2, null, StringUtils.toUtf8(json.toString())));
     }
     return records;
   }
