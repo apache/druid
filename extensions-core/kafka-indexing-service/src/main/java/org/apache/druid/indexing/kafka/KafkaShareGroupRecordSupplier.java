@@ -129,10 +129,7 @@ public class KafkaShareGroupRecordSupplier
     final String topic = partitionId.topic().orElseThrow(
         () -> new IllegalArgumentException("Cannot acknowledge record without topic")
     );
-    consumer.acknowledge(
-        new ConsumerRecord<>(topic, partitionId.partition(), offset, null, null),
-        toKafkaAcknowledgeType(type)
-    );
+    consumer.acknowledge(topic, partitionId.partition(), offset, toKafkaAcknowledgeType(type));
   }
 
   @Override
@@ -148,10 +145,7 @@ public class KafkaShareGroupRecordSupplier
           () -> new IllegalArgumentException("Cannot acknowledge record without topic")
       );
       for (Long offset : entry.getValue()) {
-        consumer.acknowledge(
-            new ConsumerRecord<>(topic, partition.partition(), offset, null, null),
-            kafkaType
-        );
+        consumer.acknowledge(topic, partition.partition(), offset, kafkaType);
       }
     }
   }
@@ -180,6 +174,18 @@ public class KafkaShareGroupRecordSupplier
   }
 
   @Override
+  public void wakeup()
+  {
+    consumer.wakeup();
+  }
+
+  @Override
+  public Optional<Integer> acquisitionLockTimeoutMs()
+  {
+    return consumer.acquisitionLockTimeoutMs();
+  }
+
+  @Override
   public void close()
   {
     if (closed) {
@@ -204,6 +210,8 @@ public class KafkaShareGroupRecordSupplier
         return org.apache.kafka.clients.consumer.AcknowledgeType.RELEASE;
       case REJECT:
         return org.apache.kafka.clients.consumer.AcknowledgeType.REJECT;
+      case RENEW:
+        return org.apache.kafka.clients.consumer.AcknowledgeType.RENEW;
       default:
         throw new IllegalArgumentException("Unknown acknowledge type: " + type);
     }
@@ -215,8 +223,10 @@ public class KafkaShareGroupRecordSupplier
       String groupId
   )
   {
+    final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(consumerProperties);
+
     final Properties props = new Properties();
-    KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, sanitized);
     props.setProperty("group.id", groupId);
     props.setProperty("share.acknowledgement.mode", "explicit");
 

@@ -165,15 +165,12 @@ public class KafkaShareGroupRecordSupplierTest
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 42L);
 
-    final ArgumentCaptor<ConsumerRecord> recordCaptor = ArgumentCaptor.forClass(ConsumerRecord.class);
-    final ArgumentCaptor<org.apache.kafka.clients.consumer.AcknowledgeType> typeCaptor =
-        ArgumentCaptor.forClass(org.apache.kafka.clients.consumer.AcknowledgeType.class);
-
-    verify(mockConsumer).acknowledge(recordCaptor.capture(), typeCaptor.capture());
-    Assert.assertEquals(42L, recordCaptor.getValue().offset());
-    Assert.assertEquals("test-topic", recordCaptor.getValue().topic());
-    Assert.assertEquals(0, recordCaptor.getValue().partition());
-    Assert.assertEquals(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT, typeCaptor.getValue());
+    Mockito.verify(mockConsumer).acknowledge(
+        Mockito.eq("test-topic"),
+        Mockito.eq(0),
+        Mockito.eq(42L),
+        Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT)
+    );
   }
 
   @Test
@@ -182,10 +179,12 @@ public class KafkaShareGroupRecordSupplierTest
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.RELEASE);
 
-    final ArgumentCaptor<org.apache.kafka.clients.consumer.AcknowledgeType> typeCaptor =
-        ArgumentCaptor.forClass(org.apache.kafka.clients.consumer.AcknowledgeType.class);
-    verify(mockConsumer).acknowledge(any(ConsumerRecord.class), typeCaptor.capture());
-    Assert.assertEquals(org.apache.kafka.clients.consumer.AcknowledgeType.RELEASE, typeCaptor.getValue());
+    Mockito.verify(mockConsumer).acknowledge(
+        Mockito.eq("test-topic"),
+        Mockito.eq(0),
+        Mockito.eq(10L),
+        Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.RELEASE)
+    );
   }
 
   @Test
@@ -194,10 +193,26 @@ public class KafkaShareGroupRecordSupplierTest
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.REJECT);
 
-    final ArgumentCaptor<org.apache.kafka.clients.consumer.AcknowledgeType> typeCaptor =
-        ArgumentCaptor.forClass(org.apache.kafka.clients.consumer.AcknowledgeType.class);
-    verify(mockConsumer).acknowledge(any(ConsumerRecord.class), typeCaptor.capture());
-    Assert.assertEquals(org.apache.kafka.clients.consumer.AcknowledgeType.REJECT, typeCaptor.getValue());
+    Mockito.verify(mockConsumer).acknowledge(
+        Mockito.eq("test-topic"),
+        Mockito.eq(0),
+        Mockito.eq(10L),
+        Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.REJECT)
+    );
+  }
+
+  @Test
+  public void testAcknowledgeWithRenew()
+  {
+    final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
+    supplier.acknowledge(partition, 99L, AcknowledgeType.RENEW);
+
+    Mockito.verify(mockConsumer).acknowledge(
+        Mockito.eq("test-topic"),
+        Mockito.eq(0),
+        Mockito.eq(99L),
+        Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.RENEW)
+    );
   }
 
   @Test
@@ -212,10 +227,11 @@ public class KafkaShareGroupRecordSupplierTest
 
     supplier.acknowledge(offsets, AcknowledgeType.ACCEPT);
 
-    // 3 + 2 = 5 individual acknowledge calls
-    verify(mockConsumer, Mockito.times(5)).acknowledge(
-        any(ConsumerRecord.class),
-        eq(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT)
+    Mockito.verify(mockConsumer, Mockito.times(5)).acknowledge(
+        Mockito.anyString(),
+        Mockito.anyInt(),
+        Mockito.anyLong(),
+        Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT)
     );
   }
 
@@ -261,5 +277,28 @@ public class KafkaShareGroupRecordSupplierTest
     supplier.close();
     supplier.close();
     verify(mockConsumer, Mockito.times(1)).close();
+  }
+
+  @Test
+  public void testWakeupForwardsToConsumer()
+  {
+    supplier.wakeup();
+    Mockito.verify(mockConsumer).wakeup();
+  }
+
+  @Test
+  public void testAcquisitionLockTimeoutMsForwardsToConsumer()
+  {
+    Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.of(45_000));
+    final Optional<Integer> lockMs = supplier.acquisitionLockTimeoutMs();
+    Assert.assertTrue(lockMs.isPresent());
+    Assert.assertEquals(Integer.valueOf(45_000), lockMs.get());
+  }
+
+  @Test
+  public void testAcquisitionLockTimeoutMsEmpty()
+  {
+    Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.empty());
+    Assert.assertTrue(supplier.acquisitionLockTimeoutMs().isEmpty());
   }
 }
