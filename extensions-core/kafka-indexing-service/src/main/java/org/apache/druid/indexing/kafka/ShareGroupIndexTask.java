@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Indexing task that consumes from a Kafka topic using share group semantics
@@ -68,6 +69,7 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
   private final ObjectMapper configMapper;
 
   private final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  private final AtomicReference<ShareGroupIndexTaskRunner> activeRunner = new AtomicReference<>();
 
   @JsonCreator
   public ShareGroupIndexTask(
@@ -117,7 +119,14 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    return new ShareGroupIndexTaskRunner(this, toolbox, configMapper).run();
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(this, toolbox, configMapper);
+    activeRunner.set(runner);
+    try {
+      return runner.run();
+    }
+    finally {
+      activeRunner.set(null);
+    }
   }
 
   @Override
@@ -125,6 +134,10 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
   {
     log.info("Graceful stop requested for task[%s].", getId());
     stopRequested.set(true);
+    final ShareGroupIndexTaskRunner runner = activeRunner.get();
+    if (runner != null) {
+      runner.requestWakeup();
+    }
   }
 
   @JsonProperty
