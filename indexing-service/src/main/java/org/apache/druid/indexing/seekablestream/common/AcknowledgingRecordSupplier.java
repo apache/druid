@@ -119,6 +119,39 @@ public interface AcknowledgingRecordSupplier<PartitionIdType, SequenceOffsetType
   Set<PartitionIdType> getPartitionIds(String stream);
 
   /**
+   * Wakes up a blocked {@link #poll(long)} call so the ingestion loop can
+   * exit promptly on graceful stop. Implementations that wrap a
+   * {@link org.apache.kafka.clients.consumer.ShareConsumer} should call its
+   * {@code wakeup()} method here. The contract for the caller is that the
+   * next {@link #poll(long)} (or the in-flight one) will throw an
+   * implementation-specific wake-up exception
+   * (e.g. {@link org.apache.kafka.common.errors.WakeupException}).
+   *
+   * <p>Default implementation is a no-op for suppliers that do not support
+   * wake-ups; the ingestion loop will fall back to polling the
+   * {@code stopRequested} flag at the next poll boundary.</p>
+   */
+  default void wakeup()
+  {
+  }
+
+  /**
+   * Returns the broker-effective acquisition lock timeout, if known. For
+   * Kafka share groups this is the {@code group.share.record.lock.duration.ms}
+   * the broker is using. The value is only meaningful after the first
+   * successful {@link #poll(long)} call (Kafka does not push it until the
+   * client has joined the share group).
+   *
+   * <p>Default implementation returns {@link Optional#empty()}.</p>
+   *
+   * @return acquisition lock timeout in milliseconds, or empty if unknown
+   */
+  default Optional<Integer> acquisitionLockTimeoutMs()
+  {
+    return Optional.empty();
+  }
+
+  /**
    * Close this supplier and release all resources.
    */
   @Override
