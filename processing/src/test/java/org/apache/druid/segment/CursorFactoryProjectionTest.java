@@ -945,6 +945,40 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testProjectionSingleDimFilteredAggElseValuePreservedThroughProjection()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new EqualityFilter("b", ColumnType.STRING, "dd", null),
+                            null,
+                            0L
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("ab_hourly_cd_sum");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 7);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 2L},
+            new Object[]{"b", 0L}
+        )
+    );
+  }
+
+  @Test
   public void testProjectionSingleDimFilterWithPartialIntervalAligned()
   {
     final GroupByQuery query =

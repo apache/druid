@@ -1923,7 +1923,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
     final AggregatorFactory[] aggs = {
-        new FilteredAggregatorFactory(new CountAggregatorFactory("w1"), notNull("d2"), "w1")
+        new FilteredAggregatorFactory(new CountAggregatorFactory("w1"), notNull("d2"), "w1", null)
     };
 
     final WindowOperatorQuery windowQuery = new WindowOperatorQuery(

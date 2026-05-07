@@ -342,7 +342,9 @@ public class Projections
 
             final FilteredAggregatorFactory remappedFilteredAgg = new FilteredAggregatorFactory(
                 filteredCombining,
-                new RewrittenAggDimFilter(filteredQueryAgg.getFilter(), remappedAggFilter)
+                new RewrittenAggDimFilter(filteredQueryAgg.getFilter(), remappedAggFilter),
+                null,
+                filteredQueryAgg.getElseValue()
             );
             matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
                         .addReferencedPhysicalColumn(projectionAgg.getName())

@@ -742,7 +742,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                   false
                               )
                           ),
-                          "agg"
+                          "agg",
+                          null
                       )))
               .granularity(Granularities.ALL)
               .context(ImmutableMap.of("queryId", "dummy"))
