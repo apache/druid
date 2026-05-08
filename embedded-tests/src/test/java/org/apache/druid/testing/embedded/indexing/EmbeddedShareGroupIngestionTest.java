@@ -121,11 +121,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     waitForRowsProcessed(numRecords);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(numRecords),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(numRecords);
 
     cancelAndAwaitTermination(taskId);
   }
@@ -156,11 +152,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     final long expectedRows = (long) numRecords * rowsPerRecord;
     waitForRowsProcessed(expectedRows);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(expectedRows),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(expectedRows);
 
     cancelAndAwaitTermination(taskId);
   }
@@ -189,11 +181,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     waitForRowsProcessed(numRecords);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(numRecords),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(numRecords);
 
     cancelAndAwaitTermination(taskId);
   }
@@ -224,11 +212,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     cancelAndAwaitTermination(taskId);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(numRecords),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(numRecords);
   }
 
   /** Three tasks sharing one group on a 2-partition topic ingest every record exactly once (KIP-932). */
@@ -262,11 +246,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskB);
     cancelAndAwaitTermination(taskC);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(numRecords),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(numRecords);
   }
 
   /** 1000 rows with {@code maxRowsInMemory=100} forces mid-batch persists yet ingests all rows. */
@@ -295,11 +275,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     cancelAndAwaitTermination(taskId);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    Assertions.assertEquals(
-        String.valueOf(numRecords),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
+    assertRowCountEventually(numRecords);
   }
 
   private DataSchema buildDataSchema()
@@ -386,6 +362,42 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expected)
+    );
+  }
+
+  /**
+   * Polls SQL for the expected row count, swallowing transient
+   * "datasource not found" errors that can arise immediately after a task
+   * cancel before the broker's SQL catalog has refreshed.
+   */
+  private void assertRowCountEventually(long expected)
+  {
+    final String expectedStr = String.valueOf(expected);
+    final long deadlineMillis = System.currentTimeMillis() + 30_000L;
+    String last = null;
+    Exception lastException = null;
+    while (System.currentTimeMillis() < deadlineMillis) {
+      try {
+        last = cluster.runSql("SELECT COUNT(*) FROM %s", dataSource);
+        if (expectedStr.equals(last)) {
+          return;
+        }
+        lastException = null;
+      }
+      catch (Exception e) {
+        lastException = e;
+      }
+      try {
+        Thread.sleep(250L);
+      }
+      catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
+    Assertions.fail(
+        "Expected row count [" + expectedStr + "] but last result was [" + last
+        + "], lastException=" + lastException
     );
   }
 
