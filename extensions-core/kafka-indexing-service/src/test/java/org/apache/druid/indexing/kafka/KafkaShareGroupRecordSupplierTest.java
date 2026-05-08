@@ -94,10 +94,10 @@ public class KafkaShareGroupRecordSupplierTest
   public void testPollWrapsRecords()
   {
     final ConsumerRecord<byte[], byte[]> record1 = new ConsumerRecord<>(
-        "test-topic", 0, 100L, "key1".getBytes(), "value1".getBytes()
+        "test-topic", 0, 100L, "key1".getBytes(StandardCharsets.UTF_8), "value1".getBytes(StandardCharsets.UTF_8)
     );
     final ConsumerRecord<byte[], byte[]> record2 = new ConsumerRecord<>(
-        "test-topic", 1, 200L, "key2".getBytes(), "value2".getBytes()
+        "test-topic", 1, 200L, "key2".getBytes(StandardCharsets.UTF_8), "value2".getBytes(StandardCharsets.UTF_8)
     );
 
     final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
@@ -158,7 +158,7 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeDefaultAccept()
   {
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        "test-topic", 0, 42L, "key".getBytes(), "value".getBytes()
+        "test-topic", 0, 42L, "key".getBytes(StandardCharsets.UTF_8), "value".getBytes(StandardCharsets.UTF_8)
     );
     pollSingleRecord(record);
 
@@ -175,7 +175,7 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeWithRelease()
   {
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        "test-topic", 0, 10L, "key".getBytes(), "value".getBytes()
+        "test-topic", 0, 10L, "key".getBytes(StandardCharsets.UTF_8), "value".getBytes(StandardCharsets.UTF_8)
     );
     pollSingleRecord(record);
 
@@ -192,7 +192,7 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeWithReject()
   {
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        "test-topic", 0, 10L, "key".getBytes(), "value".getBytes()
+        "test-topic", 0, 10L, "key".getBytes(StandardCharsets.UTF_8), "value".getBytes(StandardCharsets.UTF_8)
     );
     pollSingleRecord(record);
 
@@ -209,7 +209,7 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeWithRenew()
   {
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        "test-topic", 0, 99L, "key".getBytes(), "value".getBytes()
+        "test-topic", 0, 99L, "key".getBytes(StandardCharsets.UTF_8), "value".getBytes(StandardCharsets.UTF_8)
     );
     pollSingleRecord(record);
 
@@ -226,13 +226,13 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeBatch()
   {
     final List<ConsumerRecord<byte[], byte[]>> recordsP0 = Arrays.asList(
-        new ConsumerRecord<>("test-topic", 0, 1L, "k".getBytes(), "v".getBytes()),
-        new ConsumerRecord<>("test-topic", 0, 2L, "k".getBytes(), "v".getBytes()),
-        new ConsumerRecord<>("test-topic", 0, 3L, "k".getBytes(), "v".getBytes())
+        new ConsumerRecord<>("test-topic", 0, 1L, "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8)),
+        new ConsumerRecord<>("test-topic", 0, 2L, "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8)),
+        new ConsumerRecord<>("test-topic", 0, 3L, "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8))
     );
     final List<ConsumerRecord<byte[], byte[]>> recordsP1 = Arrays.asList(
-        new ConsumerRecord<>("test-topic", 1, 10L, "k".getBytes(), "v".getBytes()),
-        new ConsumerRecord<>("test-topic", 1, 11L, "k".getBytes(), "v".getBytes())
+        new ConsumerRecord<>("test-topic", 1, 10L, "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8)),
+        new ConsumerRecord<>("test-topic", 1, 11L, "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8))
     );
     final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
     recordMap.put(new TopicPartition("test-topic", 0), recordsP0);
