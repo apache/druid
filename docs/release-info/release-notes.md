@@ -460,7 +460,7 @@ Added `segment/schemaCache/rowSignature/changed` and `segment/schemaCache/rowSig
 - Added compaction mode to the `compact/task/count` metric [#19151](https://github.com/apache/druid/pull/19151)
 - Added support for logging and emitting SQL dynamic parameter values [#19067](https://github.com/apache/druid/pull/19067)
 - Added `ingest/rows/published`, which all task types emit to denote the total row count of successfully published segments [#19177](https://github.com/apache/druid/pull/19177)
-- Added `queries` and `totalQueries` counters, which reflect queries made to realtime servers to retrieve realtime data [#19196](https://github.com/apache/druid/19196)
+- Added `queries` and `totalQueries` counters, which reflect queries made to realtime servers to retrieve realtime data [#19196](https://github.com/apache/druid/pull/19196)
 - Added `tier/storage/capacity` metric for the Coordinator. This metric is guaranteed to reflect the total `StorageLocation` size configured across all Historicals in a tier [#18962](https://github.com/apache/druid/pull/18962)
 - Added new metrics for virtual storage fabric to the MSQ task engine `ChannelCounters`: `loadBytes`, `loadTime`, `loadWait`, and `loadFiles` [#18971](https://github.com/apache/druid/pull/18971)
 - Added `storage/virtual/hit/bytes`, `storage/virtual/hold/count` and `storage/virtual/hold/bytes` metric to `StorageMonitor`
