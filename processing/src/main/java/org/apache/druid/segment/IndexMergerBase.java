@@ -776,10 +776,19 @@ public abstract class IndexMergerBase implements IndexMerger
       rowNumConversions.add(IntBuffer.wrap(arr));
     }
 
+    long minTime = Long.MAX_VALUE;
+    long maxTime = Long.MIN_VALUE;
     long time = System.currentTimeMillis();
     while (timeAndDimsIterator.moveToNext()) {
       progress.progress();
       TimeAndDimsPointer timeAndDims = timeAndDimsIterator.getPointer();
+      final long timestamp = timeAndDims.timestampSelector.getLong();
+      if (timestamp < minTime) {
+        minTime = timestamp;
+      }
+      if (timestamp > maxTime) {
+        maxTime = timestamp;
+      }
       timeWriter.serialize(timeAndDims.timestampSelector);
 
       for (int metricIndex = 0; metricIndex < timeAndDims.getNumMetrics(); metricIndex++) {
@@ -837,7 +846,12 @@ public abstract class IndexMergerBase implements IndexMerger
     }
     log.debug("completed walk through of %,d rows in %,d millis.", rowCount, System.currentTimeMillis() - startTime);
     progress.stopSection(section);
-    return new IndexMergeResult(rowNumConversions, rowCount);
+    return new IndexMergeResult(
+        rowNumConversions,
+        rowCount,
+        rowCount == 0 ? null : minTime,
+        rowCount == 0 ? null : maxTime
+    );
   }
 
   protected GenericColumnSerializer setupTimeWriter(
@@ -1165,11 +1179,30 @@ public abstract class IndexMergerBase implements IndexMerger
     @Nullable
     protected final List<IntBuffer> rowNumConversions;
     protected final int rowCount;
+    /**
+     * Minimum {@code __time} value across all rows walked during the merge, or {@code null} if {@link #rowCount} is
+     * zero.
+     */
+    @Nullable
+    protected final Long minTime;
+    /**
+     * Maximum {@code __time} value across all rows walked during the merge, or {@code null} if {@link #rowCount} is
+     * zero.
+     */
+    @Nullable
+    protected final Long maxTime;
 
-    private IndexMergeResult(@Nullable List<IntBuffer> rowNumConversions, int rowCount)
+    private IndexMergeResult(
+        @Nullable List<IntBuffer> rowNumConversions,
+        int rowCount,
+        @Nullable Long minTime,
+        @Nullable Long maxTime
+    )
     {
       this.rowNumConversions = rowNumConversions;
       this.rowCount = rowCount;
+      this.minTime = minTime;
+      this.maxTime = maxTime;
     }
   }
 
