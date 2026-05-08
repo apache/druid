@@ -27,29 +27,17 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Helpers for handling Kafka consumer properties supplied to the share-group
- * task. Single Responsibility: filter / validate properties before they reach
- * the {@link org.apache.kafka.clients.consumer.KafkaShareConsumer}.
- *
- * <p>Kafka 4.2.0 rejects a fixed set of properties when the consumer is a
- * share consumer (see {@code ShareConsumerConfig.SHARE_GROUP_UNSUPPORTED_CONFIGS}).
- * If users copy a regular consumer config wholesale, the broker raises
- * {@code ConfigException} at construction time. We strip those keys with a
- * warning so the task can still start; users get a clear log line telling them
- * exactly which keys were dropped.</p>
- *
- * <p>The list is kept in sync with Kafka 4.2.0; if the upstream list changes
- * in a future release, this code should be updated.</p>
+ * Sanitises Kafka consumer properties before they reach
+ * {@link org.apache.kafka.clients.consumer.KafkaShareConsumer}: strips keys
+ * forbidden by {@code ShareConsumerConfig.SHARE_GROUP_UNSUPPORTED_CONFIGS}
+ * (Kafka 4.2.0) so the task starts cleanly when users supply a regular
+ * consumer config.
  */
 public final class ShareGroupConsumerProperties
 {
   private static final Logger log = new Logger(ShareGroupConsumerProperties.class);
 
-  /**
-   * Mirror of {@code ShareConsumerConfig.SHARE_GROUP_UNSUPPORTED_CONFIGS} from
-   * Kafka 4.2.0. Setting any of these on a {@code KafkaShareConsumer} causes
-   * a {@code ConfigException} at construction. We strip them defensively.
-   */
+  /** Mirrors {@code ShareConsumerConfig.SHARE_GROUP_UNSUPPORTED_CONFIGS} (Kafka 4.2.0). */
   static final Set<String> UNSUPPORTED_CONFIGS = ImmutableSet.of(
       "auto.offset.reset",
       "enable.auto.commit",
@@ -68,12 +56,8 @@ public final class ShareGroupConsumerProperties
   }
 
   /**
-   * Returns a copy of {@code consumerProperties} with all share-group-unsupported
-   * keys removed. Each removed key is logged at WARN level once. Insertion
-   * order is preserved (uses {@link LinkedHashMap}).
-   *
-   * @param consumerProperties caller-supplied properties; never null
-   * @return new map with unsupported keys removed
+   * Returns a copy of {@code consumerProperties} with unsupported keys
+   * removed; each removed key is logged at WARN. Iteration order is preserved.
    */
   public static Map<String, Object> sanitize(Map<String, Object> consumerProperties)
   {
