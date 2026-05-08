@@ -206,6 +206,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
       }
 
+      if (this.ldapConfig.isGroupSearchConfigured() && !hasMemberOfAttribute(userResult)) {
+        enrichWithGroupSearch(userResult);
+      }
+
       byte[] salt = BasicAuthUtils.generateSalt();
       byte[] hash = hashGenerator.getOrComputePasswordHash(password, salt, this.ldapConfig.getCredentialIterations());
       LdapUserPrincipal newPrincipal = new LdapUserPrincipal(
@@ -253,14 +257,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       finally {
         results.close();
       }
-
-      // Some LDAP servers do not return memberOf in search results. When memberOf is
-      // absent and group search configuration is provided, fall back to a reverse
-      // group lookup.
-      if (ldapConfig.isGroupSearchConfigured() && !hasMemberOfAttribute(userResult)) {
-        populateMemberOfFromGroupSearch(ldapConfig, context, userResult);
-      }
-
       return userResult;
     }
     catch (NamingException e) {
@@ -276,23 +272,22 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   }
 
   @SuppressWarnings("BanJNDI")
-  private void populateMemberOfFromGroupSearch(
-      BasicAuthLDAPConfig ldapConfig,
-      DirContext context,
-      SearchResult userResult
-  )
+  private void enrichWithGroupSearch(SearchResult userResult)
   {
+    final ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+    InitialDirContext dirContext = null;
     try {
+      Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+      dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
+
       final String userDn = userResult.getNameInNamespace();
       final SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-      // Request only the DN by returning a minimal attribute. The group DN is
-      // obtained via getNameInNamespace() and does not depend on any returned attribute.
       sc.setReturningAttributes(new String[]{"1.1"});
 
-      final String filter = StringUtils.format(ldapConfig.getGroupSearch(), encodeForLDAP(userDn, true));
-      final NamingEnumeration<SearchResult> groupResults = context.search(
-          ldapConfig.getGroupBaseDn(),
+      final String filter = StringUtils.format(this.ldapConfig.getGroupSearch(), encodeForLDAP(userDn, true));
+      final NamingEnumeration<SearchResult> groupResults = dirContext.search(
+          this.ldapConfig.getGroupBaseDn(),
           filter,
           sc
       );
@@ -300,9 +295,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       final BasicAttribute memberOfAttr = new BasicAttribute("memberOf");
       try {
         while (groupResults.hasMore()) {
-          final SearchResult groupResult = groupResults.next();
-          final String groupDn = groupResult.getNameInNamespace();
-          memberOfAttr.add(groupDn);
+          memberOfAttr.add(groupResults.next().getNameInNamespace());
         }
       }
       finally {
@@ -310,13 +303,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       }
 
       if (memberOfAttr.size() > 0) {
-        if (userResult.getAttributes() != null) {
-          userResult.getAttributes().put(memberOfAttr);
-        } else {
-          final BasicAttributes attrs = new BasicAttributes(true);
-          attrs.put(memberOfAttr);
-          userResult.setAttributes(attrs);
+        if (userResult.getAttributes() == null) {
+          userResult.setAttributes(new BasicAttributes(true));
         }
+        userResult.getAttributes().put(memberOfAttr);
         LOG.debug(
             "Populated memberOf for user '%s' with %d groups from reverse group search",
             userDn,
@@ -326,6 +316,18 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
     catch (NamingException e) {
       LOG.error(e, "Exception during reverse group lookup, proceeding without group memberships");
+    }
+    finally {
+      try {
+        if (dirContext != null) {
+          dirContext.close();
+        }
+      }
+      catch (Exception ignored) {
+        LOG.warn("Exception closing LDAP context");
+        // ignored
+      }
+      Thread.currentThread().setContextClassLoader(currentClassLoader);
     }
   }
 
