@@ -290,4 +290,3 @@ public class MultipleKubernetesTaskRunnerConfigTest
     Assertions.assertEquals("namespace1", config.getClusters().get(0).getTaskNamespace());
   }
 }
-

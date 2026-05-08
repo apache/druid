@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
@@ -51,7 +52,7 @@ public class AutoscalableThreadPoolExecutor extends ThreadPoolExecutor
     );
 
     this.configManager = configManager;
-    this.listenerKey = String.format("AutoscalableThreadPoolExecutor-%d", System.identityHashCode(this));
+    this.listenerKey = StringUtils.format("AutoscalableThreadPoolExecutor-%d", System.identityHashCode(this));
     this.configListener = this::onConfigurationChange;
 
     // Monitor the configuration change
