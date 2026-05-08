@@ -20,37 +20,20 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 /**
- * Acknowledgement types for queue-semantics record suppliers where the broker
- * manages delivery state (e.g., Kafka Share Groups).
- *
- * Maps directly to Kafka's {@code AcknowledgeType} enum values.
+ * Acknowledgement types for queue-semantics record suppliers; mirrors Kafka's
+ * {@code AcknowledgeType}.
  */
 public enum AcknowledgeType
 {
-  /**
-   * The record was consumed and processed successfully.
-   * The broker will mark the record as committed.
-   */
+  /** Record processed successfully; broker commits it. */
   ACCEPT,
 
-  /**
-   * Release the record for redelivery to another consumer.
-   * Used when the consumer cannot process the record right now
-   * but another consumer might be able to.
-   */
+  /** Release the record back to the broker for redelivery. */
   RELEASE,
 
-  /**
-   * Reject the record permanently. The broker will not redeliver it.
-   * Used for poison-pill records that can never be processed.
-   */
+  /** Reject the record permanently (poison pill); never redelivered. */
   REJECT,
 
-  /**
-   * Extend the acquisition lock on the record without releasing or accepting it.
-   * Used by background lock-renewal workers to keep records under lock while
-   * the foreground processing thread continues building segments. Maps to
-   * Kafka's {@code AcknowledgeType.RENEW}.
-   */
+  /** Extend the acquisition lock without accepting or releasing. */
   RENEW
 }

@@ -41,14 +41,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}.
- *
- * <p>Public so it can be reused by stream-ingestion implementations outside the
- * {@code seekablestream} package (notably the Kafka share-group runner). The
- * class is intentionally narrow in scope: given a chunk of {@link ByteEntity}
- * bytes from one stream record, parse it into zero-or-more {@link InputRow}s
- * while honoring the configured {@link InputRowFilter},
- * {@link RowIngestionMeters}, and {@link ParseExceptionHandler}.</p>
+ * Parses one stream record's worth of {@link ByteEntity} chunks into zero-or-more
+ * {@link InputRow}s, honouring the configured {@link InputRowFilter},
+ * {@link RowIngestionMeters}, and {@link ParseExceptionHandler}. Public so it
+ * can be reused by stream-ingestion implementations outside the
+ * {@code seekablestream} package.
  */
 public class StreamChunkReader<RecordType extends ByteEntity>
 {
