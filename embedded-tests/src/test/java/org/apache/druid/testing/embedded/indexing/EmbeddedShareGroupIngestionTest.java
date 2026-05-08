@@ -120,6 +120,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
 
     waitForRowsProcessed(numRecords);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(numRecords),
@@ -154,6 +155,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     final long expectedRows = (long) numRecords * rowsPerRecord;
     waitForRowsProcessed(expectedRows);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(expectedRows),
@@ -186,6 +188,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
 
     waitForRowsProcessed(numRecords);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(numRecords),
@@ -220,6 +223,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     waitForRowsProcessed(numRecords);
 
     cancelAndAwaitTermination(taskId);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(numRecords),
@@ -257,6 +261,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskA);
     cancelAndAwaitTermination(taskB);
     cancelAndAwaitTermination(taskC);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(numRecords),
@@ -289,6 +294,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     waitForRowsProcessed(numRecords);
 
     cancelAndAwaitTermination(taskId);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
         String.valueOf(numRecords),
