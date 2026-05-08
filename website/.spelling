@@ -120,6 +120,7 @@ GoogleCloudStorageInputSource
 GSSAPI
 GUIs
 GroupBy
+gRPC
 Guice
 HDFS
 HLL
@@ -822,6 +823,7 @@ InvalidNullByte
 QueryNotSupported
 QueryNotSupported
 RowTooLarge
+tooltip
 TooManyBuckets
 TooManyInputFiles
 TooManyPartitions
@@ -1315,6 +1317,7 @@ pull-deps
 sqlserver-metadata-storage
 statsd-emitter
 coords
+cooldown
 dimName
 maxCoords
 Mb
