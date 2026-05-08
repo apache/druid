@@ -55,10 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * End-to-end integration tests for Kafka share group ingestion. Requires
- * Docker for the Testcontainers Kafka broker.
- */
+/** End-to-end IT for Kafka share-group ingestion; requires Docker. */
 public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 {
   private static final String COL_TIMESTAMP = "__time";
@@ -68,8 +65,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   private static final InputFormat DEFAULT_CSV_FORMAT =
       new CsvInputFormat(List.of(COL_TIMESTAMP, COL_ITEM, COL_VALUE), null, null, false, 0, false);
 
-  // Wall-clock pause to let a freshly submitted share-group task reach STABLE
-  // before records are produced; STABLE is observed within ~300 ms locally.
+  /** Lets a freshly submitted share-group task reach STABLE before records are produced. */
   private static final long SHARE_CONSUMER_READY_DELAY_MS = 3_000L;
 
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
@@ -133,14 +129,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId);
   }
 
-  /**
-   * A single Kafka record carrying multiple JSON objects must produce all its
-   * rows in Druid (multi-row records are routed through {@link
-   * org.apache.druid.indexing.seekablestream.StreamChunkReader}). The producer
-   * emits whitespace-separated JSON objects per record, which {@link
-   * org.apache.druid.data.input.impl.JsonNodeReader} splits into one row per
-   * object.
-   */
+  /** Verifies that one Kafka record carrying multiple JSON objects yields one row per object. */
   @Test
   public void test_shareGroupIngestion_multiRowPerKafkaRecord() throws InterruptedException
   {
@@ -174,10 +163,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId);
   }
 
-  /**
-   * Forbidden share-group consumer properties must be stripped silently so the
-   * task starts and ingests instead of failing with a Kafka {@code ConfigException}.
-   */
+  /** Forbidden share-group consumer properties are stripped so the task starts and ingests. */
   @Test
   public void test_shareGroupIngestion_unsupportedConsumerProperty_isSanitized() throws InterruptedException
   {
@@ -209,11 +195,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId);
   }
 
-  /**
-   * Cancelling a share-group task via the Overlord must drain the in-flight
-   * batch (segments published, records acknowledged) before terminating, so
-   * rows ingested before the cancel remain queryable.
-   */
+  /** Cancel must drain the in-flight batch so rows ingested before cancel remain queryable. */
   @Test
   public void test_shareGroupIngestion_gracefulStop_publishesInflightBatch() throws InterruptedException
   {
@@ -245,11 +227,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
   }
 
-  /**
-   * Three share-group tasks sharing one {@code consumerGroupId} on a 2-partition
-   * topic must collectively ingest every produced record exactly once
-   * (KIP-932 fan-out: no duplicates, no loss).
-   */
+  /** Three tasks sharing one group on a 2-partition topic ingest every record exactly once (KIP-932). */
   @Test
   public void test_shareGroupIngestion_multiTaskShareGroup_noDuplicatesNoLoss() throws InterruptedException
   {
@@ -286,11 +264,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
   }
 
-  /**
-   * Ingestion must be data-correct under memory pressure: 1000 rows with
-   * {@code maxRowsInMemory=100} forces mid-batch persists yet still yields
-   * the full row count.
-   */
+  /** 1000 rows with {@code maxRowsInMemory=100} forces mid-batch persists yet ingests all rows. */
   @Test
   public void test_shareGroupIngestion_lowMaxRowsInMemory_dataCorrect() throws InterruptedException
   {
@@ -362,8 +336,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
       KafkaIndexTaskTuningConfig tuningConfig
   )
   {
-    // Broker default is LATEST; switch this share group to EARLIEST so any
-    // pre-existing records are delivered.
+    // Broker default is LATEST; deliver pre-existing records to this group.
     kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
 
     final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
@@ -390,11 +363,10 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Cancels the task and waits for it to reach a terminal state. The Overlord
-   * always reports user-initiated cancels as FAILED ("Shutdown request from
-   * user"); supervisor-driven graceful stops use {@code shutdownWithSuccess},
-   * but standalone tasks cannot opt into that path. Data correctness is
-   * verified separately via SQL row counts.
+   * Cancels and waits for any terminal state. User-initiated cancels are
+   * always reported as FAILED by the Overlord; only supervisors can drive
+   * SUCCESS via {@code shutdownWithSuccess}, so data correctness is verified
+   * separately via SQL row counts.
    */
   private void cancelAndAwaitTermination(String taskId)
   {
@@ -411,9 +383,9 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
   }
 
+  /** Builds a property map containing keys forbidden by {@code SHARE_GROUP_UNSUPPORTED_CONFIGS}. */
   private Map<String, Object> consumerPropsWithUnsupportedKeys()
   {
-    // Keys forbidden by ShareConsumerConfig.SHARE_GROUP_UNSUPPORTED_CONFIGS.
     final Map<String, Object> props = new HashMap<>(kafkaServer.consumerProperties());
     props.put("enable.auto.commit", "false");
     props.put("auto.offset.reset", "earliest");
