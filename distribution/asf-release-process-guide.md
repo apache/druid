@@ -591,7 +591,7 @@ Once the Druid community vote passes (or fails), close the vote with a thread li
 ##### Subject
 
 ```plaintext
-[RESULT][VOTE] Release Apache Druid 37.0.0 [RC1]
+[RESULT][VOTE] Release Apache Druid 37.0.0 [RC2]
 ```
 
 ##### Body
@@ -601,7 +601,7 @@ Thanks to everyone who participated in the vote! The results are as follows:
 
 Lucas Capistrant: +1 (binding)
 Clint Wylie: +1 (binding)
-Kashif Faraz: +1 (binding)
+Cece Mei: +1 (binding)
 
 The vote has passed with 3 binding +1 votes!
 ...
@@ -609,7 +609,7 @@ The vote has passed with 3 binding +1 votes!
 
 ### Cancelling a vote
 
-If for any reason during the Druid PMC vote a blocking issue becomes apparent, a vote should be officially cancelled by sending an email with the following subject line: `[CANCEL][VOTE] Release Apache Druid 0.17.0 [RC3]` and the reasons for the cancellation in the body.
+If for any reason during the Druid PMC vote a blocking issue becomes apparent, a vote should be officially cancelled by sending an email with the following subject line: `[CANCEL][VOTE] Release Apache Druid 37.0.0 [RC3]` and the reasons for the cancellation in the body.
 
 ### Previous vote threads for additional examples
 
@@ -631,7 +631,7 @@ Once a release candidate has passed the Druid PMC vote, you'll need to do the fo
 Tag the rc that passed vote as the release tag and push to github.
 
 ```bash
-$ git checkout druid-37.0.0-rc1
+$ git checkout druid-37.0.0-rc2
 $ git tag druid-37.0.0
 $ git push origin tag druid-37.0.0
 ```
@@ -643,14 +643,14 @@ The final release artifacts are kept in the `https://dist.apache.org/repos/dist/
 Use `svn mv` to publish the release artifacts as below:
 
 ```bash
-$ svn mv https://dist.apache.org/repos/dist/dev/druid/37.0.0-rc1 https://dist.apache.org/repos/dist/release/druid/37.0.0 -m 'add 37.0.0 artifacts'
+$ svn mv https://dist.apache.org/repos/dist/dev/druid/37.0.0-rc2 https://dist.apache.org/repos/dist/release/druid/37.0.0 -m 'add 37.0.0 artifacts'
 ```
 
 Replace the versions of the release candidate and the release with the ones you are currently working on. This command will drop those artifacts from the dev repo but add them to the release repo.
 Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/37.0.0`.
 
 ### Publish the staged Maven repo
-Returning to the staged repo you created for the Druid PMC vote ( https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
+Returning to the staged repo you created for the Druid PMC vote (https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
 
 https://central.sonatype.org/pages/releasing-the-deployment.html#close-and-drop-or-release-your-staging-repository
 
@@ -713,32 +713,39 @@ Additionally, announce it to the Druid official ASF Slack channel, https://druid
 ##### Subject
 
 ```plaintext
-[ANNOUNCE] Apache Druid 0.17.0 release
+[ANNOUNCE] Apache Druid 37.0.0 release
 ```
 
 ##### Body
 
 ```plaintext
-The Apache Druid team is proud to announce the release of Apache Druid 0.17.0. 
+The Apache Druid team is proud to announce the release of Apache Druid 37.0.0. 
 Druid is a high performance analytics data store for event-driven data.
 
-Apache Druid 0.17.0 contains over 350 new features, performance
-enhancements, bug fixes, and major documentation improvements from 50
+Apache Druid 37.0.0 contains over 255 new features, performance
+enhancements, bug fixes, and major documentation improvements from 29
 contributors. Major new features and improvements include:
 
-- 'Vectorized' query processing
-- 'Minor' compaction
-- Native parallel indexing with shuffle
-- New 'indexer' process
-- Huge improvements to the web console
-- New documentation website
-- Official Docker image
+- Removed hadoop-based ingestion
+- Dynamic query blocklist
+- Dynamic default query context on Broker
+- Broker tier selection for real-time servers
+- Manual Broker routing in the web console
+- Minor compaction to compact only fragmented segments for Overlord-based compaction
+- Fingerprinting mechanism to track compaction states for Overlord-based compaction
+- Cascading reindexing to apply different compaction configurations based on the age of your data
+- Read-only authorizer
+- Thrift input format
+- sys.queries table for Dart engine
+- New Consul contrib extension for service discovery and Coordinator/Overlord leader election
+
+Also, Auto-compaction using compaction supervisors, Multi-supervisor ingestion, Incremental cache, Kubernetes-based task management are now generally available!
 
 Source and binary distributions can be downloaded from:
 https://druid.apache.org/downloads.html
 
 Release notes are at:
-https://github.com/apache/druid/releases/tag/druid-0.17.0
+https://github.com/apache/druid/releases/tag/druid-37.0.0
 
 A big thank you to all the contributors in this milestone release!
 ```
