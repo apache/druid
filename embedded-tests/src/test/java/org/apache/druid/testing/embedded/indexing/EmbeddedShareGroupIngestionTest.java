@@ -224,13 +224,25 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     final String groupId = "druid-share-group-fanout";
     final String taskA = submitShareGroupTask(
-        topic, groupId, kafkaServer.consumerProperties(), DEFAULT_CSV_FORMAT, defaultTuningConfig()
+        topic,
+        groupId,
+        kafkaServer.consumerProperties(),
+        DEFAULT_CSV_FORMAT,
+        defaultTuningConfig()
     );
     final String taskB = submitShareGroupTask(
-        topic, groupId, kafkaServer.consumerProperties(), DEFAULT_CSV_FORMAT, defaultTuningConfig()
+        topic,
+        groupId,
+        kafkaServer.consumerProperties(),
+        DEFAULT_CSV_FORMAT,
+        defaultTuningConfig()
     );
     final String taskC = submitShareGroupTask(
-        topic, groupId, kafkaServer.consumerProperties(), DEFAULT_CSV_FORMAT, defaultTuningConfig()
+        topic,
+        groupId,
+        kafkaServer.consumerProperties(),
+        DEFAULT_CSV_FORMAT,
+        defaultTuningConfig()
     );
 
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
@@ -295,18 +307,56 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   private static KafkaIndexTaskTuningConfig defaultTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
-        null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
   }
 
   private static KafkaIndexTaskTuningConfig tuningConfigWithMaxRowsInMemory(int maxRowsInMemory)
   {
     return new KafkaIndexTaskTuningConfig(
-        null, maxRowsInMemory, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null
+        null,
+        maxRowsInMemory,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
   }
 
