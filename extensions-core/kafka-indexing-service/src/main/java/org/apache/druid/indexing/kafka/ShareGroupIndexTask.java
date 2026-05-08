@@ -46,13 +46,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Indexing task that consumes from a Kafka topic using share group semantics
- * (KIP-932). Unlike {@link KafkaIndexTask}, this task does not manage offsets
- * client-side. The Kafka broker tracks delivery state; the task explicitly
- * acknowledges records after segments are published.
- *
- * Phase 1: Single-threaded, no supervisor, no dedup cache.
- * The task polls, parses, builds segments, publishes, ACKs, and commits.
+ * Indexing task that consumes from a Kafka topic with share-group semantics
+ * (KIP-932). The broker tracks delivery state; the task acknowledges records
+ * after the segments containing them are published. Phase 1: single-threaded,
+ * no supervisor, no dedup cache.
  */
 public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
