@@ -38,6 +38,17 @@
   </parent>
 
   <dependencies>
+    <!-- Declared first so its classes win on the test classpath over older
+         kafka classes shaded into druid-protobuf-extensions (Confluent
+         transitive). Required for share-group APIs (KIP-932) such as
+         ConfigResource.Type.GROUP. -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>4.2.0</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -528,12 +539,6 @@
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka-clients</artifactId>
-      <version>${apache.kafka.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
