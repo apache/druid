@@ -45,6 +45,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Collections;
@@ -391,6 +392,17 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       if (taskRunner.getRunner().getRunnerTaskState(taskid) != null) {
         // Found the task runner, then stream the task log on this runner
         return taskRunner.getRunner().streamTaskLog(taskid, offset);
+      }
+    }
+    return Optional.absent();
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
+  {
+    for (final MultipleKubernetesTaskRunnerDelegate taskRunner : taskRunners) {
+      if (taskRunner.getRunner().getRunnerTaskState(taskid) != null) {
+        return taskRunner.getRunner().streamTaskReports(taskid);
       }
     }
     return Optional.absent();

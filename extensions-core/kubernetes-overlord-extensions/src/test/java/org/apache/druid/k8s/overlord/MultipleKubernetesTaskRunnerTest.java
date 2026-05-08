@@ -119,6 +119,7 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     private final Map<String, RunnerTaskState> runnerTaskStates = new HashMap<>();
     private final Map<String, TaskLocation> taskLocations = new HashMap<>();
     private final Map<String, Optional<InputStream>> taskLogs = new HashMap<>();
+    private final Map<String, Optional<InputStream>> taskReports = new HashMap<>();
     private final Map<String, ListenableFuture<TaskStatus>> runResults = new HashMap<>();
 
     public TestKubernetesTaskRunner(KubernetesTaskRunnerEffectiveConfig config, ConfigManager configManager)
@@ -158,6 +159,11 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     public void setTaskLog(String taskId, Optional<InputStream> log)
     {
       taskLogs.put(taskId, log);
+    }
+
+    public void setTaskReports(String taskId, Optional<InputStream> reports)
+    {
+      taskReports.put(taskId, reports);
     }
 
     public void setRunResult(Task task, ListenableFuture<TaskStatus> result)
@@ -201,6 +207,13 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     {
       Optional<InputStream> log = taskLogs.get(taskid);
       return log != null ? log : Optional.absent();
+    }
+
+    @Override
+    public Optional<InputStream> streamTaskReports(String taskid)
+    {
+      Optional<InputStream> reports = taskReports.get(taskid);
+      return reports != null ? reports : Optional.absent();
     }
 
     @Override
@@ -889,6 +902,60 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     testRunner2.setRunnerTaskState(taskId, null);
 
     Optional<InputStream> result = runner.streamTaskLog(taskId, 0L);
+
+    assertFalse(result.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_withExistingTask() throws Exception
+  {
+    // Create test runners with clear setup - similar to Mockito style
+    final TestKubernetesTaskRunner testRunner1 = new TestKubernetesTaskRunner(effectiveConfig1, testConfigManager);
+    final TestKubernetesTaskRunner testRunner2 = new TestKubernetesTaskRunner(effectiveConfig2, testConfigManager);
+
+    runner = new MultipleKubernetesTaskRunner(
+        config,
+        new MultipleKubernetesTaskRunner.RoundRobinSelector(),
+        ImmutableList.of(
+            new MultipleKubernetesTaskRunnerDelegate(testRunner1),
+            new MultipleKubernetesTaskRunnerDelegate(testRunner2)
+        )
+    );
+
+    final String taskId = "report-task";
+    final InputStream inputStream = IOUtils.toInputStream("report content", StandardCharsets.UTF_8);
+
+    testRunner1.setRunnerTaskState(taskId, null);
+    testRunner2.setRunnerTaskState(taskId, RunnerTaskState.RUNNING);
+    testRunner2.setTaskReports(taskId, Optional.of(inputStream));
+
+    final Optional<InputStream> result = runner.streamTaskReports(taskId);
+
+    assertTrue(result.isPresent());
+    assertEquals("report content", IOUtils.toString(result.get(), StandardCharsets.UTF_8));
+  }
+
+  @Test
+  public void test_streamTaskReports_withoutExistingTask() throws Exception
+  {
+    // Create test runners with clear setup - similar to Mockito style
+    final TestKubernetesTaskRunner testRunner1 = new TestKubernetesTaskRunner(effectiveConfig1, testConfigManager);
+    final TestKubernetesTaskRunner testRunner2 = new TestKubernetesTaskRunner(effectiveConfig2, testConfigManager);
+
+    runner = new MultipleKubernetesTaskRunner(
+        config,
+        new MultipleKubernetesTaskRunner.RoundRobinSelector(),
+        ImmutableList.of(
+            new MultipleKubernetesTaskRunnerDelegate(testRunner1),
+            new MultipleKubernetesTaskRunnerDelegate(testRunner2)
+        )
+    );
+
+    final String taskId = "no-report-task";
+    testRunner1.setRunnerTaskState(taskId, null);
+    testRunner2.setRunnerTaskState(taskId, null);
+
+    final Optional<InputStream> result = runner.streamTaskReports(taskId);
 
     assertFalse(result.isPresent());
   }
