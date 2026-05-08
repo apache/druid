@@ -38,6 +38,8 @@ import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.common.CachingKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
@@ -134,13 +136,15 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
       final DruidKubernetesClient client = createClientForCluster(kubernetesCluster, clusterConfig);
       final TaskAdapter clusterTaskAdapter = buildTaskAdapter(client, effectiveConfig);
       final boolean useOverlordNamespace = PodTemplateTaskAdapter.TYPE.equals(clusterTaskAdapter.getAdapterType());
+      final DruidKubernetesCachingClient cachingClient = effectiveConfig.isUseK8sSharedInformers()
+                                                         ? createCachingClient(client, effectiveConfig)
+                                                         : null;
 
-      final KubernetesPeonClient peonClient = new KubernetesPeonClient(
+      final KubernetesPeonClient peonClient = createPeonClient(
           client,
-          effectiveConfig.getNamespace(),
-          useOverlordNamespace ? effectiveConfig.getOverlordNamespace() : "",
-          effectiveConfig.isDebugJobs(),
-          emitter
+          cachingClient,
+          effectiveConfig,
+          useOverlordNamespace
       );
 
       final KubernetesTaskRunner clusterRunner = new KubernetesTaskRunner(
@@ -164,7 +168,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
               clusterRunner,
               kubernetesCluster.getName(),
               kubernetesCluster.isDisabled(),
-              client
+              client,
+              cachingClient
           )
       );
     }
@@ -207,6 +212,44 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
     config.setNamespace(clusterConfig.getNamespace());
 
     return new DruidKubernetesClient(httpClientFactory, config);
+  }
+
+  protected DruidKubernetesCachingClient createCachingClient(
+      DruidKubernetesClient client,
+      KubernetesTaskRunnerEffectiveConfig effectiveConfig
+  )
+  {
+    return new DruidKubernetesCachingClient(
+        client,
+        effectiveConfig.getNamespace(),
+        effectiveConfig.getK8sSharedInformerResyncPeriod().toStandardDuration().getMillis()
+    );
+  }
+
+  private KubernetesPeonClient createPeonClient(
+      DruidKubernetesClient client,
+      @Nullable DruidKubernetesCachingClient cachingClient,
+      KubernetesTaskRunnerEffectiveConfig effectiveConfig,
+      boolean useOverlordNamespace
+  )
+  {
+    if (cachingClient != null) {
+      return new CachingKubernetesPeonClient(
+          cachingClient,
+          effectiveConfig.getNamespace(),
+          useOverlordNamespace ? effectiveConfig.getOverlordNamespace() : "",
+          effectiveConfig.isDebugJobs(),
+          emitter
+      );
+    }
+
+    return new KubernetesPeonClient(
+        client,
+        effectiveConfig.getNamespace(),
+        useOverlordNamespace ? effectiveConfig.getOverlordNamespace() : "",
+        effectiveConfig.isDebugJobs(),
+        emitter
+    );
   }
 
   private TaskAdapter buildTaskAdapter(

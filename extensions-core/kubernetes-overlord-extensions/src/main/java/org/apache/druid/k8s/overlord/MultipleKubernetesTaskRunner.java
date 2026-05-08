@@ -165,6 +165,12 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.executor = executor;
   }
 
+  @VisibleForTesting
+  List<MultipleKubernetesTaskRunnerDelegate> getTaskRunners()
+  {
+    return taskRunners;
+  }
+
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {

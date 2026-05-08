@@ -244,6 +244,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     currentCapacity.set(newCapacity);
   }
 
+  @VisibleForTesting
+  KubernetesPeonClient getPeonClient()
+  {
+    return client;
+  }
+
   private TaskStatus runTask(Task task)
   {
     return doTask(task, true);

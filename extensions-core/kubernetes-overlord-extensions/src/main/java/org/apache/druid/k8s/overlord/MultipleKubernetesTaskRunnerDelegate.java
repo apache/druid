@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 
 import javax.annotation.Nullable;
@@ -34,11 +35,12 @@ public class MultipleKubernetesTaskRunnerDelegate implements Closeable
   private final String k8sCluster;
   private final boolean disabled;
   private final DruidKubernetesClient kubernetesClient;
+  private final DruidKubernetesCachingClient cachingClient;
 
   @VisibleForTesting
   MultipleKubernetesTaskRunnerDelegate(KubernetesTaskRunner runner)
   {
-    this(runner, null, false, null);
+    this(runner, null, false, null, null);
   }
 
   public MultipleKubernetesTaskRunnerDelegate(KubernetesTaskRunner runner,
@@ -46,10 +48,20 @@ public class MultipleKubernetesTaskRunnerDelegate implements Closeable
                                               boolean disabled,
                                               @Nullable DruidKubernetesClient kubernetesClient)
   {
+    this(runner, k8sCluster, disabled, kubernetesClient, null);
+  }
+
+  public MultipleKubernetesTaskRunnerDelegate(KubernetesTaskRunner runner,
+                                              String k8sCluster,
+                                              boolean disabled,
+                                              @Nullable DruidKubernetesClient kubernetesClient,
+                                              @Nullable DruidKubernetesCachingClient cachingClient)
+  {
     this.k8sCluster = k8sCluster;
     this.runner = runner;
     this.disabled = disabled;
     this.kubernetesClient = kubernetesClient;
+    this.cachingClient = cachingClient;
   }
 
   public KubernetesTaskRunner getRunner()
@@ -71,6 +83,16 @@ public class MultipleKubernetesTaskRunnerDelegate implements Closeable
   public void close()
   {
     runner.stop();
+
+    if (cachingClient != null) {
+      try {
+        log.info("Stopping Kubernetes caching client for cluster[%s]", k8sCluster);
+        cachingClient.stop();
+      }
+      catch (Exception e) {
+        log.warn(e, "Error while stopping Kubernetes caching client for cluster[%s]", k8sCluster);
+      }
+    }
 
     // Close the associated Kubernetes client if present
     if (kubernetesClient != null) {
