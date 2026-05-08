@@ -50,13 +50,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Wraps a {@link KafkaShareConsumer} to implement {@link AcknowledgingRecordSupplier}.
- *
- * The share consumer uses broker-managed offset tracking with explicit
- * acknowledgement. Records are delivered with acquisition locks; unacknowledged
- * records are redelivered after lock timeout.
- *
- * This supplier sets {@code group.id} to the share group name provided in config.
+ * Adapts {@link KafkaShareConsumer} to {@link AcknowledgingRecordSupplier}.
+ * Delivery state lives on the broker; the supplier sets {@code group.id} to
+ * the configured share group name.
  */
 public class KafkaShareGroupRecordSupplier
     implements AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
@@ -64,6 +60,16 @@ public class KafkaShareGroupRecordSupplier
   private static final Logger log = new Logger(KafkaShareGroupRecordSupplier.class);
 
   private final KafkaShareConsumer<byte[], byte[]> consumer;
+  /**
+   * Tracks {@link ConsumerRecord} references from the most recent {@link #poll}
+   * so {@link #acknowledge} can be invoked with the original record. Kafka's
+   * {@code KafkaShareConsumer.acknowledge(topic, partition, offset, type)}
+   * variant is restricted to records still resident in the consumer's current
+   * fetch and can throw {@code IllegalStateException("The record cannot be
+   * acknowledged.")} once the fetch buffer has rolled over; passing the
+   * record reference is the safer pattern recommended by KIP-932.
+   */
+  private final Map<RecordKey, ConsumerRecord<byte[], byte[]>> deliveredRecords = new HashMap<>();
   private boolean closed;
 
   public KafkaShareGroupRecordSupplier(
@@ -103,9 +109,11 @@ public class KafkaShareGroupRecordSupplier
   @Override
   public List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> poll(long timeoutMs)
   {
+    deliveredRecords.clear();
     final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> polledRecords =
         new ArrayList<>();
     for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeoutMs))) {
+      deliveredRecords.put(new RecordKey(record.topic(), record.partition(), record.offset()), record);
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
           new KafkaTopicPartition(true, record.topic(), record.partition()),
@@ -129,7 +137,17 @@ public class KafkaShareGroupRecordSupplier
     final String topic = partitionId.topic().orElseThrow(
         () -> new IllegalArgumentException("Cannot acknowledge record without topic")
     );
-    consumer.acknowledge(topic, partitionId.partition(), offset, toKafkaAcknowledgeType(type));
+    final ConsumerRecord<byte[], byte[]> record = deliveredRecords.get(
+        new RecordKey(topic, partitionId.partition(), offset)
+    );
+    if (record == null) {
+      throw new IllegalStateException(StringUtils.format(
+          "Cannot acknowledge unknown record at topic[%s] partition[%d] offset[%d]; "
+          + "either it was not delivered by the most recent poll() or it has already been acknowledged.",
+          topic, partitionId.partition(), offset
+      ));
+    }
+    consumer.acknowledge(record, toKafkaAcknowledgeType(type));
   }
 
   @Override
@@ -145,7 +163,17 @@ public class KafkaShareGroupRecordSupplier
           () -> new IllegalArgumentException("Cannot acknowledge record without topic")
       );
       for (Long offset : entry.getValue()) {
-        consumer.acknowledge(topic, partition.partition(), offset, kafkaType);
+        final ConsumerRecord<byte[], byte[]> record = deliveredRecords.get(
+            new RecordKey(topic, partition.partition(), offset)
+        );
+        if (record == null) {
+          throw new IllegalStateException(StringUtils.format(
+              "Cannot acknowledge unknown record at topic[%s] partition[%d] offset[%d]; "
+              + "either it was not delivered by the most recent poll() or it has already been acknowledged.",
+              topic, partition.partition(), offset
+          ));
+        }
+        consumer.acknowledge(record, kafkaType);
       }
     }
   }
@@ -168,8 +196,7 @@ public class KafkaShareGroupRecordSupplier
   @Override
   public Set<KafkaTopicPartition> getPartitionIds(String stream)
   {
-    // Share consumer does not expose partitionsFor; use admin client if needed.
-    // For Phase 1, return empty set as the broker manages assignment.
+    // Share consumer does not expose partition assignment; broker manages it.
     return Collections.emptySet();
   }
 
@@ -237,6 +264,42 @@ public class KafkaShareGroupRecordSupplier
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  private static final class RecordKey
+  {
+    private final String topic;
+    private final int partition;
+    private final long offset;
+
+    RecordKey(String topic, int partition, long offset)
+    {
+      this.topic = topic;
+      this.partition = partition;
+      this.offset = offset;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof RecordKey)) {
+        return false;
+      }
+      final RecordKey that = (RecordKey) o;
+      return partition == that.partition && offset == that.offset && topic.equals(that.topic);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = topic.hashCode();
+      result = 31 * result + partition;
+      result = 31 * result + Long.hashCode(offset);
+      return result;
     }
   }
 }
