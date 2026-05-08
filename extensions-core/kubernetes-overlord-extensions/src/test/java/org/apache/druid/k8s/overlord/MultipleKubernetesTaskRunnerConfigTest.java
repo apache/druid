@@ -99,13 +99,13 @@ public class MultipleKubernetesTaskRunnerConfigTest
   }
 
   @Test
-  public void test_fromProperties_withSelectionStrategy_roundrobin()
+  public void test_fromProperties_withClusterSelector_roundRobin()
   {
-    Properties props = new Properties();
+    final Properties props = new Properties();
     props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "namespace1");
-    props.setProperty("druid.indexer.runner.selectionStrategy.type", "roundrobin");
+    props.setProperty("druid.indexer.runner.clusterSelector.type", "roundrobin");
 
-    MultipleKubernetesTaskRunnerConfig config = MultipleKubernetesTaskRunnerConfig.fromProperties(props);
+    final MultipleKubernetesTaskRunnerConfig config = MultipleKubernetesTaskRunnerConfig.fromProperties(props);
 
     Assertions.assertNotNull(config);
     Assertions.assertInstanceOf(MultipleKubernetesTaskRunner.RoundRobinSelector.class, config.getClusterSelector());
@@ -206,6 +206,18 @@ public class MultipleKubernetesTaskRunnerConfigTest
 
     Assertions.assertNotNull(config);
     Assertions.assertInstanceOf(MultipleKubernetesTaskRunner.LeastTaskSelector.class, config.getClusterSelector());
+  }
+
+  @Test
+  public void test_fromProperties_withAllowTaskPodTemplateSelection()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "namespace1");
+    props.setProperty("druid.indexer.runner.allowTaskPodTemplateSelection", "true");
+
+    final MultipleKubernetesTaskRunnerConfig config = MultipleKubernetesTaskRunnerConfig.fromProperties(props);
+
+    Assertions.assertTrue(config.isAllowTaskPodTemplateSelection());
   }
 
   @Test

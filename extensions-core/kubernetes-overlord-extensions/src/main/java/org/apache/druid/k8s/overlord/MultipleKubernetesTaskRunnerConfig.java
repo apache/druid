@@ -147,7 +147,8 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
       @JsonProperty("logSaveTimeout") Period logSaveTimeout,
       @JsonProperty("taskJoinTimeout") Period taskJoinTimeout,
       @JsonProperty("useK8sSharedInformers") Boolean useK8sSharedInformers,
-      @JsonProperty("k8sSharedInformerResyncPeriod") Period k8sSharedInformerResyncPeriod
+      @JsonProperty("k8sSharedInformerResyncPeriod") Period k8sSharedInformerResyncPeriod,
+      @JsonProperty("allowTaskPodTemplateSelection") Boolean allowTaskPodTemplateSelection
   )
   {
     super(
@@ -173,7 +174,8 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
         capacity,
         taskJoinTimeout,
         useK8sSharedInformers != null && useK8sSharedInformers,
-        k8sSharedInformerResyncPeriod
+        k8sSharedInformerResyncPeriod,
+        allowTaskPodTemplateSelection != null && allowTaskPodTemplateSelection
     );
     Preconditions.checkNotNull(clusters);
     Preconditions.checkState(
