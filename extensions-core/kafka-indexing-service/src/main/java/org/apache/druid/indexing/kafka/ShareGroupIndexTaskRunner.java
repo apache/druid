@@ -82,51 +82,31 @@ import com.google.common.base.Supplier;
 /**
  * Ingestion loop for {@link ShareGroupIndexTask}.
  *
- * <p><b>Phase 1 invariants:</b>
+ * <p>Invariants:
  * <ol>
- *   <li><b>ACK after publish (data safety):</b> records are acknowledged with
- *       {@code ACCEPT} only after the segment containing them is atomically
- *       registered in the metadata store via
- *       {@link SegmentTransactionalAppendAction}. Any failure between poll and
- *       publish leaves the records unacknowledged and the broker will
- *       redeliver them after the acquisition lock expires.</li>
- *   <li><b>Multi-row safe:</b> records are parsed via
- *       {@link StreamChunkReader} which returns 0..N rows per record (handles
- *       JSON arrays, null/empty records, and ParseException routing). Every
- *       row produced from a record is added to the appenderator before the
- *       record is acknowledged.</li>
- *   <li><b>Resource safe:</b> {@code Appenderator} and {@code RecordSupplier}
- *       are released on every exit path, including
- *       {@link org.apache.kafka.common.errors.WakeupException} during graceful
- *       stop and any in-loop ISE.</li>
- *   <li><b>Graceful stop:</b> {@link ShareGroupIndexTask#stopGracefully} calls
- *       {@link #requestWakeup()} which forwards to
- *       {@link AcknowledgingRecordSupplier#wakeup()}, interrupting an
- *       in-flight {@code poll()} so the loop exits at the next iteration.</li>
- *   <li><b>Observability:</b> per-partition commit failures are emitted as
- *       {@code ingest/shareGroup/commitFailures}; broker-effective acquisition
- *       lock duration is logged once after the first poll.</li>
+ *   <li>Records are {@code ACCEPT}-acknowledged only after the segment they
+ *       belong to has been atomically published; any failure before that
+ *       leaves them unacknowledged and the broker redelivers them after the
+ *       acquisition lock expires.</li>
+ *   <li>Multi-row records (e.g. JSON arrays) are fully drained through
+ *       {@link StreamChunkReader} before the source record is acknowledged.</li>
+ *   <li>{@code Appenderator} and {@link AcknowledgingRecordSupplier} are
+ *       released on every exit path, including
+ *       {@link org.apache.kafka.common.errors.WakeupException}.</li>
+ *   <li>{@link ShareGroupIndexTask#stopGracefully} drives
+ *       {@link AcknowledgingRecordSupplier#wakeup()} via {@link #requestWakeup()}
+ *       to interrupt an in-flight {@code poll()}.</li>
  * </ol>
  *
- * <p><b>Single-threaded:</b> all {@code Appenderator} interactions happen on
- * the run thread. Background lock-renewal is a Phase 2 enhancement (see
- * {@link AcknowledgeType#RENEW}).</p>
- *
- * <p><b>Testability (DIP):</b> the supplier factory is constructor-injected
- * so unit tests can plug in a mock {@link AcknowledgingRecordSupplier} without
- * spinning up a Kafka broker.</p>
+ * <p>The loop is single-threaded. The supplier factory is constructor-injected
+ * so tests can plug in a mock {@link AcknowledgingRecordSupplier}.
  */
 public class ShareGroupIndexTaskRunner
 {
   private static final Logger log = new Logger(ShareGroupIndexTaskRunner.class);
   private static final String SEQUENCE_NAME = "share_group_seq_0";
 
-  /**
-   * Metric for per-partition acknowledgement commit failures during share-group
-   * ingestion. Emitted with the standard task dimensions (datasource, taskId,
-   * etc.) so operators can alert on sustained broker commit issues. A non-zero
-   * value implies the corresponding records will be redelivered by the broker.
-   */
+  /** Per-partition acknowledgement commit failures; non-zero implies redelivery. */
   static final String METRIC_COMMIT_FAILURES = "ingest/shareGroup/commitFailures";
 
   private final ShareGroupIndexTask task;
@@ -135,11 +115,7 @@ public class ShareGroupIndexTaskRunner
   private final Function<ShareGroupIndexTaskIOConfig,
       AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory;
 
-  /**
-   * Active supplier reference used by {@link #requestWakeup()} so the task's
-   * {@code stopGracefully} hook can interrupt a blocking poll. Set on entry
-   * to the run loop and cleared on exit.
-   */
+  // Set on entry to the run loop and cleared on exit; used by requestWakeup().
   private final AtomicReference<AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>>
       activeSupplier = new AtomicReference<>();
 
@@ -152,12 +128,7 @@ public class ShareGroupIndexTaskRunner
     this(task, toolbox, configMapper, null);
   }
 
-  /**
-   * DIP-friendly constructor: accepts a factory that builds the
-   * {@link AcknowledgingRecordSupplier} from the IO config. Tests can pass a
-   * factory returning a mock supplier; production passes {@code null} and the
-   * runner falls back to building a {@link KafkaShareGroupRecordSupplier}.
-   */
+  /** Test-only ctor; pass a factory to inject a mock {@link AcknowledgingRecordSupplier}. */
   @VisibleForTesting
   ShareGroupIndexTaskRunner(
       ShareGroupIndexTask task,
@@ -195,14 +166,8 @@ public class ShareGroupIndexTaskRunner
       throw new ISE("inputFormat must be specified in ioConfig");
     }
 
-    // Single canonical multi-row parser, shared with the seekable-stream runner.
-    // Handles null/empty records, multi-row records (e.g. JSON arrays), parse
-    // exceptions (via ParseExceptionHandler), and processedBytes metrics.
-    //
-    // Raw type matches the SeekableStreamIndexTaskRunner idiom: works around
-    // OrderedPartitionableRecord.getData() returning List<? extends ByteEntity>
-    // (rather than List<? extends RecordType>); changing that signature would
-    // be a much larger refactor for marginal benefit.
+    // Raw type mirrors SeekableStreamIndexTaskRunner: works around
+    // OrderedPartitionableRecord.getData() returning List<? extends ByteEntity>.
     @SuppressWarnings({"rawtypes", "unchecked"})
     final StreamChunkReader chunkReader = new StreamChunkReader<KafkaRecordEntity>(
         inputFormat,
@@ -279,6 +244,14 @@ public class ShareGroupIndexTaskRunner
         segmentGenerationMetrics
     );
 
+    final org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor metricsMonitor =
+        new org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor(
+            segmentGenerationMetrics,
+            rowIngestionMeters,
+            task.getMetricBuilder()
+        );
+    toolbox.addMonitor(metricsMonitor);
+
     boolean appenderatorClosedNormally = false;
     try (final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier =
              supplierFactory.apply(ioConfig)) {
@@ -298,7 +271,7 @@ public class ShareGroupIndexTaskRunner
         @Override
         public void run()
         {
-          // no-op: share group does not need client-side offset persistence
+          // Share groups manage delivery state on the broker; no client commit.
         }
       };
 
@@ -336,7 +309,7 @@ public class ShareGroupIndexTaskRunner
           continue;
         }
 
-        // Track offsets of records in this batch for acknowledgement after publish
+        // Offsets to acknowledge after the batch is published.
         final Map<KafkaTopicPartition, List<Long>> batchOffsets = new HashMap<>();
         boolean midBatchPersistNeeded = false;
         boolean pushThresholdLogged = false;
@@ -345,10 +318,8 @@ public class ShareGroupIndexTaskRunner
           batchOffsets.computeIfAbsent(record.getPartitionId(), k -> new ArrayList<>())
                       .add(record.getSequenceNumber());
 
-          // Multi-row safe: chunkReader returns 0..N rows per record, increments
-          // processedBytes/thrownAway/unparseable internally, and routes parse
-          // exceptions through parseExceptionHandler (so maxParseExceptions/etc.
-          // are honored). Null record.data() is handled inside parse().
+          // 0..N rows per record; null/empty data and parse exceptions are
+          // handled inside parse() and routed through parseExceptionHandler.
           final List<InputRow> rows = chunkReader.parse(record.getData(), false);
 
           for (InputRow row : rows) {
@@ -361,8 +332,7 @@ public class ShareGroupIndexTaskRunner
             );
 
             if (!addResult.isOk()) {
-              // Failure to allocate segment puts data integrity at risk: bail out
-              // so the records remain unacknowledged and the broker redelivers.
+              // Bail without acknowledging so the broker redelivers the batch.
               throw new ISE(
                   "Could not allocate segment for row with timestamp[%s]",
                   row.getTimestamp()
@@ -388,15 +358,13 @@ public class ShareGroupIndexTaskRunner
           }
         }
 
-        // Mid-batch persist if memory pressure dictates (max{Bytes,Rows}InMemory).
+        // Mid-batch persist when memory thresholds were tripped during add().
         if (midBatchPersistNeeded) {
           driver.persist(committerSupplier.get());
         }
 
-        // End-of-batch persist before publish
         driver.persist(committerSupplier.get());
 
-        // Publish all segments for this sequence
         final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
         {
           @Override
@@ -433,16 +401,14 @@ public class ShareGroupIndexTaskRunner
           log.info("Published %d segments with %d total rows.", segmentCount, totalRowsIngested);
         }
 
-        // INVARIANT 1: ACK only after successful publish
+        // ACK only after publish succeeded (data-safety invariant).
         for (Map.Entry<KafkaTopicPartition, List<Long>> entry : batchOffsets.entrySet()) {
           for (Long offset : entry.getValue()) {
             recordSupplier.acknowledge(entry.getKey(), offset, AcknowledgeType.ACCEPT);
           }
         }
 
-        // Commit acknowledgements to the broker. Failures here mean the broker
-        // will redeliver the affected records (at-least-once); we count and emit
-        // a metric so operators can alert on sustained commit issues.
+        // Commit failures cause broker redelivery; emit a metric for alerting.
         final Map<KafkaTopicPartition, Optional<Exception>> commitResult = recordSupplier.commitSync();
         long commitFailures = 0L;
         for (Map.Entry<KafkaTopicPartition, Optional<Exception>> entry : commitResult.entrySet()) {
@@ -460,7 +426,6 @@ public class ShareGroupIndexTaskRunner
         }
       }
 
-      // Final persist and graceful close
       driver.persist(committerSupplier.get());
 
       log.info("Share group ingestion complete. Total rows ingested: %d", totalRowsIngested);
@@ -470,15 +435,19 @@ public class ShareGroupIndexTaskRunner
     finally {
       activeSupplier.set(null);
       try {
+        toolbox.removeMonitor(metricsMonitor);
+      }
+      catch (Exception e) {
+        log.warn(e, "Exception removing TaskRealtimeMetricsMonitor; continuing teardown.");
+      }
+      try {
         driver.close();
       }
       catch (Exception e) {
         log.warn(e, "Exception closing StreamAppenderatorDriver; continuing teardown.");
       }
-      // Guarantees the appenderator is released on every exception path
-      // (incl. WakeupException, ISE during add, persist/publish failures).
-      // closeNow() is the immediate variant; safe to call after a successful
-      // close() since Appenderator implementations make close idempotent.
+      // Release the appenderator on every abnormal exit path; closeNow() is
+      // idempotent and safe even if close() already ran.
       if (!appenderatorClosedNormally) {
         try {
           appenderator.closeNow();
@@ -493,9 +462,8 @@ public class ShareGroupIndexTaskRunner
   }
 
   /**
-   * Wake up an in-flight {@link AcknowledgingRecordSupplier#poll(long)} call.
-   * Called by {@link ShareGroupIndexTask#stopGracefully(org.apache.druid.indexing.common.config.TaskConfig)}.
-   * Safe to call from any thread; no-op if the loop is not currently running.
+   * Interrupt an in-flight {@link AcknowledgingRecordSupplier#poll(long)}.
+   * Thread-safe; no-op when the loop is not running.
    */
   void requestWakeup()
   {
