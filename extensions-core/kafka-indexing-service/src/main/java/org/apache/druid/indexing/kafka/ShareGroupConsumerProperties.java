@@ -21,8 +21,8 @@ package org.apache.druid.indexing.kafka;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CollectionUtils;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,7 +61,7 @@ public final class ShareGroupConsumerProperties
    */
   public static Map<String, Object> sanitize(Map<String, Object> consumerProperties)
   {
-    final Map<String, Object> sanitized = new LinkedHashMap<>(consumerProperties.size());
+    final Map<String, Object> sanitized = CollectionUtils.newLinkedHashMapWithExpectedSize(consumerProperties.size());
     for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
       if (UNSUPPORTED_CONFIGS.contains(entry.getKey())) {
         log.warn(

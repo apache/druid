@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -99,7 +100,7 @@ public class ShareGroupProbeTest
         final java.util.ArrayList<org.apache.kafka.clients.producer.ProducerRecord<byte[], byte[]>> records =
             new java.util.ArrayList<>();
         for (int i = 0; i < 10; i++) {
-          records.add(new org.apache.kafka.clients.producer.ProducerRecord<>(topic, i % 2, null, ("v-" + i).getBytes()));
+          records.add(new org.apache.kafka.clients.producer.ProducerRecord<>(topic, i % 2, null, ("v-" + i).getBytes(StandardCharsets.UTF_8)));
         }
         kafkaServer.produceRecordsToTopic(records);
       }
@@ -153,7 +154,7 @@ public class ShareGroupProbeTest
       final java.util.ArrayList<org.apache.kafka.clients.producer.ProducerRecord<byte[], byte[]>> records =
           new java.util.ArrayList<>();
       for (int i = 0; i < 10; i++) {
-        records.add(new org.apache.kafka.clients.producer.ProducerRecord<>(topic, i % 2, null, ("value-" + i).getBytes()));
+        records.add(new org.apache.kafka.clients.producer.ProducerRecord<>(topic, i % 2, null, ("value-" + i).getBytes(StandardCharsets.UTF_8)));
       }
       kafkaServer.produceRecordsToTopic(records);
 
@@ -225,7 +226,7 @@ public class ShareGroupProbeTest
 
       try (KafkaProducer<byte[], byte[]> producer = new KafkaProducer<>(producerProps)) {
         for (int i = 0; i < 10; i++) {
-          producer.send(new ProducerRecord<>(topic, i % 2, null, ("value-" + i).getBytes()));
+          producer.send(new ProducerRecord<>(topic, i % 2, null, ("value-" + i).getBytes(StandardCharsets.UTF_8)));
         }
         producer.flush();
       }
