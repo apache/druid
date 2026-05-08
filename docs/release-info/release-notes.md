@@ -24,7 +24,7 @@ title: "Release notes"
 
 <!--Replace {{DRUIDVERSION}} with the correct Druid version.-->
 
-Apache Druid \{\{DRUIDVERSION}} contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
+Apache Druid 37.0.0 contains over 255 new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from 29 contributors.
 
 <!--
 Replace {{MILESTONE}} with the correct milestone number. For example: https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+
@@ -110,6 +110,14 @@ You must use compaction supervisors with the MSQ task engine to use cascading re
 Multi-supervisor ingestion is now generally available. You can run multiple stream supervisors that ingest into the same datasource.
 
 [#18983](https://github.com/apache/druid/pull/18983)
+
+### Read-only authorizer
+
+Added a `ReadOnly` authorizer to Druid. This is the first global authorizer for Druid. The authorizer enforces a global restriction on all non-READ operations, denying them regardless of individual user permissions. You can use this capability to ensure all users of a specific authorizer are limited to READ access.
+
+There is a known limitation where some endpoints currently require WRITE access despite being READ-only, such as `GET /druid/indexer/v1/supervisor`. These operations will fail.
+
+[#19243](https://github.com/apache/druid/pull/19243)
 
 ### Thrift input format
 
@@ -365,7 +373,6 @@ The algorithm for cost-based autoscaling has been changed:
 
 #### Other cluster management improvements
 
-- Added a `ReadOnly` authorizer that allows all READ operations but denies any other operation, such as WRITE [#19243](https://github.com/apache/druid/pull/19243)
 - Added `/status/ready` endpoint for service health so that external load balancers can handle a graceful shutdown better [#19148](https://github.com/apache/druid/pull/19148)
 - Added a configurable option to scale-down during task run time for cost-based autoscaler [#18958](https://github.com/apache/druid/pull/18958)
 - Added `storage_size` to `sys.servers` to facilitate retrieving disk cache size for Historicals when using the virtual storage fabric [#18979](https://github.com/apache/druid/pull/18979)
@@ -453,7 +460,7 @@ Added `segment/schemaCache/rowSignature/changed` and `segment/schemaCache/rowSig
 - Added compaction mode to the `compact/task/count` metric [#19151](https://github.com/apache/druid/pull/19151)
 - Added support for logging and emitting SQL dynamic parameter values [#19067](https://github.com/apache/druid/pull/19067)
 - Added `ingest/rows/published`, which all task types emit to denote the total row count of successfully published segments [#19177](https://github.com/apache/druid/pull/19177)
-- Added `queries` and `totalQueries` counters, which reflect queries made to realtime servers to retrieve realtime data
+- Added `queries` and `totalQueries` counters, which reflect queries made to realtime servers to retrieve realtime data [#19196](https://github.com/apache/druid/19196)
 - Added `tier/storage/capacity` metric for the Coordinator. This metric is guaranteed to reflect the total `StorageLocation` size configured across all Historicals in a tier [#18962](https://github.com/apache/druid/pull/18962)
 - Added new metrics for virtual storage fabric to the MSQ task engine `ChannelCounters`: `loadBytes`, `loadTime`, `loadWait`, and `loadFiles` [#18971](https://github.com/apache/druid/pull/18971)
 - Added `storage/virtual/hit/bytes`, `storage/virtual/hold/count` and `storage/virtual/hold/bytes` metric to `StorageMonitor`
