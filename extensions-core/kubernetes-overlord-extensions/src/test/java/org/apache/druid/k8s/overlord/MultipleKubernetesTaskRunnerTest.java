@@ -1248,7 +1248,7 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     verifyAll();
 
     // Verify that k8s_cluster=cluster-a was injected into tags
-    Map<?, ?> tags1 = task1.getContextValue(DruidMetrics.TAGS);
+    Map<String, String> tags1 = task1.getContextValue(DruidMetrics.TAGS);
     Assertions.assertEquals(clusterNameA, tags1.get("k8s_cluster"));
 
     resetAll();
@@ -1267,7 +1267,7 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     verifyAll();
 
     // Verify that k8s_cluster=cluster-b was injected into tags
-    Map<?, ?> tags2 = task2.getContextValue(DruidMetrics.TAGS);
+    Map<String, String> tags2 = task2.getContextValue(DruidMetrics.TAGS);
     Assertions.assertEquals(clusterNameB, tags2.get("k8s_cluster"));
   }
 
@@ -1330,7 +1330,7 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     verifyAll();
 
     // Verify that k8s_cluster was injected into tags
-    Map<?, ?> tags = task.getContextValue(DruidMetrics.TAGS);
+    Map<String, String> tags = task.getContextValue(DruidMetrics.TAGS);
     Assertions.assertEquals(clusterName, tags.get("k8s_cluster"));
 
     // Note: The actual pod template selection happens inside KubernetesTaskRunner.run()
