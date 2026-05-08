@@ -171,7 +171,6 @@ public class LDAPCredentialsValidatorTest
               ArgumentMatchers.any(SearchControls.class))
       ).thenReturn(makeNamingEnum(userResults));
 
-      // Group search results
       final SearchResult group1 = new SearchResult("cn=admins,ou=Groups,dc=example,dc=org", null, new BasicAttributes(true));
       group1.setNameInNamespace("cn=admins,ou=Groups,dc=example,dc=org");
       final SearchResult group2 = new SearchResult("cn=developers,ou=Groups,dc=example,dc=org", null, new BasicAttributes(true));
