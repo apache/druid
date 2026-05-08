@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Adapts {@link KafkaShareConsumer} to {@link AcknowledgingRecordSupplier}.
