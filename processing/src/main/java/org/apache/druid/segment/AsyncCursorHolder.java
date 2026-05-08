@@ -23,6 +23,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -71,6 +72,8 @@ import java.util.List;
  */
 public class AsyncCursorHolder implements Closeable
 {
+  private static final Logger LOG = new Logger(AsyncCursorHolder.class);
+
   /**
    * Completed {@link AsyncCursorHolder} backed by an already available {@link CursorHolder}
    */
@@ -114,10 +117,14 @@ public class AsyncCursorHolder implements Closeable
    * itself. Throws {@link DruidException} if the load was already completed (from prior calls to this method or
    * {@link #setException}).
    * <p>
-   * Callbacks registered via {@link #addReadyCallback} fire outside the lock to avoid re-entrancy deadlocks.
+   * Callbacks registered via {@link #addReadyCallback} fire outside the lock to avoid lock-ordering deadlocks and
+   * unbounded lock holds.
    */
   public boolean set(CursorHolder holder)
   {
+    if (holder == null) {
+      throw DruidException.defensive("CursorHolder cannot be null");
+    }
     return setInternal(Either.value(holder));
   }
 
@@ -126,7 +133,8 @@ public class AsyncCursorHolder implements Closeable
    * already been closed (no holder was produced, so there's nothing for the producer to clean up). Throws
    * {@link DruidException} if the load was already completed (from prior calls to this method or {@link #set}).
    * <p>
-   * Callbacks registered via {@link #addReadyCallback} fire outside the lock to avoid re-entrancy deadlocks.
+   * Callbacks registered via {@link #addReadyCallback} fire outside the lock to avoid lock-ordering deadlocks and
+   * unbounded lock holds.
    */
   public boolean setException(Throwable t)
   {
@@ -184,6 +192,8 @@ public class AsyncCursorHolder implements Closeable
       // pass through as is
       if (error instanceof RuntimeException runtime) {
         throw runtime;
+      } else if (error instanceof Error e) {
+        throw e;
       }
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
@@ -192,8 +202,11 @@ public class AsyncCursorHolder implements Closeable
     if (result == null) {
       throw DruidException.defensive("AsyncCursorHolder is not ready yet");
     }
+    final CursorHolder resultToReturn = result;
+    // clear result so it can be eligible for gc
+    result = null;
     disposed = true;
-    return result;
+    return resultToReturn;
   }
 
   /**
@@ -226,7 +239,8 @@ public class AsyncCursorHolder implements Closeable
    *       call {@link #set} / {@link #setException} after this; if the producer wins the race and calls {@code set}
    *       with a holder, {@code set} returns false and the producer is responsible for closing it.</li>
    *   <li>Load failed: no-op (no holder was produced).</li>
-   *   <li>Already released or already closed: no-op.</li>
+   *   <li>Already released: no-op.</li>
+   *   <li>Already closed: throws {@link DruidException}.</li>
    * </ul>
    */
   @Override
@@ -236,7 +250,7 @@ public class AsyncCursorHolder implements Closeable
     final Runnable cancelerToRun;
     synchronized (this) {
       if (closed) {
-        return;
+        throw DruidException.defensive("Already closed");
       }
       closed = true;
       if (disposed) {
@@ -270,8 +284,9 @@ public class AsyncCursorHolder implements Closeable
       try {
         cancelerToRun.run();
       }
-      catch (Throwable ignored) {
+      catch (Throwable t) {
         // Best-effort cancel
+        LOG.warn(t, "AsyncCursorHolder canceler exception");
       }
     }
   }
@@ -290,8 +305,9 @@ public class AsyncCursorHolder implements Closeable
       try {
         cb.run();
       }
-      catch (Throwable ignored) {
+      catch (Throwable t) {
         // Best-effort; one bad callback shouldn't break others.
+        LOG.warn(t, "AsyncCursorHolder callback exception");
       }
     }
   }

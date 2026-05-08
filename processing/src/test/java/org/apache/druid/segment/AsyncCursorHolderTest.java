@@ -52,15 +52,15 @@ class AsyncCursorHolderTest
   }
 
   @Test
-  void testCloseIsIdempotent()
+  void testCloseMultiple()
   {
     final CountingCursorHolder holder = new CountingCursorHolder();
     final AsyncCursorHolder asyncHolder = AsyncCursorHolder.completed(holder);
 
     asyncHolder.close();
-    asyncHolder.close();
-    asyncHolder.close();
-    Assertions.assertEquals(1, holder.closeCount(), "repeated close should be idempotent");
+    Throwable t = Assertions.assertThrows(DruidException.class, asyncHolder::close);
+    Assertions.assertEquals(1, holder.closeCount());
+    Assertions.assertEquals("Already closed", t.getMessage());
   }
 
   @Test
