@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -36,11 +37,12 @@ public class AutoscalableThreadPoolExecutor extends ThreadPoolExecutor
 {
   private static final EmittingLogger log = new EmittingLogger(AutoscalableThreadPoolExecutor.class);
 
+  @Nullable
   private final ConfigManager configManager;
   private final String listenerKey;
   private final Consumer<KubernetesTaskRunnerDynamicConfig> configListener;
 
-  public AutoscalableThreadPoolExecutor(int initialCapacity, ConfigManager configManager)
+  public AutoscalableThreadPoolExecutor(int initialCapacity, @Nullable ConfigManager configManager)
   {
     super(
         initialCapacity,
@@ -56,7 +58,7 @@ public class AutoscalableThreadPoolExecutor extends ThreadPoolExecutor
     this.configListener = this::onConfigurationChange;
 
     // Monitor the configuration change
-    if (!configManager.addListener(
+    if (configManager != null && !configManager.addListener(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         listenerKey,
         configListener)) {
@@ -80,6 +82,10 @@ public class AutoscalableThreadPoolExecutor extends ThreadPoolExecutor
 
   private void removeConfigListener()
   {
+    if (configManager == null) {
+      return;
+    }
+
     if (!configManager.removeListener(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         listenerKey,
@@ -91,8 +97,12 @@ public class AutoscalableThreadPoolExecutor extends ThreadPoolExecutor
 
   private void onConfigurationChange(KubernetesTaskRunnerDynamicConfig config)
   {
-    int curCapacity = this.getCorePoolSize();
-    int newCapacity = config.getCapacity();
+    if (config.getCapacity() == null) {
+      return;
+    }
+
+    final int curCapacity = this.getCorePoolSize();
+    final int newCapacity = config.getCapacity();
     if (newCapacity == curCapacity) {
       return;
     }
