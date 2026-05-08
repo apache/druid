@@ -60,14 +60,12 @@ public class KafkaShareGroupRecordSupplier
   private static final Logger log = new Logger(KafkaShareGroupRecordSupplier.class);
 
   private final KafkaShareConsumer<byte[], byte[]> consumer;
+
   /**
-   * Tracks {@link ConsumerRecord} references from the most recent {@link #poll}
-   * so {@link #acknowledge} can be invoked with the original record. Kafka's
-   * {@code KafkaShareConsumer.acknowledge(topic, partition, offset, type)}
-   * variant is restricted to records still resident in the consumer's current
-   * fetch and can throw {@code IllegalStateException("The record cannot be
-   * acknowledged.")} once the fetch buffer has rolled over; passing the
-   * record reference is the safer pattern recommended by KIP-932.
+   * Records returned by the most recent {@link #poll(long)}, retained so
+   * {@link #acknowledge} can pass the original {@link ConsumerRecord} to the
+   * Kafka client. The {@code (topic, partition, offset)} ack variant is fragile
+   * once the share-fetch buffer rolls over (KIP-932).
    */
   private final Map<RecordKey, ConsumerRecord<byte[], byte[]>> deliveredRecords = new HashMap<>();
   private boolean closed;

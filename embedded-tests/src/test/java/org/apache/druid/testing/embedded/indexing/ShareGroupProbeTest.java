@@ -80,10 +80,7 @@ public class ShareGroupProbeTest
     kafkaServer.createTopicWithPartitions(topic, 2);
     kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
 
-    // Build props EXACTLY like Druid's KafkaShareGroupRecordSupplier does:
-    // - start from kafkaServer.consumerProperties() (KafkaConsumerConfigs.getConsumerProperties + bootstrap)
-    // - sanitize (strips enable.auto.commit/auto.offset.reset/group.instance.id)
-    // - set group.id and share.acknowledgement.mode
+    // Mirror Druid's KafkaShareGroupRecordSupplier props pipeline.
     final Map<String, Object> raw = new HashMap<>(kafkaServer.consumerProperties());
     final Map<String, Object> sanitized =
         org.apache.druid.indexing.kafka.ShareGroupConsumerProperties.sanitize(raw);
