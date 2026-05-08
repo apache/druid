@@ -308,8 +308,8 @@ org.apache.druid.indexing.kafka.ShareGroupConsumerPropertiesTest" \
 E2E test (requires Docker running -- Testcontainers starts a Kafka 4.1.1 broker with share groups enabled automatically):
 
 ```bash
-mvn test -pl extensions-core/kafka-indexing-service \
-  -Dtest="org.apache.druid.indexing.kafka.simulate.EmbeddedShareGroupIngestionTest" \
+mvn test -pl embedded-tests -am \
+  -Dtest="org.apache.druid.testing.embedded.indexing.EmbeddedShareGroupIngestionTest" \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Pskip-static-checks -Dweb.console.skip=true -T1C
 ```
