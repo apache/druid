@@ -269,7 +269,7 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       // See SelectorBasedPodTemplateSelectStrategy to learn more.
       if (selected.getK8sCluster() != null) {
         //noinspection unchecked
-        Map<String,String> tags = new LinkedHashMap<>((Map<String, String>) task.getContext().getOrDefault(DruidMetrics.TAGS, ImmutableMap.of()));
+        Map<String, String> tags = new LinkedHashMap<>((Map<String, String>) task.getContext().getOrDefault(DruidMetrics.TAGS, ImmutableMap.of()));
         tags.put("k8s_cluster", selected.getK8sCluster());
         task.getContext().put(DruidMetrics.TAGS, tags);
       }

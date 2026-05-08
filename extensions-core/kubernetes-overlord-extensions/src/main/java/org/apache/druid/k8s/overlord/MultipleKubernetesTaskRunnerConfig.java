@@ -236,7 +236,7 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
         String value = properties.getProperty(prop);
 
         // Special handling for labels: if value starts with '{', treat as JSON
-        if (key.equals("labels") && value.trim().startsWith("{")) {
+        if ("labels".equals(key) && value.trim().startsWith("{")) {
           try {
             labelNode = jsonMapper.readTree(value);
             // Don't add to props - we'll handle this in the tree
@@ -248,7 +248,7 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
         }
 
         // Special handling for annotations: if value starts with '{', treat as JSON
-        if (key.equals("annotations") && value.trim().startsWith("{")) {
+        if ("annotations".equals(key) && value.trim().startsWith("{")) {
           try {
             annotationNode = jsonMapper.readTree(value);
             // Don't add to props - we'll handle this in the tree

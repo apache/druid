@@ -26,10 +26,10 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
@@ -1184,7 +1184,7 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     verifyAll();
 
     // Verify that k8s_cluster was added to the task context
-    Map tags = task.getContextValue(DruidMetrics.TAGS);
+    Map<String, String> tags = task.getContextValue(DruidMetrics.TAGS);
     Assertions.assertEquals(clusterName, tags.get("k8s_cluster"));
 
     // Verify that existing tags are preserved
@@ -1338,4 +1338,3 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
     // in the task's context tags (DruidMetrics.TAGS) to select different pod templates
   }
 }
-
