@@ -26,11 +26,6 @@ import org.junit.Test;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Unit tests for {@link ShareGroupConsumerProperties}. Validates that the
- * sanitize method strips exactly the share-group-unsupported keys without
- * touching legitimate ones, and preserves insertion order.
- */
 public class ShareGroupConsumerPropertiesTest
 {
   @Test

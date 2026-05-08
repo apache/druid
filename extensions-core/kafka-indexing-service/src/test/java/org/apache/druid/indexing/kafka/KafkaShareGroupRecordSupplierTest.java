@@ -37,6 +37,12 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,17 +52,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-/**
- * Unit tests for {@link KafkaShareGroupRecordSupplier} using a mocked
- * KafkaShareConsumer. These tests verify the wrapping logic without
- * requiring a real Kafka broker.
- */
 public class KafkaShareGroupRecordSupplierTest
 {
   private KafkaShareConsumer<byte[], byte[]> mockConsumer;
@@ -162,13 +157,16 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeDefaultAccept()
   {
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        "test-topic", 0, 42L, "key".getBytes(), "value".getBytes()
+    );
+    pollSingleRecord(record);
+
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 42L);
 
     Mockito.verify(mockConsumer).acknowledge(
-        Mockito.eq("test-topic"),
-        Mockito.eq(0),
-        Mockito.eq(42L),
+        Mockito.same(record),
         Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT)
     );
   }
@@ -176,13 +174,16 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeWithRelease()
   {
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        "test-topic", 0, 10L, "key".getBytes(), "value".getBytes()
+    );
+    pollSingleRecord(record);
+
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.RELEASE);
 
     Mockito.verify(mockConsumer).acknowledge(
-        Mockito.eq("test-topic"),
-        Mockito.eq(0),
-        Mockito.eq(10L),
+        Mockito.same(record),
         Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.RELEASE)
     );
   }
@@ -190,13 +191,16 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeWithReject()
   {
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        "test-topic", 0, 10L, "key".getBytes(), "value".getBytes()
+    );
+    pollSingleRecord(record);
+
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.REJECT);
 
     Mockito.verify(mockConsumer).acknowledge(
-        Mockito.eq("test-topic"),
-        Mockito.eq(0),
-        Mockito.eq(10L),
+        Mockito.same(record),
         Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.REJECT)
     );
   }
@@ -204,13 +208,16 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeWithRenew()
   {
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        "test-topic", 0, 99L, "key".getBytes(), "value".getBytes()
+    );
+    pollSingleRecord(record);
+
     final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 99L, AcknowledgeType.RENEW);
 
     Mockito.verify(mockConsumer).acknowledge(
-        Mockito.eq("test-topic"),
-        Mockito.eq(0),
-        Mockito.eq(99L),
+        Mockito.same(record),
         Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.RENEW)
     );
   }
@@ -218,6 +225,22 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeBatch()
   {
+    final List<ConsumerRecord<byte[], byte[]>> recordsP0 = Arrays.asList(
+        new ConsumerRecord<>("test-topic", 0, 1L, "k".getBytes(), "v".getBytes()),
+        new ConsumerRecord<>("test-topic", 0, 2L, "k".getBytes(), "v".getBytes()),
+        new ConsumerRecord<>("test-topic", 0, 3L, "k".getBytes(), "v".getBytes())
+    );
+    final List<ConsumerRecord<byte[], byte[]>> recordsP1 = Arrays.asList(
+        new ConsumerRecord<>("test-topic", 1, 10L, "k".getBytes(), "v".getBytes()),
+        new ConsumerRecord<>("test-topic", 1, 11L, "k".getBytes(), "v".getBytes())
+    );
+    final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
+    recordMap.put(new TopicPartition("test-topic", 0), recordsP0);
+    recordMap.put(new TopicPartition("test-topic", 1), recordsP1);
+    Mockito.when(mockConsumer.poll(Mockito.any(Duration.class)))
+           .thenReturn(new ConsumerRecords<>(recordMap));
+    supplier.poll(1000);
+
     final KafkaTopicPartition p0 = new KafkaTopicPartition(true, "test-topic", 0);
     final KafkaTopicPartition p1 = new KafkaTopicPartition(true, "test-topic", 1);
 
@@ -228,11 +251,18 @@ public class KafkaShareGroupRecordSupplierTest
     supplier.acknowledge(offsets, AcknowledgeType.ACCEPT);
 
     Mockito.verify(mockConsumer, Mockito.times(5)).acknowledge(
-        Mockito.anyString(),
-        Mockito.anyInt(),
-        Mockito.anyLong(),
+        Mockito.<ConsumerRecord<byte[], byte[]>>any(),
         Mockito.eq(org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT)
     );
+  }
+
+  private void pollSingleRecord(ConsumerRecord<byte[], byte[]> record)
+  {
+    final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
+    recordMap.put(new TopicPartition(record.topic(), record.partition()), List.of(record));
+    Mockito.when(mockConsumer.poll(Mockito.any(Duration.class)))
+           .thenReturn(new ConsumerRecords<>(recordMap));
+    supplier.poll(1000);
   }
 
   @Test

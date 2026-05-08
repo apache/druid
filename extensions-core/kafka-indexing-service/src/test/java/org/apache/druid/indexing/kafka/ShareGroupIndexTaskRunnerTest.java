@@ -34,23 +34,8 @@ import org.mockito.Mockito;
 import java.util.Map;
 
 /**
- * Targeted unit tests for {@link ShareGroupIndexTaskRunner} that do not
- * require a full Druid toolbox. These cover behaviors that are isolatable
- * outside of {@link ShareGroupIndexTaskRunner#run()} (which itself is
- * exercised end-to-end by {@code EmbeddedShareGroupIngestionTest}).
- *
- * <p>Specifically validates:</p>
- * <ul>
- *   <li>{@link ShareGroupIndexTaskRunner#requestWakeup()} is null-safe when the
- *       run loop is not active (called by {@code stopGracefully} before/after
- *       {@code runTask}).</li>
- *   <li>The DIP-friendly constructor correctly accepts a custom
- *       {@code AcknowledgingRecordSupplier} factory; the factory is the only
- *       seam needed to write higher-fidelity runner tests in the future
- *       (Phase 2 supervisor work).</li>
- *   <li>The commit-failure metric name is the agreed contract
- *       ({@code ingest/shareGroup/commitFailures}).</li>
- * </ul>
+ * Lightweight unit tests for {@link ShareGroupIndexTaskRunner}; the run loop
+ * itself is covered end-to-end by {@code EmbeddedShareGroupIngestionTest}.
  */
 public class ShareGroupIndexTaskRunnerTest
 {
@@ -94,11 +79,6 @@ public class ShareGroupIndexTaskRunnerTest
     );
   }
 
-  /**
-   * {@code stopGracefully} may be called before {@code runTask} or after it
-   * exits. Both windows leave {@code activeSupplier} == null, so
-   * {@code requestWakeup} must be a safe no-op.
-   */
   @Test
   public void testRequestWakeupIsNullSafeWhenNoActiveSupplier()
   {
@@ -106,11 +86,6 @@ public class ShareGroupIndexTaskRunnerTest
     runner.requestWakeup();
   }
 
-  /**
-   * A task lifecycle assertion: calling {@code stopGracefully} when no
-   * runner is active (i.e. before {@code runTask} ran or after it exited)
-   * must not throw and must set {@code stopRequested}.
-   */
   @Test
   public void testStopGracefullyBeforeRunTaskIsSafe()
   {
@@ -119,10 +94,6 @@ public class ShareGroupIndexTaskRunnerTest
     Assert.assertTrue(task.isStopRequested());
   }
 
-  /**
-   * Sanity check that the DIP factory constructor is wired and does not crash
-   * when only constructing the runner (run() is exercised by IT).
-   */
   @Test
   public void testRunnerAcceptsCustomSupplierFactory()
   {
@@ -138,10 +109,6 @@ public class ShareGroupIndexTaskRunnerTest
     runner.requestWakeup();
   }
 
-  /**
-   * Locks the commit-failure metric name as a public contract: it is the
-   * single signal operators use to alert on broker commit issues.
-   */
   @Test
   public void testCommitFailureMetricName()
   {
