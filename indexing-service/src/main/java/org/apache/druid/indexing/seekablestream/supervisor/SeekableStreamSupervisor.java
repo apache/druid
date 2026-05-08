@@ -4417,14 +4417,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     for (SeekableStreamIndexTask indexTask : taskList) {
-      final String taskId = indexTask.getId();
-      final Integer serverPriority = indexTask.getServerPriority();
-
-      if (serverPriority != null) {
-        log.info("Adding serverPriority[%d] for task[%s] and groupId[%s]", serverPriority, taskId, groupId);
-        group.taskIdToServerPriority.put(taskId, serverPriority);
-      }
-
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
       if (taskQueue.isPresent()) {
         try {

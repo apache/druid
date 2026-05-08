@@ -195,10 +195,10 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testIdleCostMonotonicWithTaskCount()
+  public void testIdleCostIsUShapedAroundIdealRatio()
   {
-    // Test that idle cost increases monotonically with task count.
-    // With fixed load, adding more tasks means each task has less work, so idle increases.
+    // U-shaped cost: minimum near IDEAL_IDLE_RATIO=0.25, higher on both sides.
+    // Current: 10 tasks with 25% idle (already at ideal).
     CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
@@ -207,18 +207,19 @@ public class WeightedCostFunctionTest
                                                                         .idleWeight(1.0)
                                                                         .build();
 
-    // Current: 10 tasks with 40% idle (60% busy)
-    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.25);
 
-    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
-    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
-    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig).totalCost();
-    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+    // At current (idle=0.25=ideal): baseline cost only, penalty=0
+    double costAtIdeal = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
 
-    // Monotonically increasing idle cost as tasks increase
-    Assert.assertTrue("cost(5) < cost(10)", costAt5 < costAt10);
-    Assert.assertTrue("cost(10) < cost(15)", costAt10 < costAt15);
-    Assert.assertTrue("cost(15) < cost(20)", costAt15 < costAt20);
+    // Scale down → predicted idle falls below ideal → under-provisioning penalty
+    double costScaleDown = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+
+    // Scale up → predicted idle rises above ideal → over-provisioning penalty
+    double costScaleUp = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+
+    Assert.assertTrue("scale-down costs more than ideal", costScaleDown > costAtIdeal);
+    Assert.assertTrue("scale-up costs more than ideal", costScaleUp > costAtIdeal);
   }
 
   @Test
@@ -238,8 +239,10 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
-    // idlenessCost = taskCount * 0.0 (clamped) = 0
-    Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
+    // idle = 0: max under-provisioning penalty; cost = taskCount * (IDEAL + UNDER_PENALTY)
+    double expectedAt2 = 2 * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+    Assert.assertEquals("Idle cost at clamped-to-zero idle ratio should reflect full under-provisioning penalty",
+                        expectedAt2, costAt2, 0.0001);
 
     // Extreme scale-up shouldn't exceed 1.0 for idle ratio
     // 10 tasks → 100 tasks with 10% idle
@@ -267,11 +270,13 @@ public class WeightedCostFunctionTest
     double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig).totalCost();
     double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
-    // With missing data, predicted idle = 0.5 for all task counts
-    // idlenessCost at 10 = 10 * 0.5 = 5
-    // idlenessCost at 20 = 20 * 0.5 = 10
-    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * 0.5, cost10, 0.0001);
-    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * 0.5, cost20, 0.0001);
+    // With missing data, predicted idle = 0.5 for all task counts regardless of proposed count.
+    // U-shaped cost at idle=0.5: idle > IDEAL(0.25), norm=(0.5-0.25)/0.75=1/3, penalty=1*(1/3)^2=1/9
+    double expectedCostPerTask = WeightedCostFunction.IDEAL_IDLE_RATIO
+                                 + WeightedCostFunction.OVER_PROVISIONING_PENALTY * (1.0 / 3.0) * (1.0 / 3.0);
+    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * expectedCostPerTask, cost10, 0.0001);
+    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * expectedCostPerTask, cost20, 0.0001);
+    Assert.assertEquals("Cost scales linearly with task count at fixed idle ratio", 2 * cost10, cost20, 0.0001);
   }
 
   @Test
@@ -337,6 +342,51 @@ public class WeightedCostFunctionTest
     );
   }
 
+
+  @Test
+  public void testUShapedIdleCostFormula()
+  {
+    int n = 10;
+
+    // At ideal ratio: penalty = 0, cost = n * IDEAL_IDLE_RATIO
+    Assert.assertEquals(
+        n * WeightedCostFunction.IDEAL_IDLE_RATIO,
+        costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n),
+        1e-9
+    );
+
+    // At idle = 0 (fully under-provisioned): norm = 1, penalty = UNDER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(0.0, n),
+        1e-9
+    );
+
+    // At idle = 1 (fully over-provisioned): norm = 1, penalty = OVER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(1.0, n),
+        1e-9
+    );
+
+    // Both extremes exceed the ideal cost
+    double idealCost = costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n);
+    Assert.assertTrue("idle=0 costs more than ideal", costFunction.uShapedIdleCost(0.0, n) > idealCost);
+    Assert.assertTrue("idle=1 costs more than ideal", costFunction.uShapedIdleCost(1.0, n) > idealCost);
+
+    // Under-provisioning is penalized more than over-provisioning (UNDER > OVER)
+    Assert.assertTrue(
+        "under-provisioning penalty exceeds over-provisioning penalty",
+        costFunction.uShapedIdleCost(0.0, n) > costFunction.uShapedIdleCost(1.0, n)
+    );
+
+    // Cost scales linearly with task count at any fixed idle ratio
+    Assert.assertEquals(
+        2 * costFunction.uShapedIdleCost(0.5, n),
+        costFunction.uShapedIdleCost(0.5, 2 * n),
+        1e-9
+    );
+  }
 
   private CostMetrics createMetrics(
       double avgPartitionLag,

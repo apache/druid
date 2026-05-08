@@ -47,13 +47,13 @@ org.apache.druid.cli.Main server historical
 Each Historical service copies or pulls segment files from deep storage to local disk in an area called the segment cache. To configure the size and location of the segment cache on each Historical service, set the `druid.segmentCache.locations`.
 For more information, see [Segment cache size](../operations/basic-cluster-tuning.md#segment-cache-size).
 
-The [Coordinator](../design/coordinator.md) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical services do not communicate directly with each other, nor do they communicate directly with the Coordinator. Instead, the Coordinator creates ephemeral entries in ZooKeeper in a [load queue path](../configuration/index.md#path-configuration). Each Historical service maintains a connection to ZooKeeper, watching those paths for segment information.
+The [Coordinator](../design/coordinator.md) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical services do not communicate directly with each other. The Coordinator sends segment load and drop requests to each Historical over HTTP, and each Historical exposes an HTTP endpoint for the Coordinator to poll for the current state of its segment assignments.
 
-When a Historical service detects a new entry in the ZooKeeper load queue, it checks its own segment cache. If no information about the segment exists there, the Historical service first retrieves metadata from ZooKeeper about the segment, including where the segment is located in deep storage and how it needs to decompress and process it.
+When a Historical service receives a load request, it checks its own segment cache. If no information about the segment exists there, the Historical uses the segment metadata included in the request — including where the segment is located in deep storage and how to decompress and process it — to pull the segment from deep storage.
 
 For more information about segment metadata and Druid segments in general, see [Segments](../design/segments.md).
 
-After a Historical service pulls down and processes a segment from deep storage, Druid advertises the segment as being available for queries from the Broker. This announcement by the Historical is made via ZooKeeper, in a [served segments path](../configuration/index.md#path-configuration).
+After a Historical service pulls down and processes a segment from deep storage, Druid advertises the segment as being available for queries from the Broker. The Historical exposes its current set of served segments via an HTTP endpoint (`/druid-internal/v1/segments`), which the Broker polls to learn what data each Historical is serving.
 
 For more information about how the Broker determines what data is available for queries, see [Broker](broker.md).
 

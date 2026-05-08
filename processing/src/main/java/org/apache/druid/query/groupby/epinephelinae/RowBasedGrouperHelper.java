@@ -282,6 +282,7 @@ public class RowBasedGrouperHelper
           limitSpec,
           sortHasNonGroupingFields,
           mergeBufferSize,
+          querySpecificConfig.getMinSpillFileSize(),
           perQueryStats
       );
     } else {

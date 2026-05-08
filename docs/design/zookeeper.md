@@ -29,43 +29,39 @@ Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for mana
 
 Apache Druid supports all stable versions of ZooKeeper. For information about ZooKeeper's stable version, see [ZooKeeper releases](https://zookeeper.apache.org/releases.html).
 
-## ZooKeeper Operations
+## ZooKeeper operations
 
-The operations that happen over ZK are
+The operations that happen over ZK are:
 
-1.  [Coordinator](../design/coordinator.md) leader election
-2.  Segment "publishing" protocol from [Historical](../design/historical.md)
-3.  [Overlord](../design/overlord.md) leader election
-4.  [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) task management
+1. [Coordinator](../design/coordinator.md) leader election
+2. [Overlord](../design/overlord.md) leader election
+3. Service (node) announcement and discovery — services announce their presence so other services can find them
+4. [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) task management
 
-## Coordinator Leader Election
+Segment loading, dropping, and discovery no longer use ZooKeeper — they are served over HTTP.
 
-We use the Curator [LeaderLatch](https://curator.apache.org/docs/recipes-leader-latch) recipe to perform leader election at path
+## Coordinator leader election
+
+Druid uses the Curator [LeaderLatch](https://curator.apache.org/docs/recipes-leader-latch) recipe to perform leader election at path
 
 ```
 ${druid.zk.paths.coordinatorPath}/_COORDINATOR
 ```
 
-## Segment "publishing" protocol from Historical and Realtime
+## Overlord leader election
 
-The `announcementsPath` and `liveSegmentsPath` are used for this.
-
-All [Historical](../design/historical.md) processes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
+Druid uses the same [LeaderLatch](https://curator.apache.org/docs/recipes-leader-latch) recipe for Overlord leader election at path
 
 ```
-${druid.zk.paths.announcementsPath}/${druid.host}
+${druid.zk.paths.overlordPath}/_OVERLORD
 ```
 
-Which signifies that they exist. They will also subsequently create a permanent znode at
+## Service announcement and discovery
+
+Each Druid service announces a `DruidNode` record (host, port, role, services) under the internal-discovery path so that other services can enumerate cluster members by role:
 
 ```
-${druid.zk.paths.liveSegmentsPath}/${druid.host}
+${druid.zk.paths.base}/internal-discovery/${nodeRole}/${druid.host}
 ```
 
-And as they load up segments, they will attach ephemeral znodes that look like
-
-```
-${druid.zk.paths.liveSegmentsPath}/${druid.host}/_segment_identifier_
-```
-
-Processes like the [Coordinator](../design/coordinator.md) and [Broker](../design/broker.md) can then watch these paths to see which processes are currently serving which segments.
+Brokers and Coordinators use this path to find Historicals, Peons, and Indexers. They then poll each discovered service's HTTP `/druid-internal/v1/segments` endpoint to get its current set of served segments.

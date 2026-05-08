@@ -189,6 +189,33 @@ public class StartupInjectorBuilderTest
   }
 
   @Test
+  public void testValidator_rejectsNonHttpServerViewType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.SERVERVIEW_TYPE_CONFIG_STRING, "batch");
+
+    final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
+
+    Throwable t = Assertions.assertThrows(ISE.class, builder::build);
+    Assertions.assertEquals(
+        "Invalid value[batch] for property[druid.serverview.type]. Only [http] is supported;"
+        + " the ZooKeeper-based 'batch' server view has been removed. Remove this property or"
+        + " set it to 'http'. See the Druid upgrade notes for details.",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testValidator_acceptsHttpServerViewType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.SERVERVIEW_TYPE_CONFIG_STRING, "http");
+
+    // Should not throw
+    new StartupInjectorBuilder().withExtensions().withProperties(props).build();
+  }
+
+  @Test
   public void verifyInjectorBuild_withDeletedConfig_throwsException()
   {
     verifyInjectorBuild_withDeletedConfig_throwsException(

@@ -292,7 +292,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     return new ReadableInputQueue(
         new StandardPartitionReader(context),
         filteredSlices,
-        segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
+        segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount() * 2
     );
   }
 

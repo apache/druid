@@ -148,6 +148,14 @@
     <cve>CVE-2025-5115</cve> <!-- netty issue in shaded hadoop -->
   </suppress>
 
+  <suppress>
+    <!-- from extensions using hadoop-client-runtime 3.5.0, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.5.0.jar
+     ]]></notes>
+    <cve>CVE-2026-5795</cve> <!-- Jetty 9.4.58 JASPI ThreadLocal privilege escalation in shaded hadoop. Not exploitable in Druid's Hadoop client usage (file operations only, no JASPI auth). Requires Hadoop to update to Jetty 9.4.59+ -->
+  </suppress>
+
   <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->
   <suppress>
       <notes><![CDATA[
@@ -751,5 +759,13 @@
     file name: grpc-core-1.65.1.jar
     ]]></notes>
     <vulnerabilityName>CVE-2024-11407</vulnerabilityName> <!-- This CVE is a false positive for java. The CVE is related to their cpp library, not java -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: grpc-*.jar (all grpc-java artifacts, any version)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
+    <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
   </suppress>
 </suppressions>

@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,7 +33,6 @@ import org.apache.druid.client.selector.LowestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
-import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -44,12 +42,10 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.TestCoordinatorClient;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -70,36 +66,31 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class BrokerServerViewTest extends CuratorTestBase
+public class BrokerServerViewTest
 {
-  private final ObjectMapper jsonMapper;
-  private final ZkPathsConfig zkPathsConfig;
+  private static final long AWAIT_SECONDS = 10;
 
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch serverAddedLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
-  private BatchServerInventoryView baseView;
+  private TestServerInventoryView baseView;
   private BrokerServerView brokerServerView;
-  private BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   public BrokerServerViewTest()
   {
-    jsonMapper = TestHelper.makeJsonMapper();
-    zkPathsConfig = new ZkPathsConfig();
     brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    setupServerAndCurator();
     brokerViewOfCoordinatorConfig.start();
-    curator.start();
-    curator.blockUntilConnected();
   }
 
   @Test
@@ -115,9 +106,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
     final int partition = segment.getShardSpec().getPartitionNum();
     final Interval intervals = Intervals.of("2014-10-20T00:00:00Z/P1D");
-    announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    baseView.addSegment(druidServer, segment);
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
         new TableDataSource("test_broker_server_view")
@@ -139,8 +130,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(druidServer, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
     Assert.assertNotNull(timeline.findChunk(intervals, "v1", partition));
 
-    unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    baseView.removeSegment(druidServer, segment);
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -176,10 +167,10 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     for (int i = 0; i < 5; ++i) {
-      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
+      baseView.addSegment(druidServers.get(i), segments.get(i));
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
         new TableDataSource("test_broker_server_view")
@@ -198,8 +189,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
-    unannounceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    baseView.removeSegment(druidServers.get(2), segments.get(2));
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
@@ -225,10 +216,10 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       // skip the one that was previously unannounced
       if (i != 2) {
-        unannounceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig);
+        baseView.removeSegment(druidServers.get(i), segments.get(i));
       }
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -268,10 +259,10 @@ public class BrokerServerViewTest extends CuratorTestBase
             )
         );
 
-    setupZNodeForServer(druidBroker, zkPathsConfig, jsonMapper);
+    baseView.addServer(druidBroker);
 
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(serverAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(serverAddedLatch));
 
     // check server metadatas
     Assert.assertEquals(
@@ -291,11 +282,11 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     DataSegment brokerSegment = dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-11", "v4");
-    announceSegmentForServer(druidBroker, brokerSegment, zkPathsConfig, jsonMapper);
+    baseView.addSegment(druidBroker, brokerSegment);
     for (int i = 0; i < 5; ++i) {
-      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
+      baseView.addSegment(druidServers.get(i), segments.get(i));
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
         new TableDataSource("test_broker_server_view")
@@ -315,8 +306,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     // unannounce the broker segment should do nothing to announcements
-    unannounceSegmentForServer(druidBroker, brokerSegment, zkPathsConfig);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    baseView.removeSegment(druidBroker, brokerSegment);
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 5 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(5);
@@ -341,9 +332,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // unannounce all the segments
     for (int i = 0; i < 5; ++i) {
-      unannounceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig);
+      baseView.removeSegment(druidServers.get(i), segments.get(i));
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
   }
 
   @Test
@@ -363,18 +354,18 @@ public class BrokerServerViewTest extends CuratorTestBase
     final DruidServer server21 = setupHistoricalServer(tier2, "localhost:2", 1);
 
     final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
-    announceSegmentForServer(server11, segment1, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server11, segment1);
 
     final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
-    announceSegmentForServer(server11, segment2, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(server21, segment2, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server11, segment2);
+    baseView.addSegment(server21, segment2);
 
     final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
-    announceSegmentForServer(server21, segment3, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server21, segment3);
 
     // Wait for the segments to be added
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
@@ -423,18 +414,18 @@ public class BrokerServerViewTest extends CuratorTestBase
     final DruidServer historicalServer = setupHistoricalServer("tier1", "historical:2", 1);
 
     final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
-    announceSegmentForServer(realtimeServer, segment1, zkPathsConfig, jsonMapper);
+    baseView.addSegment(realtimeServer, segment1);
 
     final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
-    announceSegmentForServer(realtimeServer, segment2, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(historicalServer, segment2, zkPathsConfig, jsonMapper);
+    baseView.addSegment(realtimeServer, segment2);
+    baseView.addSegment(historicalServer, segment2);
 
     final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
-    announceSegmentForServer(historicalServer, segment3, zkPathsConfig, jsonMapper);
+    baseView.addSegment(historicalServer, segment3);
 
     // Wait for the segments to be added
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
@@ -485,18 +476,18 @@ public class BrokerServerViewTest extends CuratorTestBase
     final DruidServer server21 = setupHistoricalServer(tier2, "localhost:2", 1);
 
     final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
-    announceSegmentForServer(server11, segment1, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server11, segment1);
 
     final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
-    announceSegmentForServer(server11, segment2, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(server21, segment2, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server11, segment2);
+    baseView.addSegment(server21, segment2);
 
     final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
-    announceSegmentForServer(server21, segment3, zkPathsConfig, jsonMapper);
+    baseView.addSegment(server21, segment3);
 
     // Wait for the segments to be added
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
@@ -572,23 +563,23 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Segment 1: only on historicals with different priorities
     final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
-    announceSegmentForServer(historicalLowPriority, segment1, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(historicalHighPriority, segment1, zkPathsConfig, jsonMapper);
+    baseView.addSegment(historicalLowPriority, segment1);
+    baseView.addSegment(historicalHighPriority, segment1);
 
     // Segment 2: only on realtime with different priorities
     final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
-    announceSegmentForServer(realtimeLowPriority, segment2, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(realtimeHighPriority, segment2, zkPathsConfig, jsonMapper);
+    baseView.addSegment(realtimeLowPriority, segment2);
+    baseView.addSegment(realtimeHighPriority, segment2);
 
     // Segment 3: on both historical and realtime, but pick should prefer historical
     final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
-    announceSegmentForServer(historicalHighPriority, segment3, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(realtimeLowPriority, segment3, zkPathsConfig, jsonMapper);
-    announceSegmentForServer(realtimeHighPriority, segment3, zkPathsConfig, jsonMapper);
+    baseView.addSegment(historicalHighPriority, segment3);
+    baseView.addSegment(realtimeLowPriority, segment3);
+    baseView.addSegment(realtimeHighPriority, segment3);
 
     // Wait for the segments to be added
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
@@ -634,7 +625,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   /**
-   * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.
+   * Creates a DruidServer of type HISTORICAL and adds it to the test inventory view.
    */
   private DruidServer setupHistoricalServer(String tier, String name, int priority)
   {
@@ -642,7 +633,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   /**
-   * Creates a DruidServer of the specified type and sets up a ZNode for it.
+   * Creates a DruidServer of the specified type and adds it to the test inventory view.
    */
   private DruidServer setupDruidServer(ServerType serverType, String tier, String name, int priority)
   {
@@ -656,8 +647,13 @@ public class BrokerServerViewTest extends CuratorTestBase
         tier,
         priority
     );
-    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
+    baseView.addServer(druidServer);
     return druidServer;
+  }
+
+  private boolean awaitLatch(CountDownLatch latch) throws InterruptedException
+  {
+    return latch.await(AWAIT_SECONDS, TimeUnit.SECONDS);
   }
 
   private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
@@ -695,17 +691,17 @@ public class BrokerServerViewTest extends CuratorTestBase
     }
   }
 
-  private void setupViews() throws Exception
+  private void setupViews() throws InterruptedException
   {
     setupViews(null, null, true);
   }
 
-  private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy) throws Exception
+  private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy) throws InterruptedException
   {
     setupViews(historicalStrategy, realtimeStrategy, new BrokerSegmentWatcherConfig());
   }
 
-  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws Exception
+  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws InterruptedException
   {
     setupViews(
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -734,15 +730,9 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   private void setupViews(TierSelectorStrategy historicalStrategy, TierSelectorStrategy realtimeStrategy, BrokerSegmentWatcherConfig brokerSegmentWatcherConfig)
-      throws Exception
+      throws InterruptedException
   {
-    baseView = new BatchServerInventoryView(
-        zkPathsConfig,
-        curator,
-        jsonMapper,
-        Predicates.alwaysTrue(),
-        "test"
-    )
+    baseView = new TestServerInventoryView()
     {
       @Override
       public void registerServerCallback(Executor exec, ServerCallback callback)
@@ -754,7 +744,9 @@ public class BrokerServerViewTest extends CuratorTestBase
               public CallbackAction serverAdded(DruidServer server)
               {
                 final CallbackAction res = callback.serverAdded(server);
-                serverAddedLatch.countDown();
+                if (serverAddedLatch != null) {
+                  serverAddedLatch.countDown();
+                }
                 return res;
               }
 
@@ -827,6 +819,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
+    baseView.markInventoryInitialized();
     brokerServerView.start();
   }
 
@@ -863,9 +856,10 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
-    baseView.stop();
-    tearDownServerAndCurator();
+    if (baseView != null) {
+      baseView.stop();
+    }
   }
 }
