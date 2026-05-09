@@ -289,7 +289,9 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testDiskFull() throws IOException
   {
-    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 10, 100)) {
+    // Use a small minSpillFileSize so pending runs flush to disk frequently, where the
+    // 500-byte maxStorageBytes limit will be hit.
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 500, 100, 100)) {
       AggregateResult lastResult = AggregateResult.ok();
       for (int i = 0; i < 10000 && lastResult.isOk(); i++) {
         lastResult = grouper.aggregate(new IntKey(i));
@@ -346,15 +348,36 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       int maxFileCount
   )
   {
+    return makeGrouper(bufferSize, storageDir, maxStorageBytes, maxFileCount, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      File storageDir,
+      long maxStorageBytes,
+      int maxFileCount,
+      long minSpillFileSize
+  )
+  {
     return makeGrouper(
         bufferSize,
-        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats())
+        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats()),
+        minSpillFileSize
     );
   }
 
   private SpillingGrouper<IntKey> makeGrouper(
       int bufferSize,
       LimitedTemporaryStorage temporaryStorage
+  )
+  {
+    return makeGrouper(bufferSize, temporaryStorage, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage,
+      long minSpillFileSize
   )
   {
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -374,7 +397,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         null,
         false,
         bufferSize,
-        1024 * 1024L,
+        minSpillFileSize,
         new GroupByStatsProvider.PerQueryStats()
     );
     grouper.init();
