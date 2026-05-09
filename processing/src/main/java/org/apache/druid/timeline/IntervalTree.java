@@ -258,6 +258,14 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     return findMatching(i -> i.overlaps(interval));
   }
 
+  /**
+   * Get all entries matching a given condition
+   * @param condition The match condition
+   *
+   * This condition should not only return true when a node matches the condition but also when a child node range
+   * matches. It is a convenience method for {@link #forEachMatching(Predicate, Predicate, BiConsumer)} and see the
+   * method's documentation for more information. It calls the method with rangeCondition set to be same as condition.
+   */
   public Map<Interval, T> findMatching(Predicate<Interval> condition)
   {
     Map<Interval, T> result = new HashMap<>();
@@ -265,14 +273,63 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     return result;
   }
 
+  /**
+   * Find entries matching a given condition by doing a full traversal.
+   * @param condition The match condition
+   *
+   * The method traverses through all the nodes of the tree looking for matches.
+   */
+  public Map<Interval, T> findMatchingFullTraversal(Predicate<Interval> condition)
+  {
+    Map<Interval, T> result = new HashMap<>();
+    forEachMatchingFullTraversal(condition, result::put);
+    return result;
+  }
+
+  /**
+   * Perform on action for matching nodes.
+   * @param condition The match condition
+   * @param action The action
+   *
+   * This condition should not only return true when a node matches the condition but also when the child node range
+   * matches. It is a convenience method for {@link #forEachMatching(Predicate, Predicate, BiConsumer)} and see the
+   * method's documentation for more information. It calls the method with rangeCondition set to be same as condition.
+   */
   public void forEachMatching(Predicate<Interval> condition, BiConsumer<Interval, T> action)
   {
     forEachMatching(condition, condition, action);
   }
 
-  public void forEachMatching(Predicate<Interval> condition, Predicate<Interval> renageCondition, BiConsumer<Interval, T> action)
+  /**
+   * Perform on action for matching nodes by doing a full traversal.
+   * @param condition The match condition
+   * @param action The action
+   *
+   * The method traverses through all the nodes of the tree looking for matches.
+   */
+  public void forEachMatchingFullTraversal(Predicate<Interval> condition, BiConsumer<Interval, T> action)
   {
-    forEachMatching(root, condition, renageCondition, action);
+    forEachMatching(condition, null, action);
+  }
+
+  /**
+   * Perform an action for matching nodes
+   * @param condition The condition to match for the node
+   * @param rangeCondition The condition to check a child node for, to determine whether to traverse the subtree
+   * @param action The action to perform
+   *
+   * The rangeCondition is applied on the interval range of the child node and only if the condition returns true is the
+   * child subtree traversed. Interval range is the min start time to max end time for all the nodes in the child
+   * subtree. This is a lookup speedup optimization. If rangeCondition is null, the check is skipped and all the
+   * children are traversed to find matches.
+   *
+   * In some cases such as finding nodes overlapping the given interval or encompassing the given interval, the same
+   * predicate can be used for condition and rangeCondition. In other situations a full traversal maybe needed and a
+   * null can be passed in for rangeCondition. There are helper methods for these.
+   */
+  public void forEachMatching(Predicate<Interval> condition, Predicate<Interval> rangeCondition, BiConsumer<Interval, T> action)
+  {
+    forEachMatching(root, condition, rangeCondition, action);
   }
 
   private void forEachMatching(Node<T> node, Predicate<Interval> condition, Predicate<Interval> rangeCondition, BiConsumer<Interval, T> action)
@@ -285,7 +342,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     // Process in-order
 
     // Search left
-    if ((node.left != null) && rangeCondition.apply(node.left.range)) {
+    if ((node.left != null) && ((rangeCondition == null) || rangeCondition.apply(node.left.range))) {
       forEachMatching(node.left, condition, rangeCondition, action);
     }
 
@@ -294,7 +351,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     }
 
     // Search right
-    if (node.right != null && rangeCondition.apply(node.right.range)) {
+    if (node.right != null && ((rangeCondition == null) || rangeCondition.apply(node.right.range))) {
       forEachMatching(node.right, condition, rangeCondition, action);
     }
   }
