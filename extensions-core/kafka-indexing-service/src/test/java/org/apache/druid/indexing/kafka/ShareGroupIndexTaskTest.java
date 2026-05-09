@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
@@ -127,7 +128,29 @@ public class ShareGroupIndexTaskTest
     Assert.assertFalse(task.getInputSourceResources().isEmpty());
   }
 
+  @Test
+  public void testDefaultPriorityIsRealtime()
+  {
+    final ShareGroupIndexTask task = createTask("task_priority_default");
+    Assert.assertEquals(Tasks.DEFAULT_REALTIME_TASK_PRIORITY, task.getPriority());
+  }
+
+  @Test
+  public void testContextPriorityOverridesDefault()
+  {
+    final ShareGroupIndexTask task = createTask(
+        "task_priority_override",
+        ImmutableMap.of(Tasks.PRIORITY_KEY, 99)
+    );
+    Assert.assertEquals(99, task.getPriority());
+  }
+
   private ShareGroupIndexTask createTask(String id)
+  {
+    return createTask(id, null);
+  }
+
+  private ShareGroupIndexTask createTask(String id, Map<String, Object> context)
   {
     final DataSchema dataSchema = DataSchema.builder()
         .withDataSource("test_datasource")
@@ -178,7 +201,7 @@ public class ShareGroupIndexTaskTest
         dataSchema,
         tuningConfig,
         ioConfig,
-        null,
+        context,
         mapper
     );
   }

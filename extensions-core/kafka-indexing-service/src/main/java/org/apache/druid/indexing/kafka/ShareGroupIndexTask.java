@@ -161,6 +161,12 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
     return getTaskResource().getAvailabilityGroup();
   }
 
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
+  }
+
   boolean isStopRequested()
   {
     return stopRequested.get();
