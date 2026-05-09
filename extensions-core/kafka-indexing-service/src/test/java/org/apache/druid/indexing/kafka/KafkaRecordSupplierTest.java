@@ -24,11 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
-import org.apache.druid.indexing.kafka.test.TestBroker;
+import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
@@ -79,8 +78,7 @@ public class KafkaRecordSupplierTest
 
   private static String TOPIC = "topic";
   private static int TOPIC_POS_FIX = 0;
-  private static TestingCluster ZK_SERVER;
-  private static TestBroker KAFKA_SERVER;
+  private static EmbeddedKafkaBroker KAFKA_SERVER;
 
   private List<ProducerRecord<byte[], byte[]>> records;
 
@@ -199,19 +197,10 @@ public class KafkaRecordSupplierTest
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
-    ZK_SERVER = new TestingCluster(1);
-    ZK_SERVER.start();
-
-    KAFKA_SERVER = new TestBroker(
-        ZK_SERVER.getConnectString(),
-        null,
-        1,
-        ImmutableMap.of("num.partitions", "2")
-    );
+    KAFKA_SERVER = new EmbeddedKafkaBroker(ImmutableMap.of("KAFKA_NUM_PARTITIONS", "2"));
     KAFKA_SERVER.start();
-
   }
 
   @Before
@@ -222,13 +211,10 @@ public class KafkaRecordSupplierTest
   }
 
   @AfterClass
-  public static void tearDownClass() throws Exception
+  public static void tearDownClass()
   {
     KAFKA_SERVER.close();
     KAFKA_SERVER = null;
-
-    ZK_SERVER.stop();
-    ZK_SERVER = null;
   }
 
   @Test
