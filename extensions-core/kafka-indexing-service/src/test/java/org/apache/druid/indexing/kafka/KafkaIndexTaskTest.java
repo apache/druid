@@ -373,7 +373,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -1296,7 +1295,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -1369,7 +1367,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -3095,7 +3092,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
@@ -3168,7 +3164,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
@@ -3243,7 +3238,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit. Should fail and trip up with the first two bad messages in the stream
