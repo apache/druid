@@ -37,11 +37,10 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.roaringbitmap.IntIterator;
 
 import java.io.File;
@@ -62,10 +61,11 @@ public class IndexMergerNullHandlingTest
   private IndexIO indexIO;
   private IndexSpec indexSpec;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  @Before
+  @TempDir
+  public File temporaryFolder;
+
+  @BeforeEach
   public void setUp()
   {
     indexMerger = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -113,15 +113,15 @@ public class IndexMergerNullHandlingTest
         toPersist.add(new MapBasedInputRow(0L, ImmutableList.of("d"), m));
       }
 
-      final File tempDir = temporaryFolder.newFolder();
+      final File tempDir = temporaryFolder;
       try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
         final ColumnHolder columnHolder = index.getColumnHolder("d");
 
         if (nullFlavors.containsAll(subsetList)) {
           // all null -> should be missing
-          Assert.assertNull(subsetList.toString(), columnHolder);
+          Assertions.assertNull(columnHolder, subsetList.toString());
         } else {
-          Assert.assertNotNull(subsetList.toString(), columnHolder);
+          Assertions.assertNotNull(columnHolder, subsetList.toString());
 
           // The column has multiple values if there are any lists with > 1 element in the input set.
           final boolean hasMultipleValues = subsetList.stream()
@@ -142,20 +142,19 @@ public class IndexMergerNullHandlingTest
           try (final DictionaryEncodedColumn<String> dictionaryColumn =
                    (DictionaryEncodedColumn<String>) columnHolder.getColumn()) {
             // Verify unique values against the dictionary.
-            Assert.assertEquals(
-                subsetList.toString(),
+            Assertions.assertEquals(
                 uniqueValues.stream().sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList()),
                 IntStream.range(0, dictionaryColumn.getCardinality())
                          .mapToObj(dictionaryColumn::lookupName)
-                         .collect(Collectors.toList())
+                         .collect(Collectors.toList()),
+                subsetList.toString()
             );
 
-            Assert.assertEquals(subsetList.toString(), hasMultipleValues, dictionaryColumn.hasMultipleValues());
-            Assert.assertEquals(subsetList.toString(), uniqueValues.size(), dictionaryColumn.getCardinality());
+            Assertions.assertEquals(hasMultipleValues, dictionaryColumn.hasMultipleValues(), subsetList.toString());
+            Assertions.assertEquals(uniqueValues.size(), dictionaryColumn.getCardinality(), subsetList.toString());
 
             // Verify the expected set of rows was indexed, ignoring order.
-            Assert.assertEquals(
-                subsetList.toString(),
+            Assertions.assertEquals(
                 ImmutableMultiset.copyOf(
                     subsetList.stream()
                               .map(m -> normalize(m.get("d")))
@@ -169,7 +168,8 @@ public class IndexMergerNullHandlingTest
                              // yields [[null] x 2, [a]] (arguably a bug).
                              .distinct()
                              .collect(Collectors.toList())
-                )
+                ),
+                subsetList.toString()
             );
 
             // Verify that the bitmap index for null is correct.
@@ -205,7 +205,7 @@ public class IndexMergerNullHandlingTest
                 actualNullRows.add(iterator.next());
               }
 
-              Assert.assertEquals(subsetList.toString(), expectedNullRows, actualNullRows);
+              Assertions.assertEquals(expectedNullRows, actualNullRows, subsetList.toString());
             }
           }
         }
