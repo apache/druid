@@ -268,7 +268,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
       class="skip-offset-info"
     >
       <span
-        class="bp5-tag bp5-intent-success"
+        class="bp5-tag bp5-intent-success bp5-minimal"
       >
         <span
           aria-hidden="true"
@@ -431,7 +431,7 @@ exports[`ReindexingTimeline component rendering matches snapshot with skip offse
         class="bp5-popover-target"
       >
         <span
-          class="bp5-tag bp5-intent-warning"
+          class="bp5-tag bp5-intent-warning bp5-minimal"
         >
           <span
             aria-hidden="true"

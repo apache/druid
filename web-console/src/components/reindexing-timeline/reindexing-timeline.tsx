@@ -269,7 +269,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
         {skipOffset && (
           <div className="skip-offset-info">
             {skipOffset.isApplied && (
-              <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
+              <Tag minimal intent={Intent.SUCCESS} icon={IconNames.TICK}>
                 Skip Offset: {skipOffset.type} ({skipOffset.period})
               </Tag>
             )}
@@ -284,7 +284,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                   }
                   position="bottom"
                 >
-                  <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
+                  <Tag minimal intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
                     {skipOffset.type} ({skipOffset.period}): Not reflected in this preview
                   </Tag>
                 </Tooltip>
@@ -299,7 +299,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
               </>
             )}
             {!skipOffset.isApplied && queriedMaxTime && effectiveEndTime && (
-              <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
+              <Tag minimal intent={Intent.SUCCESS} icon={IconNames.TICK}>
                 {skipOffset.type} ({skipOffset.period}): Applied (latest:{' '}
                 {formatDateTimeUTC(queriedMaxTime)})
               </Tag>
