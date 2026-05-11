@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,7 +51,7 @@ public class OperatorTestHelper
           }
         }
     ).withFinalValidation(
-        testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
+        testReceiver -> Assertions.assertEquals(helpers.length, testReceiver.getNumPushed())
     );
   }
 
@@ -70,7 +70,7 @@ public class OperatorTestHelper
           }
         }
     ).withFinalValidation(
-        testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
+        testReceiver -> Assertions.assertEquals(helpers.length, testReceiver.getNumPushed())
     );
   }
 
@@ -106,7 +106,7 @@ public class OperatorTestHelper
   {
     TestReceiver receiver = this.receiverSupply.get();
     Operator.go(op, receiver);
-    Assert.assertTrue(receiver.isCompleted());
+    Assertions.assertTrue(receiver.isCompleted());
     if (finalValidation != null) {
       finalValidation.accept(receiver);
     }
@@ -135,8 +135,8 @@ public class OperatorTestHelper
     } while (continuation != null);
 
     final String msg = StringUtils.format("pauseAfter[%,d]", pauseAfter);
-    Assert.assertTrue(msg, pausingReceiver.isCompleted());
-    Assert.assertEquals(msg, expectedNumPauses, numPauses);
+    Assertions.assertTrue(pausingReceiver.isCompleted(), msg);
+    Assertions.assertEquals(expectedNumPauses, numPauses, msg);
     if (finalValidation != null) {
       finalValidation.accept(pausingReceiver);
     }

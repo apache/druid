@@ -21,10 +21,9 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,19 +50,16 @@ public class JSONPathParserTest
       "\"hey\":[{\"barx\":\"asdf\"}], \"met\":{\"a\":[7,8,9]}}";
   private static final String NOT_JSON = "***@#%R#*(TG@(*H(#@(#@((H#(@TH@(#TH(@SDHGKJDSKJFBSBJK";
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
   @Test
   public void testSimple()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(JSON);
-    Assert.assertEquals(
-        "jsonMap",
+    Assertions.assertEquals(
         ImmutableMap.of("one", "foo", "two", ImmutableList.of("bar", "baz"), "three", "qux"),
-        jsonMap
+        jsonMap,
+        "jsonMap"
     );
   }
 
@@ -73,10 +69,10 @@ public class JSONPathParserTest
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NUMBERS_JSON);
-    Assert.assertEquals(
-        "jsonMap",
+    Assertions.assertEquals(
         ImmutableMap.of("five", 5.0, "six", 6L, "many", 1234567878900L, "toomany", 1.23456789E21),
-        jsonMap
+        jsonMap,
+        "jsonMap"
     );
   }
 
@@ -86,10 +82,10 @@ public class JSONPathParserTest
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(WHACKY_CHARACTER_JSON);
-    Assert.assertEquals(
-        "jsonMap",
+    Assertions.assertEquals(
         ImmutableMap.of("one", "foo?"),
-        jsonMap
+        jsonMap,
+        "jsonMap"
     );
   }
 
@@ -118,48 +114,48 @@ public class JSONPathParserTest
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
-    Assert.assertEquals(ImmutableList.of(1L, 2L, 3L), jsonMap.get("baz"));
-    Assert.assertEquals(ImmutableList.of(4L, 5L, 6L), jsonMap.get("blah"));
-    Assert.assertEquals("text", jsonMap.get("simpleVal"));
-    Assert.assertEquals(5L, jsonMap.get("newmet"));
-    Assert.assertEquals("2999", jsonMap.get("timestamp"));
-    Assert.assertEquals("Hello world!", jsonMap.get("foo.bar1"));
+    Assertions.assertEquals(ImmutableList.of(1L, 2L, 3L), jsonMap.get("baz"));
+    Assertions.assertEquals(ImmutableList.of(4L, 5L, 6L), jsonMap.get("blah"));
+    Assertions.assertEquals("text", jsonMap.get("simpleVal"));
+    Assertions.assertEquals(5L, jsonMap.get("newmet"));
+    Assertions.assertEquals("2999", jsonMap.get("timestamp"));
+    Assertions.assertEquals("Hello world!", jsonMap.get("foo.bar1"));
 
     List<Object> testListConvert = (List) jsonMap.get("testListConvert");
-    Assert.assertEquals(1.23456789E21, testListConvert.get(0));
-    Assert.assertEquals("foo?", testListConvert.get(1));
+    Assertions.assertEquals(1.23456789E21, testListConvert.get(0));
+    Assertions.assertEquals("foo?", testListConvert.get(1));
 
     List<Object> testListConvert2 = (List) jsonMap.get("testListConvert2");
-    Assert.assertEquals(1.23456789E21, testListConvert2.get(0));
-    Assert.assertEquals("foo?", testListConvert2.get(1));
-    Assert.assertEquals(1.23456789E21, ((List) testListConvert2.get(2)).get(0));
+    Assertions.assertEquals(1.23456789E21, testListConvert2.get(0));
+    Assertions.assertEquals("foo?", testListConvert2.get(1));
+    Assertions.assertEquals(1.23456789E21, ((List) testListConvert2.get(2)).get(0));
 
     Map<String, Object> testMapConvert = (Map) jsonMap.get("testMapConvert");
-    Assert.assertEquals(1.23456789E21, testMapConvert.get("big"));
-    Assert.assertEquals(1.23456789E21, ((Map) testMapConvert.get("big2")).get("big2"));
+    Assertions.assertEquals(1.23456789E21, testMapConvert.get("big"));
+    Assertions.assertEquals(1.23456789E21, ((Map) testMapConvert.get("big2")).get("big2"));
 
-    Assert.assertEquals(ImmutableList.of(), jsonMap.get("testEmptyList"));
+    Assertions.assertEquals(ImmutableList.of(), jsonMap.get("testEmptyList"));
 
     // Nested fields
-    Assert.assertEquals("aaa", jsonMap.get("nested-foo.bar1"));
-    Assert.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
-    Assert.assertEquals("asdf", jsonMap.get("heybarx0"));
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
+    Assertions.assertEquals("aaa", jsonMap.get("nested-foo.bar1"));
+    Assertions.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
+    Assertions.assertEquals("asdf", jsonMap.get("heybarx0"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
 
-    Assert.assertEquals("aaa", jsonMap.get("jq-nested-foo.bar1"));
-    Assert.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
-    Assert.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
+    Assertions.assertEquals("aaa", jsonMap.get("jq-nested-foo.bar1"));
+    Assertions.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
+    Assertions.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
     // Fields that should not be discovered
-    Assert.assertFalse(jsonMap.containsKey("hey"));
-    Assert.assertFalse(jsonMap.containsKey("met"));
-    Assert.assertFalse(jsonMap.containsKey("ignore_me"));
-    Assert.assertFalse(jsonMap.containsKey("foo"));
+    Assertions.assertFalse(jsonMap.containsKey("hey"));
+    Assertions.assertFalse(jsonMap.containsKey("met"));
+    Assertions.assertFalse(jsonMap.containsKey("ignore_me"));
+    Assertions.assertFalse(jsonMap.containsKey("foo"));
 
     // Invalid fields
-    Assert.assertNull(jsonMap.get("INVALID_ROOT"));
-    Assert.assertNull(jsonMap.get("INVALID_PATH"));
+    Assertions.assertNull(jsonMap.get("INVALID_ROOT"));
+    Assertions.assertNull(jsonMap.get("INVALID_PATH"));
   }
 
   @Test
@@ -183,32 +179,32 @@ public class JSONPathParserTest
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
-    Assert.assertEquals("text", jsonMap.get("simpleVal"));
-    Assert.assertEquals("2999", jsonMap.get("timestamp"));
-    Assert.assertEquals("text", jsonMap.get("tree-simpleVal"));
-    Assert.assertEquals("2999", jsonMap.get("tree-timestamp"));
+    Assertions.assertEquals("text", jsonMap.get("simpleVal"));
+    Assertions.assertEquals("2999", jsonMap.get("timestamp"));
+    Assertions.assertEquals("text", jsonMap.get("tree-simpleVal"));
+    Assertions.assertEquals("2999", jsonMap.get("tree-timestamp"));
 
     // Nested fields
-    Assert.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
-    Assert.assertEquals("asdf", jsonMap.get("heybarx0"));
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
-    Assert.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
-    Assert.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
+    Assertions.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
+    Assertions.assertEquals("asdf", jsonMap.get("heybarx0"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
+    Assertions.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
+    Assertions.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("tree-met-array"));
-    Assert.assertEquals("bbb", jsonMap.get("tree-nested-foo.bar2"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("tree-met-array"));
+    Assertions.assertEquals("bbb", jsonMap.get("tree-nested-foo.bar2"));
 
     // Fields that should not be discovered
-    Assert.assertFalse(jsonMap.containsKey("newmet"));
-    Assert.assertFalse(jsonMap.containsKey("foo.bar1"));
-    Assert.assertFalse(jsonMap.containsKey("baz"));
-    Assert.assertFalse(jsonMap.containsKey("blah"));
-    Assert.assertFalse(jsonMap.containsKey("nested-foo.bar1"));
-    Assert.assertFalse(jsonMap.containsKey("hey"));
-    Assert.assertFalse(jsonMap.containsKey("met"));
-    Assert.assertFalse(jsonMap.containsKey("ignore_me"));
-    Assert.assertFalse(jsonMap.containsKey("foo"));
+    Assertions.assertFalse(jsonMap.containsKey("newmet"));
+    Assertions.assertFalse(jsonMap.containsKey("foo.bar1"));
+    Assertions.assertFalse(jsonMap.containsKey("baz"));
+    Assertions.assertFalse(jsonMap.containsKey("blah"));
+    Assertions.assertFalse(jsonMap.containsKey("nested-foo.bar1"));
+    Assertions.assertFalse(jsonMap.containsKey("hey"));
+    Assertions.assertFalse(jsonMap.containsKey("met"));
+    Assertions.assertFalse(jsonMap.containsKey("ignore_me"));
+    Assertions.assertFalse(jsonMap.containsKey("foo"));
   }
 
   @Test
@@ -218,11 +214,11 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
 
-    thrown.expect(IllegalArgumentException.class);
-    thrown.expectMessage("Cannot have duplicate field definition: met-array");
-
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
-    jsonParser.parseToMap(NESTED_JSON);
+    final IllegalArgumentException e1 = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
+      jsonParser.parseToMap(NESTED_JSON);
+    });
+    Assertions.assertTrue(e1.getMessage().contains("Cannot have duplicate field definition: met-array"));
   }
 
   @Test
@@ -232,11 +228,11 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "met-array", ".met.a"));
 
-    thrown.expect(IllegalArgumentException.class);
-    thrown.expectMessage("Cannot have duplicate field definition: met-array");
-
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
-    jsonParser.parseToMap(NESTED_JSON);
+    final IllegalArgumentException e2 = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
+      jsonParser.parseToMap(NESTED_JSON);
+    });
+    Assertions.assertTrue(e2.getMessage().contains("Cannot have duplicate field definition: met-array"));
   }
 
   @Test
@@ -244,11 +240,11 @@ public class JSONPathParserTest
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
 
-    thrown.expect(ParseException.class);
-    thrown.expectMessage("Unable to parse row [" + NOT_JSON + "]");
-
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
-    jsonParser.parseToMap(NOT_JSON);
+    final ParseException e = Assertions.assertThrows(ParseException.class, () -> {
+      final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
+      jsonParser.parseToMap(NOT_JSON);
+    });
+    Assertions.assertTrue(e.getMessage().contains("Unable to parse row [" + NOT_JSON + "]"));
   }
 
   @Test
@@ -269,17 +265,17 @@ public class JSONPathParserTest
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // values of met.a array are: 7,8,9
-    Assert.assertEquals(3, jsonMap.get("met-array-length"));
-    Assert.assertEquals(7.0, jsonMap.get("met-array-min"));
-    Assert.assertEquals(9.0, jsonMap.get("met-array-max"));
-    Assert.assertEquals(8.0, jsonMap.get("met-array-avg"));
-    Assert.assertEquals(24.0, jsonMap.get("met-array-sum"));
+    Assertions.assertEquals(3, jsonMap.get("met-array-length"));
+    Assertions.assertEquals(7.0, jsonMap.get("met-array-min"));
+    Assertions.assertEquals(9.0, jsonMap.get("met-array-max"));
+    Assertions.assertEquals(8.0, jsonMap.get("met-array-avg"));
+    Assertions.assertEquals(24.0, jsonMap.get("met-array-sum"));
 
     //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
-    Assert.assertEquals(0.8165, (double) jsonMap.get("met-array-stddev"), 0.00001);
+    Assertions.assertEquals(0.8165, (double) jsonMap.get("met-array-stddev"), 0.00001);
 
-    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L, 10L), jsonMap.get("met-array-append"));
-    Assert.assertEquals("aaabbb", jsonMap.get("concat"));
+    Assertions.assertEquals(ImmutableList.of(7L, 8L, 9L, 10L), jsonMap.get("met-array-append"));
+    Assertions.assertEquals("aaabbb", jsonMap.get("concat"));
   }
 
 }
