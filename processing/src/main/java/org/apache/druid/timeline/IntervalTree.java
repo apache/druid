@@ -20,7 +20,6 @@
 package org.apache.druid.timeline;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.java.util.common.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
@@ -32,6 +31,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -122,7 +122,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     {
       String prefix = "\t".repeat(level);
       String eprefix = "\t".repeat(level - 1);
-      return StringUtils.format(PRINT_FORMAT,
+      return String.format(Locale.ENGLISH, PRINT_FORMAT,
                               prefix, interval, prefix, value, prefix, height,
                               prefix, range,
                               prefix, (left != null) ? left.print(level + 1) : null,
