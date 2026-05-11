@@ -169,21 +169,4 @@ public abstract class IcebergCatalog {
     }
     return dataFilePaths;
   }
-
-  public List<String> extractSnapshotDataFiles(
-          String tableNamespace,
-          String tableName,
-          IcebergFilter icebergFilter,
-          DateTime snapshotTime,
-          ResidualFilterMode residualFilterMode
-  ) {
-    return extractSnapshotDataFiles(
-            tableNamespace,
-            tableName,
-            icebergFilter,
-            snapshotTime,
-            residualFilterMode,
-            null
-    );
-  }
 }
