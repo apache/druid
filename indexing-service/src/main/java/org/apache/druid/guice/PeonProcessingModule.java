@@ -84,7 +84,7 @@ public class PeonProcessingModule implements Module
       Lifecycle lifecycle
   )
   {
-    if (task.getPeonProcessingModuleConfig().processingThreads) {
+    if (task.getPeonProcessingModuleConfig().hasProcessingThreads()) {
       return DruidProcessingModule.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
     } else {
       if (config.isNumThreadsConfigured()) {
@@ -108,7 +108,7 @@ public class PeonProcessingModule implements Module
       RuntimeInfo runtimeInfo
   )
   {
-    if (task.getPeonProcessingModuleConfig().processingBuffers) {
+    if (task.getPeonProcessingModuleConfig().hasProcessingBuffers()) {
       return DruidProcessingModule.createIntermediateResultsPool(config, runtimeInfo);
     } else {
       return DummyNonBlockingPool.instance();
@@ -120,7 +120,7 @@ public class PeonProcessingModule implements Module
   @Merging
   public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    if (task.getPeonProcessingModuleConfig().mergeBuffers) {
+    if (task.getPeonProcessingModuleConfig().hasMergeBuffers()) {
       return DruidProcessingModule.createMergeBufferPool(config, runtimeInfo);
     } else {
       if (config.isNumMergeBuffersConfigured()) {
@@ -171,6 +171,21 @@ public class PeonProcessingModule implements Module
     {
       this.mergeBuffers = true;
       return this;
+    }
+
+    public boolean hasProcessingBuffers()
+    {
+      return processingBuffers;
+    }
+
+    public boolean hasProcessingThreads()
+    {
+      return processingThreads;
+    }
+
+    public boolean hasMergeBuffers()
+    {
+      return mergeBuffers;
     }
   }
 }
