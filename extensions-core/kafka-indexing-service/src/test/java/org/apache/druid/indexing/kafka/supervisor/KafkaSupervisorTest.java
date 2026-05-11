@@ -204,7 +204,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
     kafkaServer = new EmbeddedKafkaBroker(
         ImmutableMap.of(
