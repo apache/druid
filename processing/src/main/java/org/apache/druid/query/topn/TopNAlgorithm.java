@@ -21,6 +21,7 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 
@@ -40,7 +41,8 @@ public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
       Parameters params,
       TopNResultBuilder resultBuilder,
       DimValSelector dimValSelector,
-      @Nullable TopNQueryMetrics queryMetrics
+      @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   );
 
   void cleanup(Parameters params);

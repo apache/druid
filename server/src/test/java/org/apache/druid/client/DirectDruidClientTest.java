@@ -78,6 +78,11 @@ import java.util.concurrent.TimeUnit;
 
 public class DirectDruidClientTest
 {
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private final String hostName = "localhost:8080";
 
   private final DataSegment dataSegment = new DataSegment(

@@ -148,7 +148,7 @@
             <artifactId>elasticache-java-cluster-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.lz4</groupId>
+            <groupId>at.yawk.lz4</groupId>
             <artifactId>lz4-java</artifactId>
         </dependency>
         <dependency>
@@ -504,6 +504,10 @@
                         <!-- These are needed for scope: runtime -->
                         <dependency>org.xerial.snappy:snappy-java</dependency>
                     </usedDependencies>
+                    <!-- Transitive dependency from guava, used in annotations -->
+                    <ignoredUsedUndeclaredDependencies>
+                        <ignoredUsedUndeclaredDependency>org.checkerframework:checker-qual:jar:2.5.7</ignoredUsedUndeclaredDependency>
+                    </ignoredUsedUndeclaredDependencies>
                 </configuration>
             </plugin>
         </plugins>

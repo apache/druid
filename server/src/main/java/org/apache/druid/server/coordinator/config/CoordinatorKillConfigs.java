@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 public class CoordinatorKillConfigs
 {
   public static CoordinatorKillConfigs DEFAULT
-      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null, null);
+      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
   @JsonProperty("supervisor")
   private final MetadataCleanupConfig supervisors;
@@ -70,6 +71,9 @@ public class CoordinatorKillConfigs
   @JsonProperty("maxSegments")
   private final Integer killUnusedMaxSegments;
 
+  @JsonProperty("maxInterval")
+  private final Period killUnusedMaxInterval;
+
   @JsonCreator
   public CoordinatorKillConfigs(
       @JsonProperty("pendingSegments") MetadataCleanupConfig pendingSegments,
@@ -85,7 +89,8 @@ public class CoordinatorKillConfigs
       @JsonProperty("durationToRetain") Duration killUnusedDurationToRetain,
       @JsonProperty("ignoreDurationToRetain") Boolean killUnusedIgnoreDurationToRetain,
       @JsonProperty("bufferPeriod") Duration killUnusedBufferPeriod,
-      @JsonProperty("maxSegments") Integer killUnusedMaxSegments
+      @JsonProperty("maxSegments") Integer killUnusedMaxSegments,
+      @JsonProperty("maxInterval") Period killUnusedMaxInterval
   )
   {
     this.pendingSegments = Configs.valueOrDefault(pendingSegments, MetadataCleanupConfig.DEFAULT);
@@ -102,6 +107,7 @@ public class CoordinatorKillConfigs
     this.killUnusedBufferPeriod = killUnusedBufferPeriod;
     this.killUnusedIgnoreDurationToRetain = killUnusedIgnoreDurationToRetain;
     this.killUnusedMaxSegments = killUnusedMaxSegments;
+    this.killUnusedMaxInterval = killUnusedMaxInterval;
   }
 
   public MetadataCleanupConfig auditLogs()
@@ -151,7 +157,8 @@ public class CoordinatorKillConfigs
         killUnusedDurationToRetain,
         killUnusedIgnoreDurationToRetain,
         killUnusedBufferPeriod,
-        killUnusedMaxSegments
+        killUnusedMaxSegments,
+        killUnusedMaxInterval
     );
   }
 }

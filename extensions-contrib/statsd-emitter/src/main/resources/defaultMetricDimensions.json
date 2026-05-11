@@ -1,5 +1,6 @@
 {
   "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer"},
+  "query/planningTime" : { "dimensions" : ["dataSource", "type"], "type" : "timer"},
   "query/bytes" : { "dimensions" : ["dataSource", "type"], "type" : "count"},
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
@@ -43,6 +44,7 @@
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/filtered" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persists/count" : { "dimensions" : ["dataSource"], "type" : "count" },

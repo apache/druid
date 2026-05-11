@@ -55,6 +55,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.util.Timer;
 import org.joda.time.Duration;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Map;
@@ -100,7 +101,7 @@ public class NettyHttpClient extends AbstractHttpClient
   }
 
   @LifecycleStop
-  public void stop()
+  public void stop() throws IOException
   {
     pool.close();
   }

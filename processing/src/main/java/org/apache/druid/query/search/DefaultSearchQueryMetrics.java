@@ -188,6 +188,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportQueryPlanningTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportQueryPlanningTime(timeNs);
+  }
+
+  @Override
   public QueryMetrics reportQueryBytes(long byteCount)
   {
     return delegateQueryMetrics.reportQueryBytes(byteCount);
@@ -215,6 +221,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportCpuTime(long timeNs)
   {
     return delegateQueryMetrics.reportCpuTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportRowsScannedCount(long rowsScannedCount)
+  {
+    return delegateQueryMetrics.reportRowsScannedCount(rowsScannedCount);
   }
 
   @Override

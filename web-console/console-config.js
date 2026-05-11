@@ -19,4 +19,9 @@
 window.consoleConfig = {
   exampleManifestsUrl: 'https://druid.apache.org/data/example-manifests-v2.tsv',
   /* future configs may go here */
+  defaultQueryContext: {
+    priority: -1,
+    timeout: 30000,
+    lane: 'console',
+  },
 };

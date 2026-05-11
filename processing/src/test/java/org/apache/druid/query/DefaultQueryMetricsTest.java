@@ -133,10 +133,8 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     serviceEmitter.verifyValue("query/node/bytes", 10L);
     Assert.assertEquals(9, serviceEmitter.getEvents().size());
 
-    // Verify that Queried Segment Count does not get emitted by the DefaultQueryMetrics
-    // and the total number of emitted metrics remains unchanged
     queryMetrics.reportQueriedSegmentCount(25).emit(serviceEmitter);
-    Assert.assertEquals(9, serviceEmitter.getEvents().size());
+    serviceEmitter.verifyValue("query/queriedSegment/count", 25L);
   }
 
   @Test

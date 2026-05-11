@@ -61,6 +61,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -137,7 +138,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         spec.getIoConfig().getConsumerProperties(),
         sortingMapper,
         spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic()
+        spec.getIoConfig().isMultiTopic(),
+        spec.getIoConfig().getHeaderBasedFilterConfig()
     );
   }
 
@@ -218,6 +220,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         maximumMessageTime,
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
+        kafkaIoConfig.getHeaderBasedFilterConfig(),
         kafkaIoConfig.isMultiTopic()
     );
   }

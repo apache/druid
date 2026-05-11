@@ -661,7 +661,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
-              + " Expected 'SECOND', 'MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE', 'HOUR',"
+              + " Expected 'SECOND', 'MINUTE', 'TWO_MINUTE', 'THREE_MINUTE', 'FOUR_MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE', 'HOUR',"
               + " 'SIX_HOUR', 'EIGHT_HOUR', 'DAY', 'MONTH', 'QUARTER', 'YEAR', 'ALL', ALL TIME, FLOOR()"
               + " or TIME_FLOOR()"
           ));

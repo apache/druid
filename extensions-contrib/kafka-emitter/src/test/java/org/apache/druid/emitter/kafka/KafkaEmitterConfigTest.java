@@ -31,7 +31,6 @@ import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,6 +53,7 @@ public class KafkaEmitterConfigTest
         "alertTest",
         "requestTest",
         "metadataTest",
+        null,
         "clusterNameTest",
         ImmutableMap.of("env", "preProd"),
         ImmutableMap.<String, String>builder()
@@ -76,6 +76,7 @@ public class KafkaEmitterConfigTest
         "alertTest",
         null,
         "metadataTest",
+        null,
         "clusterNameTest",
         null,
         ImmutableMap.<String, String>builder()
@@ -100,6 +101,7 @@ public class KafkaEmitterConfigTest
         null,
         null,
         "metadataTest",
+        null,
         "clusterNameTest",
         null,
         ImmutableMap.<String, String>builder()
@@ -122,6 +124,7 @@ public class KafkaEmitterConfigTest
         "alertTest",
         null,
         "metadataTest",
+        null,
         null,
         ImmutableMap.of("env", "preProd"),
         null,
@@ -179,6 +182,7 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -196,6 +200,7 @@ public class KafkaEmitterConfigTest
             () -> new KafkaEmitterConfig(
                 "foo",
                 new HashSet<>(Collections.singletonList(KafkaEmitterConfig.EventType.METRICS)),
+                null,
                 null,
                 null,
                 null,
@@ -221,6 +226,7 @@ public class KafkaEmitterConfigTest
                 "foo",
                 null,
                 "foo",
+                null,
                 null,
                 null,
                 null,
@@ -253,6 +259,7 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -275,6 +282,7 @@ public class KafkaEmitterConfigTest
                 "foo",
                 "bar",
                 "baz",
+                null,
                 null,
                 null,
                 null,

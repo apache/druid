@@ -52,7 +52,7 @@ public class K8sAnnouncerAndDiscoveryIntTest
 
   private final PodInfo podInfo = new PodInfo("busybox", "default");
 
-  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null);
+  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null, null, null);
 
   @Test(timeout = 30000L)
   public void testAnnouncementAndDiscoveryWorkflow() throws Exception

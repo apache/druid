@@ -82,6 +82,7 @@ public class Pac4jAuthenticator implements Authenticator
         name,
         authorizerName,
         pac4jConfigSupplier.get(),
+        Pac4jCallbackResource.SELF_URL,
         pac4jCommonConfig.getCookiePassphrase().getPassword()
     );
   }

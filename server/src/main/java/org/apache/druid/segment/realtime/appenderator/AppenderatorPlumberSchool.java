@@ -71,7 +71,7 @@ public class AppenderatorPlumberSchool implements PlumberSchool
         metrics,
         segmentAnnouncer,
         segmentPublisher,
-        handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),
+        handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource(), "appenderator-plumber-task"),
         appenderator
     );
   }

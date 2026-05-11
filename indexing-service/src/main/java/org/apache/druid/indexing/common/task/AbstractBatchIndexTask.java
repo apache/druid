@@ -713,7 +713,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource(), getId())
     ) {
 
       final ExecutorService exec = Execs.directExecutor();

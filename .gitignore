@@ -8,7 +8,7 @@ target
 *.swo
 *.pyc
 .classpath
-.idea
+.idea/
 .project
 .PVS-Studio
 .settings/

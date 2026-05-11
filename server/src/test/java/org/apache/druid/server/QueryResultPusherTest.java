@@ -88,6 +88,12 @@ public class QueryResultPusherTest
       }
 
       @Override
+      public void recordSuccess(long numBytes, long numRowsScanned, long cpuTimeInMillis)
+      {
+
+      }
+
+      @Override
       public void recordFailure(Exception e)
       {
         assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));

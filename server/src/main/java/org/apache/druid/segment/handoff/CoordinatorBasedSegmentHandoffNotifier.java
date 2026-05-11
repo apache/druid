@@ -44,22 +44,25 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private volatile ScheduledExecutorService scheduledExecutor;
   private final Duration pollDuration;
   private final String dataSource;
+  private final String taskId;
 
   public CoordinatorBasedSegmentHandoffNotifier(
       String dataSource,
       CoordinatorClient coordinatorClient,
-      CoordinatorBasedSegmentHandoffNotifierConfig config
+      CoordinatorBasedSegmentHandoffNotifierConfig config,
+      String taskId
   )
   {
     this.dataSource = dataSource;
     this.coordinatorClient = coordinatorClient;
     this.pollDuration = config.getPollDuration();
+    this.taskId = taskId;
   }
 
   @Override
   public boolean registerSegmentHandoffCallback(SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable)
   {
-    log.debug("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
+    log.debug("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s] for task[%s]", dataSource, descriptor, taskId);
     Pair<Executor, Runnable> prev = handOffCallbacks.putIfAbsent(
         descriptor,
         new Pair<>(exec, handOffRunnable)
@@ -91,7 +94,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           Boolean handOffComplete =
               FutureUtils.getUnchecked(coordinatorClient.isHandoffComplete(dataSource, descriptor), true);
           if (Boolean.TRUE.equals(handOffComplete)) {
-            log.debug("Segment handoff complete for dataSource[%s] segment[%s]", dataSource, descriptor);
+            log.debug("Segment handoff complete for dataSource[%s] segment[%s] for task[%s]", dataSource, descriptor, taskId);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
           }
@@ -99,22 +102,24 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         catch (Exception e) {
           log.error(
               e,
-              "Exception while checking handoff for dataSource[%s] Segment[%s]; will try again after [%s]",
+              "Exception while checking handoff for dataSource[%s] Segment[%s], taskId[%s]; will try again after [%s]",
               dataSource,
               descriptor,
+              taskId,
               pollDuration
           );
         }
       }
       if (!handOffCallbacks.isEmpty()) {
-        log.info("Still waiting for handoff for [%d] segments", handOffCallbacks.size());
+        log.info("Still waiting for handoff for [%d] segments for task[%s]", handOffCallbacks.size(), taskId);
       }
     }
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s]; will try again after [%s]",
+          "Exception while checking handoff for dataSource[%s], taskId[%s]; will try again after [%s]",
           dataSource,
+          taskId,
           pollDuration
       );
     }

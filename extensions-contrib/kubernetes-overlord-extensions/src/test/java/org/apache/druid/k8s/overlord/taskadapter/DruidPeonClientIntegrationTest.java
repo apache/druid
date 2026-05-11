@@ -52,7 +52,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -146,15 +145,10 @@ public class DruidPeonClientIntegrationTest
     List<Integer> expectedLogs = IntStream.range(1, 1001).boxed().collect(Collectors.toList());
     List<Integer> actualLogs = new ArrayList<>();
     Thread thread = new Thread(() -> {
-      try {
-        actualLogs.addAll(IOUtils.readLines(peonLogs, "UTF-8")
-                                 .stream()
-                                 .map(Integer::parseInt)
-                                 .collect(Collectors.toList()));
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+      actualLogs.addAll(IOUtils.readLines(peonLogs, "UTF-8")
+                               .stream()
+                               .map(Integer::parseInt)
+                               .collect(Collectors.toList()));
     });
     thread.start();
 

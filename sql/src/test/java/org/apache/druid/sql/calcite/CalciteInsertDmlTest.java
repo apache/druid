@@ -1220,7 +1220,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
-              + " Expected 'SECOND', 'MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE', 'HOUR',"
+              + " Expected 'SECOND', 'MINUTE', 'TWO_MINUTE', 'THREE_MINUTE', 'FOUR_MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE', 'HOUR',"
               + " 'SIX_HOUR', 'EIGHT_HOUR', 'DAY', 'MONTH', 'QUARTER', 'YEAR', 'ALL', ALL TIME, FLOOR()"
               + " or TIME_FLOOR()"
           ));
@@ -1674,7 +1674,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 CoreMatchers.instanceOf(DruidException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                     "Invalid granularity[`time_floor`(`__time`, 'PT2H')] specified after PARTITIONED BY clause."
-                    + " Expected 'SECOND', 'MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE',"
+                    + " Expected 'SECOND', 'MINUTE', 'TWO_MINUTE', 'THREE_MINUTE', 'FOUR_MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE',"
                     + " 'HOUR', 'SIX_HOUR', 'EIGHT_HOUR', 'DAY', 'MONTH', 'QUARTER', 'YEAR', 'ALL',"
                     + " ALL TIME, FLOOR() or TIME_FLOOR()"))
             )

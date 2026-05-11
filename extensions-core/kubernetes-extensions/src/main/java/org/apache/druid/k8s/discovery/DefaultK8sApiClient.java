@@ -36,6 +36,9 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -76,7 +79,8 @@ public class DefaultK8sApiClient implements K8sApiClient
   public DiscoveryDruidNodeList listPods(
       String podNamespace,
       String labelSelector,
-      NodeRole nodeRole
+      NodeRole nodeRole,
+      @Nullable Duration terminatingStateCheckDuration
   )
   {
     try {
@@ -85,6 +89,26 @@ public class DefaultK8sApiClient implements K8sApiClient
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
       for (V1Pod podDef : podList.getItems()) {
+        // irrespective of the grace period, we skip the pod if it has been in termination for more than terminatingStateCheckDuration
+        if (podDef.getMetadata() != null && podDef.getMetadata().getDeletionTimestamp() != null) {
+          long deletionTimestamp = podDef.getMetadata().getDeletionTimestamp().toInstant().toEpochMilli();
+          long currentTimestamp = System.currentTimeMillis();
+          long terminationGracePeriod = podDef.getSpec().getTerminationGracePeriodSeconds() != null ? 
+              podDef.getSpec().getTerminationGracePeriodSeconds() * 1000L : 30 * 1000L; // Default to 30s if graceperiod is not set
+          long checkDuration = terminatingStateCheckDuration != null ?
+              terminatingStateCheckDuration.getMillis() : 30 * 1000L; // Default to 30s if not specified
+
+          if (currentTimestamp - deletionTimestamp + terminationGracePeriod > checkDuration) {
+            LOGGER.info(
+                "Skipping pod %s/%s from discovery as it has been in termination for more than grace period + %d seconds",
+                podDef.getMetadata().getNamespace(),
+                podDef.getMetadata().getName(),
+                checkDuration / 1000
+            );
+            continue;
+          }
+        }
+
         DiscoveryDruidNode node = getDiscoveryDruidNodeFromPodDef(nodeRole, podDef);
         allNodes.put(node.getDruidNode().getHostAndPortToUse(), node);
       }

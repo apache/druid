@@ -26,6 +26,7 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
 
@@ -72,7 +73,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       TopNParams params,
       TopNResultBuilder resultBuilder,
       int[] ints,
-      @Nullable TopNQueryMetrics queryMetrics
+      @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   )
   {
     final String metric = query.getTopNMetricSpec().getMetricName(query.getDimensionSpec());
@@ -98,7 +100,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
           singleMetricParam,
           singleMetricResultBuilder,
           null,
-          null // Don't collect metrics during the preparation run.
+          null, // Don't collect metrics during the preparation run.
+          responseContext
       );
 
       // Get only the topN dimension values
@@ -117,7 +120,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
           allMetricsParam,
           resultBuilder,
           dimValSelector,
-          queryMetrics
+          queryMetrics,
+          responseContext
       );
     }
     finally {

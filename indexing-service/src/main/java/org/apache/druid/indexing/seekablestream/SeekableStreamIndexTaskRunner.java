@@ -634,6 +634,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           stillReading = !assignment.isEmpty();
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
+          boolean flagForLogLine = true;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
@@ -646,7 +647,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
+              final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()), record.isFiltered());
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse = sequences
@@ -684,6 +685,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                   .getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                   );
                   if (isPushRequired && !sequenceToUse.isCheckpointed()) {
+                    if (flagForLogLine) {
+                      log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToUse: [%s], rowInSegment: [%s], maxTotalRows: [%s]", sequenceToUse, addResult.getNumRowsInSegment(), addResult.getTotalNumRowsInAppenderator());
+                      flagForLogLine = false;
+                    }
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
@@ -746,6 +751,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
             sequenceToCheckpoint = getLastSequenceMetadata();
+            log.info("Next checkpoint time, updating sequenceToCheckpoint, SequenceToCheckpoint: [%s]", sequenceToCheckpoint);
           }
 
           if (sequenceToCheckpoint != null && stillReading) {
@@ -1860,10 +1866,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
+    // Read the volatile status into a variable so that its value does not change while the condition is evaluated
+    final Status currentStatus = status;
+    if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
+      log.error("Cannot pause task[%s] as it is currently in state[%s]", task.getId(), currentStatus);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Cannot pause task as it is currently in state[%s]. Pausable states are [READING, PAUSED].", currentStatus))
                      .build();
     }
 

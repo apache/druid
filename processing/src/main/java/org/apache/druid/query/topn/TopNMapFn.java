@@ -21,6 +21,7 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
 import org.apache.druid.segment.Cursor;
@@ -44,7 +45,7 @@ public class TopNMapFn
 
   @SuppressWarnings("unchecked")
   @Nullable
-  public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics)
+  public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics, ResponseContext responseContext)
   {
     final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
         DimensionHandlerUtils.createColumnSelectorPlus(
@@ -67,7 +68,7 @@ public class TopNMapFn
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 
-      topNAlgorithm.run(params, resultBuilder, null, queryMetrics);
+      topNAlgorithm.run(params, resultBuilder, null, queryMetrics, responseContext);
 
       return resultBuilder.build();
     }

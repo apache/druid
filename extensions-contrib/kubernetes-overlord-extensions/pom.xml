@@ -34,16 +34,15 @@
   </parent>
 
   <dependencyManagement>
-      <dependencies>
-            <!-- snakeyaml explicitly pinned to version 1.33 as it is
-             a transitive dependency of com.fasterxml.jackson.dataformat:jackson-dataformat-yaml 2.12.7
-             please remove this pin, after updating jackson-dataform-yaml to version > 2.14.3  / 2.15.0 -->
-          <dependency>
-              <groupId>org.yaml</groupId>
-              <artifactId>snakeyaml</artifactId>
-              <version>1.33</version>
-          </dependency>
-      </dependencies>
+    <dependencies>
+      <!-- This is an indirect dependency of io.fabric8:kubernetes-client
+      update to address vulnerability in transitive dependency okio -->
+      <dependency>
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio</artifactId>
+        <version>3.6.0</version>
+      </dependency>
+    </dependencies>
   </dependencyManagement>
 
   <dependencies>
@@ -115,7 +114,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>jakarta.validation</groupId>
@@ -125,24 +124,50 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-batch</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client-api</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>logging-interceptor</artifactId>
+        </exclusion>
+      </exclusions>
       <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>logging-interceptor</artifactId>
+      <version>4.12.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>4.12.0</version>
     </dependency>
 
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>mockwebserver</artifactId>
+      <version>4.12.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -160,6 +185,16 @@
       <groupId>io.fabric8</groupId>
       <artifactId>mockwebserver</artifactId>
       <version>0.2.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>mockwebserver</artifactId>
+        </exclusion>
+      </exclusions>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -262,6 +297,17 @@
         <artifactId>dependency-check-maven</artifactId>
         <configuration>
           <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <!-- transitive dependency of io.fabric8:kubernetes-client; override version to fix security vulnerabilities -->
+          <ignoredUnusedDeclaredDependencies>
+            <ignoredUnusedDeclaredDependency>com.squareup.okhttp3:okhttp:jar:4.12.0</ignoredUnusedDeclaredDependency>
+            <ignoredUnusedDeclaredDependency>com.squareup.okhttp3:logging-interceptor:jar:4.12.0</ignoredUnusedDeclaredDependency>
+          </ignoredUnusedDeclaredDependencies>
         </configuration>
       </plugin>
     </plugins>

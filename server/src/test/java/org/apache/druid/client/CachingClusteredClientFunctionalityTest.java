@@ -33,6 +33,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -77,6 +78,11 @@ import java.util.concurrent.ForkJoinPool;
  */
 public class CachingClusteredClientFunctionalityTest
 {
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
   private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
       CachingClusteredClientTestUtils.createWarehouse();

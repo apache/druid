@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 public class ResourcePoolTest
 {
   ResourceFactory<String, String> resourceFactory;
-  ResourcePool<String, String> pool;
+  DefaultResourcePoolImpl<String, String> pool;
 
   @Before
   public void setUp()
@@ -52,7 +52,7 @@ public class ResourcePoolTest
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     EasyMock.replay(resourceFactory);
-    pool = new ResourcePool<String, String>(
+    pool = new DefaultResourcePoolImpl<String, String>(
         resourceFactory,
         new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
         eagerInitialization
@@ -418,7 +418,7 @@ public class ResourcePoolTest
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
-    pool = new ResourcePool<String, String>(
+    pool = new DefaultResourcePoolImpl<>(
         resourceFactory,
         new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10)),
         true

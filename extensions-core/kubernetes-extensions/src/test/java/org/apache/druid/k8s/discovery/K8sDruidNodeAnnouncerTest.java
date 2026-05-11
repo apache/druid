@@ -47,7 +47,7 @@ public class K8sDruidNodeAnnouncerTest
 
   private final PodInfo podInfo = new PodInfo("testpod", "testns");
 
-  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null);
+  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null, null, null);
 
   @Test
   public void testAnnounce() throws Exception

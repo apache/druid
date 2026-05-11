@@ -108,7 +108,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
-                                        .createSegmentHandoffNotifier(appenderator.getDataSource());
+                                        .createSegmentHandoffNotifier(appenderator.getDataSource(), appenderator.getId());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
   }
@@ -360,7 +360,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             ),
             Execs.directExecutor(),
             () -> {
-              log.debug("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
+              log.debug("Segment[%s] successfully handed off for task[%s], dropping.", segmentIdentifier, appenderator.getId());
               metrics.incrementHandOffCount();
 
               final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);

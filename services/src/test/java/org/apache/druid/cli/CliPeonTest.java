@@ -89,6 +89,7 @@ public class CliPeonTest
         privateField.set(this, taskAndStatusFile);
 
         System.setProperty("druid.indexer.runner.type", runnerType);
+        System.setProperty("druid.serverview.type", "http");
       }
       catch (Exception ex) {
         // do nothing

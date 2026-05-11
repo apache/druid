@@ -22,9 +22,11 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
-import org.apache.druid.java.util.http.client.pool.ResourcePool;
+import org.apache.druid.java.util.http.client.pool.DefaultResourcePoolImpl;
+import org.apache.druid.java.util.http.client.pool.MetricsEmittingResourcePoolImpl;
 import org.apache.druid.java.util.http.client.pool.ResourcePoolConfig;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.socket.nio.NioClientBossPool;
@@ -48,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpClientInit
 {
-  public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
+  public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle, ServiceEmitter emitter)
   {
     try {
       // We need to use the full constructor in order to set a ThreadNameDeterminer. The other parameters are taken
@@ -80,19 +82,22 @@ public class HttpClientInit
       );
       return lifecycle.addMaybeStartManagedInstance(
           new NettyHttpClient(
-              new ResourcePool<>(
-                  new ChannelResourceFactory(
+              new MetricsEmittingResourcePoolImpl<>(
+                  new DefaultResourcePoolImpl<>(
+                    new ChannelResourceFactory(
                       createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
                       config.getSslContext(),
                       config.getProxyConfig(),
                       timer,
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
-                  ),
-                  new ResourcePoolConfig(
+                    ),
+                    new ResourcePoolConfig(
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis()
+                    ),
+                    config.isEagerInitialization()
                   ),
-                  config.isEagerInitialization()
+                  emitter
               ),
               config.getReadTimeout(),
               config.getCompressionCodec(),

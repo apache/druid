@@ -29,6 +29,7 @@ import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -76,6 +77,10 @@ import static org.mockito.ArgumentMatchers.any;
  */
 public class CachingClusteredClientPerfTest
 {
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Test(timeout = 10_000)
   public void testGetQueryRunnerForSegments_singleIntervalLargeSegments()

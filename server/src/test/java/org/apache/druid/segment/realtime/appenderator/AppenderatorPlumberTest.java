@@ -64,7 +64,7 @@ public class AppenderatorPlumberTest
     EasyMock
         .expect(
             handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock
-                .anyString())).andReturn(handoffNotifier).anyTimes();
+                .anyString(), EasyMock.anyString())).andReturn(handoffNotifier).anyTimes();
     EasyMock
         .expect(
             handoffNotifier.registerSegmentHandoffCallback(
