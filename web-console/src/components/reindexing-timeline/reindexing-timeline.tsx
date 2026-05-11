@@ -495,37 +495,37 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
           </Tooltip>
           <div className="config-badges">
             {config.granularitySpec?.segmentGranularity && (
-              <Tag intent={Intent.PRIMARY} large icon={IconNames.CALENDAR}>
+              <Tag minimal intent={Intent.PRIMARY} icon={IconNames.CALENDAR}>
                 Segment: {config.granularitySpec.segmentGranularity}
               </Tag>
             )}
             {config.granularitySpec?.queryGranularity && (
-              <Tag intent={Intent.PRIMARY} large icon={IconNames.TIME}>
+              <Tag minimal intent={Intent.PRIMARY} icon={IconNames.TIME}>
                 Query: {config.granularitySpec.queryGranularity}
               </Tag>
             )}
             {getPartitionType(config.tuningConfig) && (
-              <Tag intent={Intent.PRIMARY} large icon={IconNames.SPLIT_COLUMNS}>
+              <Tag minimal intent={Intent.PRIMARY} icon={IconNames.SPLIT_COLUMNS}>
                 Partitioning: {getPartitionType(config.tuningConfig)}
               </Tag>
             )}
             {metricsCount > 0 && (
-              <Tag intent={Intent.SUCCESS} large icon={IconNames.CALCULATOR}>
+              <Tag minimal intent={Intent.SUCCESS} icon={IconNames.CALCULATOR}>
                 {metricsCount} metric{metricsCount !== 1 ? 's' : ''}
               </Tag>
             )}
             {dimensionsCount > 0 && (
-              <Tag intent={Intent.SUCCESS} large icon={IconNames.TAG}>
+              <Tag minimal intent={Intent.SUCCESS} icon={IconNames.TAG}>
                 {dimensionsCount} dimension{dimensionsCount !== 1 ? 's' : ''}
               </Tag>
             )}
             {projectionsCount > 0 && (
-              <Tag intent={Intent.SUCCESS} large icon={IconNames.CUBE}>
+              <Tag minimal intent={Intent.SUCCESS} icon={IconNames.CUBE}>
                 {projectionsCount} projection{projectionsCount !== 1 ? 's' : ''}
               </Tag>
             )}
             {deletionRuleCount > 0 && (
-              <Tag intent={Intent.WARNING} large icon={IconNames.TRASH}>
+              <Tag minimal intent={Intent.WARNING} icon={IconNames.TRASH}>
                 {deletionRuleCount} deletion clause{deletionRuleCount !== 1 ? 's' : ''}
               </Tag>
             )}

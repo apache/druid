@@ -436,7 +436,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           searchInterval,
           referenceTime,
           searchIntervals,
-          null
+          tuningConfig
       );
       ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builder);
 

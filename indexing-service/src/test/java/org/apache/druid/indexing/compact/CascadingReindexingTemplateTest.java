@@ -2011,6 +2011,78 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_getReindexingTimelineView_propagatesTemplateTuningConfig()
+  {
+    DateTime referenceTime = DateTimes.of("2025-02-01T00:00:00Z");
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider
+        .builder()
+        .partitioningRules(List.of(
+            new ReindexingPartitioningRule(
+                "seg-7d",
+                null,
+                Period.days(7),
+                Granularities.HOUR,
+                new DynamicPartitionsSpec(5000000, null),
+                null
+            )
+        ))
+        .build();
+
+    UserCompactionTaskQueryTuningConfig templateTuningConfig = UserCompactionTaskQueryTuningConfig.builder()
+        .maxRowsInMemory(12345)
+        .maxNumConcurrentSubTasks(7)
+        .maxRetry(9)
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(5000000, null),
+        null,
+        templateTuningConfig
+    );
+
+    ReindexingTimelineView timeline = template.getReindexingTimelineView(referenceTime);
+
+    Assertions.assertFalse(timeline.getIntervals().isEmpty(), "Expected at least one interval");
+
+    // Every interval that produced a config should carry the template-level tuning settings
+    // that don't conflict with rule-derived fields (partitionsSpec/indexSpec).
+    boolean sawConfig = false;
+    for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
+      if (intervalConfig.getConfig() == null) {
+        continue;
+      }
+      sawConfig = true;
+      UserCompactionTaskQueryTuningConfig effectiveTuning = intervalConfig.getConfig().getTuningConfig();
+      Assertions.assertNotNull(effectiveTuning, "Interval config should have a tuningConfig");
+      Assertions.assertEquals(
+          Integer.valueOf(12345),
+          effectiveTuning.getMaxRowsInMemory(),
+          "maxRowsInMemory from template tuningConfig must survive into timeline view"
+      );
+      Assertions.assertEquals(
+          Integer.valueOf(7),
+          effectiveTuning.getMaxNumConcurrentSubTasks(),
+          "maxNumConcurrentSubTasks from template tuningConfig must survive into timeline view"
+      );
+      Assertions.assertEquals(
+          Integer.valueOf(9),
+          effectiveTuning.getMaxRetry(),
+          "maxRetry from template tuningConfig must survive into timeline view"
+      );
+    }
+    Assertions.assertTrue(sawConfig, "Expected at least one interval to produce a non-null config");
+  }
+
+  @Test
   public void test_getReindexingTimelineView_skipOffsetFromNow_skipsProperIntervals()
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T00:00:00Z");
