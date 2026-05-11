@@ -30,16 +30,16 @@ Coordinator service communicates to Historical services to load or drop segments
 
 The Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
 run, the Coordinator assesses the current state of the cluster before deciding on the appropriate actions to take.
-Similar to the Broker and Historical services, the Coordinator maintains a connection to a ZooKeeper cluster for
-current cluster information. The Coordinator also maintains a connection to a database containing information about
-"used" segments (that is, the segments that *should* be loaded in the cluster) and the loading rules.
+The Coordinator uses ZooKeeper for leader election and to discover other Druid services, and polls each Historical
+service over HTTP for the current set of segments it is serving. The Coordinator also maintains a connection to a
+database containing information about "used" segments (that is, the segments that *should* be loaded in the cluster)
+and the loading rules.
 
 Before any unassigned segments are serviced by Historical services, the Historical services for each tier are first
 sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always
-assigned to the services with least capacity to maintain a level of balance between services. The Coordinator does not
-directly communicate with a Historical service when assigning it a new segment; instead the Coordinator creates some
-temporary information about the new segment under load queue path of the Historical service. Once this request is seen,
-the Historical service loads the segment and begins servicing it.
+assigned to the services with least capacity to maintain a level of balance between services. The Coordinator sends
+segment load and drop requests to each Historical service over HTTP. Once this request is received, the Historical
+service loads the segment and begins servicing it.
 
 ## Configuration
 

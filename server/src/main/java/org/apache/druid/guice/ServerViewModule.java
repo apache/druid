@@ -39,7 +39,6 @@ public class ServerViewModule implements Module
   public static final String TYPE = "type";
   public static final String SERVERVIEW_TYPE_PROPERTY = "druid.serverview.type";
   public static final String SERVERVIEW_TYPE_HTTP = "http";
-  public static final String SERVERVIEW_TYPE_BATCH = "batch";
 
   @Override
   public void configure(Binder binder)

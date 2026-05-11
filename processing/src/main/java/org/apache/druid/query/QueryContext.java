@@ -461,6 +461,14 @@ public class QueryContext
     );
   }
 
+  public boolean isOptimizeAggregators()
+  {
+    return getBoolean(
+        QueryContexts.OPTIMIZE_AGGREGATORS_KEY,
+        QueryContexts.DEFAULT_OPTIMIZE_AGGREGATORS
+    );
+  }
+
   public long getMaxQueuedBytes(long defaultValue)
   {
     return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);

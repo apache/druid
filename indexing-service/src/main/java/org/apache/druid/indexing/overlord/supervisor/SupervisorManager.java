@@ -208,9 +208,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      if (existingSpec != null) {
-        spec.merge(existingSpec);
-      }
+      spec.merge(existingSpec);
       createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;
     }

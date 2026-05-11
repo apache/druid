@@ -315,6 +315,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     return total;
   }
 
+  /**
+   * The internal file names that have been downloaded so far, scoped to this mapper. External mappers' downloaded
+   * files are not included; call {@link #getDownloadedFiles()} on each external mapper directly if needed. Primarily
+   * intended for tests and diagnostics.
+   */
+  public Set<String> getDownloadedFiles()
+  {
+    return Set.copyOf(downloadedFiles);
+  }
+
   @Override
   public void close()
   {

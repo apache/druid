@@ -218,6 +218,7 @@ public class IndexMergerV10 extends IndexMergerBase
       /************ Create Inverted Indexes and Finalize Build Columns *************/
       final String section = "build inverted index and columns";
       progress.startSection(section);
+      v10Smoosher.startFileGroup(Projections.BASE_TABLE_PROJECTION_NAME);
       makeTimeColumn(v10Smoosher, progress, timeWriter, indexSpec, basePrefix + ColumnHolder.TIME_COLUMN_NAME);
       makeMetricsColumns(
           v10Smoosher,
@@ -250,7 +251,13 @@ public class IndexMergerV10 extends IndexMergerBase
       final List<ProjectionMetadata> projections = new ArrayList<>();
       // ingestion current builds v9 metadata... translate v9 metadata and projection stuff to v10 format
       projections.add(
-          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensionsWithTime, segmentMetadata)
+          ProjectionMetadata.forBaseTable(
+              indexMergeResult.rowCount,
+              indexMergeResult.minTime,
+              indexMergeResult.maxTime,
+              mergedDimensionsWithTime,
+              segmentMetadata
+          )
       );
 
       // make the projections

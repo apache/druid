@@ -384,7 +384,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromLatest_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromLatest_truncatesIntervalsExtendingPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -399,9 +399,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -411,7 +413,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -422,9 +424,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(25), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -451,7 +455,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromNow_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromNow_truncatesIntervalThatExtendsPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -466,9 +470,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -478,7 +484,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -489,9 +495,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }

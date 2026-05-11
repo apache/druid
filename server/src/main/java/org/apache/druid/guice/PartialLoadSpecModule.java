@@ -17,23 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.curator.discovery;
+package org.apache.druid.guice;
 
-import org.apache.druid.server.DruidNode;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.segment.loading.LoadSpec;
+import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
+
+import java.util.List;
 
 /**
- * Does nothing.
+ * Registers {@link PartialProjectionLoadSpec} as a {@link LoadSpec} subtype for serde of partial load rules. This
+ * module is added to the always-loaded core list so it is available alongside any other deep-storage load spec modules.
  */
-@Deprecated
-public class NoopServiceAnnouncer implements ServiceAnnouncer
+public class PartialLoadSpecModule implements DruidModule
 {
   @Override
-  public void announce(DruidNode node)
+  public void configure(Binder binder)
   {
+    // nothing to do
   }
 
   @Override
-  public void unannounce(DruidNode node)
+  public List<? extends Module> getJacksonModules()
   {
+    return List.of(new SimpleModule().registerSubtypes(PartialProjectionLoadSpec.class));
   }
 }

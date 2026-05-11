@@ -49,7 +49,6 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
-                  + "  \"highLagThreshold\": 30000,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
@@ -68,7 +67,8 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
-    Assert.assertEquals(30000, config.getHighLagThreshold());
+    Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);
@@ -101,10 +101,10 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), config.getMinScaleUpDelay());
     Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
-    // When highLagThreshold is not set, it defaults to -1 (burst scale-up disabled)
-    Assert.assertEquals(-1, config.getHighLagThreshold());
   }
 
   @Test
@@ -185,10 +185,11 @@ public class CostBasedAutoScalerConfigTest
                                                                 .scaleActionPeriodMillis(60000L)
                                                                 .lagWeight(0.6)
                                                                 .idleWeight(0.4)
+                                                                .useTaskCountBoundariesOnScaleUp(true)
+                                                                .useTaskCountBoundariesOnScaleDown(true)
                                                                 .minScaleUpDelay(Duration.standardMinutes(5))
                                                                 .minScaleDownDelay(Duration.standardMinutes(10))
                                                                 .scaleDownDuringTaskRolloverOnly(true)
-                                                                .highLagThreshold(30000)
                                                                 .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -199,10 +200,11 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleUp());
+    Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
-    Assert.assertEquals(30000, config.getHighLagThreshold());
   }
 
   @Test
@@ -243,7 +245,10 @@ public class CostBasedAutoScalerConfigTest
                                                                  .build();
     Assert.assertEquals(Duration.standardMinutes(5), bothSet.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(20), bothSet.getMinScaleDownDelay());
-    CostBasedAutoScalerConfig roundTripped = mapper.readValue(mapper.writeValueAsString(bothSet), CostBasedAutoScalerConfig.class);
+    CostBasedAutoScalerConfig roundTripped = mapper.readValue(
+        mapper.writeValueAsString(bothSet),
+        CostBasedAutoScalerConfig.class
+    );
     Assert.assertEquals(bothSet, roundTripped);
   }
 

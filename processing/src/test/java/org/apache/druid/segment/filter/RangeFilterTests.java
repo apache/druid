@@ -35,8 +35,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -2035,12 +2033,16 @@ public class RangeFilterTests
       Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
       Assert.assertNull(filter.getDimensionRangeSet("y"));
 
-      ExprEval<?> evalLower = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"});
-      filter = new RangeFilter("x", ColumnType.STRING_ARRAY, evalLower.value(), null, true, false, null);
-      set = TreeRangeSet.create();
-      set.add(Range.greaterThan(Arrays.deepToString(evalLower.asArray())));
-      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
-      Assert.assertNull(filter.getDimensionRangeSet("y"));
+      // Non-STRING match value types must not return a RangeSet.
+      Assert.assertNull(
+          new RangeFilter("x", ColumnType.LONG, 80L, null, false, false, null).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          new RangeFilter("x", ColumnType.DOUBLE, 1.5, 2.5, false, false, null).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          new RangeFilter("x", ColumnType.FLOAT, null, 7.5f, false, true, null).getDimensionRangeSet("x")
+      );
     }
 
     @Test

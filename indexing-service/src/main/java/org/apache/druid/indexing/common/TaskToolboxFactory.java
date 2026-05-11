@@ -66,7 +66,6 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.utils.RuntimeInfo;
@@ -90,7 +89,6 @@ public class TaskToolboxFactory
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final Provider<DruidProcessingConfig> processingConfigProvider;
@@ -139,7 +137,6 @@ public class TaskToolboxFactory
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       Provider<DruidProcessingConfig> processingConfigProvider,
@@ -185,7 +182,6 @@ public class TaskToolboxFactory
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.processingConfigProvider = processingConfigProvider;
@@ -245,7 +241,6 @@ public class TaskToolboxFactory
         .dataSegmentMover(dataSegmentMover)
         .dataSegmentArchiver(dataSegmentArchiver)
         .segmentAnnouncer(segmentAnnouncer)
-        .serverAnnouncer(serverAnnouncer)
         .handoffNotifierFactory(handoffNotifierFactory)
         .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
         .processingConfigProvider(processingConfigProvider)
