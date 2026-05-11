@@ -36,12 +36,7 @@ exports[`ServerMultiSelectDialog matches snapshot with existing selection 1`] = 
         value=""
       />
       <div
-        style={
-          {
-            "maxHeight": 400,
-            "overflowY": "auto",
-          }
-        }
+        className="server-list"
       >
         <div
           style={
@@ -174,12 +169,7 @@ exports[`ServerMultiSelectDialog matches snapshot with no selection 1`] = `
         value=""
       />
       <div
-        style={
-          {
-            "maxHeight": 400,
-            "overflowY": "auto",
-          }
-        }
+        className="server-list"
       >
         <div
           style={

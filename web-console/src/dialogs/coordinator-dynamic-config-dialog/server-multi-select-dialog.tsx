@@ -24,6 +24,8 @@ import { Loader } from '../../components';
 
 import type { TieredServers } from './tiered-servers';
 
+import './server-multi-select-dialog.scss';
+
 export interface ServerMultiSelectDialogProps {
   title: string;
   servers: TieredServers | undefined;
@@ -117,7 +119,7 @@ export const ServerMultiSelectDialog = React.memo(function ServerMultiSelectDial
               onChange={e => setSearchText(e.target.value)}
               style={{ marginBottom: 10 }}
             />
-            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <div className="server-list">
               {filteredTiers.map(({ tier, tierServers, filtered: filteredServers }) => {
                 if (filteredServers.length === 0) return null;
 
