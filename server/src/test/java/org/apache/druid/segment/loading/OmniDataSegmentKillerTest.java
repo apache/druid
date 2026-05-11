@@ -37,6 +37,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -137,6 +138,23 @@ public class OmniDataSegmentKillerTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     segmentKiller.kill(tombstone);
+  }
+
+  @Test
+  public void testKillRecursively_delegatesToAllKillers() throws IOException
+  {
+    final DataSegmentKiller killerA = Mockito.mock(DataSegmentKiller.class);
+    final DataSegmentKiller killerB = Mockito.mock(DataSegmentKiller.class);
+    final Injector injector = createInjectorFromMap(
+        ImmutableMap.of("type_a", killerA, "type_b", killerB)
+    );
+    final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
+
+    final String relativePath = "intermediate/batch_1";
+    segmentKiller.killRecursively(relativePath);
+
+    Mockito.verify(killerA).killRecursively(relativePath);
+    Mockito.verify(killerB).killRecursively(relativePath);
   }
 
   @Test

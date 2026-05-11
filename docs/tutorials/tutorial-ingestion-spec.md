@@ -222,8 +222,6 @@ When defining a metric, it is necessary to specify what type of aggregation shou
 
 Here we have defined long sum aggregations on the two long metric columns, `packets` and `bytes`, and a double sum aggregation for the `cost` column.
 
-Note that the `metricsSpec` is on a different nesting level than `dimensionSpec` or `parseSpec`; it belongs on the same nesting level as `parser` within the `dataSchema`.
-
 Note that we have also defined a `count` aggregator. The count aggregator will track how many rows in the original input data contributed to a "rolled up" row in the final ingested data.
 
 ### No rollup
@@ -248,7 +246,7 @@ If we were not using rollup, all columns would be specified in the `dimensionsSp
 
 ### Define granularities
 
-At this point, we are done defining the `parser` and `metricsSpec` within the `dataSchema` and we are almost done writing the ingestion spec.
+At this point, we are done defining the `dimensionsSpec` and `metricsSpec` within the `dataSchema` and we are almost done writing the ingestion spec.
 
 There are some additional properties we need to set in the `granularitySpec`:
 * Type of granularitySpec: the `uniform` granularity spec defines segments with uniform interval sizes. For example, all segments cover an hour's worth of data.

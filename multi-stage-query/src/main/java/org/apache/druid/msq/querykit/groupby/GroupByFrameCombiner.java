@@ -22,6 +22,8 @@ package org.apache.druid.msq.querykit.groupby;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.processor.FrameCombiner;
 import org.apache.druid.frame.processor.FrameProcessors;
+import org.apache.druid.frame.processor.TrackingColumnValueSelector;
+import org.apache.druid.frame.processor.TrackingDimensionSelector;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -134,9 +136,6 @@ public class GroupByFrameCombiner implements FrameCombiner
       cachedFrame = frame;
       cachedCursor = FrameProcessors.makeCursor(frame, frameReader);
 
-      // Reset dimension selectors, they need to be recreated for the new cursor.
-      combinedColumnSelectorFactory.resetSelectorCache();
-
       // Rebuild aggregator selectors for the new cursor.
       final ColumnSelectorFactory columnSelectorFactory = cachedCursor.getColumnSelectorFactory();
       cachedAggregatorSelectors = new ColumnValueSelector<?>[aggregatorFactories.size()];
@@ -156,15 +155,8 @@ public class GroupByFrameCombiner implements FrameCombiner
    */
   private class CombinedColumnSelectorFactory implements ColumnSelectorFactory
   {
-    /**
-     * Cached dimension value selectors from {@link #cachedCursor}.
-     */
-    private final Map<String, ColumnValueSelector<?>> valueDimensionSelectorCache = new HashMap<>();
-
-    /**
-     * Cached dimension string selectors from {@link #cachedCursor}.
-     */
-    private final Map<DimensionSpec, DimensionSelector> stringDimensionSelectorCache = new HashMap<>();
+    private final Map<String, TrackingColumnValueSelector> columnValueSelectorCache = new HashMap<>();
+    private final Map<DimensionSpec, TrackingDimensionSelector> dimensionSelectorCache = new HashMap<>();
 
     @Override
     public DimensionSelector makeDimensionSelector(final DimensionSpec dimensionSpec)
@@ -193,10 +185,10 @@ public class GroupByFrameCombiner implements FrameCombiner
           }
         };
       } else {
-        // Dimension: delegate to cached dimension selector.
-        return stringDimensionSelectorCache.computeIfAbsent(
+        // Dimension: delegate to a cursor-tracking selector that refreshes when cachedCursor changes.
+        return dimensionSelectorCache.computeIfAbsent(
             dimensionSpec,
-            spec -> cachedCursor.getColumnSelectorFactory().makeDimensionSelector(spec)
+            spec -> new TrackingDimensionSelector(spec, () -> cachedCursor.getColumnSelectorFactory())
         );
       }
     }
@@ -257,18 +249,12 @@ public class GroupByFrameCombiner implements FrameCombiner
           }
         };
       } else {
-        // Dimension: delegate to cached dimension value selector.
-        return valueDimensionSelectorCache.computeIfAbsent(
+        // Dimension: delegate to a cursor-tracking selector that refreshes when cachedCursor changes.
+        return columnValueSelectorCache.computeIfAbsent(
             columnName,
-            name -> cachedCursor.getColumnSelectorFactory().makeColumnValueSelector(name)
+            name -> new TrackingColumnValueSelector(name, () -> cachedCursor.getColumnSelectorFactory())
         );
       }
-    }
-
-    private void resetSelectorCache()
-    {
-      valueDimensionSelectorCache.clear();
-      stringDimensionSelectorCache.clear();
     }
 
     @Nullable

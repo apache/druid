@@ -27,7 +27,7 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -74,8 +74,8 @@ public class FutureWaitingProcessor implements FrameProcessor<List<String>>
       return ReturnOrAwait.awaitAllFutures(ImmutableList.of(future1, future2));
     } else if (runCount == 2) {
       // Second run: futures should be complete, collect results
-      Assert.assertTrue("future1 should be done", future1.isDone());
-      Assert.assertTrue("future2 should be done", future2.isDone());
+      Assertions.assertTrue(future1.isDone(), "future1 should be done");
+      Assertions.assertTrue(future2.isDone(), "future2 should be done");
 
       try {
         results.add(future1.get());

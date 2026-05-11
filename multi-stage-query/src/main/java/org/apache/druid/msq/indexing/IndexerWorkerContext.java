@@ -93,6 +93,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final int maxConcurrentStages;
   private final boolean liveReportCounters;
   private final boolean includeAllCounters;
+  private final boolean debug;
   private final int threadCount;
 
   // Written under synchronized(this) using double-checked locking.
@@ -134,6 +135,7 @@ public class IndexerWorkerContext implements WorkerContext
     );
     this.liveReportCounters = MultiStageQueryContext.getLiveReportCounters(queryContext, DEFAULT_LIVE_REPORT_COUNTERS);
     this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    this.debug = queryContext.isDebug();
     
     // Compute thread count once in constructor
     final int baseThreadCount = memoryIntrospector.numProcessingThreads();
@@ -325,6 +327,12 @@ public class IndexerWorkerContext implements WorkerContext
   public boolean includeAllCounters()
   {
     return includeAllCounters;
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return debug;
   }
 
   public ServiceLocator controllerLocator()

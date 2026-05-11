@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
+import org.apache.druid.server.BuildInfo;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -92,6 +93,9 @@ public class EmitterModule implements Module
     extraServiceDimensions
         .addBinding("version")
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
+    extraServiceDimensions
+        .addBinding("buildRevision")
+        .toInstance(getBuildRevision());
   }
 
   @Provides
@@ -176,5 +180,14 @@ public class EmitterModule implements Module
       }
       return emitter;
     }
+  }
+
+  /**
+   * Returns the {@code Build-Revision} for the current build, delegating to {@link BuildInfo}.
+   * Overridable for testing.
+   */
+  protected String getBuildRevision()
+  {
+    return BuildInfo.getBuildRevision();
   }
 }

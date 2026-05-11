@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.constant;
 
 import org.apache.commons.lang3.RandomUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -32,7 +32,7 @@ public class LongConstantVectorAggregatorTest
   private LongConstantVectorAggregator aggregator;
   private ByteBuffer byteBuffer;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     randomVal = RandomUtils.nextLong();
@@ -45,19 +45,19 @@ public class LongConstantVectorAggregatorTest
   public void testAggregate()
   {
     aggregator.aggregate(byteBuffer, 0, 1, 10);
-    Assert.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
+    Assertions.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
   }
 
   @Test
   public void testAggregateWithIndirection()
   {
     aggregator.aggregate(byteBuffer, 2, new int[]{2, 3}, null, 0);
-    Assert.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
+    Assertions.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
   }
 
   @Test
   public void testGet()
   {
-    Assert.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
+    Assertions.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
   }
 }

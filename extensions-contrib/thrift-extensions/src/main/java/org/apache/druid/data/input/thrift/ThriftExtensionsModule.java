@@ -37,7 +37,6 @@ public class ThriftExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("ThriftInputRowParserModule")
             .registerSubtypes(
-                new NamedType(ThriftInputRowParser.class, "thrift"),
                 new NamedType(ThriftInputFormat.class, "thrift")
             )
     );

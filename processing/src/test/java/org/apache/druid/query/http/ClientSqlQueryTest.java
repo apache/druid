@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ClientSqlQueryTest
 {
@@ -41,7 +41,7 @@ public class ClientSqlQueryTest
         null,
         null
     );
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
+    Assertions.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
   }
 
   @Test
@@ -57,6 +57,6 @@ public class ClientSqlQueryTest
         null,
         ImmutableList.of(new ClientSqlParameter("ARRAY", ImmutableList.of(-25.7, 20.2, 36.85)))
     );
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
+    Assertions.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
   }
 }

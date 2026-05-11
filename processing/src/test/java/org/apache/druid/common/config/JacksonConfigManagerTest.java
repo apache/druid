@@ -26,18 +26,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Objects;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class JacksonConfigManagerTest
 {
   @Mock
@@ -48,7 +48,7 @@ public class JacksonConfigManagerTest
 
   private JacksonConfigManager jacksonConfigManager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     jacksonConfigManager = new JacksonConfigManager(
@@ -74,7 +74,7 @@ public class JacksonConfigManagerTest
 
     ArgumentCaptor<AuditEntry> auditCapture = ArgumentCaptor.forClass(AuditEntry.class);
     Mockito.verify(mockAuditManager).doAudit(auditCapture.capture());
-    Assert.assertNotNull(auditCapture.getValue());
+    Assertions.assertNotNull(auditCapture.getValue());
   }
 
   @Test
@@ -82,7 +82,7 @@ public class JacksonConfigManagerTest
   {
     TestConfig defaultExpected = new TestConfig("version", null, 3);
     TestConfig actual = jacksonConfigManager.convertByteToConfig(null, TestConfig.class, defaultExpected);
-    Assert.assertEquals(defaultExpected, actual);
+    Assertions.assertEquals(defaultExpected, actual);
   }
 
   @Test
@@ -94,7 +94,7 @@ public class JacksonConfigManagerTest
     byte[] expectedConfigInByte = configConfigSerdeFromTypeReference.serialize(expectedConfig);
 
     TestConfig actual = jacksonConfigManager.convertByteToConfig(expectedConfigInByte, TestConfig.class, defaultConfig);
-    Assert.assertEquals(expectedConfig, actual);
+    Assertions.assertEquals(expectedConfig, actual);
   }
 
   static class TestConfig

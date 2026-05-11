@@ -22,10 +22,12 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -46,6 +48,8 @@ import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -70,6 +74,8 @@ import java.util.Map;
 public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
+  private static final ClusterCompactionConfig CLUSTER_CONFIG =
+      new ClusterCompactionConfig(null, null, null, null, null, null);
 
   @BeforeEach
   public void setUp()
@@ -382,7 +388,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromLatest_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromLatest_truncatesIntervalsExtendingPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -397,9 +403,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -409,7 +417,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -420,9 +428,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(25), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -449,7 +459,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromNow_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromNow_truncatesIntervalThatExtendsPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -464,9 +474,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -476,7 +488,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -487,9 +499,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -1764,6 +1778,102 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assertions.assertEquals(
         template.getDefaultPartitioningVirtualColumns(),
         fromJson.getDefaultPartitioningVirtualColumns()
+    );
+  }
+
+  @Test
+  public void test_validate_returnsValid_withDynamicPartitionsSpec()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDataSource",
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
+    Assertions.assertTrue(result.isValid());
+  }
+
+  @Test
+  public void test_validate_returnsInvalid_withHashedPartitionsSpec()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDataSource",
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new HashedPartitionsSpec(null, 3, null),
+        null,
+        null
+    );
+
+    CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertEquals(
+        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
+        result.getReason()
+    );
+  }
+
+  @Test
+  public void test_validate_returnsInvalid_withMaxTotalRows()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDataSource",
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, 1000L),
+        null,
+        null
+    );
+
+    CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertEquals(
+        "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning",
+        result.getReason()
+    );
+  }
+
+  @Test
+  public void test_validate_returnsInvalid_withOneMaxNumTasks()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDataSource",
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1),
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertEquals(
+        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        result.getReason()
     );
   }
 

@@ -32,8 +32,8 @@ import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FrameWireTransferableTest
 {
@@ -67,8 +67,8 @@ public class FrameWireTransferableTest
     final FrameWireTransferable.Deserializer deserializer = new FrameWireTransferable.Deserializer();
     final RowsAndColumns deserialized = deserializer.deserialize(objectMapper, ByteBufferUtils.wrapLE(bytes));
 
-    Assert.assertTrue(deserialized instanceof ColumnBasedFrameRowsAndColumns);
-    Assert.assertEquals(frameRac, deserialized);
+    Assertions.assertInstanceOf(ColumnBasedFrameRowsAndColumns.class, deserialized);
+    Assertions.assertEquals(frameRac, deserialized);
   }
 
   @Test
@@ -86,9 +86,9 @@ public class FrameWireTransferableTest
     final FrameWireTransferable.Deserializer deserializer = new FrameWireTransferable.Deserializer();
     final RowsAndColumns deserialized = deserializer.deserialize(objectMapper, ByteBufferUtils.wrapLE(bytes));
 
-    Assert.assertTrue(deserialized instanceof ColumnBasedFrameRowsAndColumns);
-    Assert.assertEquals(frameRac.getFrame(), ((ColumnBasedFrameRowsAndColumns) deserialized).getFrame());
-    Assert.assertFalse(((ColumnBasedFrameRowsAndColumns) deserialized).hasSignature());
+    Assertions.assertInstanceOf(ColumnBasedFrameRowsAndColumns.class, deserialized);
+    Assertions.assertEquals(frameRac.getFrame(), ((ColumnBasedFrameRowsAndColumns) deserialized).getFrame());
+    Assertions.assertFalse(((ColumnBasedFrameRowsAndColumns) deserialized).hasSignature());
   }
 
   @Test
@@ -106,8 +106,8 @@ public class FrameWireTransferableTest
     final FrameWireTransferable.Deserializer deserializer = new FrameWireTransferable.Deserializer();
     final RowsAndColumns deserialized = deserializer.deserialize(objectMapper, ByteBufferUtils.wrapLE(bytes));
 
-    Assert.assertTrue(deserialized instanceof RowBasedFrameRowsAndColumns);
-    Assert.assertEquals(frameRac, deserialized);
+    Assertions.assertInstanceOf(RowBasedFrameRowsAndColumns.class, deserialized);
+    Assertions.assertEquals(frameRac, deserialized);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class FrameWireTransferableTest
 
     // Get WireTransferable via as()
     final WireTransferable wt = frameRac.as(WireTransferable.class);
-    Assert.assertNotNull(wt);
+    Assertions.assertNotNull(wt);
 
     // Serialize
     final WireTransferable.ByteArrayOffsetAndLen serialized = wt.serializedBytes(objectMapper);
@@ -128,8 +128,8 @@ public class FrameWireTransferableTest
     final FrameWireTransferable.Deserializer deserializer = new FrameWireTransferable.Deserializer();
     final RowsAndColumns deserialized = deserializer.deserialize(objectMapper, ByteBufferUtils.wrapLE(bytes));
 
-    Assert.assertTrue(deserialized instanceof ColumnBasedFrameRowsAndColumns);
-    Assert.assertEquals(frameRac, deserialized);
+    Assertions.assertInstanceOf(ColumnBasedFrameRowsAndColumns.class, deserialized);
+    Assertions.assertEquals(frameRac, deserialized);
   }
 
   @Test
@@ -139,7 +139,7 @@ public class FrameWireTransferableTest
 
     // Get WireTransferable via as()
     final WireTransferable wt = frameRac.as(WireTransferable.class);
-    Assert.assertNotNull(wt);
+    Assertions.assertNotNull(wt);
 
     // Serialize
     final WireTransferable.ByteArrayOffsetAndLen serialized = wt.serializedBytes(objectMapper);
@@ -150,7 +150,7 @@ public class FrameWireTransferableTest
     final FrameWireTransferable.Deserializer deserializer = new FrameWireTransferable.Deserializer();
     final RowsAndColumns deserialized = deserializer.deserialize(objectMapper, ByteBufferUtils.wrapLE(bytes));
 
-    Assert.assertTrue(deserialized instanceof RowBasedFrameRowsAndColumns);
-    Assert.assertEquals(frameRac, deserialized);
+    Assertions.assertInstanceOf(RowBasedFrameRowsAndColumns.class, deserialized);
+    Assertions.assertEquals(frameRac, deserialized);
   }
 }

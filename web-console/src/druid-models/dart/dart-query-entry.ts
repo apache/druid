@@ -25,4 +25,30 @@ export interface DartQueryEntry {
   identity: string;
   startTime: string;
   state: 'ACCEPTED' | 'RUNNING' | 'CANCELED' | 'SUCCESS' | 'FAILED';
+  durationMs?: number;
+}
+
+const STATE_RANK: Record<string, number> = {
+  RUNNING: 2,
+  ACCEPTED: 1,
+};
+
+export function compareForDisplay(a: DartQueryEntry, b: DartQueryEntry): number {
+  const stateA = STATE_RANK[a.state] ?? 0;
+  const stateB = STATE_RANK[b.state] ?? 0;
+
+  // Primary: RUNNING > ACCEPTED > others
+  if (stateA !== stateB) {
+    return stateB - stateA;
+  }
+
+  if (stateA > 0) {
+    // RUNNING or ACCEPTED: descending startTime (newest first)
+    return b.startTime.localeCompare(a.startTime);
+  } else {
+    // Finished: descending finish time (startTime + durationMs)
+    const finishA = new Date(a.startTime).valueOf() + (a.durationMs ?? 0);
+    const finishB = new Date(b.startTime).valueOf() + (b.durationMs ?? 0);
+    return finishB - finishA;
+  }
 }

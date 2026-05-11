@@ -31,6 +31,8 @@ All Druid metrics share a common set of fields:
 * `metric`: the name of the metric
 * `service`: the service name that emitted the metric
 * `host`: the host name that emitted the metric
+* `version`: the Druid version of the service that emitted the metric
+* `buildRevision`: the git commit of the build that produced the service binary. Useful for verifying that all nodes in a cluster are running the intended revision during rolling deployments.
 * `value`: some numeric value associated with the metric
 
 Metrics may have additional dimensions beyond those listed above.
@@ -362,7 +364,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 ### Segment metadata cache
 
-The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache) is enabled on the Overlord.
 
 |Metric|Description|Dimensions|
 |------|-----------|----------|

@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -79,8 +80,9 @@ public class Either<L, R>
   /**
    * If this Either represents a value, returns it. If this Either represents an error, throw an error.
    *
-   * If the error is a {@link Throwable}, it is wrapped in a RuntimeException and thrown. If it is not a throwable,
-   * a generic error is thrown containing the string representation of the error object.
+   * If the error is a {@link DruidException}, it is thrown. If it is some other {@link Throwable}, it is
+   * wrapped in a {@link DruidException} and thrown. If it is not a throwable, a generic {@link DruidException}
+   * is thrown containing the string representation of the error object.
    *
    * To retrieve the error as-is, use {@link #isError()} and {@link #error()} instead.
    */
@@ -90,11 +92,22 @@ public class Either<L, R>
     if (isValue()) {
       return value;
     } else if (error instanceof Throwable) {
-      // Always wrap Throwable, even if we could throw it directly, to provide additional context
-      // about where the exception happened (we want the current stack frame in the trace).
-      throw new RuntimeException((Throwable) error);
+      // The exception happened somewhere else, perhaps in another thread entirely. If it is a DruidException
+      // targeting a non-DEVELOPER persona, re-throw it as-is so we keep the original intent of the error message.
+      // Otherwise, wrap it in a DEVELOPER-oriented DruidException so the stack trace of the current thread is
+      // added to the exception details.
+      if (error instanceof DruidException
+          && ((DruidException) error).getTargetPersona() != DruidException.Persona.DEVELOPER) {
+        throw (DruidException) error;
+      }
+
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build((Throwable) error, ((Throwable) error).getMessage());
     } else {
-      throw new RuntimeException(error.toString());
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build("%s", error);
     }
   }
 

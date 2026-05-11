@@ -32,6 +32,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Simple test combiner that sums a long column at {@link #sumColumnNumber}.
@@ -41,15 +43,26 @@ public class SummingFrameCombiner implements FrameCombiner
 {
   private final RowSignature signature;
   private final int sumColumnNumber;
+  private final CombinedColumnSelectorFactory combinedColumnSelectorFactory;
 
   private FrameReader frameReader;
-  private FrameCursor keyCursor;
+
+  @Nullable
+  private Frame cachedFrame;
+
+  @Nullable
+  private FrameCursor cachedCursor;
+
+  @Nullable
+  private ColumnValueSelector<?> cachedSumSelector;
+
   private long summedValue;
 
   public SummingFrameCombiner(final RowSignature signature, final int sumColumnNumber)
   {
     this.signature = signature;
     this.sumColumnNumber = sumColumnNumber;
+    this.combinedColumnSelectorFactory = new CombinedColumnSelectorFactory();
   }
 
   @Override
@@ -61,105 +74,123 @@ public class SummingFrameCombiner implements FrameCombiner
   @Override
   public void reset(final Frame frame, final int row)
   {
-    this.keyCursor = FrameProcessors.makeCursor(frame, frameReader);
-    this.keyCursor.setCurrentRow(row);
-    this.summedValue = readLongValue(frame, row);
+    final FrameCursor cursor = getCursor(frame);
+    cursor.setCurrentRow(row);
+    this.summedValue = cachedSumSelector.getLong();
   }
 
   @Override
   public void combine(final Frame frame, final int row)
   {
-    this.summedValue += readLongValue(frame, row);
+    final FrameCursor cursor = getCursor(frame);
+    cursor.setCurrentRow(row);
+    this.summedValue += cachedSumSelector.getLong();
   }
 
   @Override
   public ColumnSelectorFactory getCombinedColumnSelectorFactory()
   {
-    return new ColumnSelectorFactory()
-    {
-      @Override
-      public DimensionSelector makeDimensionSelector(final DimensionSpec dimensionSpec)
-      {
-        final int columnNumber = signature.indexOf(dimensionSpec.getDimension());
-        if (columnNumber < 0) {
-          return DimensionSelector.constant(null, dimensionSpec.getExtractionFn());
-        } else if (columnNumber == sumColumnNumber) {
-          throw new UnsupportedOperationException();
-        } else {
-          return keyCursor.getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-        }
-      }
-
-      @Override
-      public ColumnValueSelector<?> makeColumnValueSelector(final String columnName)
-      {
-        final int columnNumber = signature.indexOf(columnName);
-        if (columnNumber < 0) {
-          return NilColumnValueSelector.instance();
-        } else if (columnNumber == sumColumnNumber) {
-          return new ColumnValueSelector<Long>()
-          {
-            @Override
-            public double getDouble()
-            {
-              return summedValue;
-            }
-
-            @Override
-            public float getFloat()
-            {
-              return summedValue;
-            }
-
-            @Override
-            public long getLong()
-            {
-              return summedValue;
-            }
-
-            @Override
-            public boolean isNull()
-            {
-              return false;
-            }
-
-            @Override
-            public Long getObject()
-            {
-              return summedValue;
-            }
-
-            @Override
-            public Class<Long> classOfObject()
-            {
-              return Long.class;
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-              // Nothing to do.
-            }
-          };
-        } else {
-          return keyCursor.getColumnSelectorFactory().makeColumnValueSelector(columnName);
-        }
-      }
-
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(final String column)
-      {
-        return signature.getColumnCapabilities(column);
-      }
-    };
+    return combinedColumnSelectorFactory;
   }
 
-  private long readLongValue(final Frame frame, final int row)
+  private FrameCursor getCursor(final Frame frame)
   {
-    final FrameCursor cursor = FrameProcessors.makeCursor(frame, frameReader);
-    cursor.setCurrentRow(row);
-    final String columnName = signature.getColumnName(sumColumnNumber);
-    return cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName).getLong();
+    //noinspection ObjectEquality
+    if (frame != cachedFrame) {
+      cachedFrame = frame;
+      cachedCursor = FrameProcessors.makeCursor(frame, frameReader);
+
+      final String sumColumnName = signature.getColumnName(sumColumnNumber);
+      cachedSumSelector = cachedCursor.getColumnSelectorFactory().makeColumnValueSelector(sumColumnName);
+    }
+    return cachedCursor;
+  }
+
+  private class CombinedColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final Map<String, TrackingColumnValueSelector> columnValueSelectorCache = new HashMap<>();
+    private final Map<DimensionSpec, TrackingDimensionSelector> dimensionSelectorCache = new HashMap<>();
+
+    @Override
+    public DimensionSelector makeDimensionSelector(final DimensionSpec dimensionSpec)
+    {
+      final int columnNumber = signature.indexOf(dimensionSpec.getDimension());
+      if (columnNumber < 0) {
+        return DimensionSelector.constant(null, dimensionSpec.getExtractionFn());
+      } else if (columnNumber == sumColumnNumber) {
+        throw new UnsupportedOperationException();
+      } else {
+        return dimensionSelectorCache.computeIfAbsent(
+            dimensionSpec,
+            spec -> new TrackingDimensionSelector(spec, () -> cachedCursor.getColumnSelectorFactory())
+        );
+      }
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(final String columnName)
+    {
+      final int columnNumber = signature.indexOf(columnName);
+      if (columnNumber < 0) {
+        return NilColumnValueSelector.instance();
+      } else if (columnNumber == sumColumnNumber) {
+        return new ColumnValueSelector<Long>()
+        {
+          @Override
+          public double getDouble()
+          {
+            return summedValue;
+          }
+
+          @Override
+          public float getFloat()
+          {
+            return summedValue;
+          }
+
+          @Override
+          public long getLong()
+          {
+            return summedValue;
+          }
+
+          @Override
+          public boolean isNull()
+          {
+            return false;
+          }
+
+          @Override
+          public Long getObject()
+          {
+            return summedValue;
+          }
+
+          @Override
+          public Class<Long> classOfObject()
+          {
+            return Long.class;
+          }
+
+          @Override
+          public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
+          {
+            // Nothing to do.
+          }
+        };
+      } else {
+        return columnValueSelectorCache.computeIfAbsent(
+            columnName,
+            name -> new TrackingColumnValueSelector(name, () -> cachedCursor.getColumnSelectorFactory())
+        );
+      }
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(final String column)
+    {
+      return signature.getColumnCapabilities(column);
+    }
   }
 }

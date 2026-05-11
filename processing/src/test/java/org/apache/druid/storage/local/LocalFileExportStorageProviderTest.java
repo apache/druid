@@ -27,8 +27,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnectorModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +49,7 @@ public class LocalFileExportStorageProviderTest
     byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
 
     ExportStorageProvider deserialized = objectMapper.readValue(bytes, LocalFileExportStorageProvider.class);
-    Assert.assertEquals(exportDestination, deserialized);
+    Assertions.assertEquals(exportDestination, deserialized);
   }
 
   @Test
@@ -65,7 +65,7 @@ public class LocalFileExportStorageProviderTest
   @Test
   public void testEmptyPath()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> LocalFileExportStorageProvider.validateAndGetPath(null, "path")
     );
@@ -75,17 +75,17 @@ public class LocalFileExportStorageProviderTest
   public void testValidate()
   {
     File file = LocalFileExportStorageProvider.validateAndGetPath("/base", "/base/path");
-    Assert.assertEquals("/base/path", file.toPath().toString());
+    Assertions.assertEquals("/base/path", file.toPath().toString());
   }
 
   @Test
   public void testWithNonSubdir()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "/base/../path")
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "/base1")
     );
@@ -94,11 +94,11 @@ public class LocalFileExportStorageProviderTest
   @Test
   public void testExportManifestFilePath()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "file:/base/path1/file1",
         new LocalFileExportStorageProvider("/base/path1").getFilePathForManifest("file1")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "file:/base/path1/file1",
         new LocalFileExportStorageProvider("/base/../base/path1").getFilePathForManifest("file1")
     );

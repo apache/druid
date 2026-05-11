@@ -21,7 +21,6 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
@@ -39,9 +38,9 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
-
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Set;
 
 public class FilteredRequestLoggerTest
 {
@@ -87,7 +86,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        ImmutableList.of()
+        Set.of()
     );
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(nativeRequestLogLine.getQueryStats())
@@ -130,7 +129,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        ImmutableList.of()
+        Set.of()
     );
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(
@@ -166,7 +165,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        ImmutableList.of(Query.SEGMENT_METADATA)
+        Set.of(Query.SEGMENT_METADATA)
     );
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(

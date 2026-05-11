@@ -27,14 +27,11 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>37.0.0-SNAPSHOT</version>
+    <version>38.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <properties>
-    <parquet.version>1.15.2</parquet.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>

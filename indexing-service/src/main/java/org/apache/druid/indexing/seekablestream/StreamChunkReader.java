@@ -24,7 +24,6 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
 import org.apache.druid.indexing.common.task.InputRowFilter;
@@ -42,8 +41,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
- * or {@link InputRowParser}. This class will be useful until we remove the deprecated {@link InputRowParser}.
+ * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}.
  */
 class StreamChunkReader<RecordType extends ByteEntity>
 {

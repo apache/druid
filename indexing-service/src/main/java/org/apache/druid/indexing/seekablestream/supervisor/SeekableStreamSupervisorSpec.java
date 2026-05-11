@@ -43,7 +43,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -261,30 +260,37 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
+  /**
+   * Updates {@link SeekableStreamSupervisorIOConfig#getTaskCount()} on this user-submitted spec
+   * to the desired value. The rules applied are:
+   *
+   * <ol>
+   *   <li>If {@code taskCountStart} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, if {@code taskCount} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, use the existing spec's {@code taskCount}.</li>
+   * </ol>
+   */
   @Override
-  public void merge(@NotNull SupervisorSpec existingSpec)
+  public void merge(@Nullable SupervisorSpec existingSpec)
   {
-    AutoScalerConfig thisAutoScalerConfig = this.getIoConfig().getAutoScalerConfig();
-    // Either if autoscaler is absent or taskCountStart is specified - just return.
-    if (thisAutoScalerConfig == null || thisAutoScalerConfig.getTaskCountStart() != null) {
+    // Use this spec's taskCountStart if set.
+    final AutoScalerConfig thisAutoScalerConfig = getIoConfig().getAutoScalerConfig();
+    if (thisAutoScalerConfig != null
+        && thisAutoScalerConfig.getEnableTaskAutoScaler()
+        && thisAutoScalerConfig.getTaskCountStart() != null) {
+      getIoConfig().setTaskCount(thisAutoScalerConfig.getTaskCountStart());
       return;
     }
 
-    // Use a switch expression with pattern matching when we move to Java 21 as a minimum requirement.
-    if (existingSpec instanceof SeekableStreamSupervisorSpec) {
-      SeekableStreamSupervisorSpec spec = (SeekableStreamSupervisorSpec) existingSpec;
-      AutoScalerConfig autoScalerConfig = spec.getIoConfig().getAutoScalerConfig();
-      if (autoScalerConfig == null) {
-        return;
-      }
-      // provided `taskCountStart` > provided `taskCount` > existing `taskCount` > provided `taskCountMin`.
-      int taskCount = thisAutoScalerConfig.getTaskCountMin();
-      if (this.getIoConfig().getTaskCount() != null) {
-        taskCount = this.getIoConfig().getTaskCount();
-      } else if (spec.getIoConfig().getTaskCount() != null) {
-        taskCount = spec.getIoConfig().getTaskCount();
-      }
-      this.getIoConfig().setTaskCount(taskCount);
+    // Use this spec's taskCount if set.
+    if (getIoConfig().isTaskCountExplicit()) {
+      return;
+    }
+
+    // Use the existing spec's taskCount. If it isn't there, we'll fall back to this spec's taskCount. Because there's
+    // no taskCountStart (and taskCount hasn't been explicitly set) this spec's taskCount will be taskCountMin or 1.
+    if (existingSpec instanceof SeekableStreamSupervisorSpec existingSeekableStreamSpec) {
+      getIoConfig().setTaskCount(existingSeekableStreamSpec.getIoConfig().getTaskCount());
     }
   }
 

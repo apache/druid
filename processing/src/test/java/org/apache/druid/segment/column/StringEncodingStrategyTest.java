@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.data.FrontCodedIndexed;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringEncodingStrategyTest
 {
@@ -38,7 +38,7 @@ public class StringEncodingStrategyTest
     StringEncodingStrategy utf8 = new StringEncodingStrategy.Utf8();
     String there = JSON_MAPPER.writeValueAsString(utf8);
     StringEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
-    Assert.assertEquals(utf8, andBackAgain);
+    Assertions.assertEquals(utf8, andBackAgain);
   }
 
   @Test
@@ -47,14 +47,14 @@ public class StringEncodingStrategyTest
     StringEncodingStrategy frontCoded = new StringEncodingStrategy.FrontCoded(null, null);
     String there = JSON_MAPPER.writeValueAsString(frontCoded);
     StringEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
-    Assert.assertEquals(frontCoded, andBackAgain);
-    Assert.assertEquals(FrontCodedIndexed.DEFAULT_BUCKET_SIZE, ((StringEncodingStrategy.FrontCoded) andBackAgain).getBucketSize());
-    Assert.assertEquals(FrontCodedIndexed.DEFAULT_VERSION, ((StringEncodingStrategy.FrontCoded) andBackAgain).getFormatVersion());
+    Assertions.assertEquals(frontCoded, andBackAgain);
+    Assertions.assertEquals(FrontCodedIndexed.DEFAULT_BUCKET_SIZE, ((StringEncodingStrategy.FrontCoded) andBackAgain).getBucketSize());
+    Assertions.assertEquals(FrontCodedIndexed.DEFAULT_VERSION, ((StringEncodingStrategy.FrontCoded) andBackAgain).getFormatVersion());
 
     // this next assert seems silly, but its a sanity check to make us think hard before changing the default version,
     // to make us think of the backwards compatibility implications, as new versions of segment format stuff cannot be
     // downgraded to older versions of Druid and still read
-    Assert.assertEquals(FrontCodedIndexed.V1, FrontCodedIndexed.DEFAULT_VERSION);
+    Assertions.assertEquals(FrontCodedIndexed.V1, FrontCodedIndexed.DEFAULT_VERSION);
   }
 
   @Test
@@ -63,12 +63,12 @@ public class StringEncodingStrategyTest
     StringEncodingStrategy frontCodedV0 = new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V0);
     String there = JSON_MAPPER.writeValueAsString(frontCodedV0);
     StringEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
-    Assert.assertEquals(frontCodedV0, andBackAgain);
+    Assertions.assertEquals(frontCodedV0, andBackAgain);
 
     StringEncodingStrategy frontCodedV1 = new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1);
     there = JSON_MAPPER.writeValueAsString(frontCodedV1);
     andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
-    Assert.assertEquals(frontCodedV1, andBackAgain);
+    Assertions.assertEquals(frontCodedV1, andBackAgain);
   }
 
   @Test

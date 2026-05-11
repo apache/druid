@@ -49,4 +49,32 @@ public class SegmentLoadingCapabilitiesTest
     Assert.assertEquals(3, reread.getNumLoadingThreads());
     Assert.assertEquals(5, reread.getNumTurboLoadingThreads());
   }
+
+  @Test
+  public void testTwoArgConstructorDefaultsPartialLoadToFalse()
+  {
+    SegmentLoadingCapabilities capabilities = new SegmentLoadingCapabilities(1, 4);
+    Assert.assertFalse(capabilities.isSupportsPartialLoad());
+  }
+
+  @Test
+  public void testSerdeWithPartialLoadTrue() throws Exception
+  {
+    SegmentLoadingCapabilities capabilities = new SegmentLoadingCapabilities(1, 4, true);
+    SegmentLoadingCapabilities reread = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(capabilities),
+        SegmentLoadingCapabilities.class
+    );
+    Assert.assertTrue(reread.isSupportsPartialLoad());
+  }
+
+  @Test
+  public void testOldPayloadDeserializesWithPartialLoadFalse() throws JsonProcessingException
+  {
+    // An older historical that doesn't include the new field should deserialize cleanly with the field defaulting to
+    // false. The coordinator then conservatively avoids sending wrapped LoadSpecs to that historical.
+    String json = "{\"numLoadingThreads\":3,\"numTurboLoadingThreads\":5}";
+    SegmentLoadingCapabilities reread = jsonMapper.readValue(json, SegmentLoadingCapabilities.class);
+    Assert.assertFalse(reread.isSupportsPartialLoad());
+  }
 }

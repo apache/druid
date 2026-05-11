@@ -23,11 +23,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -40,13 +38,10 @@ public class RowBasedIndexedTableTest
   private static final int INDEX_COUNTRIES_COUNTRY_NAME = 2;
   private static final int INDEX_REGIONS_REGION_ISO_CODE = 0;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   public RowBasedIndexedTable<Map<String, Object>> countriesTable;
   public RowBasedIndexedTable<Map<String, Object>> regionsTable;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     countriesTable = JoinTestHelper.createCountriesIndexedTable();
@@ -56,13 +51,13 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_keyColumns_countries()
   {
-    Assert.assertEquals(ImmutableSet.of("countryNumber", "countryIsoCode"), countriesTable.keyColumns());
+    Assertions.assertEquals(ImmutableSet.of("countryNumber", "countryIsoCode"), countriesTable.keyColumns());
   }
 
   @Test
   public void test_rowSignature_countries()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add("countryNumber", ColumnType.LONG)
                     .add("countryIsoCode", ColumnType.STRING)
@@ -75,7 +70,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_numRows_countries()
   {
-    Assert.assertEquals(18, countriesTable.numRows());
+    Assertions.assertEquals(18, countriesTable.numRows());
   }
 
   @Test
@@ -83,9 +78,9 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_ISO_CODE);
 
-    Assert.assertEquals(ImmutableSet.of(), index.find(null));
-    Assert.assertEquals(ImmutableSet.of(), index.find(2));
-    Assert.assertEquals(ImmutableSet.of(13), index.find("US"));
+    Assertions.assertEquals(ImmutableSet.of(), index.find(null));
+    Assertions.assertEquals(ImmutableSet.of(), index.find(2));
+    Assertions.assertEquals(ImmutableSet.of(13), index.find("US"));
   }
 
   @Test
@@ -93,29 +88,31 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_NUMBER);
 
-    Assert.assertEquals(ImmutableSet.of(), index.find(null));
-    Assert.assertEquals(ImmutableSet.of(0), index.find(0));
-    Assert.assertEquals(ImmutableSet.of(0), index.find(0.0));
-    Assert.assertEquals(ImmutableSet.of(0), index.find("0"));
-    Assert.assertEquals(ImmutableSet.of(2), index.find(2));
-    Assert.assertEquals(ImmutableSet.of(2), index.find(2.0));
-    Assert.assertEquals(ImmutableSet.of(2), index.find("2"));
-    Assert.assertEquals(ImmutableSet.of(), index.find(20));
-    Assert.assertEquals(ImmutableSet.of(), index.find("US"));
+    Assertions.assertEquals(ImmutableSet.of(), index.find(null));
+    Assertions.assertEquals(ImmutableSet.of(0), index.find(0));
+    Assertions.assertEquals(ImmutableSet.of(0), index.find(0.0));
+    Assertions.assertEquals(ImmutableSet.of(0), index.find("0"));
+    Assertions.assertEquals(ImmutableSet.of(2), index.find(2));
+    Assertions.assertEquals(ImmutableSet.of(2), index.find(2.0));
+    Assertions.assertEquals(ImmutableSet.of(2), index.find("2"));
+    Assertions.assertEquals(ImmutableSet.of(), index.find(20));
+    Assertions.assertEquals(ImmutableSet.of(), index.find("US"));
   }
 
   @Test
   public void test_columnIndex_countriesCountryName()
   {
-    expectedException.expectMessage("Column[2] is not a key column");
-    countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_NAME);
+    Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_NAME)
+    );
+    Assertions.assertTrue(e.getMessage().contains("Column[2] is not a key column"));
   }
 
   @Test
   public void test_columnIndex_countriesOutOfBounds()
   {
-    expectedException.expect(IndexOutOfBoundsException.class);
-    countriesTable.columnIndex(99);
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> countriesTable.columnIndex(99));
   }
 
   @Test
@@ -123,11 +120,11 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = regionsTable.columnIndex(INDEX_REGIONS_REGION_ISO_CODE);
 
-    Assert.assertEquals(ImmutableSet.of(21), index.find(null));
-    Assert.assertEquals(ImmutableSet.of(0), index.find("11"));
-    Assert.assertEquals(ImmutableSet.of(1), index.find(13));
-    Assert.assertEquals(ImmutableSet.of(12), index.find("QC"));
-    Assert.assertEquals(ImmutableSet.of(15, 16), index.find("VA"));
+    Assertions.assertEquals(ImmutableSet.of(21), index.find(null));
+    Assertions.assertEquals(ImmutableSet.of(0), index.find("11"));
+    Assertions.assertEquals(ImmutableSet.of(1), index.find(13));
+    Assertions.assertEquals(ImmutableSet.of(12), index.find("QC"));
+    Assertions.assertEquals(ImmutableSet.of(15, 16), index.find("VA"));
   }
 
   @Test
@@ -135,8 +132,8 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Reader reader = countriesTable.columnReader(INDEX_COUNTRIES_COUNTRY_NUMBER);
 
-    Assert.assertEquals(0L, reader.read(0));
-    Assert.assertEquals(1L, reader.read(1));
+    Assertions.assertEquals(0L, reader.read(0));
+    Assertions.assertEquals(1L, reader.read(1));
   }
 
   @Test
@@ -144,39 +141,37 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Reader reader = countriesTable.columnReader(INDEX_COUNTRIES_COUNTRY_NAME);
 
-    Assert.assertEquals("Australia", reader.read(0));
-    Assert.assertEquals("Canada", reader.read(1));
-    Assert.assertEquals("Atlantis", reader.read(14));
+    Assertions.assertEquals("Australia", reader.read(0));
+    Assertions.assertEquals("Canada", reader.read(1));
+    Assertions.assertEquals("Atlantis", reader.read(14));
   }
 
   @Test
   public void test_columnReader_countriesOutOfBoundsRow()
   {
     final IndexedTable.Reader reader = countriesTable.columnReader(INDEX_COUNTRIES_COUNTRY_NUMBER);
-    expectedException.expect(IndexOutOfBoundsException.class);
-    reader.read(99);
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> reader.read(99));
   }
 
   @Test
   public void test_columnReader_countriesOutOfBoundsColumn()
   {
-    expectedException.expect(IndexOutOfBoundsException.class);
-    countriesTable.columnReader(99);
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> countriesTable.columnReader(99));
   }
 
   @Test
   public void testVersion()
   {
-    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, countriesTable.version());
-    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, regionsTable.version());
+    Assertions.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, countriesTable.version());
+    Assertions.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, regionsTable.version());
   }
 
   @Test
   public void testIsCacheable() throws IOException
   {
-    Assert.assertFalse(countriesTable.isCacheable());
+    Assertions.assertFalse(countriesTable.isCacheable());
     RowBasedIndexedTable<Map<String, Object>> countriesTableWithCacheKey = JoinTestHelper.createCountriesIndexedTableWithCacheKey();
-    Assert.assertTrue(countriesTableWithCacheKey.isCacheable());
-    Assert.assertArrayEquals(JoinTestHelper.INDEXED_TABLE_CACHE_KEY, countriesTableWithCacheKey.computeCacheKey());
+    Assertions.assertTrue(countriesTableWithCacheKey.isCacheable());
+    Assertions.assertArrayEquals(JoinTestHelper.INDEXED_TABLE_CACHE_KEY, countriesTableWithCacheKey.computeCacheKey());
   }
 }

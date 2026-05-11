@@ -21,8 +21,8 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -53,7 +53,7 @@ public class SingleDimensionPartialShardSpecTest
         json,
         PartialShardSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    Assertions.assertEquals(expected, fromJson);
   }
 
   @Test
@@ -67,6 +67,6 @@ public class SingleDimensionPartialShardSpecTest
         3
     );
     final ShardSpec shardSpec = partialShardSpec.complete(new ObjectMapper(), 1, 2);
-    Assert.assertEquals(new SingleDimensionShardSpec("dim", "end2", null, 1, 2), shardSpec);
+    Assertions.assertEquals(new SingleDimensionShardSpec("dim", "end2", null, 1, 2), shardSpec);
   }
 }

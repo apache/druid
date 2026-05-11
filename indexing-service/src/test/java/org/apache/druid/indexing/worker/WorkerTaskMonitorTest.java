@@ -186,7 +186,6 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                null,
                 notifierFactory,
                 null,
                 null,
@@ -226,6 +225,7 @@ public class WorkerTaskMonitorTest
             new ServerConfig()
         ),
         taskConfig,
+        new WorkerConfig(),
         cf,
         workerCuratorCoordinator,
         EasyMock.createNiceMock(OverlordClient.class)

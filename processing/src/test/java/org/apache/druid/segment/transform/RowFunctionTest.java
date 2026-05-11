@@ -22,8 +22,8 @@ package org.apache.druid.segment.transform;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -79,6 +79,6 @@ public class RowFunctionTest implements RowFunction
         return 0;
       }
     };
-    Assert.assertEquals(Rows.objectToStrings(eval(row)), evalDimension(row));
+    Assertions.assertEquals(Rows.objectToStrings(eval(row)), evalDimension(row));
   }
 }

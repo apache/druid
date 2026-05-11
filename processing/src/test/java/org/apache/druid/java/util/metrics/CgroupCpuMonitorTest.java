@@ -27,36 +27,33 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CgroupCpuMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
   private File procDir;
   private File cgroupDir;
   private File statFile;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpuDir = new File(
@@ -77,15 +74,15 @@ public class CgroupCpuMonitorTest
   {
     final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(2, actualEvents.size());
+    Assertions.assertEquals(2, actualEvents.size());
     final Map<String, Object> sharesEvent = actualEvents.get(0).toMap();
     final Map<String, Object> coresEvent = actualEvents.get(1).toMap();
-    Assert.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
-    Assert.assertEquals(1024L, sharesEvent.get("value"));
-    Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
-    Assert.assertEquals(3.0D, coresEvent.get("value"));
+    Assertions.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
+    Assertions.assertEquals(1024L, sharesEvent.get("value"));
+    Assertions.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
+    Assertions.assertEquals(3.0D, coresEvent.get("value"));
     emitter.flush();
 
     TestUtils.copyOrReplaceResource("/cpuacct.stat-2", statFile);
@@ -93,8 +90,8 @@ public class CgroupCpuMonitorTest
     // to avoid divide by zero.
     Thread.sleep(1000);
 
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertTrue(
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertTrue(
         emitter
             .getEvents()
             .stream()
@@ -111,19 +108,19 @@ public class CgroupCpuMonitorTest
   @Test
   public void testQuotaCompute()
   {
-    Assert.assertEquals(-1, CgroupUtil.computeProcessorQuota(-1, 100000), 0);
-    Assert.assertEquals(0, CgroupUtil.computeProcessorQuota(0, 100000), 0);
-    Assert.assertEquals(-1, CgroupUtil.computeProcessorQuota(100000, 0), 0);
-    Assert.assertEquals(2.0D, CgroupUtil.computeProcessorQuota(200000, 100000), 0);
-    Assert.assertEquals(0.5D, CgroupUtil.computeProcessorQuota(50000, 100000), 0);
+    Assertions.assertEquals(-1, CgroupUtil.computeProcessorQuota(-1, 100000), 0);
+    Assertions.assertEquals(0, CgroupUtil.computeProcessorQuota(0, 100000), 0);
+    Assertions.assertEquals(-1, CgroupUtil.computeProcessorQuota(100000, 0), 0);
+    Assertions.assertEquals(2.0D, CgroupUtil.computeProcessorQuota(200000, 100000), 0);
+    Assertions.assertEquals(0.5D, CgroupUtil.computeProcessorQuota(50000, 100000), 0);
   }
 
   @Test
   public void testCgroupsV2Detection() throws IOException, URISyntaxException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = temporaryFolder.newFolder();
-    File procV2Dir = temporaryFolder.newFolder();
+    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2Dir");
+    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2Dir");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
 
 
@@ -135,10 +132,10 @@ public class CgroupCpuMonitorTest
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
 
     // doMonitor should return true
-    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertTrue(monitor.doMonitor(emitter));
 
-    Assert.assertEquals(2, emitter.getEvents().size());
-    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
+    Assertions.assertEquals(2, emitter.getEvents().size());
+    Assertions.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
   @Test  
@@ -149,17 +146,17 @@ public class CgroupCpuMonitorTest
     final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     
-    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
 
     // Should emit metrics normally for v1
-    Assert.assertEquals(2, actualEvents.size());
+    Assertions.assertEquals(2, actualEvents.size());
     final Map<String, Object> sharesEvent = actualEvents.get(0).toMap();
     final Map<String, Object> coresEvent = actualEvents.get(1).toMap();
-    Assert.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
-    Assert.assertEquals(1024L, sharesEvent.get("value"));
-    Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
-    Assert.assertEquals(3.0D, coresEvent.get("value"));
-    Assert.assertEquals(CgroupVersion.V1.name(), coresEvent.get("cgroupversion"));
+    Assertions.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
+    Assertions.assertEquals(1024L, sharesEvent.get("value"));
+    Assertions.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
+    Assertions.assertEquals(3.0D, coresEvent.get("value"));
+    Assertions.assertEquals(CgroupVersion.V1.name(), coresEvent.get("cgroupversion"));
   }
 }

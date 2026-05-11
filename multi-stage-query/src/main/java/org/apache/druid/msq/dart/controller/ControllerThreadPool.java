@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 /**
  * Thread pool for running {@link Controller}. Number of threads is equal to
  * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
@@ -32,21 +34,32 @@ import org.apache.druid.msq.exec.Controller;
 @ManageLifecycle
 public class ControllerThreadPool
 {
-  private final ListeningExecutorService executorService;
+  private final ListeningExecutorService runExec;
+  private final ScheduledExecutorService timeoutExec;
 
-  public ControllerThreadPool(final ListeningExecutorService executorService)
+  public ControllerThreadPool(
+      final ListeningExecutorService runExec,
+      final ScheduledExecutorService timeoutExec
+  )
   {
-    this.executorService = executorService;
+    this.runExec = runExec;
+    this.timeoutExec = timeoutExec;
   }
 
-  public ListeningExecutorService getExecutorService()
+  public ListeningExecutorService getRunExecutorService()
   {
-    return executorService;
+    return runExec;
+  }
+
+  public ScheduledExecutorService getTimeoutExecutorService()
+  {
+    return timeoutExec;
   }
 
   @LifecycleStop
   public void stop()
   {
-    executorService.shutdown();
+    runExec.shutdown();
+    timeoutExec.shutdown();
   }
 }

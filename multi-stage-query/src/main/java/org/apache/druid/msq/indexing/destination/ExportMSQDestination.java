@@ -108,7 +108,7 @@ public class ExportMSQDestination implements MSQDestination
   @Override
   public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
   {
-    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+    return ShuffleSpecFactories.globalSortWithTargetSize(targetSize);
   }
 
   @Override

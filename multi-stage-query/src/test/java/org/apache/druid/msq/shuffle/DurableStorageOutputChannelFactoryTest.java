@@ -21,17 +21,18 @@ package org.apache.druid.msq.shuffle;
 
 import org.apache.druid.frame.processor.OutputChannelFactoryTest;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.msq.shuffle.output.DurableStorageTaskOutputChannelFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @ClassRule
-  public static TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public static Path temporaryFolder;
 
   public DurableStorageOutputChannelFactoryTest()
       throws IOException
@@ -43,8 +44,8 @@ public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactory
             0,
             "0",
             100,
-            new LocalFileStorageConnector(folder.newFolder()),
-            folder.newFolder(),
+            new LocalFileStorageConnector(FileUtils.createTempDirInLocation(temporaryFolder, "f1")),
+            FileUtils.createTempDirInLocation(temporaryFolder, "f2"),
             FrameTestUtil.WT_CONTEXT_LEGACY
         ),
         100

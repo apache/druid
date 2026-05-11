@@ -24,20 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.io.CharSource;
-import com.google.common.io.LineProcessor;
-import com.google.common.io.Resources;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
-import org.apache.commons.io.output.NullWriter;
 import org.apache.druid.cli.GuiceRunnable;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
@@ -51,12 +44,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.Writer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -70,7 +57,6 @@ import java.util.List;
 public class DruidJsonValidator extends GuiceRunnable
 {
   private static final Logger LOG = new Logger(DruidJsonValidator.class);
-  private Writer logWriter = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
 
   @Option(name = "-f", title = "file", description = "file to validate")
   @Required
@@ -79,12 +65,6 @@ public class DruidJsonValidator extends GuiceRunnable
   @Option(name = "-t", title = "type", description = "the type of schema to validate")
   @Required
   public String type;
-
-  @Option(name = "-r", title = "resource", description = "optional resources required for validation")
-  public String resource;
-
-  @Option(name = "--log", title = "toLogger", description = "redirects any outputs to logger")
-  public boolean toLogger;
 
   public DruidJsonValidator()
   {
@@ -132,66 +112,11 @@ public class DruidJsonValidator extends GuiceRunnable
         )
     );
 
-    final ClassLoader loader;
-    if (Thread.currentThread().getContextClassLoader() != null) {
-      loader = Thread.currentThread().getContextClassLoader();
-    } else {
-      loader = DruidJsonValidator.class.getClassLoader();
-    }
-
-    if (toLogger) {
-      logWriter = new NullWriter()
-      {
-        private final Logger logger = new Logger(DruidJsonValidator.class);
-
-        @Override
-        public void write(char[] cbuf, int off, int len)
-        {
-          logger.info(new String(cbuf, off, len));
-        }
-      };
-    }
-
     try {
       if ("query".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Query.class);
       } else if ("task".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Task.class);
-      } else if ("parse".equalsIgnoreCase(type)) {
-        final StringInputRowParser parser;
-        if (file.isFile()) {
-          logWriter.write("loading parse spec from file '" + file + "'");
-          parser = jsonMapper.readValue(file, StringInputRowParser.class);
-        } else if (loader.getResource(jsonFile) != null) {
-          logWriter.write("loading parse spec from resource '" + jsonFile + "'");
-          parser = jsonMapper.readValue(loader.getResource(jsonFile), StringInputRowParser.class);
-        } else {
-          logWriter.write("cannot find proper spec from 'file'.. regarding it as a json spec");
-          parser = jsonMapper.readValue(jsonFile, StringInputRowParser.class);
-        }
-        parser.initializeParser();
-        if (resource != null) {
-          final CharSource source;
-          if (new File(resource).isFile()) {
-            logWriter.write("loading data from file '" + resource + "'");
-            source = Resources.asByteSource(new File(resource).toURI().toURL()).asCharSource(
-                Charset.forName(
-                    parser.getEncoding()
-                )
-            );
-          } else if (loader.getResource(resource) != null) {
-            logWriter.write("loading data from resource '" + resource + "'");
-            source = Resources.asByteSource(loader.getResource(resource)).asCharSource(
-                Charset.forName(
-                    parser.getEncoding()
-                )
-            );
-          } else {
-            logWriter.write("cannot find proper data from 'resource'.. regarding it as data string");
-            source = CharSource.wrap(resource);
-          }
-          readData(parser, source);
-        }
       } else {
         throw new UOE("Unknown type[%s]", type);
       }
@@ -210,42 +135,5 @@ public class DruidJsonValidator extends GuiceRunnable
         jsonMapper.registerModule(module);
       }
     }
-  }
-
-  @VisibleForTesting
-  void setLogWriter(Writer writer)
-  {
-    this.logWriter = writer;
-  }
-
-  private Void readData(final StringInputRowParser parser, final CharSource source)
-      throws IOException
-  {
-    return source.readLines(
-        new LineProcessor<>()
-        {
-          private final StringBuilder builder = new StringBuilder();
-
-          @Override
-          public boolean processLine(String line) throws IOException
-          {
-            InputRow parsed = parser.parse(line);
-            builder.append(parsed.getTimestamp());
-            for (String dimension : parsed.getDimensions()) {
-              builder.append('\t');
-              builder.append(parsed.getRaw(dimension));
-            }
-            logWriter.write(builder.toString());
-            builder.setLength(0);
-            return true;
-          }
-
-          @Override
-          public Void getResult()
-          {
-            return null;
-          }
-        }
-    );
   }
 }

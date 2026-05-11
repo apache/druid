@@ -20,24 +20,16 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Injector;
-import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.utils.RuntimeInfo;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
 public class StartupInjectorBuilderTest
 {
@@ -48,25 +40,25 @@ public class StartupInjectorBuilderTest
 
     // Empty properties come along for free
     Properties props = injector.getInstance(Properties.class);
-    assertNotNull(props);
-    assertTrue(props.isEmpty());
+    Assertions.assertNotNull(props);
+    Assertions.assertTrue(props.isEmpty());
 
     // Since we didn't configure this item, we get a new instance every time.
-    assertNotSame(props, injector.getInstance(Properties.class));
+    Assertions.assertNotSame(props, injector.getInstance(Properties.class));
 
     // Runtime info is available, though not configured, because Guice can create
     // one when requested. Our class, so marked singleton.
-    assertNotNull(injector.getInstance(RuntimeInfo.class));
-    assertSame(injector.getInstance(RuntimeInfo.class), injector.getInstance(RuntimeInfo.class));
+    Assertions.assertNotNull(injector.getInstance(RuntimeInfo.class));
+    Assertions.assertSame(injector.getInstance(RuntimeInfo.class), injector.getInstance(RuntimeInfo.class));
 
     // The extension loader is available, again via implicit creation.
     // Since it is our class, we marked it as a lazy singleton.
-    assertNotNull(injector.getInstance(ExtensionsLoader.class));
-    assertSame(injector.getInstance(ExtensionsLoader.class), injector.getInstance(ExtensionsLoader.class));
+    Assertions.assertNotNull(injector.getInstance(ExtensionsLoader.class));
+    Assertions.assertSame(injector.getInstance(ExtensionsLoader.class), injector.getInstance(ExtensionsLoader.class));
 
     // Does have the basics. Sample one such entry.
-    assertNotNull(injector.getInstance(DruidSecondaryModule.class));
-    assertSame(injector.getInstance(DruidSecondaryModule.class), injector.getInstance(DruidSecondaryModule.class));
+    Assertions.assertNotNull(injector.getInstance(DruidSecondaryModule.class));
+    Assertions.assertSame(injector.getInstance(DruidSecondaryModule.class), injector.getInstance(DruidSecondaryModule.class));
   }
 
   @Test
@@ -76,21 +68,21 @@ public class StartupInjectorBuilderTest
 
     // Empty properties come along for free
     Properties props = injector.getInstance(Properties.class);
-    assertNotNull(props);
-    assertTrue(props.isEmpty());
+    Assertions.assertNotNull(props);
+    Assertions.assertTrue(props.isEmpty());
 
     // Since we didn't configure this item, we get a new instance every time.
-    assertNotSame(props, injector.getInstance(Properties.class));
+    Assertions.assertNotSame(props, injector.getInstance(Properties.class));
 
     // Runtime info bound to null.
-    assertNull(injector.getInstance(RuntimeInfo.class));
+    Assertions.assertNull(injector.getInstance(RuntimeInfo.class));
 
     // The extension loader bound to null.
-    assertNull(injector.getInstance(ExtensionsLoader.class));
+    Assertions.assertNull(injector.getInstance(ExtensionsLoader.class));
 
     // Does have the basics. Sample one such entry.
-    assertNotNull(injector.getInstance(DruidSecondaryModule.class));
-    assertSame(injector.getInstance(DruidSecondaryModule.class), injector.getInstance(DruidSecondaryModule.class));
+    Assertions.assertNotNull(injector.getInstance(DruidSecondaryModule.class));
+    Assertions.assertSame(injector.getInstance(DruidSecondaryModule.class), injector.getInstance(DruidSecondaryModule.class));
   }
 
   @Test
@@ -102,11 +94,11 @@ public class StartupInjectorBuilderTest
 
     // Single empty properties instance
     Properties props = injector.getInstance(Properties.class);
-    assertNotNull(props);
-    assertTrue(props.isEmpty());
+    Assertions.assertNotNull(props);
+    Assertions.assertTrue(props.isEmpty());
 
     // Since we didn't configure this item, we get a new instance every time.
-    assertSame(props, injector.getInstance(Properties.class));
+    Assertions.assertSame(props, injector.getInstance(Properties.class));
   }
 
   @Test
@@ -121,7 +113,7 @@ public class StartupInjectorBuilderTest
 
     // Returns explicit properties
     Properties propsInstance = injector.getInstance(Properties.class);
-    assertSame(props, propsInstance);
+    Assertions.assertSame(props, propsInstance);
   }
 
   @Test
@@ -136,8 +128,8 @@ public class StartupInjectorBuilderTest
         .build();
 
     // Extensions config is populated. (Can't tests extensions themselves.)
-    assertEquals("bogus", injector.getInstance(ExtensionsConfig.class).getDirectory());
-    assertEquals(Collections.singletonList("excluded"), injector.getInstance(ModulesConfig.class).getExcludeList());
+    Assertions.assertEquals("bogus", injector.getInstance(ExtensionsConfig.class).getDirectory());
+    Assertions.assertEquals(Collections.singletonList("excluded"), injector.getInstance(ModulesConfig.class).getExcludeList());
   }
 
   // Can't test the server option here: there are no actual property files to read.
@@ -148,13 +140,13 @@ public class StartupInjectorBuilderTest
     final Properties propsDefaultValueMode = new Properties();
     propsDefaultValueMode.put(StartupInjectorBuilder.NULL_HANDLING_CONFIG_STRING, "true");
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ISE.class,
         () -> new StartupInjectorBuilder().withExtensions()
                                           .withProperties(propsDefaultValueMode)
                                           .build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format(
             "druid.generic.useDefaultValueForNull set to 'true', but has been removed, see https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null for details for how to migrate to SQL compliant behavior",
             StartupInjectorBuilder.getVersionString()
@@ -164,13 +156,13 @@ public class StartupInjectorBuilderTest
 
     final Properties propsNo3vl = new Properties();
     propsNo3vl.put(StartupInjectorBuilder.THREE_VALUE_LOGIC_CONFIG_STRING, "false");
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         ISE.class,
         () -> new StartupInjectorBuilder().withExtensions()
                                           .withProperties(propsNo3vl)
                                           .build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format(
             "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed, see https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null for details for how to migrate to SQL compliant behavior",
             StartupInjectorBuilder.getVersionString()
@@ -181,19 +173,46 @@ public class StartupInjectorBuilderTest
     final Properties propsNonStrictBooleans = new Properties();
     propsNonStrictBooleans.put(ExpressionProcessingConfig.NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false");
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         ISE.class,
         () -> new StartupInjectorBuilder().withExtensions()
                                           .withProperties(propsNonStrictBooleans)
                                           .build()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format(
             "druid.expressions.useStrictBooleans set to 'false', but has been removed, see https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null for details for how to migrate to SQL compliant behavior",
             StartupInjectorBuilder.getVersionString()
         ),
         t.getMessage()
     );
+  }
+
+  @Test
+  public void testValidator_rejectsNonHttpServerViewType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.SERVERVIEW_TYPE_CONFIG_STRING, "batch");
+
+    final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
+
+    Throwable t = Assertions.assertThrows(ISE.class, builder::build);
+    Assertions.assertEquals(
+        "Invalid value[batch] for property[druid.serverview.type]. Only [http] is supported;"
+        + " the ZooKeeper-based 'batch' server view has been removed. Remove this property or"
+        + " set it to 'http'. See the Druid upgrade notes for details.",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testValidator_acceptsHttpServerViewType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.SERVERVIEW_TYPE_CONFIG_STRING, "http");
+
+    // Should not throw
+    new StartupInjectorBuilder().withExtensions().withProperties(props).build();
   }
 
   @Test
@@ -248,9 +267,7 @@ public class StartupInjectorBuilderTest
     props.setProperty(removedProperty, dummyValue);
 
     final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
-    MatcherAssert.assertThat(
-        Assert.assertThrows(ISE.class, builder::build),
-        ExceptionMatcher.of(ISE.class).expectMessageIs(expectedMessage)
-    );
+    Throwable t = Assertions.assertThrows(ISE.class, builder::build);
+    Assertions.assertEquals(expectedMessage, t.getMessage());
   }
 }

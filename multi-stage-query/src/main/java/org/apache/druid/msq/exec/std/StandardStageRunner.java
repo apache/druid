@@ -33,7 +33,7 @@ import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.StageProcessor;
-import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
+import org.apache.druid.msq.indexing.ChannelCountingOutputChannelFactory;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -128,7 +128,7 @@ public class StandardStageRunner<T, R>
       baseOutputChannelFactory = executionContext.outputChannelFactory();
     }
 
-    workOutputChannelFactory = new CountingOutputChannelFactory(
+    workOutputChannelFactory = new ChannelCountingOutputChannelFactory(
         baseOutputChannelFactory,
         executionContext.counters().channel(CounterNames.outputChannel())
     );
@@ -181,7 +181,7 @@ public class StandardStageRunner<T, R>
 
     pipelineFuture = stageOperations.gatherResultKeyStatisticsIfNeeded(pipelineFuture);
 
-    final OutputChannelFactory stageOutputChannelFactory = new CountingOutputChannelFactory(
+    final OutputChannelFactory stageOutputChannelFactory = new ChannelCountingOutputChannelFactory(
         executionContext.outputChannelFactory(),
         executionContext.counters().channel(CounterNames.shuffleChannel())
     );

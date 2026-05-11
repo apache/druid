@@ -25,8 +25,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -58,6 +58,6 @@ public class SegmentizerFactoryTest
     fos.close();
 
     SegmentizerFactory factory = mapper.readValue(factoryFile, SegmentizerFactory.class);
-    Assert.assertTrue(factory instanceof MMappedQueryableSegmentizerFactory);
+    Assertions.assertTrue(factory instanceof MMappedQueryableSegmentizerFactory);
   }
 }

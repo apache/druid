@@ -34,18 +34,20 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.QueryInfoAndReport;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
+import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -53,6 +55,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -79,7 +82,6 @@ public class DartSqlEngine implements SqlEngine
 {
   public static final String NAME = "msq-dart";
   private static final Logger log = new Logger(DartSqlEngine.class);
-
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
@@ -115,6 +117,18 @@ public class DartSqlEngine implements SqlEngine
     this.queryConfigProvider = queryConfigProvider;
     this.toolbox = toolbox;
     this.sqlClients = sqlClients;
+  }
+
+  /**
+   * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+   * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
+   *
+   * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+   * for purposes of query cancellation.
+   */
+  public static String generateExecutionId()
+  {
+    return UUID.randomUUID().toString();
   }
 
   @Override
@@ -156,6 +170,7 @@ public class DartSqlEngine implements SqlEngine
   public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, MSQTaskSqlEngine.SYSTEM_CONTEXT_PARAMETERS);
+    QueryContext.of(queryContext).verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
   }
 
   @Override
@@ -199,8 +214,7 @@ public class DartSqlEngine implements SqlEngine
         controllerConfig,
         controllerThreadPool,
         queryKitSpecFactory,
-        queryKit,
-        serverConfig
+        queryKit
     );
     if (plannerContext.queryContext().isPrePlanned()) {
       return new PrePlannedDartQueryMaker(plannerContext, dartQueryMaker);
@@ -226,18 +240,12 @@ public class DartSqlEngine implements SqlEngine
     for (Map.Entry<String, Object> entry : queryConfigProvider.getContext().entrySet()) {
       contextMap.putIfAbsent(entry.getKey(), entry.getValue());
     }
-    /**
-     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
-     * the user may have provided. This becomes the {@link Controller#queryId()}.
-     *
-     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
-     * for purposes of query cancellation.
-     *
-     * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
-     */
-    final String dartQueryId = UUID.randomUUID().toString();
-    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
+
+    // Set default query timeout if not already specified.
+    contextMap.putIfAbsent(QueryContexts.TIMEOUT_KEY, serverConfig.getDefaultQueryTimeout());
+
+    // Add execution ID.
+    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, generateExecutionId());
   }
 
   @Override
@@ -247,7 +255,7 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public GetQueriesResponse getRunningQueries(
+  public GetQueriesResponse getQueries(
       boolean selfOnly,
       boolean includeComplete,
       AuthenticationResult authenticationResult,
@@ -267,7 +275,7 @@ public class DartSqlEngine implements SqlEngine
           Futures.successfulAsList(
               Iterables.transform(
                   sqlClients.getAllClients(),
-                  client -> client.getRunningQueries(true, includeComplete)
+                  client -> client.getQueries(true, includeComplete)
               )
           ),
           true

@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
+import org.apache.druid.msq.exec.ControllerRegistry;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -54,7 +56,7 @@ import java.util.concurrent.TimeUnit;
  * Registry for actively-running {@link Controller} and recently-completed {@link TaskReport}.
  */
 @ManageLifecycle
-public class DartControllerRegistry
+public class DartControllerRegistry implements ControllerRegistry
 {
   /**
    * Minimum frequency for checking if {@link #cleanupExpiredReports()} needs to be run.
@@ -127,6 +129,7 @@ public class DartControllerRegistry
    * Add a controller. Throws {@link DruidException} if a controller with the same {@link Controller#queryId()} is
    * already registered.
    */
+  @Override
   public void register(ControllerHolder holder)
   {
     final String dartQueryId = holder.getController().queryId();
@@ -141,6 +144,7 @@ public class DartControllerRegistry
    * time afterwards, based on {@link DartControllerConfig#getMaxRetainedReportCount()} and
    * {@link DartControllerConfig#getMaxRetainedReportDuration()}.
    */
+  @Override
   public void deregister(ControllerHolder holder, @Nullable TaskReport.ReportMap completeReport)
   {
     final String dartQueryId = holder.getController().queryId();

@@ -30,8 +30,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -150,7 +150,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
     try (ComplexColumn compressedCol = createComplexColumn(compressedBuffer)
     ) {
       for (int i = 0; i < expected.size(); i++) {
-        Assert.assertEquals(expected.get(i), compressedCol.getRowValue(i));
+        Assertions.assertEquals(expected.get(i), compressedCol.getRowValue(i));
       }
     }
     return compressedBuffer;
@@ -169,10 +169,10 @@ public class SerializablePairLongLongComplexMetricSerdeTest
 
     final ComplexColumn col = (ComplexColumn) columnHolder.getColumn();
     if (col instanceof SerializablePairLongLongComplexColumn) {
-      Assert.assertEquals(serializedSize, col.getLength());
+      Assertions.assertEquals(serializedSize, col.getLength());
     }
-    Assert.assertEquals("serializablePairLongLong", col.getTypeName());
-    Assert.assertEquals(SerializablePairLongLong.class, col.getClazz());
+    Assertions.assertEquals("serializablePairLongLong", col.getTypeName());
+    Assertions.assertEquals(SerializablePairLongLong.class, col.getClazz());
 
     return col;
   }
@@ -224,10 +224,10 @@ public class SerializablePairLongLongComplexMetricSerdeTest
     byteBuffer.flip();
 
     if (expectedSize > -1) {
-      Assert.assertEquals(expectedSize, serializer.getSerializedSize());
+      Assertions.assertEquals(expectedSize, serializer.getSerializedSize());
     }
 
-    Assert.assertEquals(serializer.getSerializedSize(), byteBuffer.limit());
+    Assertions.assertEquals(serializer.getSerializedSize(), byteBuffer.limit());
 
     return byteBuffer;
   }

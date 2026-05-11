@@ -25,8 +25,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.column.ValueType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GeneratorColumnSchemaTest
 {
@@ -48,7 +48,7 @@ public class GeneratorColumnSchemaTest
 
     final String serialized = MAPPER.writeValueAsString(schema);
     GeneratorColumnSchema again = MAPPER.readValue(serialized, GeneratorColumnSchema.class);
-    Assert.assertEquals(schema, again);
+    Assertions.assertEquals(schema, again);
   }
 
   @Test
