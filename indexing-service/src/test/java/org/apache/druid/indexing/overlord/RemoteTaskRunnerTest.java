@@ -560,7 +560,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
 
     // Confirm RTR thinks the worker is disabled.
-    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
+    Assert.assertTrue(Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().isDisabled());
   }
 
   @Test

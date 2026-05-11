@@ -211,7 +211,7 @@ public class ImmutableWorkerInfo
 
   public boolean isValidVersion(String minVersion)
   {
-    return worker.getVersion().compareTo(minVersion) >= 0;
+    return !worker.isDisabled() && worker.getVersion().compareTo(minVersion) >= 0;
   }
 
   public boolean canRunTask(Task task, double parallelIndexTaskSlotRatio)

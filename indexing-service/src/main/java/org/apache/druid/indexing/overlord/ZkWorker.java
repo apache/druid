@@ -205,7 +205,8 @@ public class ZkWorker implements Closeable
   @UsedInGeneratedCode // See JavaScriptWorkerSelectStrategyTest
   public boolean isValidVersion(String minVersion)
   {
-    return worker.get().getVersion().compareTo(minVersion) >= 0;
+    final Worker w = worker.get();
+    return !w.isDisabled() && w.getVersion().compareTo(minVersion) >= 0;
   }
 
   public void setWorker(Worker newWorker)
