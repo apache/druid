@@ -191,7 +191,5 @@
 
   "killTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
   "killTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
-  "killTask/task/count" : { "dimensions" : [], "type" : "count" },
-
-  "router/http/numRequestsQueued" : { "dimensions" : [], "type" : "gauge" }
+  "killTask/task/count" : { "dimensions" : [], "type" : "count" }
 }
