@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -75,5 +76,80 @@ public class SegmentChangeRequestLoadTest
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
     Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
+  }
+
+  @Test
+  public void testPartialLoadFieldsOmittedWhenNull() throws Exception
+  {
+    // Coordinator-issued load requests leave the partial-load fields null; the wire payload should not include them.
+    ObjectMapper mapper = new DefaultObjectMapper();
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        Map.of("type", "local"),
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+    SegmentChangeRequestLoad load = new SegmentChangeRequestLoad(segment);
+    Map<String, Object> objectMap = mapper.readValue(
+        mapper.writeValueAsString(load),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertFalse(objectMap.containsKey("fingerprint"));
+    Assert.assertFalse(objectMap.containsKey("loadedBytes"));
+  }
+
+  @Test
+  public void testPartialLoadFieldsRoundTrip() throws Exception
+  {
+    // Historical announcement with partial-load metadata: round-trip preserves both fields.
+    ObjectMapper mapper = new DefaultObjectMapper();
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        Map.of("type", "local"),
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+    SegmentChangeRequestLoad load = new SegmentChangeRequestLoad(
+        segment,
+        "v1:abcdef0123456789",
+        12345L
+    );
+    String json = mapper.writeValueAsString(load);
+    SegmentChangeRequestLoad reread = mapper.readValue(json, SegmentChangeRequestLoad.class);
+    Assert.assertEquals(load, reread);
+    Assert.assertEquals("v1:abcdef0123456789", reread.getFingerprint());
+    Assert.assertEquals(Long.valueOf(12345L), reread.getLoadedBytes());
+  }
+
+  @Test
+  public void testOldPayloadDeserializesWithoutPartialFields() throws Exception
+  {
+    // An old-version payload with no partial-load fields should deserialize cleanly; the partial fields are null.
+    ObjectMapper mapper = new DefaultObjectMapper();
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        Map.of("type", "local"),
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+    String oldJson = mapper.writeValueAsString(new SegmentChangeRequestLoad(segment));
+    SegmentChangeRequestLoad reread = mapper.readValue(oldJson, SegmentChangeRequestLoad.class);
+    Assert.assertNull(reread.getFingerprint());
+    Assert.assertNull(reread.getLoadedBytes());
   }
 }

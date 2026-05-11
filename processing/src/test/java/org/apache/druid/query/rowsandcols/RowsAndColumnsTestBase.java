@@ -25,8 +25,8 @@ import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumn
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -110,6 +110,6 @@ public abstract class RowsAndColumnsTestBase
         break;
       }
     }
-    Assert.assertTrue(inList);
+    Assertions.assertTrue(inList);
   }
 }

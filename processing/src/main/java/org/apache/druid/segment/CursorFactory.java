@@ -33,6 +33,19 @@ public interface CursorFactory extends ColumnInspector
   CursorHolder makeCursorHolder(CursorBuildSpec spec);
 
   /**
+   * Asynchronous variant of {@link #makeCursorHolder(CursorBuildSpec)} for cursor factories that may need to do I/O
+   * (e.g. download column data from deep storage) before they can serve a cursor. Callers running on threads that
+   * must not block should use this.
+   * <p>
+   * The default implementation completes synchronously by delegating to {@link #makeCursorHolder(CursorBuildSpec)},
+   * which keeps every existing implementation async-correct without changes.
+   */
+  default AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    return AsyncCursorHolder.completed(makeCursorHolder(spec));
+  }
+
+  /**
    * Returns the {@link RowSignature} of the data available from this cursor factory. For mutable segments, even though
    * the signature may evolve over time, any particular object returned by this method is an immutable snapshot.
    */

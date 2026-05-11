@@ -1726,6 +1726,84 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(Integer.valueOf(1), retriedTask.getServerPriority());
   }
 
+  /**
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
+   */
+  @Test
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery() throws Exception
+  {
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
+    supervisor = getTestableSupervisor(null, 2, 1, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(0, 1, 1, 1));
+    addSomeEvents(1);
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    // Run 1 submits the initial 2 replicas. (Run 2's 1 replacement is programmed after the reset below.)
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
+
+    // discoverTasks() on run 2 calls verifyAndMergeCheckpoints -> taskClient.getCheckpointsAsync on the survivor.
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    final List<Task> run1Tasks = captured.getValues();
+    Assert.assertEquals(2, run1Tasks.size());
+    final KafkaIndexTask orphan = (KafkaIndexTask) run1Tasks.get(0);
+    final KafkaIndexTask survivor = (KafkaIndexTask) run1Tasks.get(1);
+    // Sanity check: the two replicas must hold the two configured priorities.
+    Assert.assertEquals(
+        Set.of(0, 1),
+        Set.of(orphan.getServerPriority(), survivor.getServerPriority())
+    );
+
+    // Run 2: the first replica died before discoverTasks() could observe it, so activeTaskMap contains only
+    // the survivor. Prior to the fix, createTasksForGroup had already written the orphan's priority into
+    // taskIdToServerPriority during run 1, so run 2's computeUnassignedServerPriorities would see both
+    // priorities as "assigned" and throw.
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskQueue);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(toMap(List.of(survivor)))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus(survivor.getId()))
+            .andReturn(Optional.of(TaskStatus.running(survivor.getId())))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getTask(survivor.getId())).andReturn(Optional.of(survivor)).anyTimes();
+    final Capture<Task> replacementCapture = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(replacementCapture))).andReturn(true);
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskQueue);
+
+    // Must not throw.
+    supervisor.runInternal();
+    verifyAll();
+
+    // The replacement task should take the orphan's priority, not duplicate the survivor's or block.
+    final KafkaIndexTask replacement = (KafkaIndexTask) replacementCapture.getValue();
+    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
+  }
+
   @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {

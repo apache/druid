@@ -3596,6 +3596,122 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  /**
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
+   */
+  @Test
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery()
+  {
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
+
+    Assert.assertEquals(2, (int) ioConfig.getReplicas());
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+
+    // Run 1 starts with no active tasks in the overlord. After runInternal() we reset & replay the mock
+    // below to simulate run 2, where one replica is missing from activeTaskMap.
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of())
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID, "5")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    final Capture<Task> submittedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(submittedTasks))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    // Custom supervisor that honors serverPrioritiesToAssign when creating tasks so run 1 produces
+    // two replicas carrying priorities
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
+          int replicas,
+          String baseSequenceName,
+          ObjectMapper sortingMapper,
+          TreeMap<Integer, Map<String, String>> sequenceOffsets,
+          SeekableStreamIndexTaskIOConfig taskIoConfig,
+          SeekableStreamIndexTaskTuningConfig taskTuningConfig,
+          RowIngestionMetersFactory rowIngestionMetersFactory,
+          @Nullable List<Integer> serverPrioritiesToAssign
+      )
+      {
+        final List<SeekableStreamIndexTask<String, String, ByteEntity>> tasks = new ArrayList<>();
+        for (int i = 0; i < replicas; i++) {
+          final Integer priority = serverPrioritiesToAssign == null ? null : serverPrioritiesToAssign.get(i);
+          tasks.add(createTestTask(
+              baseSequenceName + "_replica_" + i + "_p" + priority,
+              "0",
+              priority,
+              taskIoConfig,
+              recordSupplier
+          ));
+        }
+        return tasks;
+      }
+    };
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Run 1 should have submitted 2 replicas.
+    final List<Task> run1Tasks = submittedTasks.getValues();
+    Assert.assertEquals(2, run1Tasks.size());
+    final TestSeekableStreamIndexTask orphan = (TestSeekableStreamIndexTask) run1Tasks.get(0);
+    final TestSeekableStreamIndexTask survivor = (TestSeekableStreamIndexTask) run1Tasks.get(1);
+    Assert.assertEquals(
+        Set.of(0, 1),
+        Set.of(orphan.getServerPriority(), survivor.getServerPriority())
+    );
+
+    // Run 2: only the survivor is still active. The orphan died before discoverTasks() could observe it,
+    // so with the old eager-write bug it would linger in taskIdToServerPriority and block replacement.
+    EasyMock.reset(taskQueue, taskStorage);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(survivor.getId(), survivor))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus(survivor.getId()))
+            .andReturn(Optional.of(TaskStatus.running(survivor.getId())))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getTask(survivor.getId())).andReturn(Optional.of(survivor)).anyTimes();
+    final Capture<Task> replacementCapture = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(replacementCapture))).andReturn(true).once();
+    EasyMock.replay(taskQueue, taskStorage);
+
+    // Must not throw.
+    supervisor.runInternal();
+
+    // Replacement task should carry the orphan's missing priority, not duplicate the survivor's.
+    final TestSeekableStreamIndexTask replacement = (TestSeekableStreamIndexTask) replacementCapture.getValue();
+    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
+  }
+
 
   @Test
   public void testDynamicAllocationScaleUpAllowedWhenCooldownElapsed()
@@ -3609,7 +3725,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3628,11 +3744,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-up succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3655,7 +3771,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3674,11 +3790,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-down succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
-    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
