@@ -364,6 +364,36 @@ public class ExpressionFilterTest extends BaseFilterTest
     Assert.assertEquals("Required column rewrite is not supported by this filter.", t.getMessage());
   }
 
+  /**
+   * now() has no required column bindings, so without the non-determinism check Expr.asBitmapColumnIndex would fall
+   * into the "constant expression" branch and evaluate it once to produce an AllTrue/AllFalse bitmap index. The
+   * correct behavior is to return null, which forces per-row evaluation.
+   */
+  @Test
+  public void testNowFilterDoesNotProduceConstantBitmapIndex()
+  {
+    // "now() > 0" has no required bindings — would otherwise trigger constant folding in asBitmapColumnIndex.
+    Filter filter = edf("now() > 0").toFilter();
+    Assert.assertNull(
+        "ExpressionFilter.getBitmapColumnIndex should return null for non-deterministic now()",
+        filter.getBitmapColumnIndex(null)
+    );
+  }
+
+  /**
+   * ExpressionDimFilter serializes the expression string into its cache key. Because now() always stringifies to
+   * "now()", two filters created at different wall-clock times would produce the same bytes, allowing stale cached
+   * results to be reused. getCacheKey() must return null when the expression is non-deterministic.
+   */
+  @Test
+  public void testNowDimFilterCacheKeyIsNull()
+  {
+    Assert.assertNull(
+        "ExpressionDimFilter.getCacheKey should return null for non-deterministic now()",
+        edf("now()").getCacheKey()
+    );
+  }
+
   protected static ExpressionDimFilter edf(final String expression)
   {
     return new ExpressionDimFilter(expression, null, TestExprMacroTable.INSTANCE);
