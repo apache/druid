@@ -25,13 +25,16 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.server.router.Router;
+import org.eclipse.jetty.client.AbstractConnectionPool;
+import org.eclipse.jetty.client.ConnectionPool;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpDestination;
 import org.eclipse.jetty.client.api.Destination;
 
 /**
- * Monitor that emits the total number of outbound HTTP requests currently queued
- * across all destinations on the Router's Jetty HttpClient.
+ * Monitor that emits per-destination outbound HTTP metrics for the Router's Jetty HttpClient:
+ * - router/http/numRequestsQueued: requests waiting for a connection slot
+ * - router/http/numActiveConnections: connections currently carrying a request
  */
 public class RouterHttpClientMonitor extends AbstractMonitor
 {
@@ -48,14 +51,21 @@ public class RouterHttpClientMonitor extends AbstractMonitor
   {
     final HttpClient httpClient = httpClientProvider.get();
 
-    int totalQueuedRequests = 0;
     for (Destination destination : httpClient.getDestinations()) {
       if (destination instanceof HttpDestination) {
-        totalQueuedRequests += ((HttpDestination) destination).getQueuedRequestCount();
+        final HttpDestination httpDest = (HttpDestination) destination;
+        final String dest = httpDest.getOrigin().asString();
+        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+            .setDimension("destination", dest);
+
+        emitter.emit(builder.setMetric("router/http/numRequestsQueued", httpDest.getQueuedRequestCount()));
+
+        final ConnectionPool pool = httpDest.getConnectionPool();
+        if (pool instanceof AbstractConnectionPool) {
+          emitter.emit(builder.setMetric("router/http/numActiveConnections", ((AbstractConnectionPool) pool).getActiveConnectionCount()));
+        }
       }
     }
-
-    emitter.emit(new ServiceMetricEvent.Builder().setMetric("router/http/numRequestsQueued", totalQueuedRequests));
 
     return true;
   }

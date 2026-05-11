@@ -46,7 +46,8 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.|< 1s|
-|`router/http/numRequestsQueued`|Total number of outbound HTTP requests currently queued across all destinations on the Router's HTTP client.|None.|0; sustained high values indicate backpressure toward downstream Brokers.|
+|`router/http/numRequestsQueued`|Number of outbound HTTP requests currently queued for a destination on the Router's HTTP client, waiting for a connection slot.|`destination`|0; sustained high values indicate backpressure toward downstream Brokers.|
+|`router/http/numActiveConnections`|Number of outbound HTTP connections currently carrying a request to a destination on the Router's HTTP client.|`destination`|Varies with load; approaching `druid.router.http.numConnections` indicates the connection pool is near saturation.|
 
 ### Broker
 
