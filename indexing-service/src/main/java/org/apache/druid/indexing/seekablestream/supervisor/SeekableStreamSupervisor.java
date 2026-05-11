@@ -4192,8 +4192,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       resetInternal(createDataSourceMetaDataForReset(ioConfig.getStream(), partitionsToReset));
       throw new StreamException(
           new ISE(
-              "Previous sequenceNumbers for partitions %s are no longer available - automatically resetting sequences",
-              partitionsToReset.keySet()
+              "Previous sequenceNumbers %s are no longer available - automatically resetting sequences",
+              partitionsToReset
           )
       );
     }
