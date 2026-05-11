@@ -444,7 +444,7 @@ public abstract class QueryResultPusher
         response.setTrailerFields(() -> trailerFields);
 
         try {
-          out = new CountingOutputStream(new BufferedOutputStream(response.getOutputStream(), 64 * 1024));
+          out = new CountingOutputStream(response.getOutputStream());
           writer = resultsWriter.makeWriter(out);
         }
         catch (IOException e) {
