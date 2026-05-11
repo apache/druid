@@ -143,7 +143,7 @@ public class CompactionRunSimulatorTest
     final CompactionSimulateResult simulateResult = simulator.simulateRunWithConfig(
         DruidCompactionConfig
             .empty()
-            .withClusterConfig(new ClusterCompactionConfig(null, null, policy, null, null))
+            .withClusterConfig(new ClusterCompactionConfig(null, null, policy, null, null, null))
             .withDatasourceConfig(
                 InlineSchemaDataSourceCompactionConfig.builder().forDataSource(dataSource).build()
             ),

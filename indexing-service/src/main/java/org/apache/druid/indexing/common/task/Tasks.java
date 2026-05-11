@@ -68,4 +68,13 @@ public class Tasks
   static {
     Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
   }
+
+  /**
+   * Context k:v pair that holds the fingerprint of the indexing state to be stored with the segment
+   */
+  public static final String INDEXING_STATE_FINGERPRINT_KEY = "indexingStateFingerprint";
+
+  static {
+    Verify.verify(INDEXING_STATE_FINGERPRINT_KEY.equals(CompactSegments.INDEXING_STATE_FINGERPRINT_KEY));
+  }
 }

@@ -40,7 +40,7 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {
   // A flag indicating whether to cache polled segments from the Coordinator.
   @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
+  private boolean metadataSegmentCacheEnable = true;
 
   // Interval for polling segments from the coordinator.
   @JsonProperty
@@ -64,6 +64,12 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return config;
   }
 
+  /**
+   * Flag to indicate if Broker should cache segment metadata polled from the
+   * Coordinator to serve {@code sys.segments} queries. True by default.
+   * If disabled, segment metadata is freshly fetched from the Coordinator for
+   * each query.
+   */
   public boolean isMetadataSegmentCacheEnable()
   {
     return metadataSegmentCacheEnable;

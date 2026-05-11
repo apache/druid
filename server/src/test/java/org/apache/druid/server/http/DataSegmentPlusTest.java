@@ -32,10 +32,15 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -58,6 +63,7 @@ public class DataSegmentPlusTest
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE);
     injectableValues.addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
   }
@@ -77,6 +83,7 @@ public class DataSegmentPlusTest
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
+    String indexingStateFingerprint = "abc123";
     String createdDateStr = "2024-01-20T00:00:00.701Z";
     String usedStatusLastUpdatedDateStr = "2024-01-20T01:00:00.701Z";
     DateTime createdDate = DateTimes.of(createdDateStr);
@@ -94,11 +101,22 @@ public class DataSegmentPlusTest
                            DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                        ),
                        ImmutableList.of(new CountAggregatorFactory("cnt")),
-                       new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                       new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ),
                        MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                        MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
                        null
                    ))
+                   .indexingStateFingerprint(indexingStateFingerprint)
                    .binaryVersion(TEST_VERSION)
                    .size(123L)
                    .totalRows(12)
@@ -108,7 +126,8 @@ public class DataSegmentPlusTest
         null,
         null,
         null,
-        null
+        null,
+        indexingStateFingerprint
     );
 
     final Map<String, Object> objectMap = MAPPER.readValue(
@@ -116,14 +135,14 @@ public class DataSegmentPlusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(7, objectMap.size());
+    Assert.assertEquals(8, objectMap.size());
     final Map<String, Object> segmentObjectMap = MAPPER.readValue(
         MAPPER.writeValueAsString(segmentPlus.getDataSegment()),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
     // verify dataSegment
-    Assert.assertEquals(13, segmentObjectMap.size());
+    Assert.assertEquals(14, segmentObjectMap.size());
     Assert.assertEquals("something", segmentObjectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), segmentObjectMap.get("interval"));
     Assert.assertEquals("1", segmentObjectMap.get("version"));
@@ -139,6 +158,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(123, segmentObjectMap.get("size"));
     Assert.assertEquals(12, segmentObjectMap.get("totalRows"));
     Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
+    Assert.assertEquals("abc123", segmentObjectMap.get("indexingStateFingerprint"));
 
     // verify extra metadata
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));

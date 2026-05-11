@@ -214,6 +214,23 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testReservedName()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionSpec(
+            "__foo",
+            null,
+            VirtualColumns.EMPTY,
+            List.of(new StringDimensionSchema("string")),
+            null
+        )
+    );
+
+    Assertions.assertEquals("projection cannot use reserved name[__foo], names cannot start with '__'", t.getMessage());
+  }
+
+  @Test
   void testInvalidGrouping()
   {
     Throwable t = Assertions.assertThrows(

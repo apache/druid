@@ -34,14 +34,11 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
@@ -237,23 +234,19 @@ public class QueryKitUtils
   }
 
   /**
-   * Create a sequence of {@link ReadableInput} corresponding to {@link ReadablePartitions}, read with a standard merger.
+   * Create a {@link ReadableInput} for a single {@link ReadablePartition}, read with the given partition reader.
    */
   public static ReadableInput readPartition(
-      final ExecutionContext context,
+      final StandardPartitionReader partitionReader,
       final ReadablePartition readablePartition
   )
   {
-    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
-    final String queryId = context.workOrder().getStageDefinition().getId().getQueryId();
     try {
       return ReadableInput.channel(
           partitionReader.openChannel(readablePartition),
           partitionReader.frameReader(readablePartition.getStageNumber()),
-          new StagePartition(
-              new StageId(queryId, readablePartition.getStageNumber()),
-              readablePartition.getPartitionNumber()
-          )
+          readablePartition.getStageNumber(),
+          readablePartition.getPartitionNumber()
       );
     }
     catch (IOException e) {
@@ -262,13 +255,14 @@ public class QueryKitUtils
   }
 
   /**
-   * Create a sequence of {@link ReadableInput} corresponding to {@link ReadablePartitions}, read with a standard merger.
+   * Create a sequence of {@link ReadableInput} corresponding to {@link ReadablePartitions}, read with the given
+   * partition reader.
    */
   public static Sequence<ReadableInput> readPartitions(
-      final ExecutionContext context,
+      final StandardPartitionReader partitionReader,
       final ReadablePartitions readablePartitions
   )
   {
-    return Sequences.simple(readablePartitions).map(partition -> readPartition(context, partition));
+    return Sequences.simple(readablePartitions).map(partition -> readPartition(partitionReader, partition));
   }
 }

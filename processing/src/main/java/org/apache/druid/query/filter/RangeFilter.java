@@ -271,23 +271,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       return null;
     }
 
-    // We need to return a RangeSet<String>, but we have Object, not String.  We align with the interface by
-    // converting things to String, but we'd probably be better off adjusting the interface to something that is
-    // more type aware in the future
+    // The RangeSet returned here is compared lexicographically against shard boundaries (see DimensionRangeShardSpec),
+    // so it is only OK to return one for STRING comparison.
+    if (!matchValueType.is(ValueType.STRING)) {
+      return null;
+    }
 
-    final Supplier<String> lowerString = () -> lowerEval.isArray() ? Arrays.deepToString(lowerEval.asArray()) : lowerEval.asString();
-    final Supplier<String> upperString = () -> upperEval.isArray() ? Arrays.deepToString(upperEval.asArray()) : upperEval.asString();
-    RangeSet<String> retSet = TreeRangeSet.create();
+    final String lowerString = hasLowerBound() ? lowerEval.asString() : null;
+    final String upperString = hasUpperBound() ? upperEval.asString() : null;
+    final RangeSet<String> retSet = TreeRangeSet.create();
     final Range<String> range;
     if (!hasLowerBound()) {
-      range = isUpperOpen() ? Range.lessThan(upperString.get()) : Range.atMost(upperString.get());
+      range = isUpperOpen() ? Range.lessThan(upperString) : Range.atMost(upperString);
     } else if (!hasUpperBound()) {
-      range = isLowerOpen() ? Range.greaterThan(lowerString.get()) : Range.atLeast(lowerString.get());
+      range = isLowerOpen() ? Range.greaterThan(lowerString) : Range.atLeast(lowerString);
     } else {
       range = Range.range(
-          lowerString.get(),
+          lowerString,
           isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED,
-          upperString.get(),
+          upperString,
           isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED
       );
     }

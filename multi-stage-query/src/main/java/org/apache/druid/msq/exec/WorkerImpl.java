@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -43,12 +42,14 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.DecoratedExecutorService;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -72,7 +73,6 @@ import org.apache.druid.msq.shuffle.input.WorkerOrLocalInputChannelFactory;
 import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
-import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
@@ -100,6 +100,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -194,7 +195,7 @@ public class WorkerImpl implements Worker
 
       if (maybeErrorReport.isPresent()) {
         final MSQErrorReport errorReport = maybeErrorReport.get();
-        final String logMessage = MSQTasks.errorReportToLogMessage(errorReport);
+        final String logMessage = MSQTasks.errorReportToLogMessage(errorReport, context.isDebug());
         log.warn("%s", logMessage);
 
         // Inform controller of any errors that occur, unless we were canceled. This prevents attempting to contact
@@ -229,16 +230,21 @@ public class WorkerImpl implements Worker
       cpuTimeNs += tracker.totalCpu();
     }
 
-    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
-    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
-
     final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
-    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
-                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
-                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
-                 .setDimension(DruidMetrics.SUCCESS, success)
-                 .setMetric("query/time", time);
 
+    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
+    if (datasources != null) {
+      metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
+    }
+
+    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
+    if (intervals != null) {
+      metricBuilder.setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
+      metricBuilder.setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals));
+    }
+
+    metricBuilder.setDimension(DruidMetrics.SUCCESS, success);
+    metricBuilder.setMetric("query/time", time);
     context.emitMetric(metricBuilder);
 
     metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
@@ -693,6 +699,16 @@ public class WorkerImpl implements Worker
     return retVal;
   }
 
+  @Override
+  public void stop()
+  {
+    kernelManipulationQueue.add(
+        kernel -> {
+          throw new MSQException(new CanceledFault(CancellationReason.UNKNOWN));
+        }
+    );
+  }
+
   /**
    * Returns the context used to create this worker.
    */
@@ -868,7 +884,7 @@ public class WorkerImpl implements Worker
    * In production, the underlying {@link QueryProcessingPool} pool is set up by
    * {@link org.apache.druid.guice.DruidProcessingModule}.
    */
-  private ListeningExecutorService makeProcessingPool()
+  private ExecutorService makeProcessingPool()
   {
     final QueryProcessingPool queryProcessingPool = context.injector().getInstance(QueryProcessingPool.class);
     final int priority = 0;

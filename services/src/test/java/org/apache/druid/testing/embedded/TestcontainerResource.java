@@ -68,8 +68,7 @@ public abstract class TestcontainerResource<T extends GenericContainer<?>> imple
    */
   public String getHost()
   {
-    ensureRunning();
-    return container.getHost();
+    return getContainer().getHost();
   }
 
   /**
@@ -77,16 +76,17 @@ public abstract class TestcontainerResource<T extends GenericContainer<?>> imple
    */
   public int getMappedPort(int exposedPort)
   {
-    ensureRunning();
-    return container.getMappedPort(exposedPort);
+    return getContainer().getMappedPort(exposedPort);
   }
 
   /**
    * Returns the underlying container instance.
+   *
+   * @throws DruidException if the container has not started running yet.
    */
-  @Nullable
   public T getContainer()
   {
+    ensureRunning();
     return container;
   }
 
@@ -94,6 +94,8 @@ public abstract class TestcontainerResource<T extends GenericContainer<?>> imple
   {
     if (!isRunning()) {
       throw DruidException.defensive("Container is not running");
+    } else if (container == null) {
+      throw DruidException.defensive("Container is not initialized");
     }
   }
 }

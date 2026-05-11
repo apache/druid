@@ -347,7 +347,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> VirtualColumns.create(ImmutableList.of(expr))
+        () -> VirtualColumns.create(expr)
     );
     Assert.assertEquals("virtualColumn name[__time] not allowed", t.getMessage());
   }
@@ -371,7 +371,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> VirtualColumns.create(ImmutableList.of(expr, expr2))
+        () -> VirtualColumns.create(expr, expr2)
     );
     Assert.assertEquals("Duplicate virtualColumn name[expr]", t.getMessage());
   }
@@ -398,7 +398,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> VirtualColumns.create(ImmutableList.of(expr, expr2))
+        () -> VirtualColumns.create(expr, expr2)
     );
     Assert.assertEquals("Self-referential column[expr]", t.getMessage());
   }
@@ -431,7 +431,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         TestExprMacroTable.INSTANCE
     );
 
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr, expr2, expr3));
+    final VirtualColumns virtualColumns = VirtualColumns.create(expr, expr2, expr3);
     Assert.assertEquals(3, virtualColumns.getColumnNames().size());
   }
 
@@ -439,15 +439,11 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   public void testGetCacheKey()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
-        )
+        new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
     );
 
     Assert.assertArrayEquals(virtualColumns.getCacheKey(), virtualColumns2.getCacheKey());
@@ -462,11 +458,108 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
                   .withIgnoredFields(
                       "virtualColumnNames",
                       "equivalence",
+                      "dependencyNodes",
                       "withDotSupport",
                       "withoutDotSupport",
                       "hasNoDotColumns"
                   )
                   .verify();
+  }
+
+  @Test
+  public void testGetNodeNullForNonVirtualColumn()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    Assert.assertNull(virtualColumns.getNode(REAL_COLUMN_NAME));
+    Assert.assertNull(virtualColumns.getNode("doesNotExist"));
+    Assert.assertNull(VirtualColumns.EMPTY.getNode("anything"));
+  }
+
+  @Test
+  public void testGetNodeLeaf()
+  {
+    // "expr" is "1", a constant expression with no required columns, so no VC deps
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final VirtualColumns.Node node = virtualColumns.getNode("expr");
+    Assert.assertNotNull(node);
+    Assert.assertEquals(virtualColumns.getVirtualColumn("expr"), node.getVirtualColumn());
+    Assert.assertTrue(node.getDependencies().isEmpty());
+  }
+
+  @Test
+  public void testGetNodeWithVcDependency()
+  {
+    // "expr2" is "expr2i + real_column", depends on expr2i (a VC) and REAL_COLUMN_NAME (physical)
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final VirtualColumns.Node node = virtualColumns.getNode("expr2");
+    Assert.assertNotNull(node);
+    Assert.assertEquals(virtualColumns.getVirtualColumn("expr2"), node.getVirtualColumn());
+    Assert.assertEquals(1, node.getDependencies().size());
+    final VirtualColumns.Node depNode = node.getDependencies().get(0);
+    Assert.assertEquals(virtualColumns.getVirtualColumn("expr2i"), depNode.getVirtualColumn());
+    Assert.assertTrue(depNode.getDependencies().isEmpty());
+  }
+
+  @Test
+  public void testGetNodeTransitiveDependencies()
+  {
+    // v0 = v1 + v2, v2 = 1 + v1, v1 = 1 + x (physical)
+    final ExpressionVirtualColumn v1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn v2 = new ExpressionVirtualColumn("v2", "1 + v1", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn v0 = new ExpressionVirtualColumn("v0", "v1 + v2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final VirtualColumns virtualColumns = VirtualColumns.create(v0, v1, v2);
+
+    final VirtualColumns.Node v1Node = virtualColumns.getNode("v1");
+    final VirtualColumns.Node v2Node = virtualColumns.getNode("v2");
+    final VirtualColumns.Node v0Node = virtualColumns.getNode("v0");
+
+    // v1 is a leaf
+    Assert.assertNotNull(v1Node);
+    Assert.assertEquals(v1, v1Node.getVirtualColumn());
+    Assert.assertTrue(v1Node.getDependencies().isEmpty());
+
+    // v2 has v1 as a dependency
+    Assert.assertNotNull(v2Node);
+    Assert.assertEquals(v2, v2Node.getVirtualColumn());
+    Assert.assertEquals(1, v2Node.getDependencies().size());
+    Assert.assertSame(v1Node, v2Node.getDependencies().get(0));
+
+    // v0 has v1 and v2 as direct dependencies; the same node instances are reused
+    Assert.assertNotNull(v0Node);
+    Assert.assertEquals(v0, v0Node.getVirtualColumn());
+    Assert.assertEquals(2, v0Node.getDependencies().size());
+    Assert.assertTrue(v0Node.getDependencies().contains(v1Node));
+    Assert.assertTrue(v0Node.getDependencies().contains(v2Node));
+  }
+
+  @Test
+  public void testGetNodeStructuralEquality()
+  {
+    final NestedFieldVirtualColumn n0 = new NestedFieldVirtualColumn("obj", "$.a", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0 = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns vc1 = VirtualColumns.create(n0, e0);
+
+    // Same structure, different instances, nodes must be equal
+    final NestedFieldVirtualColumn n0copy = new NestedFieldVirtualColumn("obj", "$.a", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0copy = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns vc2 = VirtualColumns.create(n0copy, e0copy);
+
+    Assert.assertEquals(vc1.getNode("e0"), vc2.getNode("e0"));
+    Assert.assertEquals(vc1.getNode("e0").hashCode(), vc2.getNode("e0").hashCode());
+
+    // Different underlying dependency ($.b instead of $.a), even though e0's expression looks the same,
+    // the node must differ because the dependency subtree differs
+    final NestedFieldVirtualColumn n0different = new NestedFieldVirtualColumn("obj", "$.b", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0sameName = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns vc3 = VirtualColumns.create(n0different, e0sameName);
+
+    Assert.assertNotEquals(vc1.getNode("e0"), vc3.getNode("e0"));
   }
 
   @Test
@@ -478,7 +571,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(v0));
+    final VirtualColumns virtualColumns = VirtualColumns.create(v0);
 
     final VirtualColumn v1 = new ExpressionVirtualColumn(
         "differentNameExpr",
@@ -498,11 +591,46 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         ColumnType.DOUBLE,
         TestExprMacroTable.INSTANCE
     );
+    VirtualColumns otherVirtualColumns = VirtualColumns.create(v1, v2, v3);
 
-    Assert.assertEquals(v0, virtualColumns.findEquivalent(v0));
-    Assert.assertEquals(v0, virtualColumns.findEquivalent(v1));
-    Assert.assertNull(virtualColumns.findEquivalent(v2));
-    Assert.assertNull(virtualColumns.findEquivalent(v3));
+    Assert.assertEquals(v0, virtualColumns.findEquivalent(virtualColumns.getNode(v0.getOutputName())));
+    Assert.assertEquals(v0, virtualColumns.findEquivalent(otherVirtualColumns.getNode(v1.getOutputName())));
+    Assert.assertNull(virtualColumns.findEquivalent(otherVirtualColumns.getNode(v2.getOutputName())));
+    Assert.assertNull(virtualColumns.findEquivalent(otherVirtualColumns.getNode(v3.getOutputName())));
+  }
+
+  @Test
+  public void testFindEquivalentWithDependentVirtualColumn()
+  {
+    final NestedFieldVirtualColumn n0 = new NestedFieldVirtualColumn("obj", "$.a", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0 = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")", ColumnType.STRING, TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns virtualColumns = VirtualColumns.create(n0, e0);
+
+    final NestedFieldVirtualColumn n1 = new NestedFieldVirtualColumn("obj", "$.a", "n1", ColumnType.STRING);
+    final ExpressionVirtualColumn e1 = new ExpressionVirtualColumn(
+        "e1",
+        "lower(\"n1\")",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns otherVirtualColumns = VirtualColumns.create(n1, e1);
+
+    Assert.assertEquals(n0, virtualColumns.findEquivalent(otherVirtualColumns.getNode(n1.getOutputName())));
+
+    Assert.assertEquals(e0, virtualColumns.findEquivalent(otherVirtualColumns.getNode(e1.getOutputName())));
+
+    // a different nested field path produces no equivalence, even if it has the same name
+    final NestedFieldVirtualColumn n0different = new NestedFieldVirtualColumn("obj", "$.b", "n0", ColumnType.STRING);
+    final ExpressionVirtualColumn e0different = new ExpressionVirtualColumn(
+        "e0", "lower(\"n0\")",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+    final VirtualColumns notEquivalent = VirtualColumns.create(n0different, e0different);
+    Assert.assertNull(virtualColumns.findEquivalent(notEquivalent.getNode(n0different.getOutputName())));
+    Assert.assertNull(virtualColumns.findEquivalent(notEquivalent.getNode(e0different.getOutputName())));
   }
 
   @Test
@@ -538,7 +666,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + y", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "case_searched(notnull(1 + x), v1, v2)", ColumnType.LONG, TestExprMacroTable.INSTANCE);
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+    final VirtualColumns virtualColumns = VirtualColumns.create(expr0, expr1, expr2);
 
     Assert.assertTrue(virtualColumns.exists("v0"));
     Assert.assertTrue(virtualColumns.exists("v1"));
@@ -551,7 +679,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + y", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "case_searched(notnull(v1), v1, v2)", ColumnType.LONG, TestExprMacroTable.INSTANCE);
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+    final VirtualColumns virtualColumns = VirtualColumns.create(expr0, expr1, expr2);
 
     Assert.assertTrue(virtualColumns.exists("v0"));
     Assert.assertTrue(virtualColumns.exists("v1"));
@@ -564,7 +692,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + v1", ColumnType.LONG, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "v1 + v2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+    final VirtualColumns virtualColumns = VirtualColumns.create(expr0, expr1, expr2);
 
     Assert.assertTrue(virtualColumns.exists("v0"));
     Assert.assertTrue(virtualColumns.exists("v1"));
@@ -593,7 +721,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final NestedFieldVirtualColumn v1 = new NestedFieldVirtualColumn("n", "$.y", "v1", ColumnType.LONG);
     final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v2", "v0 * v1", null, TestExprMacroTable.INSTANCE);
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v3", "v0 * x", null, TestExprMacroTable.INSTANCE);
-    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(v0, v1, expr1, expr2));
+    final VirtualColumns virtualColumns = VirtualColumns.create(v0, v1, expr1, expr2);
 
     Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v0").toColumnType());
     Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v1").toColumnType());
@@ -628,7 +756,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         TestExprMacroTable.INSTANCE
     );
     final DottyVirtualColumn dotty = new DottyVirtualColumn("foo");
-    return VirtualColumns.create(ImmutableList.of(expr, expr2i, expr2, dotty));
+    return VirtualColumns.create(expr, expr2i, expr2, dotty);
   }
 
   static class DottyVirtualColumn implements VirtualColumn

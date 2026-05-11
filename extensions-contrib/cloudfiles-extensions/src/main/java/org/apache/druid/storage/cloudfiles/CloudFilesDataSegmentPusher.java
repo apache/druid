@@ -56,19 +56,6 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String getPathForHadoop()
-  {
-    return null;
-  }
-
-  @Deprecated
-  @Override
-  public String getPathForHadoop(final String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
-  @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
   {
     return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));

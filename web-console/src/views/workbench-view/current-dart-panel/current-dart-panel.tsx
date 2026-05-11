@@ -24,7 +24,7 @@ import React, { useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import type { DartQueryEntry } from '../../../druid-models';
+import { compareForDisplay, type DartQueryEntry } from '../../../druid-models';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
@@ -38,7 +38,11 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
     case 'ACCEPTED':
-      return [IconNames.CIRCLE, '#8d8d8d'];
+      return [IconNames.CIRCLE, '#d5631a'];
+    case 'SUCCESS':
+      return [IconNames.TICK_CIRCLE, '#57d500'];
+    case 'FAILED':
+      return [IconNames.DELETE, '#9f0d0a'];
     case 'CANCELED':
       return [IconNames.DISABLE, '#8d8d8d'];
     default:
@@ -61,8 +65,10 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, signal) => {
-      return (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
-        .queries as DartQueryEntry[];
+      const queries = (await Api.instance.get('/druid/v2/sql/queries?includeComplete', { signal }))
+        .data.queries as DartQueryEntry[];
+      queries.sort(compareForDisplay);
+      return queries;
     },
   });
 
@@ -113,13 +119,28 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                     });
                   }}
                 />
-                <MenuDivider />
                 <MenuItem
-                  icon={IconNames.CROSS}
-                  text="Cancel query"
-                  intent={Intent.DANGER}
-                  onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                  icon={IconNames.DUPLICATE}
+                  text="Copy Identity"
+                  onClick={() => {
+                    copy(w.identity, { format: 'text/plain' });
+                    AppToaster.show({
+                      message: `${w.identity} copied to clipboard`,
+                      intent: Intent.SUCCESS,
+                    });
+                  }}
                 />
+                {(w.state === 'ACCEPTED' || w.state === 'RUNNING') && (
+                  <>
+                    <MenuDivider />
+                    <MenuItem
+                      icon={IconNames.CROSS}
+                      text="Cancel query"
+                      intent={Intent.DANGER}
+                      onClick={() => setConfirmCancelId(w.sqlQueryId)}
+                    />
+                  </>
+                )}
               </Menu>
             );
 
@@ -171,18 +192,22 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             if (!confirmCancelId) return;
             try {
               await Api.instance.delete(`/druid/v2/sql/${Api.encodePath(confirmCancelId)}`);
-
-              AppToaster.show({
-                message: 'Query canceled',
-                intent: Intent.SUCCESS,
-              });
-              queryManager.rerunLastQuery();
-            } catch {
-              AppToaster.show({
-                message: 'Could not cancel query',
-                intent: Intent.DANGER,
-              });
+            } catch (e: any) {
+              if (e.response?.status === 404) {
+                // Query may have already completed or been canceled, which is fine.
+              } else {
+                AppToaster.show({
+                  message: 'Could not cancel query',
+                  intent: Intent.DANGER,
+                });
+                return;
+              }
             }
+            AppToaster.show({
+              message: 'Query canceled or no longer running',
+              intent: Intent.SUCCESS,
+            });
+            queryManager.rerunLastQuery();
           }}
           onDismiss={() => setConfirmCancelId(undefined)}
         />

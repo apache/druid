@@ -50,6 +50,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -175,6 +176,49 @@ public class StageDefinition
   }
 
   /**
+   * Returns a new {@link StageDefinition} with runtime bounds applied. See {@link QueryDefinition#withRuntimeBounds}
+   * for details on the logic.
+   */
+  public StageDefinition withRuntimeBounds(
+      final int maxWorkerCount,
+      final int maxNonLeafWorkerCount,
+      final int targetPartitionsPerWorker
+  )
+  {
+    final int adjustedMaxWorkerCount;
+    final ShuffleSpec adjustedShuffleSpec;
+
+    if (InputSpecs.hasLeafInputs(inputSpecs, getBroadcastInputNumbers())) {
+      // Leaf stage.
+      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, maxWorkerCount);
+    } else {
+      // Nonleaf stage.
+      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, Math.min(maxWorkerCount, maxNonLeafWorkerCount));
+    }
+
+    if (shuffleSpec != null && shuffleSpec.isAdjustable()) {
+      adjustedShuffleSpec = shuffleSpec.withPartitionCount(adjustedMaxWorkerCount * targetPartitionsPerWorker);
+    } else {
+      adjustedShuffleSpec = shuffleSpec;
+    }
+
+    if (adjustedMaxWorkerCount == this.maxWorkerCount && Objects.equals(adjustedShuffleSpec, shuffleSpec)) {
+      return this;
+    }
+
+    return new StageDefinition(
+        id,
+        inputSpecs,
+        broadcastInputNumbers,
+        processor,
+        signature,
+        adjustedShuffleSpec,
+        adjustedMaxWorkerCount,
+        shuffleCheckHasMultipleValues
+    );
+  }
+
+  /**
    * Returns a unique stage identifier.
    */
   @JsonProperty
@@ -229,6 +273,16 @@ public class StageDefinition
     } else {
       return shuffleSpec.clusterBy().sortable();
     }
+  }
+
+  /**
+   * Get a {@link SegmentPruner} from the {@link StageProcessor} for a given 'input number' from {@link #inputSpecs}.
+   * This can be used to best-effort prune the set of {@link org.apache.druid.timeline.DataSegment} to process in order
+   * to reduce the working set before processing begins
+   */
+  public SegmentPruner getSegmentPruner(int inputNumber)
+  {
+    return processor.getPruner(inputSpecs.get(inputNumber), inputNumber);
   }
 
   /**

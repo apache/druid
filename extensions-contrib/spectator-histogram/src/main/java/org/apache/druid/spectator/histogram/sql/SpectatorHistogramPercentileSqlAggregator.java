@@ -42,6 +42,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -123,7 +124,8 @@ public class SpectatorHistogramPercentileSqlAggregator implements SqlAggregator
       final List<Aggregation> existingAggregations
   )
   {
-    final double percentile = ((Number) RexLiteral.value(percentileArg)).doubleValue();
+    final Object value = RexLiteral.value(percentileArg);
+    final double percentile = DruidSqlParserUtils.getNumericLiteral(value, NAME, "percentile").doubleValue();
 
     final String histogramName = StringUtils.format("%s:agg", name);
 

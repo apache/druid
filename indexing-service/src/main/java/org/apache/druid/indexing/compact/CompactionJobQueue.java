@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -36,12 +37,16 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateCache;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -59,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Iterates over all eligible compaction jobs in order of their priority.
@@ -96,6 +100,9 @@ public class CompactionJobQueue
   private final Set<String> activeSupervisors;
   private final Map<String, CompactionJob> submittedTaskIdToJob;
 
+  private final IndexingStateStorage indexingStateStorage;
+  private final IndexingStateCache indexingStateCache;
+
   public CompactionJobQueue(
       DataSourcesSnapshot dataSourcesSnapshot,
       ClusterCompactionConfig clusterCompactionConfig,
@@ -104,7 +111,9 @@ public class CompactionJobQueue
       GlobalTaskLockbox taskLockbox,
       OverlordClient overlordClient,
       BrokerClient brokerClient,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      IndexingStateStorage indexingStateStorage,
+      IndexingStateCache indexingStateCache
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -120,8 +129,13 @@ public class CompactionJobQueue
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
-        snapshotBuilder
+        statusTracker::getLatestTaskStatus,
+        snapshotBuilder,
+        new DefaultIndexingStateFingerprintMapper(indexingStateCache, objectMapper)
     );
+
+    this.indexingStateStorage = indexingStateStorage;
+    this.indexingStateCache = indexingStateCache;
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.overlordClient = overlordClient;
@@ -147,6 +161,17 @@ public class CompactionJobQueue
     final String supervisorId = supervisor.getSpec().getId();
     try {
       if (supervisor.shouldCreateJobs() && !activeSupervisors.contains(supervisorId)) {
+        final CompactionConfigValidationResult validationResult =
+            supervisor.getSpec().getSpec().validate(clusterCompactionConfig);
+        if (!validationResult.isValid()) {
+          log.warn(
+              "Skipping job creation for invalid supervisor[%s]: %s",
+              supervisorId,
+              validationResult.getReason()
+          );
+          return;
+        }
+
         // Queue fresh jobs
         final List<CompactionJob> jobs = supervisor.createJobs(source, jobParams);
         jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate()));
@@ -183,7 +208,7 @@ public class CompactionJobQueue
     final List<CompactionJob> jobsToRemove = queue
         .stream()
         .filter(job -> job.getDataSource().equals(dataSource))
-        .collect(Collectors.toList());
+        .toList();
 
     queue.removeAll(jobsToRemove);
     log.info("Removed [%d] jobs for datasource[%s] from queue.", jobsToRemove.size(), dataSource);
@@ -205,8 +230,11 @@ public class CompactionJobQueue
     final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      if (startJobIfPendingAndReady(job, searchPolicy, pendingJobs, slotManager)) {
-        runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
+      if (startJobIfPendingAndReady(job, pendingJobs, slotManager)) {
+        final RowKey rowKey = RowKey
+            .with(Dimension.DATASOURCE, job.getDataSource())
+            .and(Dimension.DESCRIPTION, job.getEligibility().getMode().name());
+        runStats.add(Stats.Compaction.SUBMITTED_TASKS, rowKey, 1);
       }
     }
 
@@ -255,7 +283,6 @@ public class CompactionJobQueue
    */
   private boolean startJobIfPendingAndReady(
       CompactionJob job,
-      CompactionCandidateSearchPolicy policy,
       List<CompactionJob> pendingJobs,
       CompactionSlotManager slotManager
   )
@@ -269,19 +296,21 @@ public class CompactionJobQueue
       return false;
     }
 
-    // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = getCurrentStatusForJob(job, policy);
+    // Check if the job is already running or skipped or pending
+    final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
+    final CompactionStatus compactionStatus = statusTracker.deriveCompactionStatus(lastTaskStatus);
+
     switch (compactionStatus.getState()) {
       case RUNNING:
-        return false;
-      case COMPLETE:
-        snapshotBuilder.moveFromPendingToCompleted(candidate);
         return false;
       case SKIPPED:
         snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
-      default:
+      case PENDING:
         break;
+      case COMPLETE:
+      default:
+        throw DruidException.defensive("unexpected derived compaction state[%s]", compactionStatus.getState());
     }
 
     // Check if enough compaction task slots are available
@@ -315,6 +344,7 @@ public class CompactionJobQueue
     // Assume MSQ jobs to be always ready
     if (job.isMsq()) {
       try {
+        persistPendingIndexingState(job);
         return FutureUtils.getUnchecked(brokerClient.submitSqlTask(job.getNonNullMsqQuery()), true)
                           .getTaskId();
       }
@@ -333,6 +363,7 @@ public class CompactionJobQueue
     try {
       taskLockbox.add(task);
       if (task.isReady(taskActionClientFactory.create(task))) {
+        persistPendingIndexingState(job);
         // Hold the locks acquired by task.isReady() as we will reacquire them anyway
         FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
         return task.getId();
@@ -348,12 +379,20 @@ public class CompactionJobQueue
     }
   }
 
-  public CompactionStatus getCurrentStatusForJob(CompactionJob job, CompactionCandidateSearchPolicy policy)
+  /**
+   * Persist the indexing state associated with the given job with {@link IndexingStateStorage}.
+   */
+  private void persistPendingIndexingState(CompactionJob job)
   {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
-    final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
-    statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
-    return compactionStatus;
+    if (job.getTargetIndexingState() != null && job.getTargetIndexingStateFingerprint() != null) {
+      indexingStateStorage.upsertIndexingState(
+          job.getDataSource(),
+          job.getTargetIndexingStateFingerprint(),
+          job.getTargetIndexingState(),
+          DateTimes.nowUtc()
+      );
+      indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetIndexingState());
+    }
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

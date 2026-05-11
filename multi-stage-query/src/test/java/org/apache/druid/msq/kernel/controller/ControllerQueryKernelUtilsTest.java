@@ -303,6 +303,34 @@ public class ControllerQueryKernelUtilsTest
   }
 
   @Test
+  public void test_computeStageGroups_linearWithLeafInput_pipeline_threeAtOnce()
+  {
+    // 0 -> 1 (with leaf input) -> 2
+    // Stage 1 has a stage input from 0 and a non-stage (leaf) input.
+    // canUseMemoryOutput for stage 0 should still return true, because stage 1 has
+    // only a single non-broadcast *stage* input.
+
+    final QueryDefinition queryDef = makeLinearQueryDefinitionWithLeafInput();
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 0, 1, 2)
+        ),
+        ControllerQueryKernelUtils.computeStageGroups(
+            queryDef,
+            ControllerQueryKernelConfig
+                .builder()
+                .maxRetainedPartitionSketchBytes(1)
+                .maxConcurrentStages(3)
+                .pipeline(true)
+                .faultTolerance(false)
+                .destination(TaskReportMSQDestination.instance())
+                .build()
+        )
+    );
+  }
+
+  @Test
   public void test_computeStageGroups_fanIn()
   {
     final QueryDefinition queryDef = makeFanInQueryDefinition();
@@ -483,6 +511,18 @@ public class ControllerQueryKernelUtilsTest
         .addEdge(0, 1)
         .addEdge(1, 2)
         .addEdge(2, 3)
+        .getQueryDefinitionBuilder()
+        .build();
+  }
+
+  private static QueryDefinition makeLinearQueryDefinitionWithLeafInput()
+  {
+    // 0 -> 1 -> 2, where stage 1 also has a non-stage (leaf) input
+
+    return new MockQueryDefinitionBuilder(3)
+        .addEdge(0, 1)
+        .addNonStageInput(1)
+        .addEdge(1, 2)
         .getQueryDefinitionBuilder()
         .build();
   }

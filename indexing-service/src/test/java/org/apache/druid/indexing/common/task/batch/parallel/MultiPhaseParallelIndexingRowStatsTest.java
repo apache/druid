@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -55,13 +55,13 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
   );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      null,
+  private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
+      null,
       false,
-      0
+      false,
+      0,
+      null
   );
 
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
@@ -72,7 +72,6 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   {
     super(
         LockGranularity.SEGMENT,
-        false,
         DEFAULT_TRANSIENT_TASK_FAILURE_RATE,
         DEFAULT_TRANSIENT_API_FAILURE_RATE
     );
@@ -120,10 +119,9 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     final Integer numShards = 10;
 
     ParallelIndexSupervisorTask task = createTask(
-        null,
-        null,
-        null,
-        PARSE_SPEC,
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",
@@ -157,10 +155,9 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   {
     final int targetRowsPerSegment = 20;
     ParallelIndexSupervisorTask task = createTask(
-        null,
-        null,
-        null,
-        PARSE_SPEC,
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",

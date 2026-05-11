@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Object returned by {@link DartControllerRegistry#getQueryInfoAndReport(String)}.
+ * Object returned by {@link DartControllerRegistry#getQueryDetails(String)}.
  */
 public class QueryInfoAndReport
 {

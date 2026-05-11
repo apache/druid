@@ -32,11 +32,16 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -66,6 +71,7 @@ public class DataSegmentTest
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
+    injectableValues.addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE);
     MAPPER.setInjectableValues(injectableValues);
   }
 
@@ -82,7 +88,17 @@ public class DataSegmentTest
         new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))),
         ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+        new CompactionTransformSpec(
+            new SelectorDimFilter("dim1", "foo", null),
+            VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
+                )
+            )
+        ),
         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
         null
@@ -147,7 +163,17 @@ public class DataSegmentTest
                                              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                                          ),
                                          ImmutableList.of(new CountAggregatorFactory("count")),
-                                         new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                                         new CompactionTransformSpec(
+                                             new SelectorDimFilter("dim1", "foo", null),
+                                             VirtualColumns.create(
+                                                 new ExpressionVirtualColumn(
+                                                     "isRobotFiltered",
+                                                     "concat(isRobot, '_filtered')",
+                                                     ColumnType.STRING,
+                                                     ExprMacroTable.nil()
+                                                 )
+                                             )
+                                         ),
                                          MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                                          MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
                                          null
@@ -347,7 +373,17 @@ public class DataSegmentTest
         new DynamicPartitionsSpec(null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+        new CompactionTransformSpec(
+            new SelectorDimFilter("dim1", "foo", null),
+            VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
+                )
+            )
+        ),
         MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
         MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
         null
@@ -377,7 +413,15 @@ public class DataSegmentTest
     DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("bar", "foo")));
     List<AggregatorFactory> metricsSpec = ImmutableList.of(new CountAggregatorFactory("count"));
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(
-        new SelectorDimFilter("dim1", "foo", null)
+        new SelectorDimFilter("dim1", "foo", null),
+        VirtualColumns.create(
+            new ExpressionVirtualColumn(
+                "isRobotFiltered",
+                "concat(isRobot, '_filtered')",
+                ColumnType.STRING,
+                ExprMacroTable.nil()
+            )
+        )
     );
     IndexSpec indexSpec = MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class).getEffectiveSpec();
     GranularitySpec granularitySpec = MAPPER.convertValue(Map.of("test2", "map"), GranularitySpec.class);
@@ -462,5 +506,111 @@ public class DataSegmentTest
 
     Assert.assertFalse(segment3.isTombstone());
     Assert.assertTrue(segment3.hasData());
+
+  }
+
+  @Test
+  public void testSerializationWithIndexingStateFingerprint() throws Exception
+  {
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+    final String fingerprint = "abc123def456";
+    final SegmentId segmentId = SegmentId.of("something", interval, "1", new NumberedShardSpec(3, 0));
+
+    DataSegment segment = DataSegment.builder(segmentId)
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .indexingStateFingerprint(fingerprint)
+                                     .binaryVersion(TEST_VERSION)
+                                     .size(1)
+                                     .build();
+
+    // Verify fingerprint is present in serialized JSON
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertEquals(fingerprint, objectMap.get("indexingStateFingerprint"));
+
+    // Verify deserialization preserves fingerprint
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
+    Assert.assertEquals(fingerprint, deserializedSegment.getIndexingStateFingerprint());
+    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+  }
+
+  @Test
+  public void testSerializationWithNullIndexingStateFingerprint() throws Exception
+  {
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+    final SegmentId segmentId = SegmentId.of("something", interval, "1", new NumberedShardSpec(3, 0));
+
+    DataSegment segment = DataSegment.builder(segmentId)
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .indexingStateFingerprint(null)
+                                     .binaryVersion(TEST_VERSION)
+                                     .size(1)
+                                     .build();
+
+    // Verify fingerprint is NOT present in serialized JSON (due to @JsonInclude(NON_NULL))
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertFalse("indexingStateFingerprint should not be in JSON when null",
+                       objectMap.containsKey("indexingStateFingerprint"));
+
+    // Verify deserialization handles missing fingerprint
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
+    Assert.assertNull(deserializedSegment.getIndexingStateFingerprint());
+    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+  }
+
+  @Test
+  public void testDeserializationBackwardCompatibility_missingIndexingStateFingerprint() throws Exception
+  {
+    // Simulate JSON from old Druid version without indexingStateFingerprint field
+    String jsonWithoutFingerprint = "{"
+                                    + "\"dataSource\": \"something\","
+                                    + "\"interval\": \"2011-10-01T00:00:00.000Z/2011-10-02T00:00:00.000Z\","
+                                    + "\"version\": \"1\","
+                                    + "\"loadSpec\": {\"something\": \"or_other\"},"
+                                    + "\"dimensions\": \"dim1,dim2\","
+                                    + "\"metrics\": \"met1,met2\","
+                                    + "\"shardSpec\": {\"type\": \"numbered\", \"partitionNum\": 3, \"partitions\": 0},"
+                                    + "\"binaryVersion\": 9,"
+                                    + "\"size\": 1"
+                                    + "}";
+
+    DataSegment deserializedSegment = MAPPER.readValue(jsonWithoutFingerprint, DataSegment.class);
+    Assert.assertNull("indexingStateFingerprint should be null for backward compatibility",
+                      deserializedSegment.getIndexingStateFingerprint());
+    Assert.assertEquals("something", deserializedSegment.getDataSource());
+    Assert.assertEquals(Intervals.of("2011-10-01/2011-10-02"), deserializedSegment.getInterval());
+  }
+
+  @Test
+  public void testWithIndexingStateFingerprint()
+  {
+    final String fingerprint = "test_fingerprint_12345";
+    final Interval interval = Intervals.of("2012-01-01/2012-01-02");
+    final String version = DateTimes.of("2012-01-01T11:22:33.444Z").toString();
+    final ShardSpec shardSpec = new NumberedShardSpec(7, 0);
+    final SegmentId segmentId = SegmentId.of("foo", interval, version, shardSpec);
+
+    final DataSegment segment1 = DataSegment.builder(segmentId)
+                                            .size(0)
+                                            .indexingStateFingerprint(fingerprint)
+                                            .build();
+    final DataSegment segment2 = DataSegment.builder(segmentId)
+                                            .size(0)
+                                            .build();
+
+    DataSegment withFingerprint = segment2.withIndexingStateFingerprint(fingerprint);
+    Assert.assertEquals(fingerprint, withFingerprint.getIndexingStateFingerprint());
+    Assert.assertEquals(segment1, withFingerprint);
   }
 }

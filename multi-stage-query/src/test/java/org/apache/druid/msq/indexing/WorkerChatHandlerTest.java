@@ -186,6 +186,12 @@ public class WorkerChatHandlerTest
     {
 
     }
+
+    @Override
+    public void stop()
+    {
+
+    }
   }
 
   @After

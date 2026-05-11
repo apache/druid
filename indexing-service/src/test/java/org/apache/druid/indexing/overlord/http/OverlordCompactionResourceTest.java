@@ -159,7 +159,7 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     Response response = compactionResource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true),
         httpRequest
     );
     Assert.assertEquals(200, response.getStatus());
@@ -170,7 +170,7 @@ public class OverlordCompactionResourceTest
   public void test_getClusterConfig()
   {
     final ClusterCompactionConfig clusterConfig =
-        new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ);
+        new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ, true);
     EasyMock.expect(configManager.getClusterCompactionConfig())
             .andReturn(clusterConfig)
             .once();

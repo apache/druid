@@ -20,8 +20,8 @@
 package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,6 +43,6 @@ public class TaskLogStreamerTest
         return Optional.absent();
       }
     };
-    Assert.assertFalse(taskLogStreamer.streamTaskStatus("id").isPresent());
+    Assertions.assertFalse(taskLogStreamer.streamTaskStatus("id").isPresent());
   }
 }

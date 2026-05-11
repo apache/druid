@@ -20,19 +20,21 @@
 package org.apache.druid.frame.channel;
 
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.utils.Throwables;
 
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Adapter that converts a {@link ReadableFrameChannel} into a {@link org.apache.druid.java.util.common.guava.Sequence}
- * of {@link RowsAndColumns}.
+ * Adapter that converts a {@link ReadableFrameChannel} into a {@link Sequence} of {@link RowsAndColumns}.
  *
- * This class does blocking reads on the channel, rather than nonblocking reads. Therefore, it is preferable to use
- * {@link ReadableFrameChannel} directly whenever nonblocking reads are desired.
+ * This class does blocking reads on the channel. Therefore, it is preferable to use {@link ReadableFrameChannel}
+ * directly whenever nonblocking reads are desired.
  */
 public class FrameChannelSequence extends BaseSequence<RowsAndColumns, FrameChannelSequence.FrameChannelIterator>
 {
@@ -81,7 +83,19 @@ public class FrameChannelSequence extends BaseSequence<RowsAndColumns, FrameChan
         throw new NoSuchElementException();
       }
 
-      return channel.read();
+      try {
+        return channel.read();
+      }
+      catch (Exception e) {
+        // Unwrap DruidException. Bit of a hack to have this here, but it's necessary to properly bubble up
+        // DruidExceptions that might be wrapped by "channel.read()" due to being thrown in another thread.
+        final DruidException druidException = Throwables.getCauseOfType(e, DruidException.class);
+        if (druidException != null) {
+          throw druidException;
+        } else {
+          throw e;
+        }
+      }
     }
 
     @Override

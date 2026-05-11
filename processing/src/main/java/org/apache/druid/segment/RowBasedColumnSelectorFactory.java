@@ -25,6 +25,7 @@ import com.google.common.primitives.Doubles;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -65,7 +66,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   private final RowAdapter<T> adapter;
   private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
-  private final boolean useStringValueOfNullInLists;
 
   /**
    * Full constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
@@ -76,8 +76,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       @Nullable final RowIdSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions,
-      final boolean useStringValueOfNullInLists
+      final boolean throwParseExceptions
   )
   {
     this.rowSupplier = rowSupplier;
@@ -85,7 +84,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     this.adapter = adapter;
     this.columnInspector = Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
-    this.useStringValueOfNullInLists = useStringValueOfNullInLists;
   }
 
   /**
@@ -101,16 +99,12 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    *                                    {@link org.apache.druid.segment.column.RowSignature#empty()}.
    * @param throwParseExceptions        whether numeric selectors should throw parse exceptions or use a default/null
    *                                    value when their inputs are not actually numeric
-   * @param useStringValueOfNullInLists whether nulls in multi-value strings should be replaced with the string "null".
-   *                                    for example: the list ["a", null] would be converted to ["a", "null"]. Useful
-   *                                    for callers that need compatibility with {@link Rows#objectToStrings}.
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions,
-      final boolean useStringValueOfNullInLists
+      final boolean throwParseExceptions
   )
   {
     return new RowBasedColumnSelectorFactory<>(
@@ -118,8 +112,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         null,
         adapter,
         columnInspector,
-        throwParseExceptions,
-        useStringValueOfNullInLists
+        throwParseExceptions
     );
   }
 
@@ -409,17 +402,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
                 //noinspection rawtypes
                 for (final Object item : ((List) rawValue)) {
-                  final String itemString;
+                  final String itemString = Evals.asString(item);
 
-                  if (useStringValueOfNullInLists) {
-                    itemString = String.valueOf(item);
-                  } else {
-                    itemString = item == null ? null : String.valueOf(item);
-                  }
-
-                  // Behavior with null item is to convert it to string "null". This is not what most other areas of Druid
-                  // would do when treating a null as a string, but it's consistent with Rows.objectToStrings, which is
-                  // commonly used when retrieving strings from input-row-like objects.
                   if (extractionFn == null) {
                     values.add(itemString);
                   } else {

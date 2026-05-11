@@ -22,7 +22,7 @@ package org.apache.druid.testing.embedded.schema;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.compact.CompactionSparseColumnTest;
 import org.apache.druid.testing.embedded.compact.CompactionTaskTest;
-import org.apache.druid.testing.embedded.indexing.KafkaDataFormatsTest;
+import org.apache.druid.testing.embedded.indexing.KafkaIndexDataFormatsTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 
@@ -70,7 +70,7 @@ public class CentralizedSchemaMetadataQueryDisabledTest
 
   @Nested
   @Disabled("Disabled due to test crossing timeouts")
-  public class KafkaDataFormats extends KafkaDataFormatsTest
+  public class KafkaDataFormats extends KafkaIndexDataFormatsTest
   {
     @Override
     public EmbeddedDruidCluster createCluster()

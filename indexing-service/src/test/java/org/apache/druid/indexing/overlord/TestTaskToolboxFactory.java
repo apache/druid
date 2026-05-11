@@ -65,7 +65,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.utils.RuntimeInfo;
@@ -94,7 +93,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.dataSegmentMover,
         bob.dataSegmentArchiver,
         bob.segmentAnnouncer,
-        bob.serverAnnouncer,
         bob.handoffNotifierFactory,
         bob.queryRunnerFactoryConglomerateProvider,
         bob.processingConfigProvider,
@@ -142,7 +140,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DataSegmentMover dataSegmentMover;
     private DataSegmentArchiver dataSegmentArchiver;
     private DataSegmentAnnouncer segmentAnnouncer;
-    private DataSegmentServerAnnouncer serverAnnouncer;
     private SegmentHandoffNotifierFactory handoffNotifierFactory;
     private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
     private Provider<DruidProcessingConfig> processingConfigProvider;
@@ -241,12 +238,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
     {
       this.segmentAnnouncer = segmentAnnouncer;
-      return this;
-    }
-
-    public Builder setServerAnnouncer(DataSegmentServerAnnouncer serverAnnouncer)
-    {
-      this.serverAnnouncer = serverAnnouncer;
       return this;
     }
 

@@ -140,6 +140,8 @@ public class SuperSorter
   private final int maxActiveProcessors;
   private final String cancellationId;
   private final boolean removeNullBytes;
+  @Nullable
+  private final FrameCombinerFactory combinerFactory;
   private final Object runWorkersLock = new Object();
 
   @GuardedBy("runWorkersLock")
@@ -238,7 +240,8 @@ public class SuperSorter
       final long rowLimit,
       @Nullable final String cancellationId,
       final SuperSorterProgressTracker superSorterProgressTracker,
-      final boolean removeNullBytes
+      final boolean removeNullBytes,
+      @Nullable final FrameCombinerFactory combinerFactory
   )
   {
     this.inputChannels = inputChannels;
@@ -256,6 +259,7 @@ public class SuperSorter
     this.cancellationId = cancellationId;
     this.superSorterProgressTracker = superSorterProgressTracker;
     this.removeNullBytes = removeNullBytes;
+    this.combinerFactory = combinerFactory;
 
     for (int i = 0; i < inputChannels.size(); i++) {
       inputChannelsToRead.add(i);
@@ -752,6 +756,7 @@ public class SuperSorter
                   removeNullBytes
               ),
               sortKey,
+              combinerFactory != null ? combinerFactory.newCombiner() : null,
               outPartitions,
               rowLimit
           );

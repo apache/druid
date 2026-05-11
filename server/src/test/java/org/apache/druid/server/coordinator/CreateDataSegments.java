@@ -63,6 +63,7 @@ public class CreateDataSegments
   private String upgradedFromSegmentId;
   private String schemaFingerprint;
   private Integer numRows;
+  private String indexingStateFingerprint;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -127,6 +128,12 @@ public class CreateDataSegments
     return this;
   }
 
+  public CreateDataSegments withIndexingStateFingerprint(String indexingStateFingerprint)
+  {
+    this.indexingStateFingerprint = indexingStateFingerprint;
+    return this;
+  }
+
   public CreateDataSegments markUnused()
   {
     this.used = false;
@@ -188,7 +195,8 @@ public class CreateDataSegments
                 ++uniqueIdInInterval,
                 compactionState,
                 sizeInBytes,
-                numRows
+                numRows,
+                indexingStateFingerprint
             )
         );
       }
@@ -207,7 +215,8 @@ public class CreateDataSegments
         used,
         schemaFingerprint,
         numRows == null ? null : numRows.longValue(),
-        upgradedFromSegmentId
+        upgradedFromSegmentId,
+        indexingStateFingerprint
     );
   }
 
@@ -227,7 +236,8 @@ public class CreateDataSegments
         int uniqueId,
         CompactionState compactionState,
         long size,
-        Integer numRows
+        Integer numRows,
+        String indexingStateFingerprint
     )
     {
       super(
@@ -243,6 +253,7 @@ public class CreateDataSegments
           IndexIO.CURRENT_VERSION_ID,
           size,
           numRows,
+          indexingStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
       this.uniqueId = uniqueId;

@@ -80,6 +80,7 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
+  private String testClassName;
   private EmbeddedHostname embeddedHostname = EmbeddedHostname.localhost();
   private boolean startedFirstDruidServer = false;
 
@@ -247,6 +248,16 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   {
     this.embeddedHostname = EmbeddedHostname.containerFriendly();
     return this;
+  }
+
+  public void setTestClassName(String testClassName)
+  {
+    this.testClassName = testClassName;
+  }
+
+  public String getTestClassName()
+  {
+    return testClassName;
   }
 
   /**

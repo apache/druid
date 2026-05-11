@@ -20,15 +20,19 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -36,17 +40,15 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
-import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,13 +59,12 @@ import java.util.List;
  */
 public class GroupByQueryRunnerFactoryTest
 {
-  @Rule
-  public CloserRule closerRule = new CloserRule(true);
+  private final Closer closerRule = Closer.create();
 
   private GroupByQueryRunnerFactory factory;
   private Closer resourceCloser;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.resourceCloser = Closer.create();
@@ -71,11 +72,12 @@ public class GroupByQueryRunnerFactoryTest
     this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig(), buffers);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     factory = null;
     resourceCloser.close();
+    closerRule.close();
   }
 
   @Test
@@ -139,36 +141,42 @@ public class GroupByQueryRunnerFactoryTest
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
-  private Segment createSegment()
+  private Segment createSegment() throws Exception
   {
     IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
         .build();
 
-    StringInputRowParser parser = new StringInputRowParser(
-        new CSVParseSpec(
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags"))),
-            "\t",
-            ImmutableList.of("timestamp", "product", "tags"),
-            false,
-            0
-        ),
-        "UTF-8"
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags"))),
+        ColumnsFilter.all()
+    );
+    CsvInputFormat format = new CsvInputFormat(
+        ImmutableList.of("timestamp", "product", "tags"),
+        "\t",
+        null,
+        false,
+        0,
+        null
     );
 
     String[] rows = new String[]{
         "2011-01-12T00:00:00.000Z,product_1,t1",
         "2011-01-13T00:00:00.000Z,product_2,t2",
-        "2011-01-14T00:00:00.000Z,product_3,t2",
-        };
+        "2011-01-14T00:00:00.000Z,product_3,t2"
+    };
 
-    for (String row : rows) {
-      incrementalIndex.add(parser.parse(row));
+    try (CloseableIterator<InputRow> iter = new InlineInputSource(String.join("\n", rows))
+        .reader(schema, format, null)
+        .read()) {
+      while (iter.hasNext()) {
+        incrementalIndex.add(iter.next());
+      }
     }
 
-    closerRule.closeLater(incrementalIndex);
+    closerRule.register(incrementalIndex);
 
     return new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"));
   }

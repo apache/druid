@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -35,7 +36,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClient;
@@ -44,6 +45,7 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
@@ -81,7 +83,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
-import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.EngineInfo;
@@ -91,6 +92,7 @@ import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SqlResourceQueryResultPusherFactory;
+import org.apache.druid.sql.http.StandardQueryState;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
@@ -111,6 +113,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -148,7 +151,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   private SqlResource sqlResource;
   private DartControllerRegistry controllerRegistry;
-  private ExecutorService controllerExecutor;
+  private ControllerThreadPool controllerThreadPool;
   private AutoCloseable mockCloser;
   private final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
 
@@ -254,11 +257,20 @@ public class DartSqlResourceTest extends MSQTestBase
           }
         },
         objectMapper.convertValue(ImmutableMap.of(), DartControllerConfig.class),
-        controllerExecutor = Execs.multiThreaded(
-            MAX_CONTROLLERS,
-            StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
+        controllerThreadPool = new ControllerThreadPool(
+            MoreExecutors.listeningDecorator(
+                Execs.multiThreaded(
+                    MAX_CONTROLLERS,
+                    StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
+                )
+            ),
+            Executors.newSingleThreadScheduledExecutor(
+                Execs.makeThreadFactory(
+                    StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-timeout")
+                )
+            )
         ),
-        new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
+        new DartQueryKitSpecFactory(),
         injector.getInstance(MultiQueryKit.class),
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
@@ -290,9 +302,9 @@ public class DartSqlResourceTest extends MSQTestBase
     mockCloser.close();
 
     // shutdown(), not shutdownNow(), to ensure controllers stop timely on their own.
-    controllerExecutor.shutdown();
+    controllerThreadPool.getRunExecutorService().shutdown();
 
-    if (!controllerExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
+    if (!controllerThreadPool.getRunExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
       throw new IAE("controllerExecutor.awaitTermination() timed out");
     }
 
@@ -322,7 +334,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder, null);
@@ -346,7 +358,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder, null);
@@ -374,9 +386,10 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2001"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING,
+        null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // With selfOnly = null, the endpoint returns both queries.
@@ -387,7 +400,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder, null);
@@ -407,14 +420,14 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder localHolder = setUpMockRunningQuery(REGULAR_USER_NAME);
 
     // Remote call fails.
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFailedFuture(new IOException("something went wrong")));
 
     // We only see local queries, because the remote call failed. (The entire call doesn't fail; we see what we
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder, null);
@@ -442,16 +455,17 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING,
+        null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder, null);
@@ -479,15 +493,16 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING,
+        null
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder, null);
@@ -571,7 +586,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
@@ -579,7 +594,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
-    Assertions.assertEquals("RUNTIME_FAILURE", e.get("category"));
+    Assertions.assertEquals("INVALID_INPUT", e.get("category"));
     assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
   }
 
@@ -743,7 +758,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     // Block up the controllerExecutor so the controller runs long enough to cancel it.
-    final Future<?> sleepFuture = controllerExecutor.submit(() -> {
+    final Future<?> sleepFuture = controllerThreadPool.getRunExecutorService().submit(() -> {
       try {
         Thread.sleep(3_600_000);
       }
@@ -797,19 +812,38 @@ public class DartSqlResourceTest extends MSQTestBase
 
     // Wait for the SQL POST to come back.
     Assertions.assertNull(doPostFuture.get());
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
-    // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
-    final Map<String, Object> e = objectMapper.readValue(
-        asyncResponse.baos.toByteArray(),
-        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
-    Assertions.assertEquals("Canceled", e.get("errorCode"));
-    Assertions.assertEquals("CANCELED", e.get("category"));
-    Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
-        e.get("errorMessage")
-    );
+    if (fullReport) {
+      // Buffered report path -- should get a cancellation error in the report.
+      Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+
+      final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          new TypeReference<>() {}
+      );
+
+      final MSQTaskReport report = (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
+      final MSQStatusReport statusReport = report.getPayload().getStatus();
+
+      Assertions.assertEquals(TaskState.FAILED, statusReport.getStatus());
+      Assertions.assertEquals(CanceledFault.userRequest(), statusReport.getErrorReport().getFault());
+
+    } else {
+      // Streaming path -- should get a serialized DruidException.
+      Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+
+      // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
+      final Map<String, Object> e = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      Assertions.assertEquals("Canceled", e.get("errorCode"));
+      Assertions.assertEquals("CANCELED", e.get("category"));
+      Assertions.assertEquals(
+          MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
+          e.get("errorMessage")
+      );
+    }
   }
 
   @Test

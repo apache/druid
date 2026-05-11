@@ -19,22 +19,49 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.annotation.Nullable;
 
 public class AWSClientConfig
 {
+  // Default values matching AWS SDK v2 defaults
+  private static final boolean DEFAULT_CHUNKED_ENCODING_DISABLED = false;
+  private static final boolean DEFAULT_PATH_STYLE_ACCESS = false;
+
+  private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 10_000;
+  private static final int DEFAULT_SOCKET_TIMEOUT_MILLIS = 50_000;
+  private static final int DEFAULT_MAX_CONNECTIONS = 50;
+
   @JsonProperty
   private String protocol = "https"; // The default of aws-java-sdk
 
   @JsonProperty
-  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
+  private boolean disableChunkedEncoding = DEFAULT_CHUNKED_ENCODING_DISABLED;
 
   @JsonProperty
-  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
+  private boolean enablePathStyleAccess = DEFAULT_PATH_STYLE_ACCESS;
+
+  /**
+   * @deprecated Use {@link #crossRegionAccessEnabled} instead.
+   */
+  @Deprecated
+  @JsonProperty
+  @Nullable
+  protected Boolean forceGlobalBucketAccessEnabled;
 
   @JsonProperty
-  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+  @Nullable
+  private Boolean crossRegionAccessEnabled;
+
+  @JsonProperty
+  private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT_MILLIS;
+
+  @JsonProperty
+  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT_MILLIS;
+
+  @JsonProperty
+  private int maxConnections = DEFAULT_MAX_CONNECTIONS;
 
   public String getProtocol()
   {
@@ -51,9 +78,52 @@ public class AWSClientConfig
     return enablePathStyleAccess;
   }
 
-  public boolean isForceGlobalBucketAccessEnabled()
+  /**
+   * @deprecated Use {@link #isCrossRegionAccessEnabled()} instead.
+   */
+  @Deprecated
+  @Nullable
+  public Boolean isForceGlobalBucketAccessEnabled()
   {
     return forceGlobalBucketAccessEnabled;
+  }
+
+  @Nullable
+  public Boolean getCrossRegionAccessEnabled()
+  {
+    return crossRegionAccessEnabled;
+  }
+
+  /**
+   * Resolves cross-region access setting. Precedence:
+   * 1. If crossRegionAccessEnabled is explicitly set, use it.
+   * 2. If forceGlobalBucketAccessEnabled (deprecated) is explicitly set, use it.
+   * 3. Otherwise, default to false.
+   */
+  public boolean isCrossRegionAccessEnabled()
+  {
+    if (crossRegionAccessEnabled != null) {
+      return crossRegionAccessEnabled;
+    }
+    if (forceGlobalBucketAccessEnabled != null) {
+      return forceGlobalBucketAccessEnabled;
+    }
+    return false;
+  }
+
+  public int getConnectionTimeoutMillis()
+  {
+    return connectionTimeout;
+  }
+
+  public int getSocketTimeoutMillis()
+  {
+    return socketTimeout;
+  }
+
+  public int getMaxConnections()
+  {
+    return maxConnections;
   }
 
   @Override
@@ -63,7 +133,10 @@ public class AWSClientConfig
            "protocol='" + protocol + '\'' +
            ", disableChunkedEncoding=" + disableChunkedEncoding +
            ", enablePathStyleAccess=" + enablePathStyleAccess +
-           ", forceGlobalBucketAccessEnabled=" + forceGlobalBucketAccessEnabled +
+           ", crossRegionAccessEnabled=" + isCrossRegionAccessEnabled() +
+           ", connectionTimeout=" + connectionTimeout +
+           ", socketTimeout=" + socketTimeout +
+           ", maxConnections=" + maxConnections +
            '}';
   }
 }

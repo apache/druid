@@ -56,6 +56,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.AggregateMergeRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
 import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
@@ -194,12 +195,13 @@ public class CalciteRulesManager
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#ABSTRACT_RELATIONAL_RULES}, minus:
    *
-   * 1) {@link CoreRules#AGGREGATE_MERGE} and related {@link CoreRules#PROJECT_AGGREGATE_MERGE}
-   * (causes testDoubleNestedGroupBy2 to fail)
-   * 2) {@link CoreRules#JOIN_TO_SEMI_JOIN}, {@link CoreRules#JOIN_ON_UNIQUE_TO_SEMI_JOIN}, and
+   * 1) {@link CoreRules#AGGREGATE_MERGE}, because we have our own version {@link AggregateMergeRule.WithoutProject}.
+   * 2) {@link CoreRules#PROJECT_AGGREGATE_MERGE}, because we have our own version
+   * {@link DruidAggregateRemoveRedundancyRule}.
+   * 3) {@link CoreRules#JOIN_TO_SEMI_JOIN}, {@link CoreRules#JOIN_ON_UNIQUE_TO_SEMI_JOIN}, and
    * {@link CoreRules#PROJECT_TO_SEMI_JOIN} (we don't need to detect semi-joins, because they are handled
    * fine as-is by {@link org.apache.druid.sql.calcite.rule.DruidJoinRule}).
-   * 3) {@link CoreRules#JOIN_COMMUTE}, {@link CoreRules#FILTER_INTO_JOIN}, and {@link CoreRules#JOIN_CONDITION_PUSH},
+   * 4) {@link CoreRules#JOIN_COMMUTE}, {@link CoreRules#FILTER_INTO_JOIN}, and {@link CoreRules#JOIN_CONDITION_PUSH},
    * which are part of {@link #FANCY_JOIN_RULES}.
    */
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
@@ -522,6 +524,8 @@ public class CalciteRulesManager
       rules.addAll(FANCY_JOIN_RULES);
     }
 
+    rules.add(new AggregateMergeRule.WithProject());
+    rules.add(new AggregateMergeRule.WithoutProject());
     rules.add(DruidAggregateRemoveRedundancyRule.instance());
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {

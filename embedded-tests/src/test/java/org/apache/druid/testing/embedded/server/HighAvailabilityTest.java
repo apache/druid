@@ -73,10 +73,12 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
   {
     overlord1.addProperty("druid.plaintextPort", "7090");
 
-    // Use incremental cache on coordinator1 so that we can wait for the
-    // segment count metric before querying sys.segments for the first time
+    // Use incremental cache on both coordinators so that we can wait for the
+    // cache sync metric before querying sys.segments
     coordinator1
         .addProperty("druid.plaintextPort", "7081")
+        .addProperty("druid.manager.segments.useIncrementalCache", "always");
+    coordinator2
         .addProperty("druid.manager.segments.useIncrementalCache", "always");
 
     // Keep the Router first in the list to ensure that EmbeddedServiceClient
@@ -140,6 +142,8 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
           "1",
           cluster.runSql("SELECT COUNT(*) FROM sys.tasks WHERE datasource='%s'", dataSource)
       );
+      waitForNextSegmentCacheSync(coordinatorPair.leader);
+      waitForNextSegmentCacheSync(broker);
       Assertions.assertEquals(
           "10",
           cluster.runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'", dataSource)
@@ -279,6 +283,13 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
             "SELECT plaintext_port, is_leader FROM sys.servers WHERE server_type='%s' ORDER BY is_leader",
             serverType
         )
+    );
+  }
+
+  private void waitForNextSegmentCacheSync(EmbeddedDruidServer<?> server)
+  {
+    server.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
     );
   }
 

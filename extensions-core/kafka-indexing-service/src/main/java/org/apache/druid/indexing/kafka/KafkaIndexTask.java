@@ -69,7 +69,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JsonProperty("serverPriority") @Nullable Integer serverPriority
   )
   {
     super(
@@ -80,7 +81,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        serverPriority
     );
     this.configMapper = configMapper;
 
@@ -99,11 +101,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   protected SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new KafkaIndexTaskRunner(
-        this,
-        dataSchema.getParser(),
-        lockGranularityToUse
-    );
+    return new KafkaIndexTaskRunner(this, lockGranularityToUse);
   }
 
   @Override

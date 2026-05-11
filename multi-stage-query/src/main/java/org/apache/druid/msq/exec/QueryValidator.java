@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 
 public class QueryValidator
 {
@@ -43,11 +44,12 @@ public class QueryValidator
       }
 
       final int numClusteredByColumns = stageDef.getClusterBy().getColumns().size();
-      if (numClusteredByColumns > Limits.MAX_CLUSTERED_BY_COLUMNS) {
+      final int maxClusteredByColumns = MultiStageQueryContext.getMaxClusteredByColumns(queryDef.getContext());
+      if (numClusteredByColumns > maxClusteredByColumns) {
         throw new MSQException(
             new TooManyClusteredByColumnsFault(
                 numClusteredByColumns,
-                Limits.MAX_CLUSTERED_BY_COLUMNS,
+                maxClusteredByColumns,
                 stageDef.getStageNumber()
             )
         );

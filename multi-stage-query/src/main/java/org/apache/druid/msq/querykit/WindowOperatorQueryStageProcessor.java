@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
@@ -133,11 +134,12 @@ public class WindowOperatorQueryStageProcessor extends BasicStageProcessor
       );
     }
 
-    final Sequence<ReadableInput> readableInputs = QueryKitUtils.readPartitions(context, slice.getPartitions());
+    final Sequence<ReadableInput> readableInputs =
+        QueryKitUtils.readPartitions(new StandardPartitionReader(context), slice.getPartitions());
     final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
-              outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
+              outputChannels.get(readableInput.getPartitionNumber());
 
           return new WindowOperatorQueryFrameProcessor(
               query.context(),

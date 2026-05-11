@@ -20,9 +20,9 @@
 package org.apache.druid.frame.processor;
 
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class primarily tests the invalid calls to the methods of {@link SuperSorterProgressTracker}. Tests regarding
@@ -32,7 +32,7 @@ public class SuperSorterProgressTrackerTest
 {
   SuperSorterProgressTracker superSorterProgressTracker;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     superSorterProgressTracker = new SuperSorterProgressTracker();
@@ -41,21 +41,21 @@ public class SuperSorterProgressTrackerTest
   @Test
   public void testSetTotalMergingLevelsMultipleTimes()
   {
-    ISE exception = Assert.assertThrows(ISE.class, () -> {
+    ISE exception = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergingLevels(5);
       superSorterProgressTracker.setTotalMergingLevels(5);
     });
-    Assert.assertEquals("Total merging levels already defined for the merge sort.", exception.getMessage());
+    Assertions.assertEquals("Total merging levels already defined for the merge sort.", exception.getMessage());
   }
 
   @Test
   public void testSetTotalMergingLevelsWithConflictingDataWithTotalMergers()
   {
     superSorterProgressTracker.setTotalMergersForLevel(3, 8);
-    ISE exception = Assert.assertThrows(ISE.class, () -> {
+    ISE exception = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergingLevels(2);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Max level found in levelToTotalBatches is 3 (0-indexed). Cannot set totalMergingLevels to 2",
         exception.getMessage()
     );
@@ -65,10 +65,10 @@ public class SuperSorterProgressTrackerTest
   public void testSetTotalMergingLevelsWithConflictingDataWithMergedBatches()
   {
     superSorterProgressTracker.addMergedBatchesForLevel(3, 8);
-    ISE exception = Assert.assertThrows(ISE.class, () -> {
+    ISE exception = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergingLevels(3);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Max level found in levelToMergedBatches is 3 (0-indexed). Cannot set totalMergingLevels to 3",
         exception.getMessage()
     );
@@ -83,28 +83,28 @@ public class SuperSorterProgressTrackerTest
     superSorterProgressTracker.setTotalMergersForLevel(3, 8);
 
     // Test throws exception when level is negative
-    ISE exception1 = Assert.assertThrows(ISE.class, () -> {
+    ISE exception1 = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergersForLevel(-1, 4);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Unable to set 4 total mergers for level -1. Level must be non-negative",
         exception1.getMessage()
     );
 
     // Test throws when trying to set total mergers for level greater than permitted by the totalMergingLevels
-    ISE exception2 = Assert.assertThrows(ISE.class, () -> {
+    ISE exception2 = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergersForLevel(4, 1);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot set total mergers for level 4. Valid levels range from 0 to 3",
         exception2.getMessage()
     );
 
     // Test throws when trying to set total mergers for a level multiple times. Only works if the ultimate level is known
-    ISE exception3 = Assert.assertThrows(ISE.class, () -> {
+    ISE exception3 = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergersForLevel(2, 16);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Total mergers are already present for the level 2",
         exception3.getMessage()
     );
@@ -116,11 +116,11 @@ public class SuperSorterProgressTrackerTest
   @Test
   public void testSetMergersForUltimateLevelMultipleTimes()
   {
-    ISE exception = Assert.assertThrows(ISE.class, () -> {
+    ISE exception = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.setTotalMergersForUltimateLevel(5);
       superSorterProgressTracker.setTotalMergersForUltimateLevel(5);
     });
-    Assert.assertEquals("Cannot set mergers for final level more than once", exception.getMessage());
+    Assertions.assertEquals("Cannot set mergers for final level more than once", exception.getMessage());
   }
 
   @Test
@@ -129,10 +129,10 @@ public class SuperSorterProgressTrackerTest
     // Init state
     superSorterProgressTracker.setTotalMergingLevels(4);
 
-    ISE exception = Assert.assertThrows(ISE.class, () -> {
+    ISE exception = Assertions.assertThrows(ISE.class, () -> {
       superSorterProgressTracker.addMergedBatchesForLevel(5, 4);
     });
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot add merged batches for level 5. Valid levels range from 0 to 3",
         exception.getMessage()
     );

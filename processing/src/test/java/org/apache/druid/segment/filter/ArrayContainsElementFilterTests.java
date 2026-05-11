@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Mode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -445,12 +446,12 @@ public class ArrayContainsElementFilterTests
     {
       // only auto schema supports array columns... skip other segment types
       Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatches(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L, 3L}, null),
           ImmutableList.of("0", "2")
       );
 
-      assertFilterMatchesSkipVectorize(
+      assertFilterMatches(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L}, null),
           ImmutableList.of()
       );
@@ -1086,11 +1087,7 @@ public class ArrayContainsElementFilterTests
                     .withNonnullFields(
                         "column",
                         "elementMatchValueType",
-                        "elementMatchValueEval",
-                        "elementMatchValue",
-                        "predicateFactory",
-                        "optimizedFilterIncludeUnknown",
-                        "optimizedFilterNoIncludeUnknown"
+                        "elementMatchValueEval"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                     .withIgnoredFields(
@@ -1099,6 +1096,7 @@ public class ArrayContainsElementFilterTests
                         "optimizedFilterNoIncludeUnknown",
                         "elementMatchValue"
                     )
+                    .set(Mode.skipMockito())
                     .verify();
     }
   }

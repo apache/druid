@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -129,7 +129,7 @@ public class DruidMeta extends MetaImpl
   );
 
   private final SqlStatementFactory sqlStatementFactory;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
@@ -150,7 +150,7 @@ public class DruidMeta extends MetaImpl
   @Inject
   public DruidMeta(
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper
@@ -158,7 +158,7 @@ public class DruidMeta extends MetaImpl
   {
     this(
         sqlStatementFactory,
-        defaultQueryConfig,
+        queryConfigProvider,
         config,
         errorHandler,
         Executors.newSingleThreadScheduledExecutor(
@@ -174,7 +174,7 @@ public class DruidMeta extends MetaImpl
 
   public DruidMeta(
       final SqlStatementFactory sqlStatementFactory,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final ScheduledExecutorService exec,
@@ -184,7 +184,7 @@ public class DruidMeta extends MetaImpl
   {
     super(null);
     this.sqlStatementFactory = sqlStatementFactory;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.config = config;
     this.errorHandler = errorHandler;
     this.exec = exec;
@@ -267,7 +267,7 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
-          .createStatement(sqlStatementFactory, defaultQueryConfig.getContext(), fetcherFactory);
+          .createStatement(sqlStatementFactory, queryConfigProvider.getContext(), fetcherFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (Throwable t) {
@@ -291,14 +291,14 @@ public class DruidMeta extends MetaImpl
       final DruidConnection druidConnection = getDruidConnection(ch.id);
       final SqlQueryPlus sqlReq = SqlQueryPlus.builder()
                                               .sql(sql)
-                                              .systemDefaultContext(defaultQueryConfig.getContext())
+                                              .systemDefaultContext(queryConfigProvider.getContext())
                                               .queryContext(druidConnection.sessionContext())
                                               .auth(doAuthenticate(druidConnection))
                                               .buildJdbc();
       final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
           sqlStatementFactory,
           sqlReq,
-          defaultQueryConfig.getContext(),
+          queryConfigProvider.getContext(),
           maxRowCount,
           fetcherFactory
       );

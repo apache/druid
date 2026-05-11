@@ -156,8 +156,11 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       // numeric no lhs null
       "SELECT NVL(long1, long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
       "SELECT NVL(long1, long5 + long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
-      "SELECT CASE WHEN MOD(long1, 2) = 0 THEN -1 WHEN MOD(long1, 2) = 1 THEN long2 / MOD(long1, 2) ELSE long3 END FROM expressions GROUP BY 1"
-
+      "SELECT CASE WHEN MOD(long1, 2) = 0 THEN -1 WHEN MOD(long1, 2) = 1 THEN long2 / MOD(long1, 2) ELSE long3 END FROM expressions GROUP BY 1",
+      // cast
+      "SELECT CAST(string1 as BIGINT) + CAST(string3 as DOUBLE) + long3, COUNT(*) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT COUNT(*), SUM(CAST(string1 as BIGINT) + CAST(string3 as BIGINT)) FROM expressions WHERE double3 < 1010.0 AND double3 > 100.0",
+      "SELECT COUNT(*) FROM expressions WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' AND (UPPER(COALESCE(string3,'')) LIKE '1%' OR TRIM(UPPER(COALESCE(string3,''))) LIKE '1%' OR SUBSTRING(UPPER(COALESCE(string3,'')),1,1) IN ('1','2','3','4','5') OR ('X' || UPPER(COALESCE(string3,''))) LIKE 'X1%') AND (UPPER(COALESCE(string5,'')) LIKE '2%' OR TRIM(UPPER(COALESCE(string5,''))) LIKE '2%' OR SUBSTRING(UPPER(COALESCE(string5,'')),1,1) IN ('1','2','3','4','5') OR ('Y' || UPPER(COALESCE(string5,''))) LIKE 'Y2%') AND CAST(double4 * 1000 AS BIGINT) BETWEEN -850000000 AND 850000000"
   );
 
   @Param({
@@ -229,7 +232,9 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "55",
       "56",
       "57",
-      "58"
+      "58",
+      "59",
+      "60"
   })
   private String query;
 

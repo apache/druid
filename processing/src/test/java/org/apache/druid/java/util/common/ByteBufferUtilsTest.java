@@ -22,12 +22,9 @@ package org.apache.druid.java.util.common;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.druid.collections.ResourceHolder;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -35,6 +32,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -59,8 +57,8 @@ public class ByteBufferUtilsTest
       "fox"
   );
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   @Test
   public void testAllocateDirect()
@@ -69,22 +67,22 @@ public class ByteBufferUtilsTest
 
     try (final ResourceHolder<ByteBuffer> holder = ByteBufferUtils.allocateDirect(sz)) {
       final ByteBuffer buf = holder.get();
-      Assert.assertTrue(buf.isDirect());
-      Assert.assertEquals(sz, buf.remaining());
+      Assertions.assertTrue(buf.isDirect());
+      Assertions.assertEquals(sz, buf.remaining());
     }
   }
 
   @Test
   public void testUnmapDoesntCrashJVM() throws Exception
   {
-    final File file = temporaryFolder.newFile("some_mmap_file");
+    final File file = tempDir.resolve("some_mmap_file").toFile();
     try (final OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
       final byte[] data = new byte[4096];
       Arrays.fill(data, (byte) 0x5A);
       os.write(data);
     }
     final MappedByteBuffer mappedByteBuffer = Files.map(file);
-    Assert.assertEquals((byte) 0x5A, mappedByteBuffer.get(0));
+    Assertions.assertEquals((byte) 0x5A, mappedByteBuffer.get(0));
     ByteBufferUtils.unmap(mappedByteBuffer);
     ByteBufferUtils.unmap(mappedByteBuffer);
   }
@@ -107,29 +105,27 @@ public class ByteBufferUtilsTest
     final Comparator<ByteBuffer> comparator = ByteBufferUtils.utf8Comparator();
 
     // Tests involving null
-    MatcherAssert.assertThat(comparator.compare(null, null), Matchers.equalTo(0));
-    MatcherAssert.assertThat(comparator.compare(null, ByteBuffer.allocate(0)), Matchers.lessThan(0));
-    MatcherAssert.assertThat(comparator.compare(ByteBuffer.allocate(0), null), Matchers.greaterThan(0));
-    MatcherAssert.assertThat(comparator.compare(null, ByteBuffer.allocate(1)), Matchers.lessThan(0));
-    MatcherAssert.assertThat(comparator.compare(ByteBuffer.allocate(1), null), Matchers.greaterThan(0));
-    MatcherAssert.assertThat(comparator.compare(null, ByteBuffer.wrap(new byte[]{-1})), Matchers.lessThan(0));
-    MatcherAssert.assertThat(comparator.compare(ByteBuffer.wrap(new byte[]{-1}), null), Matchers.greaterThan(0));
+    Assertions.assertEquals(0, comparator.compare(null, null));
+    Assertions.assertTrue(comparator.compare(null, ByteBuffer.allocate(0)) < 0);
+    Assertions.assertTrue(comparator.compare(ByteBuffer.allocate(0), null) > 0);
+    Assertions.assertTrue(comparator.compare(null, ByteBuffer.allocate(1)) < 0);
+    Assertions.assertTrue(comparator.compare(ByteBuffer.allocate(1), null) > 0);
+    Assertions.assertTrue(comparator.compare(null, ByteBuffer.wrap(new byte[]{-1})) < 0);
+    Assertions.assertTrue(comparator.compare(ByteBuffer.wrap(new byte[]{-1}), null) > 0);
 
     // Tests involving buffers of different lengths
-    MatcherAssert.assertThat(
+    Assertions.assertTrue(
         comparator.compare(
             ByteBuffer.wrap(new byte[]{1, 2, 3}),
             ByteBuffer.wrap(new byte[]{1, 2, 3, 4})
-        ),
-        Matchers.lessThan(0)
+        ) < 0
     );
 
-    MatcherAssert.assertThat(
+    Assertions.assertTrue(
         comparator.compare(
             ByteBuffer.wrap(new byte[]{1, 2, 3, 4}),
             ByteBuffer.wrap(new byte[]{1, 2, 3})
-        ),
-        Matchers.greaterThan(0)
+        ) > 0
     );
 
     for (final String string1 : COMPARE_TEST_STRINGS) {
@@ -150,15 +146,15 @@ public class ByteBufferUtilsTest
             utf8ByteBuffer2
         );
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
+            (int) Math.signum(string1.compareTo(string2)),
+            (int) Math.signum(compareByteBufferUtilsUtf8),
             StringUtils.format(
                 "compareByteBufferUtilsUtf8(byte[]) (actual) "
                 + "matches compareJavaString (expected) for [%s] vs [%s]",
                 string1,
                 string2
-            ),
-            (int) Math.signum(string1.compareTo(string2)),
-            (int) Math.signum(compareByteBufferUtilsUtf8)
+            )
         );
       }
     }

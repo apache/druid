@@ -71,7 +71,7 @@ public class ServerSelectorTest
 
     selector.addServerAndUpdateSegment(
         new QueryableDruidServer(
-            new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+            new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
             EasyMock.createMock(DirectDruidClient.class)
         ),
         DataSegment.builder()

@@ -94,6 +94,9 @@ public class RunAllFullyWidget<T, ResultType>
     }
     catch (Throwable e) {
       CloseableUtils.closeAndSuppressExceptions(processorManager, e::addSuppressed);
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       return Futures.immediateFailedFuture(e);
     }
 

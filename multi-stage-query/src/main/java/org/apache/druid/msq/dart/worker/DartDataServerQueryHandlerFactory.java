@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 /**
@@ -33,17 +32,14 @@ public class DartDataServerQueryHandlerFactory implements DataServerQueryHandler
 {
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
-  private final QueryToolChestWarehouse warehouse;
 
   public DartDataServerQueryHandlerFactory(
       ServiceClientFactory serviceClientFactory,
-      ObjectMapper objectMapper,
-      QueryToolChestWarehouse warehouse
+      ObjectMapper objectMapper
   )
   {
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
-    this.warehouse = warehouse;
   }
 
   @Override
@@ -60,7 +56,6 @@ public class DartDataServerQueryHandlerFactory implements DataServerQueryHandler
         channelCounters,
         serviceClientFactory,
         objectMapper,
-        warehouse,
         requestDescriptor
     );
   }

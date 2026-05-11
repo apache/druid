@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -71,6 +72,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -1109,6 +1111,40 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
             }
         )
     );
+  }
+
+  @Test
+  public void testApproxQuantileWithStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT APPROX_QUANTILE_DS(m1, '0.99') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+    }
+  }
+
+  @Test
+  public void testApproxQuantileWithStringResolution()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT APPROX_QUANTILE_DS(m1, 0.99, '128') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+    }
   }
 
   private static PostAggregator makeFieldAccessPostAgg(String name)

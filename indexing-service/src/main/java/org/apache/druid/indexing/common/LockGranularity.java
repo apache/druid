@@ -25,5 +25,9 @@ package org.apache.druid.indexing.common;
 public enum LockGranularity
 {
   TIME_CHUNK,
+  /**
+   * @deprecated use TIME_CHUNK instead.
+   */
+  @Deprecated
   SEGMENT
 }

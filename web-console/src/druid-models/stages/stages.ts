@@ -70,9 +70,7 @@ export type StageInput =
   | {
       type: 'table';
       dataSource: string;
-      intervals: string[];
-      filter?: any;
-      filterFields?: string[];
+      intervals?: string[];
     }
   | {
       type: 'external';
@@ -149,6 +147,7 @@ export interface StageWorkerCounter {
   segmentGenerationProgress?: SegmentGenerationProgressCounter;
   warnings?: WarningCounter;
   cpu?: CpusCounter;
+  storage?: StorageCounter;
 }
 
 export type ChannelCounterName = `input${number}` | 'output' | 'shuffle';
@@ -178,9 +177,26 @@ export interface ChannelCounter {
   frames?: number[];
   files?: number[];
   totalFiles?: number[];
+  loadBytes?: number[];
+  loadTime?: number[];
+  loadWait?: number[];
+  loadFiles?: number[];
+  queries?: number[];
+  totalQueries?: number[];
 }
 
-export type ChannelFields = 'rows' | 'bytes' | 'frames' | 'files' | 'totalFiles';
+export type ChannelFields =
+  | 'rows'
+  | 'bytes'
+  | 'frames'
+  | 'files'
+  | 'totalFiles'
+  | 'loadBytes'
+  | 'loadTime'
+  | 'loadWait'
+  | 'loadFiles'
+  | 'queries'
+  | 'totalQueries';
 
 export interface SortProgressCounter {
   type: 'sortProgress';
@@ -286,6 +302,29 @@ export interface CpuCounter {
   wall: number;
 }
 
+export interface StorageCounter {
+  type: 'storage';
+  localBytesMax?: number;
+  localBytesReserved: number;
+  localFilesWritten: number;
+  localBytesWritten: number;
+  durableFileCount: number;
+  durableBytesWritten: number;
+}
+
+function normalizeStorageCounter(s: StorageCounter | undefined): StorageCounter | undefined {
+  if (!s) return;
+  return {
+    type: 'storage',
+    localBytesMax: s.localBytesMax != null ? Number(s.localBytesMax) : undefined,
+    localBytesReserved: Number(s.localBytesReserved),
+    localFilesWritten: Number(s.localFilesWritten),
+    localBytesWritten: Number(s.localBytesWritten),
+    durableFileCount: Number(s.durableFileCount),
+    durableBytesWritten: Number(s.durableBytesWritten),
+  };
+}
+
 function sumCpuCounters(cs: CpuCounter[]): CpuCounter {
   return aggregateThings(cs, {
     type: 'cpu',
@@ -301,6 +340,7 @@ export interface SimpleWideCounter {
   shuffle?: Record<ChannelFields, number>;
   segmentGenerationProgress?: SegmentGenerationProgressCounter;
   cpu?: CpusCounter;
+  storage?: StorageCounter;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -310,6 +350,12 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     frames: 0,
     files: 0,
     totalFiles: 0,
+    loadBytes: 0,
+    loadTime: 0,
+    loadWait: 0,
+    loadFiles: 0,
+    queries: 0,
+    totalQueries: 0,
   };
 }
 
@@ -608,11 +654,18 @@ export class Stages {
               frames: sum(c.frames || []),
               files: sum(c.files || []),
               totalFiles: sum(c.totalFiles || []),
+              loadBytes: sum(c.loadBytes || []),
+              loadTime: sum(c.loadTime || []),
+              loadWait: sum(c.loadWait || []),
+              loadFiles: sum(c.loadFiles || []),
+              queries: sum(c.queries || []),
+              totalQueries: sum(c.totalQueries || []),
             }
           : zeroChannelFields();
       }
       newWideCounter.segmentGenerationProgress = stageCounters.segmentGenerationProgress;
       newWideCounter.cpu = stageCounters.cpu;
+      newWideCounter.storage = normalizeStorageCounter(stageCounters.storage);
       return newWideCounter;
     });
   }
@@ -625,18 +678,30 @@ export class Stages {
 
     const channelCounters = this.getChannelCounterNamesForStage(stage);
 
-    // Calculate and return the number of workers that have zero count across all inputChannelCounters
+    // Calculate and return the number of workers that have zero interesting counters
     return sum(
-      Object.values(forStageCounters).map(stageCounters =>
-        Number(
+      Object.values(forStageCounters).map(stageCounters => {
+        // Check if the worker has any wall time recorded
+        const { cpu } = stageCounters;
+        if (cpu) {
+          const totalWall = sum(CPUS_COUNTER_FIELDS, field => cpu[field]?.wall || 0);
+          if (totalWall > 0) return 0;
+        }
+
+        // Check if the worker has any channel activity
+        return Number(
           channelCounters.every(channel => {
             const c = stageCounters[channel];
             if (!c) return true;
-            const totalRows = sum(c.rows || []);
-            return totalRows === 0;
+            return (
+              sum(c.rows || []) === 0 &&
+              sum(c.files || []) === 0 &&
+              sum(c.bytes || []) === 0 &&
+              sum(c.frames || []) === 0
+            );
           }),
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -700,6 +765,10 @@ export class Stages {
           c.frames += channelCounter.frames?.[i] || 0;
           c.files += channelCounter.files?.[i] || 0;
           c.totalFiles += channelCounter.totalFiles?.[i] || 0;
+          c.loadBytes += channelCounter.loadBytes?.[i] || 0;
+          c.loadTime += channelCounter.loadTime?.[i] || 0;
+          c.loadWait += channelCounter.loadWait?.[i] || 0;
+          c.loadFiles += channelCounter.loadFiles?.[i] || 0;
         }
       }
     }

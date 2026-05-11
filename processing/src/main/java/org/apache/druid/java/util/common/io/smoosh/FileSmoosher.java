@@ -35,11 +35,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
-import org.apache.druid.segment.file.SegmentFileContainerMetadata;
-import org.apache.druid.segment.file.SegmentInternalFileMetadata;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -99,16 +96,11 @@ public class FileSmoosher implements SegmentFileBuilder
   private Outer currOut = null;
   private boolean writerCurrentlyInUse = false;
 
-  // helper for SegmentFileBuilderV10 to have control over naming of smoosh output files; if this is non-null
-  // meta.smoosh is not written
-  @Nullable
-  private final String outputFileName;
-
   public FileSmoosher(
       File baseDir
   )
   {
-    this(baseDir, Integer.MAX_VALUE, null);
+    this(baseDir, Integer.MAX_VALUE);
   }
 
   public FileSmoosher(
@@ -116,18 +108,8 @@ public class FileSmoosher implements SegmentFileBuilder
       int maxChunkSize
   )
   {
-    this(baseDir, maxChunkSize, null);
-  }
-
-  public FileSmoosher(
-      File baseDir,
-      int maxChunkSize,
-      @Nullable String outputFileName
-  )
-  {
     this.baseDir = baseDir;
     this.maxChunkSize = maxChunkSize;
-    this.outputFileName = outputFileName;
     this.delegateFileNameMap = new HashMap<>();
 
     Preconditions.checkArgument(maxChunkSize > 0, "maxChunkSize must be a positive value.");
@@ -141,43 +123,6 @@ public class FileSmoosher implements SegmentFileBuilder
   static File makeChunkFile(File baseDir, int i)
   {
     return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
-  }
-
-  static File makeChunkFile(File baseDir, String prefix, int i)
-  {
-    return new File(baseDir, StringUtils.format("%s-%05d.%s", prefix, i, FILE_EXTENSION));
-  }
-
-  public List<File> getOutFiles()
-  {
-    return outFiles;
-  }
-
-  public List<SegmentFileContainerMetadata> getContainers()
-  {
-    List<SegmentFileContainerMetadata> smooshContainers = new ArrayList<>();
-    long offset = 0;
-    for (File f : outFiles) {
-      smooshContainers.add(new SegmentFileContainerMetadata(offset, f.length()));
-      offset += f.length();
-    }
-    return smooshContainers;
-  }
-
-  public Map<String, SegmentInternalFileMetadata> getInternalFiles()
-  {
-    Map<String, SegmentInternalFileMetadata> smooshFileMetadata = new TreeMap<>();
-    for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
-      smooshFileMetadata.put(
-          entry.getKey(),
-          new SegmentInternalFileMetadata(
-              entry.getValue().getFileNum(),
-              entry.getValue().getStartOffset(),
-              entry.getValue().getEndOffset() - entry.getValue().getStartOffset()
-          )
-      );
-    }
-    return smooshFileMetadata;
   }
 
   @Override
@@ -456,26 +401,24 @@ public class FileSmoosher implements SegmentFileBuilder
       currOut.close();
     }
 
-    if (outputFileName == null) {
-      File metaFile = metaFile(baseDir);
+    File metaFile = metaFile(baseDir);
 
-      try (Writer out =
-               new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
-        out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
+    try (Writer out =
+             new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
+      out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
+      out.write("\n");
+
+      for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
+        final Metadata metadata = entry.getValue();
+        out.write(
+            JOINER.join(
+                entry.getKey(),
+                metadata.getFileNum(),
+                metadata.getStartOffset(),
+                metadata.getEndOffset()
+            )
+        );
         out.write("\n");
-
-        for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
-          final Metadata metadata = entry.getValue();
-          out.write(
-              JOINER.join(
-                  entry.getKey(),
-                  metadata.getFileNum(),
-                  metadata.getStartOffset(),
-                  metadata.getEndOffset()
-              )
-          );
-          out.write("\n");
-        }
       }
     }
   }
@@ -483,9 +426,7 @@ public class FileSmoosher implements SegmentFileBuilder
   private Outer getNewCurrOut() throws FileNotFoundException
   {
     final int fileNum = outFiles.size();
-    File outFile = outputFileName != null
-                   ? makeChunkFile(baseDir, outputFileName, fileNum)
-                   : makeChunkFile(baseDir, fileNum);
+    File outFile = makeChunkFile(baseDir, fileNum);
     outFiles.add(outFile);
     return new Outer(fileNum, outFile, maxChunkSize);
   }

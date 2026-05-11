@@ -60,6 +60,20 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", ColumnType.STRING_ARRAY));
     assertFaultSerde(new ColumnNameRestrictedFault("the column"));
+    assertFaultSerde(new DruidExceptionFault(
+        "general",
+        "USER",
+        "INVALID_INPUT",
+        "test message",
+        Collections.emptyMap()
+    ));
+    assertFaultSerde(new DruidExceptionFault(
+        "custom",
+        "ADMIN",
+        "RUNTIME_FAILURE",
+        "another message",
+        Collections.singletonMap("key", "value")
+    ));
     assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY, null));
     assertFaultSerde(new InsertCannotAllocateSegmentFault(
         "the datasource",

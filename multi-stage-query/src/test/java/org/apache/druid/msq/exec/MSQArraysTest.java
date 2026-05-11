@@ -611,8 +611,8 @@ public class MSQArraysTest extends MSQTestBase
             Arrays.asList(2L, 3L),
             null,
             Arrays.asList(3.3d, 4.4d, 5.5d),
-            Arrays.asList(999.0d, null, 5.5d),
-            },
+            Arrays.asList(999.0d, null, 5.5d)
+        },
         new Object[]{
             1672531200000L,
             Arrays.asList("b", "c"),
@@ -719,8 +719,8 @@ public class MSQArraysTest extends MSQTestBase
             null,
             Arrays.asList(2L, 3L),
             null,
-            Arrays.asList(null, 1.1d),
-            }
+            Arrays.asList(null, 1.1d)
+        }
     );
 
     RowSignature rowSignatureWithoutTimeColumn =

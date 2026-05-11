@@ -133,25 +133,24 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     RESOURCE_CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "{7}")
+  @Parameterized.Parameters(name = "{6}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners(true);
     List<Object[]> parameters = new ArrayList<>();
-    for (int i = 0; i < 32; i++) {
+    for (boolean enableSpecialization : new boolean[]{false, true}) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[8];
+        Object[] params = new Object[7];
         params[0] = firstParameter;
-        params[1] = (i & 1) != 0;
-        params[2] = (i & 2) != 0;
-        params[3] = (i & 4) != 0;
-        params[4] = (i & 8) != 0;
-        params[5] = (i & 16) != 0;
-        params[6] = QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS;
-        params[7] = firstParameter + " double aggs";
-        Object[] params2 = Arrays.copyOf(params, 8);
-        params2[6] = QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS;
-        params2[7] = firstParameter + " float aggs";
+        params[1] = enableSpecialization; // specializeGeneric1AggPooledTopN
+        params[2] = enableSpecialization; // specializeGeneric2AggPooledTopN
+        params[3] = enableSpecialization; // specializeHistorical1SimpleDoubleAggPooledTopN
+        params[4] = enableSpecialization; // specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN
+        params[5] = QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS;
+        params[6] = firstParameter + " double aggs" + (enableSpecialization ? " specialized" : " default");
+        Object[] params2 = Arrays.copyOf(params, 7);
+        params2[5] = QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS;
+        params2[6] = firstParameter + " float aggs" + (enableSpecialization ? " specialized" : " default");
         parameters.add(params);
         parameters.add(params2);
       }
@@ -207,7 +206,6 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   private final TestQueryRunner<Result<TopNResultValue>> runner;
-  private final boolean duplicateSingleAggregatorQueries;
   private final List<AggregatorFactory> commonAggregators;
 
 
@@ -221,7 +219,6 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
       boolean specializeGeneric2AggPooledTopN,
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
       boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN,
-      boolean duplicateSingleAggregatorQueries,
       List<AggregatorFactory> commonAggregators,
       String testName
   )
@@ -235,35 +232,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     PooledTopNAlgorithm.setSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN(
         specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN
     );
-    this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
     this.commonAggregators = commonAggregators;
-  }
-
-  private List<AggregatorFactory> duplicateAggregators(AggregatorFactory aggregatorFactory, AggregatorFactory duplicate)
-  {
-    if (duplicateSingleAggregatorQueries) {
-      return ImmutableList.of(aggregatorFactory, duplicate);
-    } else {
-      return Collections.singletonList(aggregatorFactory);
-    }
-  }
-
-  private List<Map<String, Object>> withDuplicateResults(
-      List<? extends Map<String, Object>> results,
-      String key,
-      String duplicateKey
-  )
-  {
-    if (!duplicateSingleAggregatorQueries) {
-      return (List<Map<String, Object>>) results;
-    }
-    List<Map<String, Object>> resultsWithDuplicates = new ArrayList<>();
-    for (Map<String, Object> result : results) {
-      resultsWithDuplicates.add(
-          ImmutableMap.<String, Object>builder().putAll(result).put(duplicateKey, result.get(key)).build()
-      );
-    }
-    return resultsWithDuplicates;
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResults(
@@ -3463,11 +3432,12 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNQueryByComplexMetric()
   {
-    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new DefaultDimensionSpec(
+    final ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new DefaultDimensionSpec(
         QueryRunnerTestHelper.QUALITY_DIMENSION,
         QueryRunnerTestHelper.QUALITY_DIMENSION
     ));
-    TopNQuery query =
+
+    final TopNQuery query =
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
             .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -3475,33 +3445,81 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-            .aggregators(duplicateAggregators(
-                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
-                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
-            ))
+            .aggregators(
+                Collections.singletonList(
+                    new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false)
+                )
+            )
             .build();
 
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             TopNResultValue.create(
-                withDuplicateResults(
-                    Arrays.<Map<String, Object>>asList(
-                        ImmutableMap.of(
-                            "market", "spot",
-                            "numVals", 9.019833517963864d
-                        ),
-                        ImmutableMap.of(
-                            "market", "total_market",
-                            "numVals", 2.000977198748901d
-                        ),
-                        ImmutableMap.of(
-                            "market", "upfront",
-                            "numVals", 2.000977198748901d
-                        )
+                Arrays.asList(
+                    ImmutableMap.of(
+                        "market", "spot",
+                        "numVals", 9.019833517963864d
                     ),
-                    "numVals",
-                    "numVals1"
+                    ImmutableMap.of(
+                        "market", "total_market",
+                        "numVals", 2.000977198748901d
+                    ),
+                    ImmutableMap.of(
+                        "market", "upfront",
+                        "numVals", 2.000977198748901d
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNQueryByComplexMetric_duplicateAggregators()
+  {
+    final ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new DefaultDimensionSpec(
+        QueryRunnerTestHelper.QUALITY_DIMENSION,
+        QueryRunnerTestHelper.QUALITY_DIMENSION
+    ));
+
+    final TopNQuery query =
+        new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
+            .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+            .metric(new NumericTopNMetricSpec("numVals"))
+            .threshold(10)
+            .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+            .aggregators(
+                ImmutableList.of(
+                    new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                    new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
+                )
+            )
+            .build();
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.asList(
+                    ImmutableMap.of(
+                        "market", "spot",
+                        "numVals", 9.019833517963864d,
+                        "numVals1", 9.019833517963864d
+                    ),
+                    ImmutableMap.of(
+                        "market", "total_market",
+                        "numVals", 2.000977198748901d,
+                        "numVals1", 2.000977198748901d
+                    ),
+                    ImmutableMap.of(
+                        "market", "upfront",
+                        "numVals", 2.000977198748901d,
+                        "numVals1", 2.000977198748901d
+                    )
                 )
             )
         )
@@ -3512,19 +3530,22 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNQueryCardinalityAggregatorWithExtractionFn()
   {
-    String helloJsFn = "function(str) { return 'hello' }";
-    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
+    final String helloJsFn = "function(str) { return 'hello' }";
+    final ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    DimensionSpec dimSpec = new ExtractionDimensionSpec(QueryRunnerTestHelper.MARKET_DIMENSION,
-                                                        QueryRunnerTestHelper.MARKET_DIMENSION,
-                                                        helloFn);
+    final DimensionSpec dimSpec = new ExtractionDimensionSpec(
+        QueryRunnerTestHelper.MARKET_DIMENSION,
+        QueryRunnerTestHelper.MARKET_DIMENSION,
+        helloFn
+    );
 
-    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new ExtractionDimensionSpec(
+    final ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new ExtractionDimensionSpec(
         QueryRunnerTestHelper.QUALITY_DIMENSION,
         QueryRunnerTestHelper.QUALITY_DIMENSION,
         helloFn
     ));
-    TopNQuery query =
+
+    final TopNQuery query =
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
             .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -3532,25 +3553,73 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-            .aggregators(duplicateAggregators(
-                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
-                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
-            ))
+            .aggregators(
+                Collections.singletonList(
+                    new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false)
+                )
+            )
             .build();
 
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             TopNResultValue.create(
-                withDuplicateResults(
-                    Collections.singletonList(
-                        ImmutableMap.of(
-                            "market", "hello",
-                            "numVals", 1.0002442201269182d
-                        )
-                    ),
-                    "numVals",
-                    "numVals1"
+                Collections.singletonList(
+                    ImmutableMap.of(
+                        "market", "hello",
+                        "numVals", 1.0002442201269182d
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNQueryCardinalityAggregatorWithExtractionFn_duplicateAggregators()
+  {
+    final String helloJsFn = "function(str) { return 'hello' }";
+    final ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    final DimensionSpec dimSpec = new ExtractionDimensionSpec(
+        QueryRunnerTestHelper.MARKET_DIMENSION,
+        QueryRunnerTestHelper.MARKET_DIMENSION,
+        helloFn
+    );
+
+    final ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.of(new ExtractionDimensionSpec(
+        QueryRunnerTestHelper.QUALITY_DIMENSION,
+        QueryRunnerTestHelper.QUALITY_DIMENSION,
+        helloFn
+    ));
+
+    final TopNQuery query =
+        new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
+            .dimension(dimSpec)
+            .metric(new NumericTopNMetricSpec("numVals"))
+            .threshold(10)
+            .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+            .aggregators(
+                ImmutableList.of(
+                    new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                    new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
+                )
+            )
+            .build();
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Collections.singletonList(
+                    ImmutableMap.of(
+                        "market", "hello",
+                        "numVals", 1.0002442201269182d,
+                        "numVals1", 1.0002442201269182d
+                    )
                 )
             )
         )
@@ -4019,35 +4088,50 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testAlphaNumericTopNWithNullPreviousStop()
   {
-    TopNQuery query = new TopNQueryBuilder()
+    final TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(Granularities.ALL)
         .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.SECOND_ONLY)
-        .aggregators(duplicateAggregators(
-            QueryRunnerTestHelper.ROWS_COUNT,
-            new CountAggregatorFactory("rows1")
-        ))
+        .aggregators(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
         .build();
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
             TopNResultValue.create(
-                withDuplicateResults(
-                    Arrays.asList(
-                        ImmutableMap.of(
-                            "market", "spot",
-                            "rows", 9L
-                        ),
-                        ImmutableMap.of(
-                            "market", "total_market",
-                            "rows", 2L
-                        )
-                    ),
-                    "rows",
-                    "rows1"
+                Arrays.asList(
+                    ImmutableMap.of("market", "spot", "rows", 9L),
+                    ImmutableMap.of("market", "total_market", "rows", 2L)
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+  }
+
+  @Test
+  public void testAlphaNumericTopNWithNullPreviousStop_duplicateAggregators()
+  {
+    final TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.ALL)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .aggregators(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, new CountAggregatorFactory("rows1")))
+        .build();
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.asList(
+                    ImmutableMap.of("market", "spot", "rows", 9L, "rows1", 9L),
+                    ImmutableMap.of("market", "total_market", "rows", 2L, "rows1", 2L)
                 )
             )
         )
@@ -4058,35 +4142,50 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testNumericDimensionTopNWithNullPreviousStop()
   {
-    TopNQuery query = new TopNQueryBuilder()
+    final TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(Granularities.ALL)
         .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.SECOND_ONLY)
-        .aggregators(duplicateAggregators(
-            QueryRunnerTestHelper.ROWS_COUNT,
-            new CountAggregatorFactory("rows1")
-        ))
+        .aggregators(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
         .build();
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
             TopNResultValue.create(
-                withDuplicateResults(
-                    Arrays.asList(
-                        ImmutableMap.of(
-                            "market", "spot",
-                            "rows", 9L
-                        ),
-                        ImmutableMap.of(
-                            "market", "total_market",
-                            "rows", 2L
-                        )
-                    ),
-                    "rows",
-                    "rows1"
+                Arrays.asList(
+                    ImmutableMap.of("market", "spot", "rows", 9L),
+                    ImmutableMap.of("market", "total_market", "rows", 2L)
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+  }
+
+  @Test
+  public void testNumericDimensionTopNWithNullPreviousStop_duplicateAggregators()
+  {
+    final TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.ALL)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .aggregators(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, new CountAggregatorFactory("rows1")))
+        .build();
+
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.asList(
+                    ImmutableMap.of("market", "spot", "rows", 9L, "rows1", 9L),
+                    ImmutableMap.of("market", "total_market", "rows", 2L, "rows1", 2L)
                 )
             )
         )

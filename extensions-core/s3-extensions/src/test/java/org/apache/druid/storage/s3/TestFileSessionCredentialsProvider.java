@@ -19,13 +19,14 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.io.Files;
 import org.apache.druid.common.aws.FileSessionCredentialsProvider;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -46,9 +47,11 @@ public class TestFileSessionCredentialsProvider
     }
 
     FileSessionCredentialsProvider provider = new FileSessionCredentialsProvider(file.getAbsolutePath());
-    AWSSessionCredentials sessionCredentials = (AWSSessionCredentials) provider.getCredentials();
-    Assert.assertEquals("sessionTokenSample", sessionCredentials.getSessionToken());
-    Assert.assertEquals("accessKeySample", sessionCredentials.getAWSAccessKeyId());
-    Assert.assertEquals("secretKeySample", sessionCredentials.getAWSSecretKey());
+    AwsCredentials credentials = provider.resolveCredentials();
+    Assert.assertTrue("Credentials should be session credentials", credentials instanceof AwsSessionCredentials);
+    AwsSessionCredentials sessionCredentials = (AwsSessionCredentials) credentials;
+    Assert.assertEquals("sessionTokenSample", sessionCredentials.sessionToken());
+    Assert.assertEquals("accessKeySample", sessionCredentials.accessKeyId());
+    Assert.assertEquals("secretKeySample", sessionCredentials.secretAccessKey());
   }
 }

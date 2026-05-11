@@ -18,4 +18,4 @@
 set -e
 set -x
 
-mvn -B clean -DstrictCompile -pl '!embedded-tests' compile test-compile --fail-at-end -P skip-tests -Dweb.console.skip=true -T1C
+mvn -B clean -DstrictCompile compile test-compile --fail-at-end -P skip-tests -Dweb.console.skip=true -T1C

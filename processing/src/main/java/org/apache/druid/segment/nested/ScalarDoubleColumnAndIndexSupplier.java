@@ -34,6 +34,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
@@ -635,13 +636,33 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     public String getValue(int index)
     {
       final Double value = dictionary.get(index);
-      return value == null ? null : String.valueOf(value);
+      return Evals.asString(value);
     }
 
     @Override
     public BitmapFactory getBitmapFactory()
     {
       return bitmapFactory;
+    }
+
+    @Override
+    public Iterator<String> getValueIterator()
+    {
+      final Iterator<Double> delegate = dictionary.iterator();
+      return new Iterator<>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return delegate.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          return Evals.asString(delegate.next());
+        }
+      };
     }
   }
 }

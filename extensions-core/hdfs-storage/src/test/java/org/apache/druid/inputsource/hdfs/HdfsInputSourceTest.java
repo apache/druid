@@ -81,7 +81,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
   private static final HdfsInputSourceConfig DEFAULT_INPUT_SOURCE_CONFIG = new HdfsInputSourceConfig(null);
   private static final String COLUMN = "value";
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
-      new TimestampSpec(null, null, null),
+      TimestampSpec.DEFAULT,
       DimensionsSpec.EMPTY,
       ColumnsFilter.all()
   );

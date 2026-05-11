@@ -30,10 +30,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.messages.client.MessageListener;
 import org.apache.druid.messages.client.MessageRelayClient;
+import org.apache.druid.server.http.ServletResourceUtils;
 
 import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -113,34 +112,14 @@ public class MessageRelayResource<MessageType>
     final AsyncContext asyncContext = req.startAsync();
     asyncContext.setTimeout(GET_MESSAGES_TIMEOUT);
     asyncContext.addListener(
-        new AsyncListener()
-        {
-          @Override
-          public void onComplete(AsyncEvent event)
-          {
+        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+          if (didRespond.compareAndSet(false, true)) {
+            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            event.getAsyncContext().complete();
+            batchFuture.cancel(true);
           }
-
-          @Override
-          public void onTimeout(AsyncEvent event)
-          {
-            if (didRespond.compareAndSet(false, true)) {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-              event.getAsyncContext().complete();
-              batchFuture.cancel(true);
-            }
-          }
-
-          @Override
-          public void onError(AsyncEvent event)
-          {
-          }
-
-          @Override
-          public void onStartAsync(AsyncEvent event)
-          {
-          }
-        }
+        })
     );
 
     // Save these items, since "req" becomes inaccessible in future exception handlers.

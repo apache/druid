@@ -19,10 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -39,28 +36,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class MapInputRowParser implements InputRowParser<Map<String, Object>>
+public class MapInputRowParser
 {
-  private final ParseSpec parseSpec;
-
-  @JsonCreator
-  public MapInputRowParser(
-      @JsonProperty("parseSpec") ParseSpec parseSpec
-  )
+  private MapInputRowParser()
   {
-    this.parseSpec = parseSpec;
-  }
-
-  @Override
-  public List<InputRow> parseBatch(Map<String, Object> theMap)
-  {
-    return ImmutableList.of(
-        parse(
-            parseSpec.getTimestampSpec(),
-            parseSpec.getDimensionsSpec(),
-            theMap
-        )
-    );
+    // no instantiation
   }
 
   public static InputRow parse(InputRowSchema inputRowSchema, Map<String, Object> theMap) throws ParseException
@@ -210,16 +190,4 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return input.length() < 100 ? input : input.substring(0, 100) + "...";
   }
 
-  @JsonProperty
-  @Override
-  public ParseSpec getParseSpec()
-  {
-    return parseSpec;
-  }
-
-  @Override
-  public InputRowParser withParseSpec(ParseSpec parseSpec)
-  {
-    return new MapInputRowParser(parseSpec);
-  }
 }

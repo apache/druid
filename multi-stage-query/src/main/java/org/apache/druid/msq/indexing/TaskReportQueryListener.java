@@ -22,21 +22,31 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import org.apache.calcite.sql.type.SqlTypeName;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.exec.QueryListener;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -67,18 +77,25 @@ public class TaskReportQueryListener implements QueryListener
   private final SerializerProvider serializers;
   private final String taskId;
   private final Map<String, Object> taskContext;
+  @Nullable
+  private final ColumnMappings columnMappings;
+  @Nullable
+  private final ResultsContext resultsContext;
 
   private JsonGenerator jg;
   private long numResults;
   private MSQStatusReport statusReport;
   private boolean resultsCurrentlyOpen;
+  private FrameReader frameReader; // Set after onResultsStart
 
   public TaskReportQueryListener(
       final OutputStreamSupplier reportSink,
       final ObjectMapper jsonMapper,
       final String taskId,
       final Map<String, Object> taskContext,
-      final long rowsInTaskReport
+      final long rowsInTaskReport,
+      @Nullable final ColumnMappings columnMappings,
+      @Nullable final ResultsContext resultsContext
   )
   {
     this.reportSink = reportSink;
@@ -87,6 +104,36 @@ public class TaskReportQueryListener implements QueryListener
     this.taskId = taskId;
     this.taskContext = taskContext;
     this.rowsInTaskReport = rowsInTaskReport;
+    this.columnMappings = columnMappings;
+    this.resultsContext = resultsContext;
+  }
+
+  /**
+   * Maps {@link FrameReader#signature()} using {@link ColumnMappings}, then returns the result in the
+   * form expected for {@link MSQResultsReport#getSignature()}.
+   */
+  public static List<MSQResultsReport.ColumnAndType> computeResultSignature(
+      final FrameReader frameReader,
+      @Nullable final ColumnMappings columnMappings
+  )
+  {
+    if (columnMappings == null) {
+      return computeResultSignature(frameReader, ColumnMappings.identity(frameReader.signature()));
+    }
+
+    final RowSignature querySignature = frameReader.signature();
+    final ImmutableList.Builder<MSQResultsReport.ColumnAndType> mappedSignature = ImmutableList.builder();
+
+    for (final ColumnMapping mapping : columnMappings.getMappings()) {
+      mappedSignature.add(
+          new MSQResultsReport.ColumnAndType(
+              mapping.getOutputColumn(),
+              querySignature.getColumnType(mapping.getQueryColumn()).orElse(null)
+          )
+      );
+    }
+
+    return mappedSignature.build();
   }
 
   @Override
@@ -96,16 +143,18 @@ public class TaskReportQueryListener implements QueryListener
   }
 
   @Override
-  public void onResultsStart(List<MSQResultsReport.ColumnAndType> signature, @Nullable List<SqlTypeName> sqlTypeNames)
+  public void onResultsStart(final FrameReader frameReader)
   {
+    this.frameReader = frameReader;
+
     try {
       openGenerator();
       resultsCurrentlyOpen = true;
 
       jg.writeObjectFieldStart(FIELD_RESULTS);
-      writeObjectField(FIELD_RESULTS_SIGNATURE, signature);
-      if (sqlTypeNames != null) {
-        writeObjectField(FIELD_RESULTS_SQL_TYPE_NAMES, sqlTypeNames);
+      writeObjectField(FIELD_RESULTS_SIGNATURE, computeResultSignature(frameReader, columnMappings));
+      if (resultsContext != null && resultsContext.getSqlTypeNames() != null) {
+        writeObjectField(FIELD_RESULTS_SQL_TYPE_NAMES, resultsContext.getSqlTypeNames());
       }
       jg.writeArrayFieldStart(FIELD_RESULTS_RESULTS);
     }
@@ -115,16 +164,40 @@ public class TaskReportQueryListener implements QueryListener
   }
 
   @Override
-  public boolean onResultRow(Object[] row)
+  public boolean onResultBatch(RowsAndColumns rac)
   {
-    try {
-      JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, row);
+    final Frame frame = rac.as(Frame.class);
+    if (frame == null) {
+      throw DruidException.defensive(
+          "Expected Frame, got RAC[%s]. Can only handle Frames in task reports.",
+          rac.getClass().getName()
+      );
+    }
+
+    final Iterator<Object[]> resultIterator = SqlStatementResourceHelper.getResultIterator(
+        frame,
+        frameReader,
+        columnMappings,
+        resultsContext,
+        jsonMapper
+    );
+
+    while (resultIterator.hasNext()) {
+      final Object[] row = resultIterator.next();
+      try {
+        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, row);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       numResults++;
-      return rowsInTaskReport == MSQDestination.UNLIMITED || numResults < rowsInTaskReport;
+
+      if (rowsInTaskReport != MSQDestination.UNLIMITED && numResults >= rowsInTaskReport) {
+        return false;
+      }
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+
+    return true;
   }
 
   @Override

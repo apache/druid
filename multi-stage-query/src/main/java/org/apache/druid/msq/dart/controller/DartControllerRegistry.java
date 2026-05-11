@@ -32,13 +32,22 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
+import org.apache.druid.msq.exec.ControllerRegistry;
+import org.apache.druid.msq.indexing.report.MSQStatusReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +56,7 @@ import java.util.concurrent.TimeUnit;
  * Registry for actively-running {@link Controller} and recently-completed {@link TaskReport}.
  */
 @ManageLifecycle
-public class DartControllerRegistry
+public class DartControllerRegistry implements ControllerRegistry
 {
   /**
    * Minimum frequency for checking if {@link #cleanupExpiredReports()} needs to be run.
@@ -68,7 +77,7 @@ public class DartControllerRegistry
   private final LinkedHashMap<String, QueryInfoAndReport> completeReports = new LinkedHashMap<>();
 
   /**
-   * Map of SQL query ID -> Dart query ID. Used by {@link #getQueryInfoAndReportBySqlQueryId(String)}. Contains an
+   * Map of SQL query ID -> Dart query ID. Used by {@link #getQueryDetailsBySqlQueryId(String)}. Contains an
    * entry for every query in either {@link #controllerMap} or {@link #completeReports}.
    *
    * It is possible for the same SQL query ID to map to multiple Dart query IDs, because SQL query IDs can be set
@@ -120,6 +129,7 @@ public class DartControllerRegistry
    * Add a controller. Throws {@link DruidException} if a controller with the same {@link Controller#queryId()} is
    * already registered.
    */
+  @Override
   public void register(ControllerHolder holder)
   {
     final String dartQueryId = holder.getController().queryId();
@@ -134,6 +144,7 @@ public class DartControllerRegistry
    * time afterwards, based on {@link DartControllerConfig#getMaxRetainedReportCount()} and
    * {@link DartControllerConfig#getMaxRetainedReportDuration()}.
    */
+  @Override
   public void deregister(ControllerHolder holder, @Nullable TaskReport.ReportMap completeReport)
   {
     final String dartQueryId = holder.getController().queryId();
@@ -162,7 +173,7 @@ public class DartControllerRegistry
         completeReports.put(
             dartQueryId,
             new QueryInfoAndReport(
-                DartQueryInfo.fromControllerHolder(holder),
+                createQueryInfo(holder).withDurationMs(getDurationMs(completeReport)),
                 completeReport,
                 DateTimes.nowUtc()
             )
@@ -195,21 +206,12 @@ public class DartControllerRegistry
    * Gets execution details and report for a query.
    */
   @Nullable
-  public QueryInfoAndReport getQueryInfoAndReport(final String queryId)
+  public QueryInfoAndReport getQueryDetails(final String queryId)
   {
     final ControllerHolder runningController = getController(queryId);
 
     if (runningController != null) {
-      final TaskReport.ReportMap liveReportMap = runningController.getController().liveReports();
-      if (liveReportMap != null) {
-        return new QueryInfoAndReport(
-            DartQueryInfo.fromControllerHolder(runningController),
-            liveReportMap,
-            DateTimes.nowUtc()
-        );
-      } else {
-        return null;
-      }
+      return getQueryDetails(runningController);
     } else {
       synchronized (completeReports) {
         return completeReports.get(queryId);
@@ -221,13 +223,48 @@ public class DartControllerRegistry
    * Gets execution details and report for a query by SQL query ID.
    */
   @Nullable
-  public QueryInfoAndReport getQueryInfoAndReportBySqlQueryId(final String sqlQueryId)
+  public QueryInfoAndReport getQueryDetailsBySqlQueryId(final String sqlQueryId)
   {
     final String dartQueryId = sqlQueryIdToDartQueryId.get(sqlQueryId);
     if (dartQueryId == null) {
       return null;
     }
-    return getQueryInfoAndReport(dartQueryId);
+    return getQueryDetails(dartQueryId);
+  }
+
+  /**
+   * Gets execution details and reports for all completed queries.
+   */
+  public List<QueryInfoAndReport> getAllQueryDetails(final boolean includeComplete)
+  {
+    final Set<String> queryIds = new HashSet<>();
+    final List<QueryInfoAndReport> retVal = new ArrayList<>();
+
+    for (final ControllerHolder controllerHolder : getAllControllers()) {
+      if (queryIds.add(controllerHolder.getController().queryId())) {
+        retVal.add(getQueryDetails(controllerHolder));
+      }
+    }
+
+    if (includeComplete) {
+      synchronized (completeReports) {
+        for (Map.Entry<String, QueryInfoAndReport> entry : completeReports.entrySet()) {
+          if (queryIds.add(entry.getKey())) {
+            retVal.add(entry.getValue());
+          }
+        }
+      }
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Create {@link DartQueryInfo} from a {@link ControllerHolder}.
+   */
+  protected DartQueryInfo createQueryInfo(final ControllerHolder controllerHolder)
+  {
+    return DartQueryInfo.fromControllerHolder(controllerHolder);
   }
 
   /**
@@ -251,5 +288,30 @@ public class DartControllerRegistry
         }
       }
     }
+  }
+
+  private QueryInfoAndReport getQueryDetails(final ControllerHolder controllerHolder)
+  {
+    return new QueryInfoAndReport(
+        createQueryInfo(controllerHolder),
+        controllerHolder.getController().liveReports(),
+        DateTimes.nowUtc()
+    );
+  }
+
+  /**
+   * Extracts durationMs from the {@link MSQStatusReport} within a {@link TaskReport.ReportMap}, if present.
+   */
+  @Nullable
+  private static Long getDurationMs(final TaskReport.ReportMap reportMap)
+  {
+    final TaskReport msqReport = reportMap.get(MSQTaskReport.REPORT_KEY);
+    if (msqReport instanceof MSQTaskReport) {
+      final MSQTaskReportPayload payload = ((MSQTaskReport) msqReport).getPayload();
+      if (payload != null && payload.getStatus() != null) {
+        return payload.getStatus().getDurationMs();
+      }
+    }
+    return null;
   }
 }

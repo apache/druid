@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.data.input.UnionSubEnum;
 import org.apache.druid.data.input.UnionSubFixed;
@@ -46,7 +46,14 @@ public class AvroFlattenerMakerTest
   private static final AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
       new AvroFlattenerMaker(false, false, true, false);
 
-  private static final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+  private static final SomeAvroDatum RECORD = AvroStreamInputFormatTest.buildSomeAvroDatum();
+
+  public static SomeAvroDatum buildSomeAvroDatumWithUnionValue(Object unionValue)
+  {
+    return AvroStreamInputFormatTest.createSomeAvroDatumBuilderDefaults()
+                                    .setSomeMultiMemberUnion(unionValue)
+                                    .build();
+  }
 
   @Test
   public void getRootField_flattenerWithoutExtractUnionsByType()
@@ -85,31 +92,31 @@ public class AvroFlattenerMakerTest
 
     // int
     Assert.assertEquals(1, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.int").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(1)));
+        buildSomeAvroDatumWithUnionValue(1)));
 
     // long
     Assert.assertEquals(1L, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.long").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(1L)));
+        buildSomeAvroDatumWithUnionValue(1L)));
 
     // float
     Assert.assertEquals((float) 1.0, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.float").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue((float) 1.0)));
+        buildSomeAvroDatumWithUnionValue((float) 1.0)));
 
     // double
     Assert.assertEquals(1.0, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.double").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(1.0)));
+        buildSomeAvroDatumWithUnionValue(1.0)));
 
     // string
     Assert.assertEquals("string", flattener.makeJsonPathExtractor("$.someMultiMemberUnion.string").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(new Utf8("string"))));
+        buildSomeAvroDatumWithUnionValue(new Utf8("string"))));
 
     // bytes
     Assert.assertArrayEquals(new byte[] {1}, (byte[]) flattener.makeJsonPathExtractor("$.someMultiMemberUnion.bytes").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(ByteBuffer.wrap(new byte[] {1}))));
+        buildSomeAvroDatumWithUnionValue(ByteBuffer.wrap(new byte[] {1}))));
 
     // map
     Assert.assertEquals(2, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.map.two").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(
+        buildSomeAvroDatumWithUnionValue(
             ImmutableMap.<String, Integer>builder()
                         .put("one", 1)
                         .put("two", 2)
@@ -119,13 +126,13 @@ public class AvroFlattenerMakerTest
 
     // array
     Assert.assertEquals(3, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.array[2]").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(Arrays.asList(1, 2, 3))));
+        buildSomeAvroDatumWithUnionValue(Arrays.asList(1, 2, 3))));
 
     // Named types are accessed by name
 
     // record
     Assert.assertEquals("subRecordString", flattener.makeJsonPathExtractor("$.someMultiMemberUnion.UnionSubRecord.subString").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(
+        buildSomeAvroDatumWithUnionValue(
             UnionSubRecord.newBuilder()
                           .setSubString("subRecordString")
                           .build())));
@@ -133,11 +140,11 @@ public class AvroFlattenerMakerTest
     // fixed
     final byte[] fixedBytes = new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     Assert.assertEquals(fixedBytes, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.UnionSubFixed").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(new UnionSubFixed(fixedBytes))));
+        buildSomeAvroDatumWithUnionValue(new UnionSubFixed(fixedBytes))));
 
     // enum
     Assert.assertEquals(String.valueOf(UnionSubEnum.ENUM1), flattener.makeJsonPathExtractor("$.someMultiMemberUnion.UnionSubEnum").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(UnionSubEnum.ENUM1)));
+        buildSomeAvroDatumWithUnionValue(UnionSubEnum.ENUM1)));
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -164,7 +171,7 @@ public class AvroFlattenerMakerTest
     final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
     final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
 
-    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    SomeAvroDatum input = AvroStreamInputFormatTest.buildSomeAvroDatum();
     // isFieldPrimitive on someStringArray is false
     // as it contains items as nulls and strings
     // so flattenerNested should only be able to discover it
@@ -218,7 +225,7 @@ public class AvroFlattenerMakerTest
   {
     final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
 
-    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    SomeAvroDatum input = AvroStreamInputFormatTest.buildSomeAvroDatum();
 
     Assert.assertEquals(
         ImmutableSet.of(

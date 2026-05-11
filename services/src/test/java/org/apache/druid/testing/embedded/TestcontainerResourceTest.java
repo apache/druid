@@ -22,7 +22,7 @@ package org.apache.druid.testing.embedded;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.testcontainers.containers.NginxContainer;
+import org.testcontainers.nginx.NginxContainer;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
@@ -77,7 +77,7 @@ public class TestcontainerResourceTest
   /**
    * An {@link NginxContainer} wrapped as an {@link EmbeddedResource}.
    */
-  private static class NginxTestcontainerResource extends TestcontainerResource<NginxContainer<?>>
+  private static class NginxTestcontainerResource extends TestcontainerResource<NginxContainer>
   {
     private final MountableFile indexHtml;
 
@@ -87,9 +87,9 @@ public class TestcontainerResourceTest
     }
 
     @Override
-    protected NginxContainer<?> createContainer()
+    protected NginxContainer createContainer()
     {
-      return new NginxContainer<>("nginx:alpine")
+      return new NginxContainer("nginx:alpine")
           .withCopyFileToContainer(
               indexHtml,
               "/usr/share/nginx/html/index.html"

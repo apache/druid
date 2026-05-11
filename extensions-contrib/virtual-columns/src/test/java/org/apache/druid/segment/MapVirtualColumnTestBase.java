@@ -20,9 +20,10 @@
 package org.apache.druid.segment;
 
 import com.google.common.io.CharSource;
-import org.apache.druid.data.input.impl.DelimitedParseSpec;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -31,8 +32,8 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
@@ -45,17 +46,19 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
         "2011-01-12T00:00:00.000Z\tc\tkey1,key5\tvalue1,value5,value9\n"
     );
 
-    final StringInputRowParser parser = new StringInputRowParser(
-        new DelimitedParseSpec(
-            new TimestampSpec("ts", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim", "keys", "values"))),
-            "\t",
-            ",",
-            Arrays.asList("ts", "dim", "keys", "values"),
-            false,
-            0
-        ),
-        "utf8"
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec("ts", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim", "keys", "values"))),
+        ColumnsFilter.all()
+    );
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        List.of("ts", "dim", "keys", "values"),
+        ",",
+        null,
+        null,
+        null,
+        0,
+        null
     );
 
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
@@ -68,7 +71,8 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
             .setMaxRowCount(10000)
             .build(),
         input,
-        parser
+        rowSchema,
+        format
     );
   }
 

@@ -46,7 +46,7 @@ public class DistinctKeyCollectorTest
   private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0);
   private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
   private final Comparator<RowKey> comparator = clusterBy.keyComparator(signature);
-  private final int numKeys = 500_000;
+  private final int numKeys = 100_000;
 
   @Test
   public void test_empty()

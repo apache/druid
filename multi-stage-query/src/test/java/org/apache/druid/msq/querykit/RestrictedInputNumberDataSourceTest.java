@@ -25,10 +25,12 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -152,6 +154,15 @@ public class RestrictedInputNumberDataSourceTest
     Assert.assertEquals(
         dataSource,
         mapper.readValue(mapper.writeValueAsString(dataSource), DataSource.class)
+    );
+  }
+
+  @Test
+  public void test_createSegmentPruner_withRowFilterPolicy()
+  {
+    Assert.assertEquals(
+        new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
+        restrictedFooDataSource.createSegmentPruner()
     );
   }
 }

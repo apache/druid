@@ -34,6 +34,7 @@ The metadata store includes the following:
 - Compaction configuration records
 - Datasource records created by supervisors
 - Indexer task logs
+- Indexing State records
 
 When you delete some entities from Apache Druid, records related to the entity may remain in the metadata store.
 If you have a high datasource churn rate, meaning you frequently create and delete many short-lived datasources or other related entities like compaction configuration or rules, the leftover records can fill your metadata store and cause performance issues.
@@ -59,7 +60,7 @@ If you have compliance requirements to keep audit records and you enable automat
 ## Configure automated metadata cleanup
 
 You can configure cleanup for each entity separately, as described in this section.
-Define the properties in the `coordinator/runtime.properties` file.
+Unless otherwise specified, define the properties in the `coordinator/runtime.properties` file.
 
 The cleanup of one entity may depend on the cleanup of another entity as follows:
 - You have to configure a [kill task for segment records](#segment-records-and-segments-in-deep-storage-kill-task) before you can configure automated cleanup for [rules](#rules-records) or [compaction configuration](#compaction-configuration-records).
@@ -131,6 +132,27 @@ Compaction configuration cleanup uses the following configuration:
 If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
 :::
 
+### Indexing State Records
+
+:::info
+Indexing State Records are cleaned up by the overlord. Therefore, this section should be configured in the `overlord/runtime.properties` file.
+:::
+
+:::info
+Indexing State Records are only created if you are using automatic compaction supervisors.
+:::
+
+Indexing State records become eligible for deletion in the following scenarios:
+- When no `used` segments have an `indexing_state_fingerprint` that is equal to the `fingerprint` of the record.
+- When a record has `pending` state set to `true`
+
+Indexing State cleanup uses the following configuration:
+ - `druid.overlord.kill.indexingStates.on`: When `true`, enables cleanup for indexing state records.
+ - `druid.overlord.kill.indexingStates.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible indexing state records. Defaults to `P1D`.
+ - `druid.overlord.kill.indexingStates.durationToRetain`:  Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after indexing state records are marked as `used=false` become eligible for deletion. Defaults to `P7D`.
+ - `druid.overlord.kill.indexingStates.pendingDurationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that pending indexing state records become eligible for deletion. Defaults to `P7D`.
+   - It is recommended that this value be greater than the maximum expected duration of compaction tasks to avoid pending records being deleted prematurely.
+
 ### Datasource records created by supervisors
 
 Datasource records created by supervisors become eligible for deletion when the supervisor is terminated or does not exist in the `druid_supervisors` table and the `durationToRetain` time has passed since their creation.
@@ -160,7 +182,9 @@ For more detail, see [Task logging](../configuration/index.md#task-logging).
 ## Disable automated metadata cleanup
 
 Druid automatically cleans up metadata records, excluding compaction configuration records and indexer task logs.
-To disable automated metadata cleanup, set the following properties in the `coordinator/runtime.properties` file:
+To disable automated metadata cleanup
+
+set the following properties in the `coordinator/runtime.properties` file:
 
 ```properties
 # Keep unused segments
@@ -178,10 +202,18 @@ druid.coordinator.kill.rule.on=false
 # Keep datasource records created by supervisors
 druid.coordinator.kill.datasource.on=false
 ```
+set the following properties in the `overlord/runtime.properties` file:
+
+```properties
+# Keep indexing state records
+druid.overlord.kill.indexingStates.on=false
+```
 
 ## Example configuration for automated metadata cleanup
 
 Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old after a seven day buffer period in case you want to recover the data. The exception is for audit logs, which you need to retain for 30 days:
+
+Coordinator configuration (`coordinator/runtime.properties`):
 
 ```properties
 ...
@@ -223,6 +255,18 @@ druid.coordinator.kill.compaction.period=P1D
 druid.coordinator.kill.datasource.on=true
 druid.coordinator.kill.datasource.period=P1D
 druid.coordinator.kill.datasource.durationToRetain=P4D
+...
+```
+
+Overlord configuration - if using automatic compaction supervisors (`overlord/runtime.properties`):
+
+```properties
+...
+# Poll every day to delete pending or unreferenced indexing state records > 4 days old
+druid.overlord.kill.indexingStates.on=true
+druid.overlord.kill.indexingStates.period=P1D
+druid.overlord.kill.indexingStates.durationToRetain=P4D
+druid.overlord.kill.indexingStates.pendingDurationToRetain=P4D
 ...
 ```
 

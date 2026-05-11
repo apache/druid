@@ -28,10 +28,25 @@ public interface VirtualStorageLocationStats
   long getUsedBytes();
 
   /**
+   * Number of active holds on cache entries, indicating active usage at the time this measurement collection was
+   * created.
+   */
+  long getHoldCount();
+
+  /**
+   * Number of bytes from active holds on cache entries, indicating active usage at the time this measurement
+   * collection was created.
+   */
+  long getHoldBytes();
+
+  /**
    * Number of operations for which an entry was already present during the measurement period
    */
   long getHitCount();
 
+  /**
+   * Number of bytes used by operations on entries which were already present during the measurement period
+   */
   long getHitBytes();
 
   /**

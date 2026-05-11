@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing.processor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,13 +45,14 @@ import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -72,6 +74,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -80,17 +83,20 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
+  private final Map<String, VirtualColumn> clusterByVirtualColumnMappings;
   private final MSQTuningConfig tuningConfig;
 
   @JsonCreator
   public SegmentGeneratorStageProcessor(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
+      @JsonProperty("clusterByVirtualColumnMappings") @Nullable final Map<String, VirtualColumn> clusterByVirtualColumnMappings,
       @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
+    this.clusterByVirtualColumnMappings = clusterByVirtualColumnMappings == null ? Map.of() : clusterByVirtualColumnMappings;
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
   }
 
@@ -104,6 +110,13 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
   public ColumnMappings getColumnMappings()
   {
     return columnMappings;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Map<String, VirtualColumn> getClusterByVirtualColumnMappings()
+  {
+    return clusterByVirtualColumnMappings;
   }
 
   @JsonProperty
@@ -144,7 +157,7 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
     // Expect a single input slice.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(context.workOrder().getInputs());
     final Sequence<Pair<Integer, ReadableInput>> inputSequence =
-        QueryKitUtils.readPartitions(context, slice.getPartitions())
+        QueryKitUtils.readPartitions(new StandardPartitionReader(context), slice.getPartitions())
                      .map(
                          new Function<>()
                          {
@@ -164,9 +177,15 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
-          final StagePartition stagePartition = Preconditions.checkNotNull(readableInputPair.rhs.getStagePartition());
+          final ReadableInput readableInput = readableInputPair.rhs;
           final SegmentIdWithShardSpec segmentIdWithShardSpec = extra.get(readableInputPair.lhs);
-          final String idString = StringUtils.format("%s:%s", stagePartition, context.workOrder().getWorkerNumber());
+          final String idString = StringUtils.format(
+              "%s_%s_%s:%s",
+              context.workOrder().getStageDefinition().getId().getQueryId(),
+              readableInput.getStageNumber(),
+              readableInput.getPartitionNumber(),
+              context.workOrder().getWorkerNumber()
+          );
           final File persistDirectory = new File(
               frameContext.persistDir(),
               segmentIdWithShardSpec.asSegmentId().toString()
@@ -255,13 +274,14 @@ public class SegmentGeneratorStageProcessor implements StageProcessor<Set<DataSe
     SegmentGeneratorStageProcessor that = (SegmentGeneratorStageProcessor) o;
     return Objects.equals(dataSchema, that.dataSchema)
            && Objects.equals(columnMappings, that.columnMappings)
+           && Objects.equals(clusterByVirtualColumnMappings, that.clusterByVirtualColumnMappings)
            && Objects.equals(tuningConfig, that.tuningConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSchema, columnMappings, tuningConfig);
+    return Objects.hash(dataSchema, columnMappings, clusterByVirtualColumnMappings, tuningConfig);
   }
 
   @Override

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.server.DruidNode;
@@ -97,8 +98,8 @@ public class DartControllerRegistryTest
 
     Assertions.assertEquals(0, registry.getAllControllers().size());
     Assertions.assertNull(registry.getController("dart1"));
-    Assertions.assertNull(registry.getQueryInfoAndReport("dart1"));
-    Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("sql1"));
+    Assertions.assertNull(registry.getQueryDetails("dart1"));
+    Assertions.assertNull(registry.getQueryDetailsBySqlQueryId("sql1"));
   }
 
   @Test
@@ -118,13 +119,13 @@ public class DartControllerRegistryTest
     Assertions.assertNull(registry.getController("dart1"));
 
     // But report is retained
-    final QueryInfoAndReport infoAndReport = registry.getQueryInfoAndReport("dart1");
+    final QueryInfoAndReport infoAndReport = registry.getQueryDetails("dart1");
     Assertions.assertNotNull(infoAndReport);
     Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
     Assertions.assertSame(report, infoAndReport.getReportMap().get(MSQTaskReport.REPORT_KEY));
 
     // And can be looked up by SQL query ID
-    final QueryInfoAndReport infoAndReportBySql = registry.getQueryInfoAndReportBySqlQueryId("sql1");
+    final QueryInfoAndReport infoAndReportBySql = registry.getQueryDetailsBySqlQueryId("sql1");
     Assertions.assertNotNull(infoAndReportBySql);
     Assertions.assertEquals("dart1", infoAndReportBySql.getQueryInfo().getDartQueryId());
     Assertions.assertEquals("sql1", infoAndReportBySql.getQueryInfo().getSqlQueryId());
@@ -142,8 +143,8 @@ public class DartControllerRegistryTest
     registry.register(holder);
     registry.deregister(holder, reportMap);
 
-    Assertions.assertNull(registry.getQueryInfoAndReport("dart1"));
-    Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("sql1"));
+    Assertions.assertNull(registry.getQueryDetails("dart1"));
+    Assertions.assertNull(registry.getQueryDetailsBySqlQueryId("sql1"));
   }
 
   @Test
@@ -171,12 +172,12 @@ public class DartControllerRegistryTest
 
     registry.register(holder);
 
-    final QueryInfoAndReport infoAndReport = registry.getQueryInfoAndReport("dart1");
+    final QueryInfoAndReport infoAndReport = registry.getQueryDetails("dart1");
     Assertions.assertNotNull(infoAndReport);
     Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
 
     // Also works by SQL query ID
-    final QueryInfoAndReport infoAndReportBySql = registry.getQueryInfoAndReportBySqlQueryId("sql1");
+    final QueryInfoAndReport infoAndReportBySql = registry.getQueryDetailsBySqlQueryId("sql1");
     Assertions.assertNotNull(infoAndReportBySql);
     Assertions.assertEquals("dart1", infoAndReportBySql.getQueryInfo().getDartQueryId());
 
@@ -204,12 +205,10 @@ public class DartControllerRegistryTest
 
     registry.register(holder);
 
-    // Returns null when no live reports are available
-    Assertions.assertNull(registry.getQueryInfoAndReport("dart1"));
-
-    // But the sqlQueryId mapping should still work after deregister with report
-    registry.deregister(holder, null);
-    Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("sql1"));
+    // Returns null report when no live reports are available
+    final QueryInfoAndReport infoAndReport = registry.getQueryDetails("dart1");
+    Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
+    Assertions.assertNull(infoAndReport.getReportMap());
   }
 
   @Test
@@ -227,22 +226,22 @@ public class DartControllerRegistryTest
     }
 
     // Only the last 2 reports should be retained
-    Assertions.assertNull(registry.getQueryInfoAndReport("dart1"));
-    Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("sql1"));
+    Assertions.assertNull(registry.getQueryDetails("dart1"));
+    Assertions.assertNull(registry.getQueryDetailsBySqlQueryId("sql1"));
 
-    Assertions.assertNotNull(registry.getQueryInfoAndReport("dart2"));
-    Assertions.assertNotNull(registry.getQueryInfoAndReportBySqlQueryId("sql2"));
+    Assertions.assertNotNull(registry.getQueryDetails("dart2"));
+    Assertions.assertNotNull(registry.getQueryDetailsBySqlQueryId("sql2"));
 
-    Assertions.assertNotNull(registry.getQueryInfoAndReport("dart3"));
-    Assertions.assertNotNull(registry.getQueryInfoAndReportBySqlQueryId("sql3"));
+    Assertions.assertNotNull(registry.getQueryDetails("dart3"));
+    Assertions.assertNotNull(registry.getQueryDetailsBySqlQueryId("sql3"));
   }
 
   @Test
-  public void test_getQueryInfoAndReportBySqlQueryId_notFound()
+  public void test_getQueryDetailsBySqlQueryId_notFound()
   {
     final DartControllerRegistry registry = new DartControllerRegistry(makeConfig(10, Period.hours(1)));
 
-    Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("nonexistent"));
+    Assertions.assertNull(registry.getQueryDetailsBySqlQueryId("nonexistent"));
   }
 
   @Test

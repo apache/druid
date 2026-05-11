@@ -200,7 +200,7 @@ public abstract class DimensionSchema
 
   /**
    * Computes the 'effective' {@link DimensionSchema}, allowing columns which provide mechanisms for customizing storage
-   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparising the
+   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparing the
    * operator explicitly defined schema with the 'effective' schema that was written to the segments for things like
    * comparing compaction state.
    */

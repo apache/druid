@@ -57,6 +57,7 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -70,6 +71,14 @@ import java.util.stream.Collectors;
 public class MetricsModule implements Module
 {
   public static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
+
+  /**
+   * Property set by {@code ForkingTaskRunner} when launching peons as child processes of a MiddleManager.
+   * When this property is "true", the peon is managed by a MiddleManager, and system-level monitors
+   * should be skipped because the MiddleManager already emits them.
+   */
+  public static final String PROPERTY_PEON_MANAGED = "druid.peon.managed";
+
   private static final Logger log = new Logger(MetricsModule.class);
 
   public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
@@ -163,9 +172,9 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles)
+  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles, Properties properties)
   {
-    if (nodeRoles.contains(NodeRole.PEON)) {
+    if (nodeRoles.contains(NodeRole.PEON) && isManagedPeon(properties)) {
       return new NoopSysMonitor();
     } else {
       return new SysMonitor();
@@ -176,14 +185,25 @@ public class MetricsModule implements Module
   @ManageLifecycle
   public OshiSysMonitor getOshiSysMonitor(
       @Self Set<NodeRole> nodeRoles,
-      OshiSysMonitorConfig oshiSysConfig
+      OshiSysMonitorConfig oshiSysConfig,
+      Properties properties
   )
   {
-    if (nodeRoles.contains(NodeRole.PEON)) {
+    if (nodeRoles.contains(NodeRole.PEON) && isManagedPeon(properties)) {
       return new NoopOshiSysMonitor();
     } else {
       return new OshiSysMonitor(oshiSysConfig);
     }
+  }
+
+  /**
+   * Returns true if this peon was launched by a MiddleManager (as opposed to running standalone,
+   * such as under the Kubernetes task runner). MiddleManager-launched peons share the host with
+   * the MiddleManager, so system-level metrics would be redundant.
+   */
+  private static boolean isManagedPeon(Properties properties)
+  {
+    return Boolean.parseBoolean(properties.getProperty(PROPERTY_PEON_MANAGED));
   }
 
   /**

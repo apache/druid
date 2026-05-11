@@ -304,7 +304,7 @@ public class SqlStatementResourceHelper
     ));
   }
 
-  public static Sequence<Object[]> getResultSequence(
+  public static Iterator<Object[]> getResultIterator(
       final Frame resultsFrame,
       final FrameReader resultFrameReader,
       final ColumnMappings resultColumnMappings,
@@ -321,7 +321,7 @@ public class SqlStatementResourceHelper
                             .map(mapping -> columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn()))
                             .collect(Collectors.toList());
 
-    final Iterable<Object[]> retVal = () -> new Iterator<>()
+    return new Iterator<>()
     {
       @Override
       public boolean hasNext()
@@ -356,7 +356,19 @@ public class SqlStatementResourceHelper
         return row;
       }
     };
-    return Sequences.simple(retVal);
+  }
+
+  public static Sequence<Object[]> getResultSequence(
+      final Frame resultsFrame,
+      final FrameReader resultFrameReader,
+      final ColumnMappings resultColumnMappings,
+      final ResultsContext resultsContext,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return Sequences.simple(
+        () -> getResultIterator(resultsFrame, resultFrameReader, resultColumnMappings, resultsContext, jsonMapper)
+    );
   }
 
   @Nullable

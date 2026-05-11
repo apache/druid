@@ -307,7 +307,7 @@ public class RunRulesTest
 
   private DruidServer createHistorical(String name, String tier)
   {
-    return new DruidServer(name, name, null, SERVER_SIZE_10GB, ServerType.HISTORICAL, tier, 0);
+    return new DruidServer(name, name, null, SERVER_SIZE_10GB, null, ServerType.HISTORICAL, tier, 0);
   }
 
   private ServerHolder createServerHolder(String name, String tier, LoadQueuePeon peon)
@@ -1166,7 +1166,7 @@ public class RunRulesTest
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,
         new ServerHolder(
-            new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+            new DruidServer("server1", "host1", null, 10, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
                 .toImmutableDruidServer(),
             mockPeon
         )
@@ -1228,7 +1228,7 @@ public class RunRulesTest
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,
         new ServerHolder(
-            new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+            new DruidServer("server1", "host1", null, 10, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
                 .toImmutableDruidServer(),
             mockPeon
         )

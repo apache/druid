@@ -42,9 +42,9 @@ public class LocatedSegmentDescriptorSerdeTest
         new SegmentDescriptor(Intervals.utc(100, 200), "version", 100),
         65535,
         Arrays.asList(
-            new DruidServerMetadata("server1", "host1", null, 30000L, ServerType.HISTORICAL, "tier1", 0),
-            new DruidServerMetadata("server2", "host2", null, 40000L, ServerType.HISTORICAL, "tier1", 1),
-            new DruidServerMetadata("server3", "host3", null, 50000L, ServerType.REALTIME, "tier2", 2)
+            new DruidServerMetadata("server1", "host1", null, 30000L, null, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("server2", "host2", null, 40000L, null, ServerType.HISTORICAL, "tier1", 1),
+            new DruidServerMetadata("server3", "host3", null, 50000L, null, ServerType.REALTIME, "tier2", 2)
         )
     );
 

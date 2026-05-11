@@ -80,7 +80,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
 
   public RangePartitionAdjustingCorePartitionSizeTest(LockGranularity lockGranularity, int maxNumConcurrentSubTasks)
   {
-    super(lockGranularity, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(lockGranularity, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
   }
 
@@ -112,7 +112,6 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
             TIMESTAMP_SPEC,
             DIMENSIONS_SPEC,
             INPUT_FORMAT,
-            null,
             INTERVAL_TO_INDEX,
             inputDir,
             "test_*",
@@ -152,7 +151,6 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
         TIMESTAMP_SPEC,
         DIMENSIONS_SPEC,
         INPUT_FORMAT,
-        null,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",

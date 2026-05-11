@@ -36,7 +36,9 @@ public class KubernetesOverlordUtils
   public static String convertStringToK8sLabel(String rawString)
   {
     String trimmedString = rawString == null ? "" : RegExUtils.replaceAll(rawString, K8S_LABEL_PATTERN, "");
-    return StringUtils.left(StringUtils.strip(trimmedString, "_.-"), 63);
+    String truncated = StringUtils.left(trimmedString, 63);
+    // K8s labels must start and end with an alphanumeric character
+    return StringUtils.strip(truncated, "_.-");
 
   }
 

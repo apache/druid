@@ -428,8 +428,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     replayAll();
 
     int taskCountInit = supervisor.getIoConfig().getTaskCount();
-    // when enable autoScaler the init taskCount will be equal to taskCountMin
-    Assert.assertEquals(1, taskCountInit);
+    Assert.assertEquals(2, taskCountInit);
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
@@ -468,7 +467,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -533,7 +533,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -560,7 +561,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-        false
+        false,
+        null
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -3306,10 +3308,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-    EasyMock.expect(
-        indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-        null)
-    ).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new KinesisDataSourceMetadata(null))
+            .anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3458,10 +3459,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-    EasyMock.expect(
-        indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-        null)
-    ).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new KinesisDataSourceMetadata(null))
+            .anyTimes();
 
     replayAll();
 
@@ -3738,7 +3738,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -3747,7 +3748,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
@@ -3977,7 +3979,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         minMessageTime,
         maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
@@ -4215,7 +4218,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            false
+            false,
+            null
         ),
         null,
         null,
@@ -5179,7 +5183,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5321,7 +5326,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
          autoScalerConfig,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5407,7 +5413,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5495,7 +5502,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5646,6 +5654,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         ),
         Collections.emptyMap(),
         false,
+        null,
         null
     );
   }

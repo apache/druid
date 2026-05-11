@@ -44,22 +44,29 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   private final int maxPartitions;
   private final boolean aggregate;
   private final long limitHint;
+  private final boolean adjustable;
 
   @JsonCreator
   public GlobalSortMaxCountShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
       @JsonProperty("partitions") final int maxPartitions,
       @JsonProperty("aggregate") final boolean aggregate,
-      @JsonProperty("limitHint") final Long limitHint
+      @JsonProperty("limitHint") final Long limitHint,
+      @JsonProperty("adjustable") final boolean adjustable
   )
   {
     this.clusterBy = Preconditions.checkNotNull(clusterBy, "clusterBy");
     this.maxPartitions = maxPartitions;
     this.aggregate = aggregate;
     this.limitHint = limitHint == null ? UNLIMITED : limitHint;
+    this.adjustable = adjustable;
 
     if (maxPartitions < 1) {
       throw new IAE("Partition count must be at least 1");
+    }
+
+    if (adjustable && maxPartitions != 1) {
+      throw new IAE("Partition count must be 1 when adjustable is true, but was [%d]", maxPartitions);
     }
 
     if (!clusterBy.sortable()) {
@@ -70,6 +77,16 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
       // Only GlobalSortTargetSizeShuffleSpec supports bucket-by.
       throw new IAE("Cannot bucket with %s partitioning", TYPE);
     }
+  }
+
+  public GlobalSortMaxCountShuffleSpec(
+      final ClusterBy clusterBy,
+      final int maxPartitions,
+      final boolean aggregate,
+      final Long limitHint
+  )
+  {
+    this(clusterBy, maxPartitions, aggregate, limitHint, false);
   }
 
   @Override
@@ -145,6 +162,26 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   }
 
   @Override
+  @JsonProperty("adjustable")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isAdjustable()
+  {
+    return adjustable;
+  }
+
+  @Override
+  public ShuffleSpec withPartitionCount(final int partitionCount)
+  {
+    return new GlobalSortMaxCountShuffleSpec(
+        clusterBy,
+        partitionCount,
+        aggregate,
+        limitHint == UNLIMITED ? null : limitHint,
+        false
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -156,6 +193,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
     GlobalSortMaxCountShuffleSpec that = (GlobalSortMaxCountShuffleSpec) o;
     return maxPartitions == that.maxPartitions
            && aggregate == that.aggregate
+           && adjustable == that.adjustable
            && Objects.equals(clusterBy, that.clusterBy)
            && Objects.equals(limitHint, that.limitHint);
   }
@@ -163,7 +201,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   @Override
   public int hashCode()
   {
-    return Objects.hash(clusterBy, maxPartitions, aggregate, limitHint);
+    return Objects.hash(clusterBy, maxPartitions, aggregate, limitHint, adjustable);
   }
 
   @Override
@@ -174,6 +212,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
            ", maxPartitions=" + maxPartitions +
            ", aggregate=" + aggregate +
            ", limitHint=" + limitHint +
+           ", adjustable=" + adjustable +
            '}';
   }
 }

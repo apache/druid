@@ -178,7 +178,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                          "y", 1.1,
                                          "z", List.of(2, 4, 6)
                                      ),
-                                     "c", List.of("a", "b"),
+                                     "c", List.of("a", "123"),
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -313,7 +313,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                          "y", 1.1,
                                          "z", List.of(2, 4, 6)
                                      ),
-                                     "c", List.of("a", "b"),
+                                     "c", List.of("a", "123"),
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -435,7 +435,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedResultRows(List.of(
                          new Object[]{"{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"c\":12.3,\"v\":\"b\"}"},
-                         new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}"},
+                         new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"123\"],\"v\":[]}"},
                          new Object[]{"{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"c\":{\"a\":1},\"v\":[]}"},
                          new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"c\":\"hello\",\"v\":\"a\"}"},
                          new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"c\":null,\"v\":[]}"},

@@ -19,13 +19,10 @@
 
 package org.apache.druid.msq.test;
 
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.msq.exec.QueryListener;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-
-import javax.annotation.Nullable;
-import java.util.List;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 public class NoopQueryListener implements QueryListener
 {
@@ -36,13 +33,13 @@ public class NoopQueryListener implements QueryListener
   }
 
   @Override
-  public void onResultsStart(List<MSQResultsReport.ColumnAndType> signature, @Nullable List<SqlTypeName> sqlTypeNames)
+  public void onResultsStart(final FrameReader frameReader)
   {
     // Do nothing.
   }
 
   @Override
-  public boolean onResultRow(Object[] row)
+  public boolean onResultBatch(RowsAndColumns rac)
   {
     return true;
   }

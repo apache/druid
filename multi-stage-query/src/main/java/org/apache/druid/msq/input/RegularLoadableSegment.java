@@ -140,15 +140,11 @@ public class RegularLoadableSegment implements LoadableSegment
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
     }
 
-    if (cachedDataSegment != null) {
-      final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(cachedDataSegment);
-      if (cachedSegment.isPresent()) {
-        acquired = true;
-      }
-      return cachedSegment;
+    final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(segmentId);
+    if (cachedSegment.isPresent()) {
+      acquired = true;
     }
-
-    return Optional.empty();
+    return cachedSegment;
   }
 
   @Override
@@ -229,7 +225,7 @@ public class RegularLoadableSegment implements LoadableSegment
    */
   private DruidException segmentNotFound()
   {
-    return DruidException.forPersona(DruidException.Persona.USER)
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                          .build("Segment[%s] not found on this server. Please retry your query.", segmentId);
   }

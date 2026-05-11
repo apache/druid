@@ -23,6 +23,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableDimensionValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;
@@ -104,6 +106,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
+  @Nullable
+  private final Integer maxStringLength;
 
   public StringDimensionHandler(
       String dimensionName,
@@ -112,10 +116,22 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       boolean hasSpatialIndexes
   )
   {
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, BuiltInTypesModule.getMaxStringLength());
+  }
+
+  public StringDimensionHandler(
+      String dimensionName,
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      @Nullable Integer maxStringLength
+  )
+  {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
+    this.maxStringLength = maxStringLength;
   }
 
   @Override
@@ -160,7 +176,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength);
   }
 
   @Override

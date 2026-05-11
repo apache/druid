@@ -21,8 +21,9 @@ package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexing.template.BatchIndexingJob;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.Eligibility;
+import org.apache.druid.timeline.CompactionState;
 
 /**
  * {@link BatchIndexingJob} to compact an interval of a datasource.
@@ -31,27 +32,25 @@ public class CompactionJob extends BatchIndexingJob
 {
   private final CompactionCandidate candidate;
   private final int maxRequiredTaskSlots;
+  private final String targetIndexingStateFingerprint;
+  private final CompactionState targetIndexingState;
+  private final Eligibility eligibility;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
-      int maxRequiredTaskSlots
+      int maxRequiredTaskSlots,
+      String targetIndexingStateFingerprint,
+      CompactionState targetIndexingState,
+      Eligibility eligibility
   )
   {
     super(task, null);
     this.candidate = candidate;
+    this.eligibility = eligibility;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-  }
-
-  public CompactionJob(
-      ClientSqlQuery msqQuery,
-      CompactionCandidate candidate,
-      int maxRequiredTaskSlots
-  )
-  {
-    super(null, msqQuery);
-    this.candidate = candidate;
-    this.maxRequiredTaskSlots = maxRequiredTaskSlots;
+    this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
+    this.targetIndexingState = targetIndexingState;
   }
 
   public String getDataSource()
@@ -69,6 +68,21 @@ public class CompactionJob extends BatchIndexingJob
     return maxRequiredTaskSlots;
   }
 
+  public String getTargetIndexingStateFingerprint()
+  {
+    return targetIndexingStateFingerprint;
+  }
+
+  public CompactionState getTargetIndexingState()
+  {
+    return targetIndexingState;
+  }
+
+  public Eligibility getEligibility()
+  {
+    return eligibility;
+  }
+
   @Override
   public String toString()
   {
@@ -76,6 +90,8 @@ public class CompactionJob extends BatchIndexingJob
            super.toString() +
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
+           ", targetIndexingStateFingerprint='" + targetIndexingStateFingerprint + '\'' +
+           ", targetIndexingState=" + targetIndexingState +
            '}';
   }
 }

@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -79,6 +80,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -86,6 +88,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 public class MSQTestControllerContext implements ControllerContext, DartControllerContextFactory
@@ -95,11 +99,9 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final TaskActionClient taskActionClient;
   private final ConcurrentHashMap<String, WorkerRunRef> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-      NUM_WORKERS,
-      "MultiStageQuery-test-controller-client"
-  ));
-  private final File tempDir = FileUtils.createTempDir();
+  public static final ExecutorService POOL = Execs.multiThreaded(NUM_WORKERS, "MSQTestControllerContext-worker-%d");
+  public static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(POOL);
+  private final File tempDir;
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -126,19 +128,47 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       Injector injector,
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
+      TaskLockType taskLockType,
+      QueryContext queryContext,
+      ServiceEmitter serviceEmitter,
+      CoordinatorClient coordinatorClient
+  )
+  {
+    this.queryId = queryId;
+    this.tempDir = FileUtils.createTempDir("msq-controller-" + queryId);
+    this.mapper = mapper;
+    this.injector = injector;
+    this.taskActionClient = taskActionClient;
+    this.serviceEmitter = serviceEmitter;
+    this.coordinatorClient = coordinatorClient;
+    this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
+    this.queryContext = queryContext;
+  }
+
+  public MSQTestControllerContext(
+      String queryId,
+      ObjectMapper mapper,
+      Injector injector,
+      TaskActionClient taskActionClient,
+      WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
       TaskLockType taskLockType,
       QueryContext queryContext,
       ServiceEmitter serviceEmitter
   )
   {
-    this.queryId = queryId;
-    this.mapper = mapper;
-    this.injector = injector;
-    this.taskActionClient = taskActionClient;
-    this.serviceEmitter = serviceEmitter;
-    coordinatorClient = Mockito.mock(CoordinatorClient.class);
-
+    this(
+        queryId,
+        mapper,
+        injector,
+        taskActionClient,
+        workerMemoryParameters,
+        taskLockType,
+        queryContext,
+        serviceEmitter,
+        Mockito.mock(CoordinatorClient.class)
+    );
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.any()
@@ -172,10 +202,36 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         return Futures.immediateFailedFuture(new ISE("Segment[%s] not found", segmentId));
       }
     });
+  }
 
-    this.workerMemoryParameters = workerMemoryParameters;
-    this.taskLockType = taskLockType;
-    this.queryContext = queryContext;
+  /**
+   * Waits for all tasks in {@link #POOL}, which workers run in, to exit. Throws an exception if they do
+   * not exit within 10 seconds.
+   */
+  public static void waitForWorkersToExit()
+  {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    int activeCount;
+
+    do {
+      activeCount = ((ThreadPoolExecutor) POOL).getActiveCount();
+      if (activeCount > 0) {
+        try {
+          Thread.sleep(100);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    } while (activeCount > 0 && stopwatch.millisElapsed() < 10_000);
+
+    if (activeCount > 0) {
+      throw new ISE(
+          "Worker executor still had [%,d] workers running after [%,d] ms",
+          activeCount,
+          stopwatch.millisElapsed()
+      );
+    }
   }
 
   OverlordClient overlordClient = new NoopOverlordClient()
@@ -196,20 +252,18 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         workerStorageParameters = WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE);
       }
 
-      Worker worker = new WorkerImpl(
-          task,
-          new MSQTestWorkerContext(
-              task.getId(),
-              inMemoryWorkers,
-              controller,
-              mapper,
-              injector,
-              workerMemoryParameters,
-              workerStorageParameters,
-              serviceEmitter,
-              coordinatorClient
-          )
+      final MSQTestWorkerContext workerContext = new MSQTestWorkerContext(
+          task.getId(),
+          inMemoryWorkers,
+          controller,
+          mapper,
+          injector,
+          workerMemoryParameters,
+          workerStorageParameters,
+          serviceEmitter,
+          coordinatorClient
       );
+      Worker worker = new WorkerImpl(task, workerContext);
       final WorkerRunRef workerRunRef = new WorkerRunRef();
       inMemoryWorkers.put(task.getId(), workerRunRef);
       ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
@@ -221,6 +275,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         public void onSuccess(@Nullable Object result)
         {
           statusMap.put(task.getId(), TaskStatus.success(task.getId()));
+          workerContext.close();
         }
 
         @Override
@@ -228,6 +283,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         {
           log.error(t, "error running worker task %s", task.getId());
           statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
+          workerContext.close();
         }
       }, MoreExecutors.directExecutor());
 
@@ -389,6 +445,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
         taskLauncherConfig
     );
   }
@@ -413,7 +470,25 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public WorkerClient newWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, true);
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return NUM_WORKERS;
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    return 1;
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return true;
   }
 
   @Override
@@ -421,5 +496,15 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   {
     this.queryContext = this.queryContext.override(context);
     return this;
+  }
+
+  public void close()
+  {
+    try {
+      FileUtils.deleteDirectory(tempDir);
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to delete temp dir[%s] for controller[%s]", tempDir, queryId);
+    }
   }
 }

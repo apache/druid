@@ -19,12 +19,22 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -39,6 +49,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -55,6 +66,10 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     TDigestSketchModule module = new TDigestSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
+    InjectableValues currentInjectableValues = helper.getObjectMapper().getInjectableValues();
+    InjectableValues.Std currentInjectableValuesStd = (InjectableValues.Std) currentInjectableValues;
+    currentInjectableValuesStd.addValue(TDigestConfig.class.getName(), TDigestConfig.builder().build());
+    helper.getObjectMapper().setInjectableValues(currentInjectableValuesStd);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -72,8 +87,12 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().build())
+    );
     new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
-    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "filedName", 128);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "filedName", 128, TDigestConfig.builder().build());
 
     AggregatorFactory other = objectMapper.readValue(
         objectMapper.writeValueAsString(factory),
@@ -84,49 +103,77 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void deserializedFactoryCompressionCappedAtMaxCompression() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().maxCompression(150).build())
+    );
+    new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "fieldName", 300, TDigestConfig.builder().maxCompression(150).build());
+
+    TDigestSketchAggregatorFactory deserialized = (TDigestSketchAggregatorFactory) objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(150, deserialized.getCompression());
+  }
+
+  @Test
+  public void deserializedFactoryCompressionBelowMaxCompressionUnchanged() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().maxCompression(150).build())
+    );
+    new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "fieldName", 100, TDigestConfig.builder().maxCompression(150).build());
+
+    TDigestSketchAggregatorFactory deserialized = (TDigestSketchAggregatorFactory) objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(100, deserialized.getCompression());
+  }
+
+  @Test
   public void buildingSketchesAtIngestionTime() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [ \"sequenceNumber\"],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDefaultSchemaDimensions(List.of("product"))
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
         ),
-        "[{\"type\": \"tDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}]",
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value")
+        ),
+        List.of(new TDigestSketchAggregatorFactory("sketch", "value", 200, TDigestConfig.builder().build())),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"tDigestSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
-            + "\"compression\": "
-            + "200}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesFromTDigestSketch\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], "
-            + "\"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"merged_sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("merged_sketch", "sketch", 200, TDigestConfig.builder().build()))
+                    .setPostAggregatorSpecs(
+                        new TDigestSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("merged_sketch", "merged_sketch"),
+                            new double[]{0, 0.5, 1}
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -146,42 +193,32 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("sequenceNumber", "product"))),
+            ColumnsFilter.all()
         ),
-        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value")
+        ),
+        List.of(new DoubleSumAggregatorFactory("value", "value")),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"tDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesFromTDigestSketch\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("sketch", "value", 200, TDigestConfig.builder().build()))
+                    .setPostAggregatorSpecs(
+                        new TDigestSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("sketch", "sketch"),
+                            new double[]{0, 0.5, 1}
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
@@ -202,51 +239,34 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_sketch_data.tsv").getFile()),
-        String.join(
-            "\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"product\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
-            "  }",
-            "}"
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
         ),
-        String.join(
-            "\n",
-            "[",
-            "  {\"type\": \"tDigestSketch\", \"name\": \"first_level_merge_sketch\", \"fieldName\": \"sketch\", "
-            + "\"compression\": "
-            + "200}",
-            "]"
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "product", "sketch")
         ),
+        List.of(new TDigestSketchAggregatorFactory("first_level_merge_sketch", "sketch", 200, TDigestConfig.builder().build())),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join(
-            "\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"tDigestSketch\", \"name\": \"second_level_merge_sketch\", \"fieldName\": "
-            + "\"first_level_merge_sketch\", \"compression\": "
-            + "200}",
-            "  ],",
-            "  \"postAggregations\": [",
-            "    {\"type\": \"quantilesFromTDigestSketch\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"second_level_merge_sketch\"}}",
-            "  ],",
-            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"
-        )
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(
+                        new TDigestSketchAggregatorFactory("second_level_merge_sketch", "first_level_merge_sketch", 200, TDigestConfig.builder().build())
+                    )
+                    .setPostAggregatorSpecs(
+                        new TDigestSketchToQuantilesPostAggregator(
+                            "quantiles",
+                            new FieldAccessPostAggregator("second_level_merge_sketch", "second_level_merge_sketch"),
+                            new double[]{0, 0.5, 1}
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());

@@ -49,7 +49,12 @@ import java.util.Set;
 /**
  * Simulates runs of auto-compaction duty to obtain the expected list of
  * compaction tasks that would be submitted by the actual compaction duty.
+ *
+ * @deprecated The simulator does not support the Overlord-based CompactionJobQueue
+ * or the new reindexing templates. It will either be fully replaced or undergo
+ * a major overhaul in the upcoming releases.
  */
+@Deprecated
 public class CompactionRunSimulator
 {
   private final CompactionStatusTracker statusTracker;
@@ -138,7 +143,8 @@ public class CompactionRunSimulator
         Integer.MAX_VALUE,
         clusterConfig.getCompactionPolicy(),
         clusterConfig.isUseSupervisors(),
-        clusterConfig.getEngine()
+        clusterConfig.getEngine(),
+        clusterConfig.isStoreCompactionStatePerSegment()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -176,7 +182,7 @@ public class CompactionRunSimulator
     row.add(candidate.getDataSource());
     row.add(candidate.getCompactionInterval());
     row.add(candidate.numSegments());
-    row.add(candidate.getTotalBytes());
+    row.add(candidate.getStats().getTotalBytes());
     row.add(CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     if (reason != null) {
       row.add(reason);

@@ -24,8 +24,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -111,13 +111,13 @@ public class ExecsTest
     // it could be doing nothing for any reason). But waiting a short period of time and checking that it hasn't done
     // anything should hopefully be sufficient.
     Thread.sleep(500);
-    Assert.assertEquals(capacity + 1, producedCount.get());
+    Assertions.assertEquals(capacity + 1, producedCount.get());
     // let the tasks run
     taskStartSignal.countDown();
     // wait until all tasks complete
     taskCompletedSignal.await();
     // verify all tasks consumed
-    Assert.assertEquals(nTasks, consumedCount.get());
+    Assertions.assertEquals(nTasks, consumedCount.get());
     // cleanup
     blockingExecutor.shutdown();
     producer.shutdown();
@@ -143,19 +143,19 @@ public class ExecsTest
     };
 
     // Submit multiple tasks together
-    Assert.assertNotNull(intermediateTempExecutor.submit(task));
-    Assert.assertNotNull(intermediateTempExecutor.submit(task));
+    Assertions.assertNotNull(intermediateTempExecutor.submit(task));
+    Assertions.assertNotNull(intermediateTempExecutor.submit(task));
 
     intermediateTempExecutor.shutdownNow();
     // Submit task after shutDown / shutDownNow should not be added in queue
-    Assert.assertThrows(RejectedExecutionException.class, () -> intermediateTempExecutor.submit(task));
-    Assert.assertTrue(intermediateTempExecutor.awaitTermination(10, TimeUnit.SECONDS));
-    Assert.assertTrue(intermediateTempExecutor.isShutdown());
+    Assertions.assertThrows(RejectedExecutionException.class, () -> intermediateTempExecutor.submit(task));
+    Assertions.assertTrue(intermediateTempExecutor.awaitTermination(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(intermediateTempExecutor.isShutdown());
   }
 
   @Test
   public void testDirectExecutorFactory()
   {
-    Assert.assertNotNull(Execs.directExecutor());
+    Assertions.assertNotNull(Execs.directExecutor());
   }
 }

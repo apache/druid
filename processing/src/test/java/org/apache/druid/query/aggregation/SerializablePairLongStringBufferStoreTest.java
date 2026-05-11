@@ -50,14 +50,14 @@ public class SerializablePairLongStringBufferStoreTest
   private final SerializablePairLongString[] integerRangeArr = new SerializablePairLongString[]{
       new SerializablePairLongString((long) MIN_INTEGER, "fuu"),
       new SerializablePairLongString(101L, "bar"),
-      new SerializablePairLongString(102L, "baz"),
-      };
+      new SerializablePairLongString(102L, "baz")
+  };
   private final SerializablePairLongString[] longRangeArr = new SerializablePairLongString[]{
       new SerializablePairLongString(MIN_LONG, "fuu"),
       new SerializablePairLongString(100L, "bar"),
       new SerializablePairLongString((long) Integer.MAX_VALUE, "baz"),
-      new SerializablePairLongString(Long.MAX_VALUE, "fuubarbaz"),
-      };
+      new SerializablePairLongString(Long.MAX_VALUE, "fuubarbaz")
+  };
 
   private final SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
 

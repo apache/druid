@@ -31,18 +31,6 @@ import java.util.Map;
  */
 public class NoopDataSegmentPusher implements DataSegmentPusher
 {
-  @Override
-  public String getPathForHadoop()
-  {
-    return "noop";
-  }
-
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
 
   @Override
   public DataSegment push(File file, DataSegment segment, boolean replaceExisting)

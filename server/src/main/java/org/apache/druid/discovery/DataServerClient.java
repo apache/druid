@@ -41,7 +41,7 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
-import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -64,13 +64,14 @@ public class DataServerClient
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       ServiceLocation serviceLocation,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ServiceRetryPolicy retryPolicy
   )
   {
     this.serviceClient = serviceClientFactory.makeClient(
         serviceLocation.getHost(),
         new FixedServiceLocator(serviceLocation),
-        StandardRetryPolicy.noRetries()
+        retryPolicy
     );
     this.serviceLocation = serviceLocation;
     this.objectMapper = objectMapper;

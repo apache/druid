@@ -279,6 +279,10 @@ public class InfluxdbEmitterConfigTest
         "hostname", "port", "protocol", "trustStoreType", "databaseName",
         "maxQueueSize", "flushPeriod", "flushDelay", "influxdbUserName",
         "influxdbPassword", "dimensionWhitelist"
+    ).withPrefabValues(
+        com.google.common.collect.ImmutableSet.class,
+        com.google.common.collect.ImmutableSet.of("a"),
+        com.google.common.collect.ImmutableSet.of("b")
     ).usingGetClass().verify();
   }
 

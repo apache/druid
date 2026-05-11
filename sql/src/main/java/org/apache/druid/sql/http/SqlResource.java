@@ -28,7 +28,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryResource;
@@ -86,7 +86,7 @@ public class SqlResource
   private final SqlResourceQueryResultPusherFactory resultPusherFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final SqlEngineRegistry sqlEngineRegistry;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final ServerConfig serverConfig;
 
   @VisibleForTesting
@@ -96,7 +96,7 @@ public class SqlResource
       final SqlLifecycleManager sqlLifecycleManager,
       final SqlEngineRegistry sqlEngineRegistry,
       final SqlResourceQueryResultPusherFactory resultPusherFactory,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final ServerConfig serverConfig
   )
   {
@@ -104,7 +104,7 @@ public class SqlResource
     this.sqlEngineRegistry = Preconditions.checkNotNull(sqlEngineRegistry, "sqlEngineRegistry");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
-    this.defaultQueryConfig = Preconditions.checkNotNull(defaultQueryConfig, "defaultQueryConfig");
+    this.queryConfigProvider = Preconditions.checkNotNull(queryConfigProvider, "queryConfigProvider");
     this.serverConfig = serverConfig;
   }
 
@@ -140,14 +140,18 @@ public class SqlResource
   /**
    * API to list all running queries, for all engines that supports such listings.
    *
-   * @param selfOnly if true, return queries running on this server. If false, return queries running on all servers.
-   * @param request  http request.
+   * @param selfOnly        if present, return queries running on this server only. If absent, return queries
+   *                        running on all servers.
+   * @param includeComplete if present, include completed queries in the response. The number of completed queries
+   *                        returned is determined by engine-specific retention settings.
+   * @param request         http request.
    */
   @GET
   @Path("/queries")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetRunningQueries(
       @QueryParam("selfOnly") final String selfOnly,
+      @QueryParam("includeComplete") final String includeComplete,
       @Context final HttpServletRequest request
   )
   {
@@ -163,7 +167,14 @@ public class SqlResource
 
     // Get running queries from all engines that support it.
     for (SqlEngine sqlEngine : engines) {
-      queries.addAll(sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess).getQueries());
+      queries.addAll(
+          sqlEngine.getQueries(
+              selfOnly != null,
+              includeComplete != null,
+              authenticationResult,
+              stateReadAccess
+          ).getQueries()
+      );
     }
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
@@ -230,7 +241,7 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig.getContext());
+      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
 
       // Redefine queryContext to include SET parameters and default context.
       queryContext = new QueryContext(sqlQueryPlus.context());

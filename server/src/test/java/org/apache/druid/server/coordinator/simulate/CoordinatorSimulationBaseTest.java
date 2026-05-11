@@ -209,7 +209,7 @@ public abstract class CoordinatorSimulationBaseTest implements
   static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
   {
     final String name = tier + "__" + "hist__" + uniqueIdInTier;
-    return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
+    return new DruidServer(name, name, name, serverSizeMb << 20, null, ServerType.HISTORICAL, tier, 1);
   }
 
   // Utility and constant holder classes

@@ -261,10 +261,6 @@ If you use the [Kafka Indexing Service](../ingestion/kafka-ingestion.md) or [Kin
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
 slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).
 
-###### Hadoop ingestion
-
-If you are only using [Hadoop-based batch ingestion](../ingestion/hadoop.md) with no other ingestion types, you can lower the amount of resources allocated per Task. Batch ingestion tasks do not need to answer queries, and the bulk of the ingestion workload will be executed on the Hadoop cluster, so the Tasks do not require much resources.
-
 ###### Parallel native ingestion
 
 If you are using [parallel native batch ingestion](../ingestion/native-batch.md), allocating more available task slots is a good idea and will allow greater ingestion concurrency.
@@ -333,6 +329,25 @@ GroupBy queries use an additional pool of off-heap buffers for merging query res
 Non-nested GroupBy queries require 1 merge buffer per query, while a nested GroupBy query requires 2 merge buffers (regardless of the depth of nesting).
 
 The number of merge buffers determines the number of GroupBy queries that can be processed concurrently.
+
+#### Using metrics to tune GroupBy buffer configuration
+
+Druid can emit metrics that help you right-size merge buffers and related GroupBy configuration. These metrics are available when the `GroupByStatsMonitor` module is enabled by adding `org.apache.druid.server.metrics.GroupByStatsMonitor` to `druid.monitoring.monitors`. See the [metrics reference](metrics.md) for full details.
+
+##### Sizing `druid.processing.buffer.sizeBytes`
+
+- `mergeBuffer/maxBytesUsed`: peak merge buffer bytes used by any single GroupBy query within the emission period. If this value consistently approaches `druid.processing.buffer.sizeBytes`, consider increasing the buffer size.
+- `groupBy/maxSpilledBytes`: peak bytes spilled to disk by any single GroupBy query. Non-zero values indicate that merge buffers are too small to hold intermediate results in memory, causing disk spill. Increasing `druid.processing.buffer.sizeBytes` reduces spilling. You can also adjust `druid.query.groupBy.maxOnDiskStorage` to control how much spilling is allowed before a query fails.
+- `groupBy/spilledQueries`: number of GroupBy queries spilled to disk within the emission period. Non-zero values may indicate that your buffer size is too small and should be increased to avoid performance issues caused by excessive spilling.
+
+##### Sizing `druid.processing.numMergeBuffers`
+
+- `mergeBuffer/pendingRequests`: number of queries waiting to acquire merge buffers. Persistently non-zero values indicate merge buffer pool exhaustion; consider increasing `druid.processing.numMergeBuffers`.
+- `mergeBuffer/maxAcquisitionTimeNs`: peak time in nanoseconds that any single GroupBy query waited to acquire merge buffers. High values suggest contention on the merge buffer pool; increasing `druid.processing.numMergeBuffers` can reduce wait times.
+
+##### Sizing `druid.query.groupBy.maxMergingDictionarySize`
+
+- `groupBy/maxMergeDictionarySize`: peak on-heap merge dictionary size in bytes for any single GroupBy query. If this approaches `druid.query.groupBy.maxMergingDictionarySize`, queries may spill to disk if `druid.query.groupBy.maxOnDiskStorage` is configured or fail. If this happens, consider increasing the dictionary size limit.
 
 <a name="connection-pool"></a>
 

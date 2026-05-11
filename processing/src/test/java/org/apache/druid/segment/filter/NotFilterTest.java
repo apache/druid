@@ -24,8 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NotFilterTest
 {
@@ -40,7 +40,7 @@ public class NotFilterTest
   {
     final Filter baseFilter = FilterTestUtils.selector("col1", "1");
     final Filter notFilter = FilterTestUtils.not(baseFilter);
-    Assert.assertNotEquals(notFilter.hashCode(), baseFilter.hashCode());
+    Assertions.assertNotEquals(notFilter.hashCode(), baseFilter.hashCode());
   }
 
   @Test
@@ -49,14 +49,14 @@ public class NotFilterTest
     Filter filter = new NotFilter(new SelectorFilter("dim0", "B"));
     Filter filter2 = new NotFilter(new SelectorFilter("dim1", "B"));
 
-    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-    Assert.assertEquals(filter2, rewrittenFilter);
+    Assertions.assertEquals(filter2, rewrittenFilter);
 
     Filter filter3 = new NotFilter(new ExpressionDimFilter("dim0 == 'B'", ExprMacroTable.nil()).toFilter());
-    Assert.assertFalse(filter3.supportsRequiredColumnRewrite());
+    Assertions.assertFalse(filter3.supportsRequiredColumnRewrite());
   }
 
 }

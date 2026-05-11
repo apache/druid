@@ -39,8 +39,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -128,8 +127,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -217,8 +215,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -317,8 +314,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -420,8 +416,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -509,8 +504,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -609,8 +603,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -712,8 +705,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -801,8 +793,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -901,8 +892,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1004,8 +994,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1093,8 +1082,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1193,8 +1181,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1296,8 +1283,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1385,8 +1371,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1485,8 +1470,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1588,8 +1572,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1677,8 +1660,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1777,8 +1759,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1880,8 +1861,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -1969,8 +1949,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
@@ -2069,8 +2048,7 @@ FROM test_array;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_array",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_array"
     } ],
     "processor" : {
       "type" : "scan",
